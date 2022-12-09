@@ -1,0 +1,93 @@
+:root {
+  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+
+  color: var(--color-foreground);
+  background-color: var(--color-background);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+.row {
+  display: flex;
+  justify-content: center;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+
+a:hover {
+  color: #535bf2;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: #396cd8;
+}
+
+#greet-input {
+  margin-right: 5px;
+}
+
+.s:not(.swap) {
+  width: calc(var(--w) * 1.001ch);
+  transform:
+    scaleX(calc(var(--w) / var(--i)));
+  display: inline-block;
+  color: var(--color-halfway);
+  transform-origin: center left;
+}
+
+.s.swap,
+.s.swap {
+  text-decoration: underline var(--color-halfway);
+}
+
+.alignment .alignment-body .template,
+.alignment .alignment-body .numbering {
+  grid-column: 1/ -1;
+}
+
+.alignment .alignment-wrapper {
+  margin-left: 0;
+}
+
+.input-settings {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.input-settings input,
+.input-settings textarea,
+.input-settings button,
+.input-settings select {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  border: 2px solid var(--color-halfway);
+  border-radius: 0;
+  font-size: 1.2em;
+}
+
+.input-settings textarea {
+  min-height: 7rem;
+  min-width: 100%;
+  max-width: 100%;
+}
+
+.input-settings button {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}

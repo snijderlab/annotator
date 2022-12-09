@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="C:\Users\5803969\src\stitch\assets\styles.css">
+    <style>
+        .s12 {
+            font-size: 50%;
+            transform: scaleY(2) translateY(-12.5%);
+            display: inline-block;
+            color: var(--color-halfway);
+        }
+
+        .s13 {
+            font-size: 33.333%;
+            transform: scaleY(3) translateY(-20%);
+            display: inline-block;
+            color: var(--color-halfway);
+        }
+
+        .s23 {
+            font-size: 66.666%;
+            transform: scaleY(1.5) translateY(-6%);
+            display: inline-block;
+            color: var(--color-halfway);
+        }
+
+        .s21 {
+            width: 2ch;
+            transform: scaleX(2);
+            display: inline-block;
+            text-align: center;
+            color: var(--color-halfway);
+        }
+
+        .s31,
+        .s32 {
+            width: 3ch;
+            display: inline-block;
+            text-align: center;
+            color: var(--color-halfway);
+        }
+
+        .s31 {
+            transform: scaleX(3);
+        }
+
+        .s32 {
+            transform: scaleX(1.5);
+        }
+
+        .s22:not(.swap),
+        .s33:not(.swap) {
+            color: var(--color-halfway);
+        }
+
+        .s22.swap,
+        .s33.swap {
+            text-decoration: underline var(--color-halfway);
+        }
+
+        .alignment .alignment-body .template,
+        .alignment .alignment-body .numbering {
+            grid-column: 1/ -1;
+        }
+
+        .alignment .alignment-wrapper {
+            margin-left: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="alignment">
+        <div class="alignment-wrapper">
+            <div class='alignment-body' style='grid-template-columns: repeat(121, 1ch);'>
+                <div class='numbering'>1....</div>
+                <div class='template'>
+                    EVQLVESGGGLVQ--PGGSL-RLSCAASGFTVSSNYMSWVRQAPGKGLEWVSVI-YSGGSTYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYCARXXXXXXXXXXXXXXXXXXXX
+                </div>
+                <div style='grid-column: 1 / 35'><span class='s22'>DL</span>QLVESGGGLV<span
+                        class='s12'>GA</span>KSPPGT---LSAAASGFNL</div>
+                <div style='grid-column: 1 / 35'><span class='s22'>DL</span>QLVESGGGLV<span
+                        class='s12'>GA</span>KSPPGT---LSAAASGFNL</div>
+                <div style='grid-column: 1 / 35'>EVQLVESGGGLVQ--PGGSL-SGAKYHSGFNL</div>
+                <div style='grid-column: 1 / 33'>EVQLVESGGGLVQ--PGGSLGVLSCAASGF</div>
+                <div style='grid-column: 1 / 33'><span class='s22'>DL</span>QLVESGGGLVQ--PGGSLGVLSCAASGF</div>
+                <div style='grid-column: 1 / 35'><span class='s22'>DL</span>QLVESGGGLVQ--PGTPL--YWNAASGFNL</div>
+                <div style='grid-column: 1 / 33'><span class='s22'>DL</span>QLVESGGGLVQ--PGGSL-RLSCAASGF</div>
+                <div style='grid-column: 1 / 33'>QVQLVESGGGLVQ--PGGSL-RLSCAASGF</div>
+                <div style='grid-column: 1 / 33'>EVQLVESGGGLVQ--PGGSL-RLSCAADGF</div>
+                <div style='grid-column: 1 / 33'>EVQLVESGGGLVQ--PGGSL-RLSCAASGF</div>
+                <div style='grid-column: 1 / 33'>EVQLV<span class='s33 swap'>SGE</span>GGLVQ--PGGSL-RLSCAASGF</div>
+                <div style='grid-column: 1 / 33'>QVELVESGGGLVQ--PGGSL-RLSCAASGF</div>
+                <div style='grid-column: 72 / 100'>TLSADTSKNTAYLQMNSLRAEDTAVY</div>
+                <div style='grid-column: 70 / 98'>RFTLSADTSKNTAYLQMNSLRAEDTA</div>
+                <div style='grid-column: 3 / 33'>QLVESGGGLVQ--PGGSLTHVAGGHSGF</div>
+                <div style='grid-column: 74 / 101'>SADTSKNTAYLQMNSLRAEDTAVYY</div>
+                <div style='grid-column: 54 / 81'>LMLTDGYTRYADSVKGRFTLSADTS</div>
+                <div style='grid-column: 3 / 33'>QLVESGGGLVQ--PGGSL-RLSCAASGF</div>
+                <div style='grid-column: 3 / 33'>QLVESGGGLVQ--PGGSL-RLSC<span class='s32'>QT</span>GF</div>
+                <div style='grid-column: 4 / 33'>LVESGGGLVQ--P<span class='s21'>N</span>SL-RLSCAASGF</div>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

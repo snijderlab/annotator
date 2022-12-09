@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="stitch-styles.css" />
+  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tauri App</title>
+  <script type="module" src="/main.js" defer></script>
+</head>
+
+<body>
+  <div class="input-settings">
+    <h2>Load reads from structure file</h2>
+    <input id="load-path" placeholder="Enter path" value="C:\Users\douwe\src\pdbtbx\example-pdbs\1yyf.pdb" />
+    <input id="load-min-length" type="number" value="5" />
+    <button id="load-button" type="button">Load</button>
+    <pre id="error-log"></pre>
+    <h2>Settings for alignment</h2>
+    <input id="greet-input-a" placeholder="Enter template sequence"
+      value="EVQLVESGGGLVQPGGSLRLSCAASGFTVSSNYMSWVRQAPGKGLEWVSVIYSGGSTYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYCARXXXXXXXXXXXXXXXXXXXX" />
+    <textarea id="greet-input-b" placeholder="Enter reads (each on their own line)">
+DLQLVESGGGLVGAKSPPGTLSAAASGFNL
+DLQLVESGGGLVGAKSPPGTLSAAASGFNL
+EVQLVESGGGLVQPGGSLSGAKYHSGFNL
+EVVQLVESGGGLVQPGGSLGVLSCAASGF
+DLQLVESGGGLVQPGGSLGVLSCAASGF
+DLQLVESGGGLVQPGTPLYWNAASGFNL
+DLQLVESGGGLVQPGGSLRLSCAASGF
+QVQLVESGGGLVQPGGSLRLSCAASGF
+EVQLVESGGGLPVQGGSLRLSCAADGF
+EVQLVESGGGLVQPGGSLRLSCAASGF
+EVQLVSGEGGLVQPGGSLRLSCAASGF
+QVELVESGGGLVQPGGSLRLSCAASGF
+TLSADTSKNTAYLQMNSLRAEDTAVY
+RFTLSADTSKNTAYLQMNSLRAEDTA
+QLVESGGGLVQPGGSLTHVAGAGHSGF
+SADTSKNTAYLQMNSLRAEDTAVYY
+LMLTDGYTRYADSVKGRFTLSADTS
+QLVESGGGLVQPGGSLRLSCAASGF
+QLVESGGGLVQPGGSLRLSCQTGF
+LVESGGGLVQPNSLRLSCAASGF
+      </textarea>
+    <select id="input-alignment-type">
+      <option value="1">Local</option>
+      <option value="2">Global for B</option>
+      <option value="3">Global</option>
+    </select>
+    <button id="greet-button" type="button">Align</button>
+  </div>
+
+  <div class="results">
+    <h2>Resulting alignment</h2>
+    <div class='alignment'>
+      <div class='alignment-wrapper' id="reads-alignment">
+      </div>
+    </div>
+  </div>
+</body>
+
+</html>
