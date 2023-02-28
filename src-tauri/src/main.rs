@@ -110,7 +110,7 @@ fn load_mgf(path: &str) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn annotate_spectrum(index: usize, peptide: &str) -> Result<String, String> {
+fn annotate_spectrum(index: usize, peptide: &str) -> Result<(String, String), String> {
     if index >= unsafe { spectra.len() } {
         return Err("Nonexistent spectrum index".to_string());
     }
@@ -120,17 +120,48 @@ fn annotate_spectrum(index: usize, peptide: &str) -> Result<String, String> {
     let fragments =
         generate_theoretical_fragments::<AverageWeight>(&peptide, Charge::new::<e>(1.0), &model);
     let annotated = spectrum.annotate(peptide, fragments, &model);
-    Ok(format!(
-        "{}<pre class='dump'>{annotated:?}</pre>",
-        render_annotated_spectrum(&annotated)
+    Ok((
+        render_annotated_spectrum(&annotated, "spectrum"),
+        format!("{annotated:?}"),
     ))
 }
 
-fn render_annotated_spectrum(spectrum: &AnnotatedSpectrum) -> String {
+fn render_annotated_spectrum(spectrum: &AnnotatedSpectrum, id: &str) -> String {
     let mut output = "<div class='spectrum'>".to_string();
-    let (limits, overview) = dbg!(get_overview(spectrum));
+    let (limits, overview) = get_overview(spectrum);
+
+    write!(output, "<div class='manual-zoom'>").unwrap();
+    write!(output, "<label for='{id}-mz-min'>Mz Min</label>").unwrap();
+    write!(
+        output,
+        "<input id='{id}-mz-min' class='mz-min' type='number' value='0'/>"
+    )
+    .unwrap();
+    write!(output, "<label for='{id}-mz-max'>Mz Max</label>").unwrap();
+    write!(
+        output,
+        "<input id='{id}-mz-max' class='mz-max' type='number' value='{}'/>",
+        limits.0.value
+    )
+    .unwrap();
+    write!(
+        output,
+        "<label for='{id}-intensity-max'>Intensity Max</label>"
+    )
+    .unwrap();
+    write!(
+        output,
+        "<input id='{id}-intensity-max' class='intensity-max' type='number' value='{}'/>",
+        limits.2
+    )
+    .unwrap();
+    write!(output, "</div>").unwrap();
+    write!(output, "<div class='wrapper unassigned first'>").unwrap();
+    create_ion_legend(&mut output, &format!("{id}-1"));
     render_peptide(&mut output, spectrum, overview);
-    render_spectrum(&mut output, spectrum, limits);
+    render_spectrum(&mut output, spectrum, limits, "first");
+    write!(output, "</div>").unwrap();
+    // Second spectrum
     write!(output, "</div>").unwrap();
     output
 }
@@ -152,12 +183,47 @@ fn get_overview(
     }
     (
         (
-            max_mz,
-            max_intensity.max(max_intensity_unassigned),
-            max_intensity_unassigned,
+            max_mz * 1.01,
+            max_intensity.max(max_intensity_unassigned) * 1.01,
+            max_intensity_unassigned * 1.01,
         ),
         output,
     )
+}
+
+fn create_ion_legend(output: &mut String, id: &str) {
+    write!(
+        output,
+        "<div class='legend'>
+    <span class='title'>Ion legend</span>
+    <div class='ion-series'>
+        <div class='top'>
+            <span class='ion w' tabindex='0'>w</span>
+            <span class='ion x' tabindex='0'>x</span>
+            <span class='ion y' tabindex='0'>y</span>
+            <span class='ion z' tabindex='0'>z</span>
+        </div><div class='bottom'>
+            <span class='ion a' tabindex='0'>a</span>
+            <span class='ion b' tabindex='0'>b</span>
+            <span class='ion c' tabindex='0'>c</span>
+            <span class='ion d' tabindex='0'>d</span>
+        </div>
+    </div>
+    <span class='other'>Other</span>
+    <input id='{id}_unassigned' type='checkbox' checked class='unassigned'/>
+    <label for='{id}_unassigned' class='unassigned' tabindex='0'>Unassigned</label>
+    <label class='label'>
+        Ion
+        <sup>Charge</sup>
+        <sub style='margin-left:-6ch;margin-right:.5rem;'>Position</sub>
+        Show for top:
+        <input id='{id}_label' type='range' min='0' max='100' value='100'/>
+        <input id='{id}_label_value' type='number' min='0' max='100' value='100'/>
+        %
+    </label>
+</div>"
+    )
+    .unwrap();
 }
 
 fn render_peptide(
@@ -196,6 +262,7 @@ fn render_spectrum(
     output: &mut String,
     spectrum: &AnnotatedSpectrum,
     limits: (MassOverCharge, f64, f64),
+    selection: &str,
 ) {
     write!(
         output,
@@ -209,8 +276,12 @@ fn render_spectrum(
     write!(output, "<span class='last'>{}</span>", limits.2).unwrap();
     write!(output, "</div>").unwrap();
     write!(output, "<div class='canvas' style='--min-mz:0;--max-mz:{};--max-intensity:{};' data-initial-max-mz='{}' data-initial-max-intensity='{}' data-initial-max-intensity-assigned='{}'>", limits.0.value, limits.2, limits.0.value, limits.2, limits.1).unwrap();
-    write!(output, "<span class='selection' hidden='true'></span>").unwrap();
-    write!(output, "<div class='zoom-out' tabindex='0'></div>").unwrap();
+    write!(
+        output,
+        "<span class='selection {selection}' hidden='true'></span>"
+    )
+    .unwrap();
+    write!(output, "<div class='zoom-out' tabindex='0'>Zoom Out</div>").unwrap();
 
     for peak in &spectrum.spectrum {
         match &peak.annotation {

@@ -2055,7 +2055,7 @@ span.corner.d {
 
 .spectrum .peak.unassigned {
     display: none;
-    z-index: -10;
+    z-index: 1;
 }
 
 .spectrum .unassigned .peak.unassigned {

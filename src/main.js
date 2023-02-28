@@ -33,10 +33,13 @@ async function load_mgf() {
   }
 }
 
+import { SpectrumSetUp } from "./stitch-script.js";
 async function annotate_spectrum() {
   try {
     var result = await invoke("annotate_spectrum", { index: Number(document.querySelector("#spectrum-index").value), peptide: document.querySelector("#peptide").value });
-    document.querySelector("#spectrum-results-wrapper").innerHTML = result;
+    document.querySelector("#spectrum-error-log").innerText = result[1];
+    document.querySelector("#spectrum-results-wrapper").innerHTML = result[0];
+    SpectrumSetUp();
   } catch (error) {
     console.log(error);
     document.querySelector("#spectrum-error-log").innerText = error;
