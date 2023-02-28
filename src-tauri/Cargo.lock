@@ -2076,6 +2076,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97477e48b4cf8603ad5f7aaf897467cf42ab4218a38ef76fb14c2d6773a6d6a8"
 
 [[package]]
+name = "rustyms"
+version = "0.1.0"
+dependencies = [
+ "uom",
+]
+
+[[package]]
 name = "ryu"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2616,6 +2623,7 @@ version = "0.0.0"
 dependencies = [
  "itertools",
  "pdbtbx",
+ "rustyms",
  "serde",
  "serde_json",
  "tauri",
@@ -2890,6 +2898,16 @@ name = "unicode-xid"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc72304796d0818e357ead4e000d19c9c174ab23dc11093ac919054d20a6a7fc"
+
+[[package]]
+name = "uom"
+version = "0.34.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e8f50eddd69f656ee545f7663ea5fefb7c789bc1a0d11124e049715f563a16a4"
+dependencies = [
+ "num-traits",
+ "typenum",
+]
 
 [[package]]
 name = "url"

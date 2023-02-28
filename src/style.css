@@ -91,3 +91,8 @@ button:hover {
   color: var(--color-primary);
   border-color: var(--color-primary);
 }
+
+pre.dump {
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}

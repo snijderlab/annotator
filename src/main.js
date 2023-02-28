@@ -23,6 +23,26 @@ async function load_cif() {
   }
 }
 
+async function load_mgf() {
+  try {
+    let result = await invoke("load_mgf", { path: document.querySelector("#load-mgf-path").value });
+    document.querySelector("#spectrum-error-log").innerText = result;
+  } catch (error) {
+    console.log(error);
+    document.querySelector("#spectrum-error-log").innerText = error;
+  }
+}
+
+async function annotate_spectrum() {
+  try {
+    var result = await invoke("annotate_spectrum", { index: Number(document.querySelector("#spectrum-index").value), peptide: document.querySelector("#peptide").value });
+    document.querySelector("#spectrum-results-wrapper").innerHTML = result;
+  } catch (error) {
+    console.log(error);
+    document.querySelector("#spectrum-error-log").innerText = error;
+  }
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   sequenceInputA = document.querySelector("#greet-input-a");
   sequenceInputB = document.querySelector("#greet-input-b");
@@ -34,4 +54,10 @@ window.addEventListener("DOMContentLoaded", () => {
   document
     .querySelector("#load-button")
     .addEventListener("click", () => load_cif());
+  document
+    .querySelector("#load-mgf-button")
+    .addEventListener("click", () => load_mgf());
+  document
+    .querySelector("#annotate-button")
+    .addEventListener("click", () => annotate_spectrum());
 });
