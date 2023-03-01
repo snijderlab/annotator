@@ -6,7 +6,7 @@
 use itertools::Itertools;
 use mass_alignment::{template::Template, *};
 use pdbtbx::*;
-use rustyms::{Mass, MassOverCharge, Zero};
+use rustyms::{mz, Mass, MassOverCharge, Zero};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
@@ -110,18 +110,24 @@ fn load_mgf(path: &str) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn annotate_spectrum(index: usize, peptide: &str) -> Result<(String, String), String> {
+fn annotate_spectrum(
+    index: usize,
+    ppm: f64,
+    peptide: &str,
+) -> Result<(String, String, String), String> {
     if index >= unsafe { spectra.len() } {
         return Err("Nonexistent spectrum index".to_string());
     }
-    let model = Model::all();
+    let mut model = Model::all();
+    model.ppm = MassOverCharge::new::<mz>(ppm);
     let peptide = rustyms::peptide::Peptide::pro_forma(peptide)?;
     let spectrum = unsafe { &spectra[index] };
     let fragments =
         generate_theoretical_fragments::<AverageWeight>(&peptide, Charge::new::<e>(1.0), &model);
-    let annotated = spectrum.annotate(peptide, fragments, &model);
+    let annotated = spectrum.annotate(peptide, &fragments, &model);
     Ok((
         render_annotated_spectrum(&annotated, "spectrum"),
+        format!("{fragments:?}"),
         format!("{annotated:?}"),
     ))
 }
@@ -156,12 +162,18 @@ fn render_annotated_spectrum(spectrum: &AnnotatedSpectrum, id: &str) -> String {
     )
     .unwrap();
     write!(output, "</div>").unwrap();
-    write!(output, "<div class='wrapper unassigned first'>").unwrap();
+    write!(output, "<div class='wrapper unassigned'>").unwrap();
     create_ion_legend(&mut output, &format!("{id}-1"));
     render_peptide(&mut output, spectrum, overview);
     render_spectrum(&mut output, spectrum, limits, "first");
     write!(output, "</div>").unwrap();
     // Second spectrum
+    collapsible(
+        &mut output,
+        &format!("{id}-table-1"),
+        "Peaks table".to_string(),
+        spectrum_table(spectrum, &format!("{id}-table-1")),
+    );
     write!(output, "</div>").unwrap();
     output
 }
@@ -178,7 +190,7 @@ fn get_overview(
         max_intensity_unassigned = max_intensity_unassigned.max(peak.intensity);
         if let Some(f) = &peak.annotation {
             max_intensity = max_intensity.max(peak.intensity);
-            output[f.sequence_index].insert(f.ion);
+            f.ion.sequence_index().map(|i| output[i].insert(f.ion));
         }
     }
     (
@@ -300,7 +312,9 @@ fn render_spectrum(
                     f.ion,
                     peak.experimental_mz.value,
                     peak.intensity,
-                    f.sequence_index + 1
+                    f.ion
+                        .sequence_index()
+                        .map_or("*".to_string(), |i| (i + 1).to_string()),
                 )
                 .unwrap();
                 let ch = format!("{:+}", peak.charge.value);
@@ -310,7 +324,9 @@ fn render_spectrum(
                     f.ion,
                     ch,
                     ch.len(),
-                    f.sequence_index
+                    f.ion
+                        .sequence_index()
+                        .map_or("*".to_string(), |i| (i + 1).to_string())
                 )
                 .unwrap();
             }
@@ -323,6 +339,83 @@ fn render_spectrum(
     write!(output, "<span>{}</span>", 3.0 * limits.0.value / 4.0).unwrap();
     write!(output, "<span class='last'>{}</span>", limits.0.value).unwrap();
     write!(output, "</div></div>").unwrap();
+}
+
+fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
+    let mut output = String::new();
+    write!(
+        output,
+        "<label class='background'><input type='checkbox'/>Show background peaks</label>
+        <table id='{table_id}' class='wide-table'>
+            <tr>
+                <th>Position</th>
+                <th>Ion type</th>
+                <th>Intensity</th>
+                <th>mz Theoretical</th>
+                <th>mz Error (Th)</th>
+                <th>mz Error (ppm)</th>
+                <th>Charge</th>
+                <th>Series Number</th>
+            </tr>"
+    )
+    .unwrap();
+    for peak in &spectrum.spectrum {
+        match &peak.annotation {
+            None => write!(
+                output,
+                "<tr class='unassigned'>
+                <td>-</td>
+                <td>-</td>
+                <td>{}</td>
+                <td>{}</td>
+                <td>-</td>
+                <td>-</td>
+                <td>{:+}</td>
+                <td>-</td>
+            </tr>",
+                peak.intensity, peak.experimental_mz.value, peak.charge.value
+            ),
+            Some(f) => write!(
+                output,
+                "<tr>
+                <td>{}</td>
+                <td>{}</td>
+                <td>{}</td>
+                <td>{}</td>
+                <td>{}</td>
+                <td>{}</td>
+                <td>{:+}</td>
+                <td>{}</td>
+            </tr>",
+                f.ion
+                    .sequence_index()
+                    .map_or("*".to_string(), |i| (i + 1).to_string()),
+                f.ion,
+                peak.intensity,
+                peak.experimental_mz.value,
+                (f.mz() - peak.experimental_mz).abs().value,
+                ((f.mz() - peak.experimental_mz).abs() / f.mz() * 1e6).value,
+                peak.charge.value,
+                0
+            ),
+        }
+        .unwrap()
+    }
+    write!(output, "</table>").unwrap();
+    output
+}
+
+fn collapsible(output: &mut String, id: &str, title: String, content: String) {
+    write!(
+        output,
+        "<input type='checkbox' id='collapsible-{id}'/>
+        <label for='collapsible-{id}'>{title}</label>
+        <div class='collapsible' id='{id}'>
+            <div class='clear-fix'></div>
+            {content}
+        </div>"
+    )
+    .unwrap();
 }
 
 /// All amino acids. Includes Amber-specific naming conventions for (de-)protonated versions, CYS involved in

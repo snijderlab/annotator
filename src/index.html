@@ -65,14 +65,15 @@ LVESGGGLVQPNSLRLSCAASGF
     <div class="input-settings">
       <summary>Spectra</summary>
       <h2>Load spectra</h2>
-      <input id="load-mgf-path" placeholder="Enter path" value="C:\Users\douwe\src\rustyms\data\example.mgf" />
+      <input id="load-mgf-path" placeholder="Enter path" value="C:\Users\5803969\src\rustyms\data\real_example.mgf" />
       <button id="load-mgf-button" type="button">Load</button>
       <h2>Annotate</h2>
       <input type="number" id="spectrum-index" value="0" />
-      <input id="peptide" value="AA[+15.0]A" />
+      <input type="number" id="spectrum-ppm" value="20" />
+      <input id="peptide" value="EEYTKKLNTQ" />
       <button id="annotate-button" type="button">Annotate</button>
-      <pre id="spectrum-error-log"></pre>
       <div id="spectrum-results-wrapper"></div>
+      <pre id="spectrum-error-log"></pre>
     </div>
   </details>
 </body>

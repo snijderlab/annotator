@@ -92,7 +92,11 @@ button:hover {
   border-color: var(--color-primary);
 }
 
-pre.dump {
+pre {
   word-wrap: break-word;
   white-space: pre-wrap;
+}
+
+#spectrum-results-wrapper {
+  padding: 1em;
 }
