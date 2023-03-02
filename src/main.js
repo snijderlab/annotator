@@ -36,7 +36,8 @@ async function load_mgf() {
 import { SpectrumSetUp } from "./stitch-script.js";
 async function annotate_spectrum() {
   try {
-    var result = await invoke("annotate_spectrum", { index: Number(document.querySelector("#spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), peptide: document.querySelector("#peptide").value });
+    var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);
+    var result = await invoke("annotate_spectrum", { index: Number(document.querySelector("#spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), monoisotopic: document.querySelector("#mass-system").value == "monoisotopic", charge: charge, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").value });
     document.querySelector("#spectrum-results-wrapper").innerHTML = result[0];
     document.querySelector("#spectrum-fragments").innerText = result[1];
     document.querySelector("#spectrum-error-log").innerText = result[2];

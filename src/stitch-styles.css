@@ -2032,6 +2032,7 @@ span.corner.d {
     width: var(--stroke);
     background-color: var(--color);
     transition: opacity 250ms;
+    z-index: 2;
 }
 
 .spectrum .second .peak {

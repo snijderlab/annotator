@@ -61,16 +61,32 @@ LVESGGGLVQPNSLRLSCAASGF
       </div>
     </div>
   </details>
-  <details>
+  <details open>
     <div class="input-settings">
       <summary>Spectra</summary>
       <h2>Load spectra</h2>
-      <input id="load-mgf-path" placeholder="Enter path" value="C:\Users\5803969\src\rustyms\data\real_example.mgf" />
+      <input id="load-mgf-path" placeholder="Enter path"
+        value="C:\Users\5803969\src\rustyms\data\annotated_example.mgf" />
       <button id="load-mgf-button" type="button">Load</button>
       <h2>Annotate</h2>
+      <label for="spectrum-index">Spectrum index</label>
       <input type="number" id="spectrum-index" value="0" />
+      <label for="spectrum-ppm">PPM </label>
       <input type="number" id="spectrum-ppm" value="20" />
-      <input id="peptide" value="EEYTKKLNTQ" />
+      <label for="peptide">Peptide sequence </label>
+      <input id="peptide" value="VAEINPSNGGTTFNEKFKGGKATJ" />
+      <label for="mass-system">Mass type </label>
+      <select id="mass-system">
+        <option value="monoisotopic">MonoIsotopic</option>
+        <option value="averageweight">AverageWeight</option>
+      </select>
+      <label for="spectrum-model">Model </label>
+      <select id="spectrum-model">
+        <option value="all">All</option>
+        <option value="ethcd">Ethcd</option>
+      </select>
+      <label for="spectrum-charge">Max charge </label>
+      <input type="number" id="spectrum-charge" value="" placeholder="Empty takes peptide charge from raw data" />
       <button id="annotate-button" type="button">Annotate</button>
       <div id="spectrum-results-wrapper"></div>
       <pre id="spectrum-fragments"></pre>
