@@ -65,9 +65,12 @@ LVESGGGLVQPNSLRLSCAASGF
     <div class="input-settings">
       <summary>Spectra</summary>
       <h2>Load spectra</h2>
+      <label for="load-mgf-path">Path</label>
       <input id="load-mgf-path" placeholder="Enter path"
         value="C:\Users\5803969\src\rustyms\data\annotated_example.mgf" />
       <button id="load-mgf-button" type="button">Load</button>
+    </div>
+    <div class="input-settings">
       <h2>Annotate</h2>
       <label for="spectrum-index">Spectrum index</label>
       <input type="number" id="spectrum-index" value="0" />
@@ -88,10 +91,10 @@ LVESGGGLVQPNSLRLSCAASGF
       <label for="spectrum-charge">Max charge </label>
       <input type="number" id="spectrum-charge" value="" placeholder="Empty takes peptide charge from raw data" />
       <button id="annotate-button" type="button">Annotate</button>
-      <div id="spectrum-results-wrapper"></div>
-      <pre id="spectrum-fragments"></pre>
-      <pre id="spectrum-error-log"></pre>
     </div>
+    <div id="spectrum-results-wrapper"></div>
+    <pre id="spectrum-fragments"></pre>
+    <pre id="spectrum-error-log"></pre>
   </details>
 </body>
 

@@ -1,17 +1,27 @@
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
+  font-size: 1rem;
+  line-height: 1.5rem;
   font-weight: 400;
 
   color: var(--color-foreground);
   background-color: var(--color-background);
+  font-family: Roboto, Inter, Avenir, Helvetica, Arial, sans-serif;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+}
+
+@font-face {
+  font-family: 'Roboto';
+  src: url('./RobotoFlex-VariableFont.ttf');
+}
+
+@font-face {
+  font-family: 'Roboto Mono';
+  src: url('./RobotoMono-VariableFont.ttf');
 }
 
 .row {
@@ -65,9 +75,15 @@ button:hover {
 }
 
 .input-settings {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr 2fr;
   gap: .5rem;
+}
+
+@media (max-width: 1000px) {
+  .input-settings {
+    grid-template-columns: 1fr 2fr;
+  }
 }
 
 .input-settings input,
@@ -92,9 +108,18 @@ button:hover {
   border-color: var(--color-primary);
 }
 
+.input-settings h2 {
+  grid-column: 1 /-1;
+}
+
+.input-settings button {
+  grid-column: 2;
+}
+
 pre {
   word-wrap: break-word;
   white-space: pre-wrap;
+  overflow: hidden;
 }
 
 #spectrum-results-wrapper {

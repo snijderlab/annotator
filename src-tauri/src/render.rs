@@ -91,6 +91,7 @@ fn create_ion_legend(output: &mut String, id: &str) {
             <span class='ion b' tabindex='0'>b</span>
             <span class='ion c' tabindex='0'>c</span>
             <span class='ion d' tabindex='0'>d</span>
+            <span class='ion v' tabindex='0'>v</span>
         </div>
     </div>
     <span class='other'>Other</span>
@@ -159,10 +160,10 @@ fn render_spectrum(
     )
     .unwrap();
     write!(output, "<div class='y-axis'><span class='n0'>0</span>").unwrap();
-    write!(output, "<span>{}</span>", limits.2 / 4.0).unwrap();
-    write!(output, "<span>{}</span>", limits.2 / 2.0).unwrap();
-    write!(output, "<span>{}</span>", 3.0 * limits.2 / 4.0).unwrap();
-    write!(output, "<span class='last'>{}</span>", limits.2).unwrap();
+    write!(output, "<span>{:.2}</span>", limits.2 / 4.0).unwrap();
+    write!(output, "<span>{:.2}</span>", limits.2 / 2.0).unwrap();
+    write!(output, "<span>{:.2}</span>", 3.0 * limits.2 / 4.0).unwrap();
+    write!(output, "<span class='last'>{:.2}</span>", limits.2).unwrap();
     write!(output, "</div>").unwrap();
     write!(output, "<div class='canvas' style='--min-mz:0;--max-mz:{};--max-intensity:{};' data-initial-max-mz='{}' data-initial-max-intensity='{}' data-initial-max-intensity-assigned='{}'>", limits.0.value, limits.2, limits.0.value, limits.2, limits.1).unwrap();
     write!(
@@ -211,10 +212,10 @@ fn render_spectrum(
     }
     write!(output, "</div>").unwrap();
     write!(output, "<div class='x-axis'><span class='n0'>0</span>").unwrap();
-    write!(output, "<span>{}</span>", limits.0.value / 4.0).unwrap();
-    write!(output, "<span>{}</span>", limits.0.value / 2.0).unwrap();
-    write!(output, "<span>{}</span>", 3.0 * limits.0.value / 4.0).unwrap();
-    write!(output, "<span class='last'>{}</span>", limits.0.value).unwrap();
+    write!(output, "<span>{:.2}</span>", limits.0.value / 4.0).unwrap();
+    write!(output, "<span>{:.2}</span>", limits.0.value / 2.0).unwrap();
+    write!(output, "<span>{:.2}</span>", 3.0 * limits.0.value / 4.0).unwrap();
+    write!(output, "<span class='last'>{:.2}</span>", limits.0.value).unwrap();
     write!(output, "</div></div>").unwrap();
 }
 

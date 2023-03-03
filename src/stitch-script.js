@@ -587,7 +587,6 @@ function Zoom(canvas, min, max, maxI) {
     canvas.style.setProperty("--max-intensity", canvas.dataset.maxIntensity);
 
     var spectrum = canvas.parentElement.parentElement.parentElement;
-    console.log(canvas, spectrum)
     spectrum.querySelector(".mz-min").value = fancyRound(max, min, min);
     spectrum.querySelector(".mz-max").value = fancyRound(max, min, max);
     spectrum.querySelector(".intensity-max").value = fancyRound(canvas.dataset.maxIntensity, 0, canvas.dataset.maxIntensity);
