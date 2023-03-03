@@ -7,6 +7,7 @@ use html_builder::{HtmlContent, HtmlElement, HtmlTag};
 use itertools::Itertools;
 use mass_alignment::{template::Template, *};
 use pdbtbx::*;
+use rustyms::RawSpectrum;
 use rustyms::{mz, Mass, MassOverCharge, MonoIsotopic, Zero};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
@@ -94,10 +95,7 @@ fn load_cif(path: &str, min_length: usize, warn: bool) -> Result<(String, String
     }
 }
 
-use rustyms::{
-    e, fragment::FragmentType, generate_theoretical_fragments, spectrum::*, AverageWeight, Charge,
-    Model,
-};
+use rustyms::{e, generate_theoretical_fragments, AverageWeight, Charge, FragmentType, Model};
 static mut spectra: Vec<RawSpectrum> = Vec::new();
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
@@ -131,7 +129,7 @@ fn annotate_spectrum(
         _ => Model::all(),
     };
     model.ppm = MassOverCharge::new::<mz>(ppm);
-    let peptide = rustyms::peptide::Peptide::pro_forma(peptide)?;
+    let peptide = rustyms::Peptide::pro_forma(peptide)?;
     let spectrum = unsafe { &spectra[index] };
     let fragments = if monoisotopic {
         generate_theoretical_fragments::<MonoIsotopic>(

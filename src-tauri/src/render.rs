@@ -1,6 +1,6 @@
 use std::{collections::HashSet, fmt::Write};
 
-use rustyms::{fragment::FragmentType, spectrum::AnnotatedSpectrum, MassOverCharge, Zero};
+use rustyms::{AnnotatedSpectrum, FragmentType, MassOverCharge, Zero};
 
 use crate::html_builder::{HtmlElement, HtmlTag};
 
