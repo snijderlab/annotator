@@ -130,6 +130,8 @@ fn annotate_spectrum(
     let mut model = match model {
         "all" => Model::all(),
         "ethcd" => Model::ethcd(),
+        "etcid" => Model::etcid(),
+        "cidhcd" => Model::cid_hcd(),
         _ => Model::all(),
     };
     model.ppm = MassOverCharge::new::<mz>(ppm);
