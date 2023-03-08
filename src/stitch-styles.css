@@ -1776,7 +1776,8 @@ footer .version {
     --color: var(--color-quinary);
 }
 
-.spectrum .z {
+.spectrum .z,
+.spectrum .z· {
     --color: var(--color-primary-s1);
 }
 

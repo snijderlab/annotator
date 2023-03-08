@@ -62,7 +62,9 @@ fn get_overview(
         max_intensity_unassigned = max_intensity_unassigned.max(peak.intensity);
         if let Some(f) = &peak.annotation {
             max_intensity = max_intensity.max(peak.intensity);
-            f.ion.sequence_index().map(|i| output[i].insert(f.ion));
+            f.ion
+                .position()
+                .map(|i| output[i.sequence_index].insert(f.ion));
         }
     }
     (
@@ -191,8 +193,8 @@ fn render_spectrum(
                     peak.experimental_mz.value,
                     peak.intensity,
                     f.ion
-                        .sequence_index()
-                        .map_or("*".to_string(), |i| (i + 1).to_string()),
+                        .position()
+                        .map_or("*".to_string(), |i| (i.sequence_index + 1).to_string()),
                 )
                 .unwrap();
                 let ch = format!("{:+}", peak.charge.value);
@@ -203,8 +205,8 @@ fn render_spectrum(
                     ch,
                     ch.len(),
                     f.ion
-                        .sequence_index()
-                        .map_or("*".to_string(), |i| (i + 1).to_string())
+                        .position()
+                        .map_or("*".to_string(), |i| i.series_number.to_string())
                 )
                 .unwrap();
             }
@@ -266,15 +268,17 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
                 <td>{}</td>
             </tr>",
                 f.ion
-                    .sequence_index()
-                    .map_or("*".to_string(), |i| (i + 1).to_string()),
+                    .position()
+                    .map_or("*".to_string(), |i| (i.sequence_index + 1).to_string()),
                 f.ion,
                 peak.intensity,
                 peak.experimental_mz.value,
                 (f.mz() - peak.experimental_mz).abs().value,
                 ((f.mz() - peak.experimental_mz).abs() / f.mz() * 1e6).value,
                 f.charge.value,
-                0
+                f.ion
+                    .position()
+                    .map_or("*".to_string(), |i| i.series_number.to_string()),
             ),
         }
         .unwrap()

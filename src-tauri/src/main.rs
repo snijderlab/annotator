@@ -8,7 +8,7 @@ use itertools::Itertools;
 use mass_alignment::{template::Template, *};
 use pdbtbx::*;
 use rustyms::RawSpectrum;
-use rustyms::{mz, Mass, MassOverCharge, MonoIsotopic, Zero};
+use rustyms::{mz, Hecklib, Mass, MassOverCharge, MonoIsotopic, Zero};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
@@ -101,6 +101,10 @@ static mut spectra: Vec<RawSpectrum> = Vec::new();
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
 fn load_mgf(path: &str) -> Result<String, String> {
+    //match rustyms::thermo::open(path) {
+    //    Ok(()) => Ok("loaded thermo".to_string()),
+    //    Err(err) => Err(err),
+    //}
     if let Ok(v) = rustyms::mgf::open(path) {
         unsafe {
             spectra = v;
@@ -115,7 +119,7 @@ fn load_mgf(path: &str) -> Result<String, String> {
 fn annotate_spectrum(
     index: usize,
     ppm: f64,
-    monoisotopic: bool,
+    mass: &str,
     charge: Option<f64>,
     model: &str,
     peptide: &str,
@@ -131,18 +135,26 @@ fn annotate_spectrum(
     model.ppm = MassOverCharge::new::<mz>(ppm);
     let peptide = rustyms::Peptide::pro_forma(peptide)?;
     let spectrum = unsafe { &spectra[index] };
-    let fragments = if monoisotopic {
+    let fragments = if mass == "monoisotopic" {
         generate_theoretical_fragments::<MonoIsotopic>(
             &peptide,
             charge.map_or(spectrum.charge, Charge::new::<e>),
             &model,
         )
-    } else {
+    } else if mass == "averageweight" {
         generate_theoretical_fragments::<AverageWeight>(
             &peptide,
             charge.map_or(spectrum.charge, Charge::new::<e>),
             &model,
         )
+    } else if mass == "hecklib" {
+        generate_theoretical_fragments::<Hecklib>(
+            &peptide,
+            charge.map_or(spectrum.charge, Charge::new::<e>),
+            &model,
+        )
+    } else {
+        panic!("Unknown mass type");
     };
     let annotated = spectrum.annotate(peptide, &fragments, &model);
     Ok((
