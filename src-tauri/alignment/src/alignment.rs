@@ -191,7 +191,7 @@ pub fn align(seq_a: &[AminoAcid], seq_b: &[AminoAcid], alphabet: &Alphabet, ty: 
                 (index_b as isize) * Scoring::GapExtendPenalty as isize,
                 Scoring::GapExtendPenalty as i8,
                 0,
-                if index_b == 0 { 0 } else { 1 },
+                u8::from(index_b != 0),
             );
         }
     }
@@ -202,7 +202,7 @@ pub fn align(seq_a: &[AminoAcid], seq_b: &[AminoAcid], alphabet: &Alphabet, ty: 
             row[0] = Piece::new(
                 (index_a as isize) * Scoring::GapExtendPenalty as isize,
                 Scoring::GapExtendPenalty as i8,
-                if index_a == 0 { 0 } else { 1 },
+                u8::from(index_a != 0),
                 0,
             );
         }
@@ -234,6 +234,7 @@ pub fn align(seq_a: &[AminoAcid], seq_b: &[AminoAcid], alphabet: &Alphabet, ty: 
                     if score == 0 {
                         continue;
                     }
+                    #[allow(clippy::cast_possible_truncation)]
                     values.push(Piece::new(
                         matrix[index_a - len_a][index_b - len_b].score + score as isize,
                         score,

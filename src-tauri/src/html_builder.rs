@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::fmt::Display;
 
 #[derive(Debug, Hash, Clone)]

@@ -3,17 +3,18 @@
     windows_subsystem = "windows"
 )]
 
-use html_builder::{HtmlContent, HtmlElement, HtmlTag};
 use itertools::Itertools;
 use mass_alignment::{template::Template, *};
 use pdbtbx::*;
-use rustyms::RawSpectrum;
-use rustyms::{mz, Hecklib, Mass, MassOverCharge, MonoIsotopic, Zero};
-use std::collections::{HashMap, HashSet};
-use std::fmt::Write;
+use rustyms::{e, generate_theoretical_fragments, AverageWeight, Charge, Model};
+use rustyms::{mz, Hecklib, MassOverCharge, MonoIsotopic};
+use state::State;
+use std::collections::HashMap;
+use std::sync::Mutex;
 
 mod html_builder;
 mod render;
+mod state;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
@@ -95,21 +96,19 @@ fn load_cif(path: &str, min_length: usize, warn: bool) -> Result<(String, String
     }
 }
 
-use rustyms::{e, generate_theoretical_fragments, AverageWeight, Charge, FragmentType, Model};
-static mut spectra: Vec<RawSpectrum> = Vec::new();
+type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
 
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
-fn load_mgf(path: &str) -> Result<String, String> {
+fn load_mgf(path: &str, state: ModifiableState) -> Result<String, String> {
     //match rustyms::thermo::open(path) {
     //    Ok(()) => Ok("loaded thermo".to_string()),
     //    Err(err) => Err(err),
     //}
     if let Ok(v) = rustyms::mgf::open(path) {
-        unsafe {
-            spectra = v;
-        }
-        Ok(format!("Loaded {} spectra", unsafe { spectra.len() }))
+        let count = v.len();
+        state.lock().unwrap().spectra = v;
+        Ok(format!("Loaded {count} spectra"))
     } else {
         Err("Could not load mgf file".to_string())
     }
@@ -123,9 +122,11 @@ fn annotate_spectrum(
     charge: Option<f64>,
     model: &str,
     peptide: &str,
+    state: ModifiableState,
 ) -> Result<(String, String, String), String> {
-    if index >= unsafe { spectra.len() } {
-        return Err("Nonexistent spectrum index".to_string());
+    let state = state.lock().unwrap();
+    if index >= state.spectra.len() {
+        return Err("Non existent spectrum index".to_string());
     }
     let mut model = match model {
         "all" => Model::all(),
@@ -136,7 +137,7 @@ fn annotate_spectrum(
     };
     model.ppm = MassOverCharge::new::<mz>(ppm);
     let peptide = rustyms::Peptide::pro_forma(peptide)?;
-    let spectrum = unsafe { &spectra[index] };
+    let spectrum = &state.spectra[index];
     let fragments = if mass == "monoisotopic" {
         generate_theoretical_fragments::<MonoIsotopic>(
             &peptide,
@@ -183,6 +184,9 @@ const IGNORE_LIST: &[&str] = &["HOH", "WAT", "ADP", "DMS"]; // Common solvents I
 
 fn main() {
     tauri::Builder::default()
+        .manage(Mutex::new(State {
+            spectra: Vec::new(),
+        }))
         .invoke_handler(tauri::generate_handler![
             align_sequences,
             load_cif,
