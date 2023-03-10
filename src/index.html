@@ -9,6 +9,7 @@
   <title>Tauri App</title>
   <script type="module" src="/main.js" defer></script>
   <script type="module" src="/stitch-script.js" defer></script>
+  <script src="/basic.js" defer></script>
 </head>
 
 <body>
@@ -66,8 +67,7 @@ LVESGGGLVQPNSLRLSCAASGF
       <summary>Spectra</summary>
       <h2>Load spectra</h2>
       <label for="load-mgf-path">Path</label>
-      <input id="load-mgf-path" placeholder="Enter path"
-        value="C:\Users\5803969\src\rustyms\data\annotated_example.mgf" />
+      <button type="button" onclick="select_file(this)" id="load-mgf-path">Select file</button>
       <button id="load-mgf-button" type="button">Load</button>
     </div>
     <div class="input-settings">

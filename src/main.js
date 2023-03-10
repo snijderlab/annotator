@@ -6,12 +6,10 @@ let sequenceType;
 let alignmentScore;
 
 async function align() {
-  // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
   alignmentScore.innerHTML = await invoke("align_sequences", { template: sequenceInputA.value, reads: sequenceInputB.value, alignmentType: sequenceType.value });
 }
 
 async function load_cif() {
-  // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
   try {
     var result = await invoke("load_cif", { path: document.querySelector("#load-path").value, minLength: Number(document.querySelector("#load-min-length").value), warn: true });
     console.log(result);
@@ -25,7 +23,7 @@ async function load_cif() {
 
 async function load_mgf() {
   try {
-    let result = await invoke("load_mgf", { path: document.querySelector("#load-mgf-path").value });
+    let result = await invoke("load_mgf", { path: document.querySelector("#load-mgf-path").dataset.filepath });
     document.querySelector("#spectrum-error-log").innerText = result;
   } catch (error) {
     console.log(error);
