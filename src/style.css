@@ -125,3 +125,166 @@ pre {
 #spectrum-results-wrapper {
   padding: 1em;
 }
+
+
+/* spectrum-graph */
+.spectrum-graph {
+  --graph-height: 500px;
+  --graph-height-inc: calc(var(--graph-height) + 10px);
+  --color: red;
+  --radius: 50%;
+  margin-top: 1rem;
+}
+
+.spectrum-graph label {
+  border: 2px solid var(--color-halfway);
+  padding: .25rem;
+  user-select: none;
+  border-radius: 5px;
+}
+
+.spectrum-graph label:has(+input:checked) {
+  border-color: var(--color-primary);
+}
+
+.spectrum-graph .plot {
+  display: flex;
+  flex-basis: 100%;
+}
+
+.spectrum-graph .y-axis {
+  display: flex;
+  flex-direction: column;
+  height: var(--graph-height-inc);
+  justify-content: space-between;
+  align-items: flex-end;
+  border-right: 2px solid var(--color-foreground);
+  padding-right: 2px;
+  position: relative;
+}
+
+.spectrum-graph .y-axis::after {
+  content: "";
+  display: block;
+  position: absolute;
+  height: 2px;
+  width: calc(100vw - 200% - 55px);
+  left: 100%;
+  background-color: var(--color-foreground);
+  top: var(--graph-height-inc);
+  z-index: -10;
+}
+
+.spectrum-graph .y-axis .title {
+  writing-mode: vertical-lr;
+  align-self: center;
+  transform: rotate(180deg);
+}
+
+.spectrum-graph .y-axis .max,
+.spectrum-graph .y-axis .min {
+  font-size: 10px;
+}
+
+.spectrum-graph .y-axis::after,
+.spectrum-graph .x-axis::after {
+  display: none;
+}
+
+.spectrum-graph .x-axis {
+  position: absolute;
+  width: 100%;
+  border-top: 2px solid var(--color-foreground);
+  top: calc(var(--abs-top) - 1px);
+}
+
+.spectrum-graph:has(#relative:checked) .x-axis {
+  top: calc(var(--rel-top) - 1px);
+}
+
+.spectrum-graph .x-axis .title {
+  margin: 0;
+  text-align: center;
+}
+
+.spectrum-graph .data {
+  position: relative;
+  flex-grow: 1;
+}
+
+.spectrum-graph .point {
+  width: 5px;
+  height: 5px;
+  background-color: var(--color);
+  border-radius: var(--radius);
+  position: absolute;
+  top: calc(var(--y-abs) - 2.5px);
+  left: calc(var(--x) - 2.5px);
+  display: block;
+  z-index: 0;
+}
+
+.spectrum-graph:has(#relative:checked) .point {
+  top: calc(var(--y-rel) - 2.5px);
+}
+
+.spectrum-graph:has(#relative:checked) .abs {
+  display: none;
+}
+
+.spectrum-graph:has(#absolute:checked) .rel {
+  display: none;
+}
+
+.spectrum-graph .a {
+  --color: var(--color-primary);
+  z-index: 1;
+}
+
+.spectrum-graph .b {
+  --color: var(--color-secondary);
+  z-index: 1;
+}
+
+.spectrum-graph .c {
+  --color: var(--color-tertiary);
+  z-index: 1;
+}
+
+.spectrum-graph .d {
+  --color: var(--color-quaternary);
+  --radius: 0;
+  z-index: 1;
+}
+
+.spectrum-graph .v {
+  --color: var(--color-quinary);
+  --radius: 0;
+  z-index: 1;
+}
+
+.spectrum-graph .w {
+  --color: var(--color-primary);
+  --radius: 0;
+  z-index: 1;
+}
+
+.spectrum-graph .x {
+  --color: var(--color-quaternary);
+  z-index: 1;
+}
+
+.spectrum-graph .y {
+  --color: var(--color-quinary);
+  z-index: 1;
+}
+
+.spectrum-graph .z,
+.spectrum-graph .z· {
+  --color: var(--color-primary-s1);
+}
+
+.spectrum-graph .unassigned {
+  --color: var(--color-halfway);
+  z-index: 0;
+}

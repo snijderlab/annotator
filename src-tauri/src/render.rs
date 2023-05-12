@@ -1,10 +1,14 @@
 use std::{collections::HashSet, fmt::Write};
 
-use rustyms::{AnnotatedSpectrum, FragmentType, MassOverCharge, Zero};
+use rustyms::{AnnotatedSpectrum, Fragment, FragmentType, MassOverCharge, Zero};
 
 use crate::html_builder::{HtmlElement, HtmlTag};
 
-pub fn annotated_spectrum(spectrum: &AnnotatedSpectrum, id: &str) -> String {
+pub fn annotated_spectrum(
+    spectrum: &AnnotatedSpectrum,
+    id: &str,
+    fragments: &[Fragment],
+) -> String {
     let mut output = "<div class='spectrum'>".to_string();
     let (limits, overview) = get_overview(spectrum);
 
@@ -46,8 +50,112 @@ pub fn annotated_spectrum(spectrum: &AnnotatedSpectrum, id: &str) -> String {
         "Peaks table".to_string(),
         spectrum_table(spectrum, &format!("{id}-table-1")),
     );
+
+    // Bastiaans graph
+    bastiaans_graph(&mut output, spectrum, fragments);
     write!(output, "</div>").unwrap();
     output
+}
+
+fn bastiaans_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &[Fragment]) {
+    write!(output, "<div class='graph spectrum-graph'>").unwrap();
+    write!(output, "<label for='absolute'>Absolute</label>").unwrap();
+    write!(
+        output,
+        "<input type='radio' name='y-axis' id='absolute' value='absolute' checked/>"
+    )
+    .unwrap();
+    write!(output, "<label for='relative'>Relative</label>").unwrap();
+    write!(
+        output,
+        "<input type='radio' name='y-axis' id='relative' value='relative'/>"
+    )
+    .unwrap();
+
+    write!(output, "<div class='plot'>").unwrap();
+    let data: Vec<_> = spectrum
+        .spectrum
+        .iter()
+        .map(|point| {
+            let distance = fragments
+                .iter()
+                .filter(|frag| frag.ion.to_string() == "c" || frag.ion.to_string() == "z")
+                .fold((f64::MAX, f64::MAX), |acc, frag: &Fragment| {
+                    let rel = ((frag.mz() - point.experimental_mz) / frag.mz()
+                        * MassOverCharge::new::<rustyms::mz>(1e6))
+                    .value;
+                    let abs = (frag.mz() - point.experimental_mz).value;
+                    (
+                        if acc.0.abs() < rel.abs() { acc.0 } else { rel },
+                        if acc.1.abs() < abs.abs() { acc.1 } else { abs },
+                    )
+                });
+            (
+                point
+                    .annotation
+                    .as_ref()
+                    .map(|a| a.ion.to_string())
+                    .unwrap_or("unassigned".to_string()),
+                point.experimental_mz,
+                distance.0, // rel (ppm)
+                distance.1, // abs (Da)
+            )
+        })
+        .collect();
+    let boundaries = data.iter().fold(
+        (f64::MIN, f64::MAX, f64::MIN, f64::MAX, f64::MIN, f64::MAX),
+        |acc, point| {
+            (
+                acc.0.max(point.2), // rel
+                acc.1.min(point.2),
+                acc.2.max(point.3), // abs
+                acc.3.min(point.3),
+                acc.4.max(point.1.value),
+                acc.5.min(point.1.value),
+            )
+        },
+    );
+    write!(output, "<div class='y-axis'>").unwrap();
+    write!(output, "<span class='max abs'>{:.2}</span>", boundaries.0).unwrap();
+    write!(output, "<span class='max rel'>{:.2}</span>", boundaries.2).unwrap();
+    write!(
+        output,
+        "<span class='title abs'>Absolute distance to closest c/z ion (Da)</span><span class='title rel'>Relative distance to closest c/z ion (ppm)</span>"
+    )
+    .unwrap();
+    write!(output, "<span class='min abs'>{:.2}</span>", boundaries.1).unwrap();
+    write!(output, "<span class='min rel'>{:.2}</span>", boundaries.3).unwrap();
+    write!(output, "</div>").unwrap();
+    write!(output, "<div class='data'>").unwrap();
+    write!(
+        output,
+        "<div class='x-axis' style='--abs-top:{}%;--rel-top:{}%'>",
+        boundaries.2 / (boundaries.2 + boundaries.3.abs()) * 100.0,
+        boundaries.0 / (boundaries.0 + boundaries.1.abs()) * 100.0,
+    )
+    .unwrap();
+    write!(output, "<span class='min'>{:.2}</span>", boundaries.5).unwrap();
+    write!(output, "<span class='title'>mz</span>").unwrap();
+    write!(output, "<span class='max'>{:.2}</span>", boundaries.4).unwrap();
+    write!(output, "</div>").unwrap();
+
+    for point in data {
+        write!(
+            output,
+            "<span class='point {}' style='--y-abs:{}%;--y-rel:{}%;--x:{}%' data-ppm='{}' data-abs='{}' data-mz='{}'></span>",
+            point.0,
+            (boundaries.2 - point.3) / (boundaries.2 + boundaries.3.abs()) * 100.0,
+            (boundaries.0 - point.2) / (boundaries.0 + boundaries.1.abs()) * 100.0,
+            (point.1.value - boundaries.5) / (boundaries.4 - boundaries.5) * 100.0,
+            point.3,
+            point.2,
+            point.1.value,
+        )
+        .unwrap();
+    }
+    write!(output, "</div>").unwrap();
+
+    write!(output, "</div>").unwrap();
 }
 
 fn get_overview(

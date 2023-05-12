@@ -162,7 +162,7 @@ fn annotate_spectrum(
     };
     let annotated = spectrum.annotate(peptide, &fragments, &model);
     Ok((
-        render::annotated_spectrum(&annotated, "spectrum"),
+        render::annotated_spectrum(&annotated, "spectrum", &fragments),
         format!("{fragments:?}"),
         format!("{annotated:?}"),
     ))
