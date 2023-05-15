@@ -172,7 +172,7 @@ pre {
   left: 100%;
   background-color: var(--color-foreground);
   top: var(--graph-height-inc);
-  z-index: -10;
+  z-index: 0;
 }
 
 .spectrum-graph .y-axis .title {
@@ -219,7 +219,7 @@ pre {
   border-radius: var(--radius);
   position: absolute;
   top: calc(var(--y-abs) - 2.5px);
-  left: calc(var(--x) - 2.5px);
+  left: calc(var(--x-mz) - 2.5px);
   display: block;
   z-index: 0;
 }
@@ -228,11 +228,14 @@ pre {
   top: calc(var(--y-rel) - 2.5px);
 }
 
-.spectrum-graph:has(#relative:checked) .abs {
-  display: none;
+.spectrum-graph:has(#mass:checked) .point {
+  left: calc(var(--x-mass) - 2.5px);
 }
 
-.spectrum-graph:has(#absolute:checked) .rel {
+.spectrum-graph:has(#relative:checked) .abs,
+.spectrum-graph:has(#absolute:checked) .rel,
+.spectrum-graph:has(#mz:checked) .mass,
+.spectrum-graph:has(#mass:checked) .mz {
   display: none;
 }
 

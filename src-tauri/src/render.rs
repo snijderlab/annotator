@@ -116,6 +116,18 @@ fn bastiaans_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments:
         "<input type='radio' name='y-axis' id='relative' value='relative'/>"
     )
     .unwrap();
+    write!(output, "<label for='mz'>mz</label>").unwrap();
+    write!(
+        output,
+        "<input type='radio' name='x-axis' id='mz' value='mz' checked/>"
+    )
+    .unwrap();
+    write!(output, "<label for='mass'>Mass</label>").unwrap();
+    write!(
+        output,
+        "<input type='radio' name='x-axis' id='mass' value='mass'/>"
+    )
+    .unwrap();
 
     write!(output, "<div class='plot'>").unwrap();
     let data: Vec<_> = spectrum
@@ -141,22 +153,34 @@ fn bastiaans_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments:
                     .as_ref()
                     .map(|a| a.ion.to_string())
                     .unwrap_or("unassigned".to_string()),
-                point.experimental_mz,
-                distance.0, // rel (ppm)
-                distance.1, // abs (Da)
+                distance.0,                           // rel (ppm)
+                distance.1,                           // abs (Da)
+                point.experimental_mz,                // mz
+                point.experimental_mz / point.charge, // mass
             )
         })
         .collect();
     let boundaries = data.iter().fold(
-        (f64::MIN, f64::MAX, f64::MIN, f64::MAX, f64::MIN, f64::MAX),
+        (
+            f64::MIN,
+            f64::MAX,
+            f64::MIN,
+            f64::MAX,
+            f64::MIN,
+            f64::MAX,
+            f64::MIN,
+            f64::MAX,
+        ),
         |acc, point| {
             (
-                acc.0.max(point.2), // rel
-                acc.1.min(point.2),
-                acc.2.max(point.3), // abs
-                acc.3.min(point.3),
-                acc.4.max(point.1.value),
-                acc.5.min(point.1.value),
+                acc.0.max(point.1), // rel
+                acc.1.min(point.1),
+                acc.2.max(point.2), // abs
+                acc.3.min(point.2),
+                acc.4.max(point.3.value), // mz
+                acc.5.min(point.3.value),
+                acc.6.max(point.4.value), // mass
+                acc.7.min(point.4.value),
             )
         },
     );
@@ -179,22 +203,27 @@ fn bastiaans_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments:
         boundaries.0 / (boundaries.0 + boundaries.1.abs()) * 100.0,
     )
     .unwrap();
-    write!(output, "<span class='min'>{:.2}</span>", boundaries.5).unwrap();
-    write!(output, "<span class='title'>mz</span>").unwrap();
-    write!(output, "<span class='max'>{:.2}</span>", boundaries.4).unwrap();
+    write!(output, "<span class='min mz'>{:.2}</span>", boundaries.5).unwrap();
+    write!(output, "<span class='title mz'>mz</span>").unwrap();
+    write!(output, "<span class='max mz'>{:.2}</span>", boundaries.4).unwrap();
+    write!(output, "<span class='min mass'>{:.2}</span>", boundaries.7).unwrap();
+    write!(output, "<span class='title mass'>mass</span>").unwrap();
+    write!(output, "<span class='max mass'>{:.2}</span>", boundaries.6).unwrap();
     write!(output, "</div>").unwrap();
 
     for point in data {
         write!(
             output,
-            "<span class='point {}' style='--y-abs:{}%;--y-rel:{}%;--x:{}%' data-ppm='{}' data-abs='{}' data-mz='{}'></span>",
+            "<span class='point {}' style='--y-rel:{}%;--y-abs:{}%;--x-mz:{}%;--x-mass:{}%;' data-ppm='{}' data-abs='{}' data-mz='{}' data-mass='{}'></span>",
             point.0,
-            (boundaries.2 - point.3) / (boundaries.2 + boundaries.3.abs()) * 100.0,
-            (boundaries.0 - point.2) / (boundaries.0 + boundaries.1.abs()) * 100.0,
-            (point.1.value - boundaries.5) / (boundaries.4 - boundaries.5) * 100.0,
-            point.3,
+            (boundaries.0 - point.1) / (boundaries.0 + boundaries.1.abs()) * 100.0,
+            (boundaries.2 - point.2) / (boundaries.2 + boundaries.3.abs()) * 100.0,
+            (point.3.value - boundaries.5) / (boundaries.4 - boundaries.5) * 100.0,
+            (point.4.value - boundaries.7) / (boundaries.6 - boundaries.7) * 100.0,
+            point.1,
             point.2,
-            point.1.value,
+            point.3.value,
+            point.4.value,
         )
         .unwrap();
     }

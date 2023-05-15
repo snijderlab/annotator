@@ -131,6 +131,7 @@ fn annotate_spectrum(
     }
     let mut model = match model {
         "all" => Model::all(),
+        "really_all" => Model::really_all(),
         "ethcd" => Model::ethcd(),
         "etcid" => Model::etcid(),
         "cidhcd" => Model::cid_hcd(),

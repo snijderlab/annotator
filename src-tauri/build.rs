@@ -99,6 +99,7 @@ LVESGGGLVQPNSLRLSCAASGF
       <label for="spectrum-model">Model </label>
       <select id="spectrum-model">
         <option value="all">All</option>
+        <option value="really_all">Really all</option>
         <option value="ethcd">Ethcd</option>
         <option value="etcid">Etcid</option>
         <option value="cidhcd">CidHcd</option>
