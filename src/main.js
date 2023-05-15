@@ -31,7 +31,7 @@ async function load_mgf() {
   }
 }
 
-import { SpectrumSetUp } from "./stitch-script.js";
+//import { SpectrumSetUp } from "./stitch-assets/script.js";
 async function annotate_spectrum() {
   try {
     var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);

@@ -105,7 +105,7 @@ fn load_mgf(path: &str, state: ModifiableState) -> Result<String, String> {
     //    Ok(()) => Ok("loaded thermo".to_string()),
     //    Err(err) => Err(err),
     //}
-    match rustyms::mgf::open(path) {
+    match rustyms::rawfile::mgf::open(path) {
         Ok(v) => {
             let count = v.len();
             state.lock().unwrap().spectra = v;

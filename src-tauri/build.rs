@@ -14,12 +14,12 @@ r#"<!DOCTYPE html>
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="stylesheet" href="stitch-styles.css" />
+  <link rel="stylesheet" href="stitch-assets/styles.css" />
   <link rel="stylesheet" href="style.css" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tauri App</title>
+  <title>Stitch+Ox</title>
   <script type="module" src="/main.js" defer></script>
-  <script type="module" src="/stitch-script.js" defer></script>
+  <script src="stitch-assets/script.js"></script>
   <script src="/basic.js" defer></script>
 </head>
 

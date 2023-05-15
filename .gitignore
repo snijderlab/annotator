@@ -23,5 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
+# Build directories
+/*/target
+
 # Auto generated files
 /src/index.html

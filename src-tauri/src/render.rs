@@ -1,43 +1,19 @@
-use std::{collections::HashSet, fmt::Write};
+use std::{collections::HashSet, error::Error, fmt::Write};
 
 use rustyms::{AnnotatedSpectrum, Fragment, FragmentType, MassOverCharge, Zero};
 
-use crate::html_builder::{HtmlElement, HtmlTag};
+use crate::html_builder::{HtmlContent, HtmlElement, HtmlTag};
 
 pub fn annotated_spectrum(
     spectrum: &AnnotatedSpectrum,
     id: &str,
     fragments: &[Fragment],
 ) -> String {
-    let mut output = "<div class='spectrum'>".to_string();
+    let mut output = "<div class='spectrum' onload='SpectrumSetUp()'>".to_string();
     let (limits, overview) = get_overview(spectrum);
 
-    write!(output, "<div class='manual-zoom'>").unwrap();
-    write!(output, "<label for='{id}-mz-min'>Mz Min</label>").unwrap();
-    write!(
-        output,
-        "<input id='{id}-mz-min' class='mz-min' type='number' value='0'/>"
-    )
-    .unwrap();
-    write!(output, "<label for='{id}-mz-max'>Mz Max</label>").unwrap();
-    write!(
-        output,
-        "<input id='{id}-mz-max' class='mz-max' type='number' value='{}'/>",
-        limits.0.value
-    )
-    .unwrap();
-    write!(
-        output,
-        "<label for='{id}-intensity-max'>Intensity Max</label>"
-    )
-    .unwrap();
-    write!(
-        output,
-        "<input id='{id}-intensity-max' class='intensity-max' type='number' value='{}'/>",
-        limits.2
-    )
-    .unwrap();
-    write!(output, "</div>").unwrap();
+    spectrum_top_buttons(&mut output, id, &limits);
+
     write!(output, "<div class='wrapper unassigned'>").unwrap();
     create_ion_legend(&mut output, &format!("{id}-1"));
     render_peptide(&mut output, spectrum, overview);
@@ -55,6 +31,75 @@ pub fn annotated_spectrum(
     bastiaans_graph(&mut output, spectrum, fragments);
     write!(output, "</div>").unwrap();
     output
+}
+
+fn spectrum_top_buttons(
+    output: &mut String,
+    id: &str,
+    limits: &(MassOverCharge, f64, f64),
+) -> core::fmt::Result {
+    write!(output, "<div class='manual-zoom'>")?;
+    write!(output, "<label for='{id}-mz-min'>Mz Min</label>")?;
+    write!(
+        output,
+        "<input id='{id}-mz-min' class='mz-min' type='number' value='0'/>"
+    )?;
+    write!(output, "<label for='{id}-mz-max'>Mz Max</label>")?;
+    write!(
+        output,
+        "<input id='{id}-mz-max' class='mz-max' type='number' value='{}'/>",
+        limits.0.value
+    )?;
+    write!(
+        output,
+        "<label for='{id}-intensity-max'>Intensity Max</label>"
+    )?;
+    write!(
+        output,
+        "<input id='{id}-intensity-max' class='intensity-max' type='number' value='{}'/>",
+        limits.2
+    )?;
+    write!(output, "</div>")?;
+    write!(output, "<div class='empty'></div>")?;
+    write!(output, "<div class='render-setup'>")?;
+    write!(output, "<label for='{id}-width'>Width</label>")?;
+    write!(
+        output,
+        "<input id='{id}-width' class='width' type='text' value='100%'/>",
+    )?;
+    write!(output, "<label for='{id}-height'>Height</label>")?;
+    write!(
+        output,
+        "<input id='{id}-height' class='height' type='text' value='250px'/>",
+    )?;
+    write!(
+        output,
+        "<label for='{id}-fs-peptide'>Peptide font size</label>"
+    )?;
+    write!(
+        output,
+        "<input id='{id}-fs-peptide' class='fs-peptide' type='text' value='1.25rem'/>",
+    )?;
+    write!(
+        output,
+        "<label for='{id}-fs-spectrum'>Spectrum font size</label>"
+    )?;
+    write!(
+        output,
+        "<input id='{id}-fs-spectrum' class='fs-spectrum' type='text' value='1rem'/>",
+    )?;
+    write!(output, "<label for='{id}-stroke'>Stroke width</label>")?;
+    write!(
+        output,
+        "<input id='{id}-stroke' class='stroke' type='text' value='2px'/>",
+    )?;
+    write!(
+        output,
+        "<input id='{id}-compact' class='compact' type='checkbox'/>",
+    )?;
+    write!(output, "<label for='{id}-compact'>Compact peptide</label>")?;
+    write!(output, "</div>")?;
+    Ok(())
 }
 
 fn bastiaans_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &[Fragment]) {
