@@ -6,7 +6,9 @@
 use itertools::Itertools;
 use mass_alignment::{template::Template, *};
 use pdbtbx::*;
-use rustyms::{e, generate_theoretical_fragments, AverageWeight, Charge, Model};
+use rustyms::{
+    e, generate_theoretical_fragments, AverageWeight, Charge, Location, Model, NeutralLoss,
+};
 use rustyms::{mz, Hecklib, MassOverCharge, MonoIsotopic};
 use state::State;
 use std::collections::HashMap;
@@ -115,6 +117,8 @@ fn load_mgf(path: &str, state: ModifiableState) -> Result<String, String> {
     }
 }
 
+type ModelParameters = Vec<(Location, Vec<NeutralLoss>)>;
+
 #[tauri::command]
 fn annotate_spectrum(
     index: usize,
@@ -124,6 +128,7 @@ fn annotate_spectrum(
     model: &str,
     peptide: &str,
     state: ModifiableState,
+    cmodel: ModelParameters,
 ) -> Result<(String, String, String), String> {
     let state = state.lock().unwrap();
     if index >= state.spectra.len() {
@@ -135,6 +140,20 @@ fn annotate_spectrum(
         "ethcd" => Model::ethcd(),
         "etcid" => Model::etcid(),
         "cidhcd" => Model::cid_hcd(),
+        "etd" => Model::etd(),
+        "custom" => Model::new(
+            cmodel[0].to_owned(),
+            cmodel[1].to_owned(),
+            cmodel[2].to_owned(),
+            cmodel[3].to_owned(),
+            cmodel[4].to_owned(),
+            cmodel[5].to_owned(),
+            cmodel[6].to_owned(),
+            cmodel[7].to_owned(),
+            cmodel[8].to_owned(),
+            cmodel[9].1.to_owned(),
+            MassOverCharge::new::<mz>(ppm),
+        ),
         _ => Model::all(),
     };
     model.ppm = MassOverCharge::new::<mz>(ppm);
@@ -197,4 +216,20 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[test]
+fn deserialise_test() {
+    dbg!(serde_json::to_string(&vec![
+        (Location::SkipN(1), vec![NeutralLoss::Water]),
+        (Location::All, vec![NeutralLoss::Water]),
+        (Location::SkipNC(1, 2), vec![NeutralLoss::Water]),
+        (
+            Location::TakeN { take: 1, skip: 2 },
+            vec![NeutralLoss::Water]
+        )
+    ]));
+    let text = r###"[[{"SkipN":1},["Water"]],[{"SkipN":1},["Water"]],[{"SkipN":1},["Water"]],[{"SkipN":1},["Water"]],[{"SkipN":1},["Water"]],["All",["Water"]],["All",["Water"]],["All",["Water"]],["All",["Water"]],["All",["Water"]]]"###;
+    let params: Result<ModelParameters, _> = dbg!(serde_json::from_str(text));
+    assert!(params.is_ok());
 }

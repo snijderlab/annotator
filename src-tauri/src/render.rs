@@ -19,7 +19,9 @@ pub fn annotated_spectrum(
     render_peptide(&mut output, spectrum, overview);
     render_spectrum(&mut output, spectrum, limits, "first");
     write!(output, "</div>").unwrap();
-    // Second spectrum
+    // Spectrum graph
+    spectrum_graph(&mut output, spectrum, fragments);
+    // Spectrum table
     collapsible(
         &mut output,
         &format!("{id}-table-1"),
@@ -27,8 +29,6 @@ pub fn annotated_spectrum(
         spectrum_table(spectrum, &format!("{id}-table-1")),
     );
 
-    // Bastiaans graph
-    bastiaans_graph(&mut output, spectrum, fragments);
     write!(output, "</div>").unwrap();
     output
 }
@@ -102,32 +102,21 @@ fn spectrum_top_buttons(
     Ok(())
 }
 
-fn bastiaans_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &[Fragment]) {
+fn spectrum_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &[Fragment]) {
     write!(output, "<div class='graph spectrum-graph'>").unwrap();
-    write!(output, "<label for='absolute'>Absolute</label>").unwrap();
+    write!(output, "<label for='absolute'><input type='radio' name='y-axis' id='absolute' value='absolute' checked/>Absolute</label>").unwrap();
+    write!(output, "<label for='relative'><input type='radio' name='y-axis' id='relative' value='relative'/>Relative</label>").unwrap();
     write!(
         output,
-        "<input type='radio' name='y-axis' id='absolute' value='absolute' checked/>"
+        "<label for='mz'><input type='radio' name='x-axis' id='mz' value='mz' checked/>mz</label>"
     )
     .unwrap();
-    write!(output, "<label for='relative'>Relative</label>").unwrap();
     write!(
         output,
-        "<input type='radio' name='y-axis' id='relative' value='relative'/>"
+        "<label for='mass'><input type='radio' name='x-axis' id='mass' value='mass'/>Mass</label>"
     )
     .unwrap();
-    write!(output, "<label for='mz'>mz</label>").unwrap();
-    write!(
-        output,
-        "<input type='radio' name='x-axis' id='mz' value='mz' checked/>"
-    )
-    .unwrap();
-    write!(output, "<label for='mass'>Mass</label>").unwrap();
-    write!(
-        output,
-        "<input type='radio' name='x-axis' id='mass' value='mass'/>"
-    )
-    .unwrap();
+    write!(output, "<label><input type='checkbox' name='intensity' id='intensity' value='intensity'/>Intensity</label>").unwrap();
 
     write!(output, "<div class='plot'>").unwrap();
     let data: Vec<_> = spectrum
@@ -156,12 +145,15 @@ fn bastiaans_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments:
                 distance.0,                           // rel (ppm)
                 distance.1,                           // abs (Da)
                 point.experimental_mz,                // mz
-                point.experimental_mz / point.charge, // mass
+                point.experimental_mz * point.charge, // mass
+                point.intensity,                      // intensity
             )
         })
         .collect();
     let boundaries = data.iter().fold(
         (
+            f64::MIN,
+            f64::MAX,
             f64::MIN,
             f64::MAX,
             f64::MIN,
@@ -181,6 +173,8 @@ fn bastiaans_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments:
                 acc.5.min(point.3.value),
                 acc.6.max(point.4.value), // mass
                 acc.7.min(point.4.value),
+                acc.8.max(point.5), // intensity
+                acc.9.min(point.5),
             )
         },
     );
@@ -214,21 +208,23 @@ fn bastiaans_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments:
     for point in data {
         write!(
             output,
-            "<span class='point {}' style='--y-rel:{}%;--y-abs:{}%;--x-mz:{}%;--x-mass:{}%;' data-ppm='{}' data-abs='{}' data-mz='{}' data-mass='{}'></span>",
+            "<span class='point {}' style='--y-rel:{}%;--y-abs:{}%;--x-mz:{}%;--x-mass:{}%;--intensity:{}' data-ppm='{}' data-abs='{}' data-mz='{}' data-mass='{}' data-intensity='{}'></span>",
             point.0,
-            (boundaries.0 - point.1) / (boundaries.0 + boundaries.1.abs()) * 100.0,
-            (boundaries.2 - point.2) / (boundaries.2 + boundaries.3.abs()) * 100.0,
-            (point.3.value - boundaries.5) / (boundaries.4 - boundaries.5) * 100.0,
-            (point.4.value - boundaries.7) / (boundaries.6 - boundaries.7) * 100.0,
+            (boundaries.0 - point.1) / (boundaries.0 + boundaries.1.abs()) * 100.0, // rel
+            (boundaries.2 - point.2) / (boundaries.2 + boundaries.3.abs()) * 100.0, // abs
+            (point.3.value - boundaries.5) / (boundaries.4 - boundaries.5) * 100.0, // mz
+            (point.4.value - boundaries.7) / (boundaries.6 - boundaries.7) * 100.0, // mass
+            (point.5 - boundaries.9) / (boundaries.8 - boundaries.9), // intensity
             point.1,
             point.2,
             point.3.value,
             point.4.value,
+            point.5,
         )
         .unwrap();
     }
     write!(output, "</div>").unwrap();
-
+    write!(output, "</div>").unwrap();
     write!(output, "</div>").unwrap();
 }
 

@@ -96,6 +96,8 @@ LVESGGGLVQPNSLRLSCAASGF
         <option value="averageweight">AverageWeight</option>
         <option value="hecklib">Hecklib</option>
       </select>
+      <label for="spectrum-charge">Max charge </label>
+      <input type="number" id="spectrum-charge" value="" placeholder="Empty takes peptide charge from raw data" />
       <label for="spectrum-model">Model </label>
       <select id="spectrum-model">
         <option value="all">All</option>
@@ -103,9 +105,41 @@ LVESGGGLVQPNSLRLSCAASGF
         <option value="ethcd">Ethcd</option>
         <option value="etcid">Etcid</option>
         <option value="cidhcd">CidHcd</option>
+        <option value="etd">Etd</option>
+        <option value="custom">Custom</option>
       </select>
-      <label for="spectrum-charge">Max charge </label>
-      <input type="number" id="spectrum-charge" value="" placeholder="Empty takes peptide charge from raw data" />
+      <fieldset class="custom-model">
+        <legend>Custom model</legend>
+        <p>Ion</p>
+        <p>Location</p>
+        <p>Loss</p>"#).unwrap();
+    for ion in ["a", "b", "c", "d", "v", "w", "x", "y", "z"] {
+        write!(
+            writer,
+            r#"<label>{0}</label>
+        <div id="model-{0}-location" class="location">
+          <select onchange="this.className=this.options[Number(this.value)].dataset.cls;">
+            <option value="0" data-cls="arg-0" data-value="All" selected>All</option>
+            <option value="1" data-cls="arg-0" data-value="None">None</option>
+            <option value="2" data-cls="arg-1" data-value="SkipN">SkipN</option>
+            <option value="3" data-cls="arg-1" data-value="SkipC">SkipC</option>
+            <option value="4" data-cls="arg-1" data-value="TakeC">TakeC</option>
+            <option value="5" data-cls="arg-2" data-value="SkipNC">SkipNC</option>
+            <option value="6" data-cls="arg-2" data-value="TakeN">TakeN</option>
+          </select>
+          <input type="number" value="1" min="1">
+          <input type="number" value="1" min="1">
+        </div>
+        <input type="text" id="model-{0}-loss" value="Water"/>"#,
+            ion
+        )
+        .unwrap();
+    }
+    write!(
+        writer,
+        r#"<label>precursor</label>
+        <input type="text" id="model-precursor-loss" value="Water" class="col-2"/>
+      </fieldset>
       <button id="annotate-button" type="button">Annotate</button>
     </div>
     <div id="spectrum-results-wrapper"></div>
@@ -118,6 +152,7 @@ LVESGGGLVQPNSLRLSCAASGF
 </body>
 
 </html>"#
-    ).unwrap();
+    )
+    .unwrap();
     tauri_build::build()
 }

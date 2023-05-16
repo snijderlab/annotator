@@ -7,7 +7,7 @@
     "withGlobalTauri": true
   },
   "package": {
-    "productName": "tauri-test",
+    "productName": "stitch-oxide",
     "version": "0.0.0"
   },
   "tauri": {
@@ -32,7 +32,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.stitch.tauri-test",
+      "identifier": "com.stitch.stitch-oxide",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
@@ -61,7 +61,8 @@
         "fullscreen": false,
         "height": 600,
         "resizable": true,
-        "title": "tauri-test",
+        "alwaysOnTop": false,
+        "title": "Stitch[+Oxide]",
         "width": 800
       }
     ]
