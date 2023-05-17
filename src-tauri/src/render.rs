@@ -118,7 +118,6 @@ fn spectrum_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: 
     .unwrap();
     write!(output, "<label><input type='checkbox' name='intensity' id='intensity' value='intensity'/>Intensity</label>").unwrap();
 
-    write!(output, "<div class='plot'>").unwrap();
     let data: Vec<_> = spectrum
         .spectrum
         .iter()
@@ -126,16 +125,27 @@ fn spectrum_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: 
             let distance = fragments
                 .iter()
                 .filter(|frag| frag.ion.to_string() == "c" || frag.ion.to_string() == "z")
-                .fold((f64::MAX, f64::MAX), |acc, frag: &Fragment| {
-                    let rel = ((frag.mz() - point.experimental_mz) / frag.mz()
-                        * MassOverCharge::new::<rustyms::mz>(1e6))
-                    .value;
-                    let abs = (frag.mz() - point.experimental_mz).value;
-                    (
-                        if acc.0.abs() < rel.abs() { acc.0 } else { rel },
-                        if acc.1.abs() < abs.abs() { acc.1 } else { abs },
-                    )
-                });
+                .fold(
+                    ((f64::MAX, String::new()), (f64::MAX, String::new())),
+                    |acc, frag: &Fragment| {
+                        let rel = ((frag.mz() - point.experimental_mz) / frag.mz()
+                            * MassOverCharge::new::<rustyms::mz>(1e6))
+                        .value;
+                        let abs = (frag.mz() - point.experimental_mz).value;
+                        (
+                            if acc.0 .0.abs() < rel.abs() {
+                                acc.0
+                            } else {
+                                (rel, frag.to_string())
+                            },
+                            if acc.1 .0.abs() < abs.abs() {
+                                acc.1
+                            } else {
+                                (abs, frag.to_string())
+                            },
+                        )
+                    },
+                );
             (
                 point
                     .annotation
@@ -165,10 +175,10 @@ fn spectrum_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: 
         ),
         |acc, point| {
             (
-                acc.0.max(point.1), // rel
-                acc.1.min(point.1),
-                acc.2.max(point.2), // abs
-                acc.3.min(point.2),
+                acc.0.max(point.1 .0), // rel
+                acc.1.min(point.1 .0),
+                acc.2.max(point.2 .0), // abs
+                acc.3.min(point.2 .0),
                 acc.4.max(point.3.value), // mz
                 acc.5.min(point.3.value),
                 acc.6.max(point.4.value), // mass
@@ -178,16 +188,22 @@ fn spectrum_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: 
             )
         },
     );
+    write!(
+        output,
+        "<div class='plot' style='--rel-max:{};--rel-min:{};--abs-max:{};--abs-min:{};--mz-min:{};--mz-max:{};--mass-min:{};--mass-max:{};'>",
+        boundaries.0, boundaries.1, boundaries.2, boundaries.3, boundaries.4, boundaries.5, boundaries.6, boundaries.7
+    )
+    .unwrap();
     write!(output, "<div class='y-axis'>").unwrap();
-    write!(output, "<span class='max abs'>{:.2}</span>", boundaries.0).unwrap();
-    write!(output, "<span class='max rel'>{:.2}</span>", boundaries.2).unwrap();
+    write!(output, "<span class='max abs'>{:.2}</span>", boundaries.2).unwrap();
+    write!(output, "<span class='max rel'>{:.2}</span>", boundaries.0).unwrap();
     write!(
         output,
         "<span class='title abs'>Absolute distance to closest c/z ion (Da)</span><span class='title rel'>Relative distance to closest c/z ion (ppm)</span>"
     )
     .unwrap();
-    write!(output, "<span class='min abs'>{:.2}</span>", boundaries.1).unwrap();
-    write!(output, "<span class='min rel'>{:.2}</span>", boundaries.3).unwrap();
+    write!(output, "<span class='min abs'>{:.2}</span>", boundaries.3).unwrap();
+    write!(output, "<span class='min rel'>{:.2}</span>", boundaries.1).unwrap();
     write!(output, "</div>").unwrap();
     write!(output, "<div class='data'>").unwrap();
     write!(
@@ -208,18 +224,20 @@ fn spectrum_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: 
     for point in data {
         write!(
             output,
-            "<span class='point {}' style='--y-rel:{}%;--y-abs:{}%;--x-mz:{}%;--x-mass:{}%;--intensity:{}' data-ppm='{}' data-abs='{}' data-mz='{}' data-mass='{}' data-intensity='{}'></span>",
+            "<span class='point {}' style='--rel:{};--abs:{};--mz:{};--mass:{};--intensity:{}' data-ppm='{}' data-abs='{}' data-mz='{}' data-mass='{}' data-intensity='{}' data-reference-fragment-rel='{}' data-reference-fragment-abs='{}'></span>",
             point.0,
-            (boundaries.0 - point.1) / (boundaries.0 + boundaries.1.abs()) * 100.0, // rel
-            (boundaries.2 - point.2) / (boundaries.2 + boundaries.3.abs()) * 100.0, // abs
-            (point.3.value - boundaries.5) / (boundaries.4 - boundaries.5) * 100.0, // mz
-            (point.4.value - boundaries.7) / (boundaries.6 - boundaries.7) * 100.0, // mass
-            (point.5 - boundaries.9) / (boundaries.8 - boundaries.9), // intensity
-            point.1,
-            point.2,
+            point.1.0,
+            point.2.0,
             point.3.value,
             point.4.value,
             point.5,
+            point.1.0,
+            point.2.0,
+            point.3.value,
+            point.4.value,
+            point.5,
+            point.1.1,
+            point.2.1,
         )
         .unwrap();
     }

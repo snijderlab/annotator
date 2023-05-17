@@ -245,6 +245,7 @@ pre {
 .spectrum-graph .data {
   position: relative;
   flex-grow: 1;
+  overflow: hidden;
 }
 
 .spectrum-graph .point {
@@ -253,19 +254,19 @@ pre {
   background-color: var(--color);
   border-radius: var(--radius);
   position: absolute;
-  top: calc(var(--y-abs) - 2.5px);
-  left: calc(var(--x-mz) - 2.5px);
+  top: calc(100% * (var(--abs-max) - var(--abs)) / (var(--abs-max) - var(--abs-min)));
+  left: calc(100% * (var(--mz-max) - var(--mz)) / (var(--mz-max) - var(--mz-min)));
   display: block;
   z-index: 0;
   opacity: calc(var(--intensity) * 0.5 + 50%);
 }
 
 .spectrum-graph:has(#relative:checked) .point {
-  top: calc(var(--y-rel) - 2.5px);
+  top: calc(100% * (var(--rel-max) - var(--rel)) / (var(--rel-max) - var(--rel-min)));
 }
 
 .spectrum-graph:has(#mass:checked) .point {
-  left: calc(var(--x-mass) - 2.5px);
+  left: calc(100% * (var(--mass-max) - var(--mass)) / (var(--mass-max) - var(--mass-min)));
 }
 
 .spectrum-graph:has(#relative:checked) .abs,

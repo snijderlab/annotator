@@ -2506,7 +2506,7 @@ checksum = "4f3208ce4d8448b3f3e7d168a73f5e0c43a61e32930de3bceeccedb388b6bf06"
 [[package]]
 name = "rustyms"
 version = "0.1.0"
-source = "git+https://github.com/douweschulte/rustyms#0546aeca6a206bc8ff77e427591f7725238cad4f"
+source = "git+https://github.com/douweschulte/rustyms#48aa067b0e385a761527e46c51ebb34c35b23a36"
 dependencies = [
  "entab",
  "serde",
