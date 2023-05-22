@@ -103,21 +103,6 @@ fn spectrum_top_buttons(
 }
 
 fn spectrum_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &[Fragment]) {
-    write!(output, "<div class='graph spectrum-graph'>").unwrap();
-    write!(output, "<label for='absolute'><input type='radio' name='y-axis' id='absolute' value='absolute' checked/>Absolute</label>").unwrap();
-    write!(output, "<label for='relative'><input type='radio' name='y-axis' id='relative' value='relative'/>Relative</label>").unwrap();
-    write!(
-        output,
-        "<label for='mz'><input type='radio' name='x-axis' id='mz' value='mz' checked/>mz</label>"
-    )
-    .unwrap();
-    write!(
-        output,
-        "<label for='mass'><input type='radio' name='x-axis' id='mass' value='mass'/>Mass</label>"
-    )
-    .unwrap();
-    write!(output, "<label><input type='checkbox' name='intensity' id='intensity' value='intensity'/>Intensity</label>").unwrap();
-
     let data: Vec<_> = spectrum
         .spectrum
         .iter()
@@ -188,10 +173,12 @@ fn spectrum_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: 
             )
         },
     );
+
+    spectrum_graph_header(output, &boundaries).unwrap();
     write!(
         output,
-        "<div class='plot' style='--rel-max:{};--rel-min:{};--abs-max:{};--abs-min:{};--mz-min:{};--mz-max:{};--mass-min:{};--mass-max:{};'>",
-        boundaries.0, boundaries.1, boundaries.2, boundaries.3, boundaries.4, boundaries.5, boundaries.6, boundaries.7
+        "<div class='plot' style='--rel-max:{};--rel-min:{};--abs-max:{};--abs-min:{};--mz-min:{};--mz-max:{};--mass-min:{};--mass-max:{};--intensity-min:{};--intensity-max:{};'>",
+        boundaries.0, boundaries.1, boundaries.2, boundaries.3, boundaries.5, boundaries.4, boundaries.7, boundaries.6, boundaries.8, boundaries.9
     )
     .unwrap();
     write!(output, "<div class='y-axis'>").unwrap();
@@ -206,20 +193,19 @@ fn spectrum_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: 
     write!(output, "<span class='min rel'>{:.2}</span>", boundaries.1).unwrap();
     write!(output, "</div>").unwrap();
     write!(output, "<div class='data'>").unwrap();
+    write!(output, "<div class='x-axis'>").unwrap();
+    write!(output, "<span class='min mz'>{:.2}</span>", boundaries.4).unwrap();
+    write!(output, "<span class='title mz'>mz</span>").unwrap();
+    write!(output, "<span class='max mz'>{:.2}</span>", boundaries.5).unwrap();
+    write!(output, "<span class='min mass'>{:.2}</span>", boundaries.6).unwrap();
+    write!(output, "<span class='title mass'>mass</span>").unwrap();
+    write!(output, "<span class='max mass'>{:.2}</span>", boundaries.7).unwrap();
+    write!(output, "</div>").unwrap();
     write!(
         output,
-        "<div class='x-axis' style='--abs-top:{}%;--rel-top:{}%'>",
-        boundaries.2 / (boundaries.2 + boundaries.3.abs()) * 100.0,
-        boundaries.0 / (boundaries.0 + boundaries.1.abs()) * 100.0,
+        "<span class='ruler'><span id='ruler-value'>XX</span></span>"
     )
     .unwrap();
-    write!(output, "<span class='min mz'>{:.2}</span>", boundaries.5).unwrap();
-    write!(output, "<span class='title mz'>mz</span>").unwrap();
-    write!(output, "<span class='max mz'>{:.2}</span>", boundaries.4).unwrap();
-    write!(output, "<span class='min mass'>{:.2}</span>", boundaries.7).unwrap();
-    write!(output, "<span class='title mass'>mass</span>").unwrap();
-    write!(output, "<span class='max mass'>{:.2}</span>", boundaries.6).unwrap();
-    write!(output, "</div>").unwrap();
 
     for point in data {
         write!(
@@ -244,6 +230,51 @@ fn spectrum_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: 
     write!(output, "</div>").unwrap();
     write!(output, "</div>").unwrap();
     write!(output, "</div>").unwrap();
+}
+
+fn spectrum_graph_header(
+    output: &mut String,
+    boundaries: &(f64, f64, f64, f64, f64, f64, f64, f64, f64, f64),
+) -> std::fmt::Result {
+    write!(output, "<div class='graph spectrum-graph'>")?;
+    write!(output, "<label for='absolute'><input type='radio' name='y-axis' id='absolute' value='absolute' checked/>Absolute</label>")?;
+    write!(output, "<label for='relative'><input type='radio' name='y-axis' id='relative' value='relative'/>Relative</label>")?;
+    write!(
+        output,
+        "<label for='mz'><input type='radio' name='x-axis' id='mz' value='mz' checked/>mz</label>"
+    )?;
+    write!(
+        output,
+        "<label for='mass'><input type='radio' name='x-axis' id='mass' value='mass'/>Mass</label>"
+    )?;
+    write!(output, "<label><input type='checkbox' name='intensity' id='intensity' value='intensity'/>Intensity</label>")?;
+    write!(output, "<div class='manual-zoom'>")?;
+    write!(output, "<label for='x-min'>X Min</label>")?;
+    write!(
+        output,
+        "<input id='x-min' class='x-min' type='number' value='{}'/>",
+        boundaries.5
+    )?;
+    write!(output, "<label for='x-max'>X Max</label>")?;
+    write!(
+        output,
+        "<input id='x-max' class='x-max' type='number' value='{}'/>",
+        boundaries.4
+    )?;
+    write!(output, "<label for='y-min'>Y Min</label>")?;
+    write!(
+        output,
+        "<input id='y-min' class='y-min' type='number' value='{}'/>",
+        boundaries.3
+    )?;
+    write!(output, "<label for='y-max'>Y Max</label>")?;
+    write!(
+        output,
+        "<input id='y-max' class='y-max' type='number' value='{}'/>",
+        boundaries.2
+    )?;
+    write!(output, "</div>")?;
+    Ok(())
 }
 
 fn get_overview(

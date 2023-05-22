@@ -119,8 +119,8 @@ LVESGGGLVQPNSLRLSCAASGF
             r#"<label>{0}</label>
         <div id="model-{0}-location" class="location">
           <select onchange="this.className=this.options[Number(this.value)].dataset.cls;">
-            <option value="0" data-cls="arg-0" data-value="All" selected>All</option>
-            <option value="1" data-cls="arg-0" data-value="None">None</option>
+            <option value="0" data-cls="arg-0" data-value="All">All</option>
+            <option value="1" data-cls="arg-0" data-value="None" selected>None</option>
             <option value="2" data-cls="arg-1" data-value="SkipN">SkipN</option>
             <option value="3" data-cls="arg-1" data-value="SkipC">SkipC</option>
             <option value="4" data-cls="arg-1" data-value="TakeC">TakeC</option>
@@ -130,7 +130,7 @@ LVESGGGLVQPNSLRLSCAASGF
           <input type="number" value="1" min="1">
           <input type="number" value="1" min="1">
         </div>
-        <input type="text" id="model-{0}-loss" value="Water"/>"#,
+        <input type="text" id="model-{0}-loss" value=""/>"#,
             ion
         )
         .unwrap();
@@ -138,7 +138,7 @@ LVESGGGLVQPNSLRLSCAASGF
     write!(
         writer,
         r#"<label>precursor</label>
-        <input type="text" id="model-precursor-loss" value="Water" class="col-2"/>
+        <input type="text" id="model-precursor-loss" value="" class="col-2"/>
       </fieldset>
       <button id="annotate-button" type="button">Annotate</button>
     </div>
