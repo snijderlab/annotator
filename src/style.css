@@ -162,6 +162,15 @@ pre {
 
 
 /* spectrum-graph */
+.spectrum .canvas-wrapper {
+  height: calc(2 * var(--height));
+  grid-template-rows: 1fr 2em 1fr;
+  grid-template-areas:
+    "y-axis canvas"
+    ". x-axis"
+    "sg-y-axis spectrum-graph";
+}
+
 .spectrum-graph {
   --graph-height: 500px;
   --graph-height-inc: calc(var(--graph-height) + 10px);
@@ -182,12 +191,16 @@ pre {
   border-color: var(--color-primary);
 }
 
-.spectrum-graph .plot {
+.spectrum-graph {
   display: flex;
   flex-basis: 100%;
+  grid-area: spectrum-graph;
+  position: relative;
+  overflow: hidden;
 }
 
-.spectrum-graph .y-axis {
+.spectrum-graph-y-axis {
+  grid-area: sg-y-axis;
   display: flex;
   flex-direction: column;
   height: var(--graph-height-inc);
@@ -198,7 +211,7 @@ pre {
   position: relative;
 }
 
-.spectrum-graph .y-axis::after {
+.spectrum-graph-y-axis::after {
   content: "";
   display: block;
   position: absolute;
@@ -210,7 +223,7 @@ pre {
   z-index: 0;
 }
 
-.spectrum-graph .y-axis .title {
+.spectrum-graph-y-axis .title {
   writing-mode: vertical-lr;
   align-self: center;
   transform: rotate(180deg);
@@ -220,7 +233,7 @@ pre {
   font-size: 10px;
 }
 
-.spectrum-graph .y-axis::after,
+.spectrum-graph-y-axis::after,
 .spectrum-graph .x-axis::after {
   display: none;
 }
@@ -233,7 +246,7 @@ pre {
   pointer-events: none;
 }
 
-.spectrum-graph:has(#relative:checked) .x-axis {
+.spectrum:has(#relative:checked) .x-axis {
   top: clamp(0px, calc(var(--rel-max) / (var(--rel-max) - var(--rel-min)) * 100% - 1px), 100%)
 }
 
@@ -249,12 +262,6 @@ pre {
   text-align: center;
 }
 
-.spectrum-graph .data {
-  position: relative;
-  flex-grow: 1;
-  overflow: hidden;
-}
-
 .spectrum-graph .point {
   width: 5px;
   height: 5px;
@@ -262,18 +269,14 @@ pre {
   border-radius: var(--radius);
   position: absolute;
   top: calc(100% * (var(--abs-max) - var(--abs)) / (var(--abs-max) - var(--abs-min)));
-  left: calc(100% * (1 - (var(--mz-max) - var(--mz)) / (var(--mz-max) - var(--mz-min))));
+  left: calc(100% * (1 - (var(--max-mz) - var(--mz)) / (var(--max-mz) - var(--min-mz))));
   display: block;
   z-index: 1;
   opacity: calc(var(--intensity) * 0.5 + 50%);
 }
 
-.spectrum-graph:has(#relative:checked) .point {
+.spectrum:has(#relative:checked) .point {
   top: calc(100% * (var(--rel-max) - var(--rel)) / (var(--rel-max) - var(--rel-min)));
-}
-
-.spectrum-graph:has(#mass:checked) .point {
-  left: calc(100% * (1 - (var(--mass-max) - var(--mass)) / (var(--mass-max) - var(--mass-min))));
 }
 
 .spectrum-graph .ruler {
@@ -288,18 +291,16 @@ pre {
   pointer-events: none;
 }
 
-.spectrum-graph .data:hover .ruler {
+.spectrum-graph:hover .ruler {
   display: block;
 }
 
-.spectrum-graph:has(#relative:checked) .abs,
-.spectrum-graph:has(#absolute:checked) .rel,
-.spectrum-graph:has(#mz:checked) .mass,
-.spectrum-graph:has(#mass:checked) .mz {
+.spectrum:has(#relative:checked) .abs,
+.spectrum:has(#absolute:checked) .rel {
   display: none;
 }
 
-.spectrum-graph:has(#intensity:checked) .point {
+.spectrum:has(#intensity:checked) .point {
   width: calc((var(--intensity-max) - var(--intensity)) / (var(--intensity-max) - var(--intensity-min)) * 6px + 2px);
   height: calc((var(--intensity-max) - var(--intensity)) / (var(--intensity-max) - var(--intensity-min)) * 6px + 2px);
 }
