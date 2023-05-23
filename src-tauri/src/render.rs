@@ -1,6 +1,6 @@
 use std::{collections::HashSet, error::Error, fmt::Write};
 
-use rustyms::{AnnotatedSpectrum, Fragment, FragmentType, MassOverCharge, Zero};
+use rustyms::{AnnotatedSpectrum, Fragment, FragmentType, Mass, MassOverCharge, Zero};
 
 use crate::html_builder::{HtmlContent, HtmlElement, HtmlTag};
 
@@ -11,16 +11,17 @@ pub fn annotated_spectrum(
 ) -> String {
     let mut output = "<div class='spectrum' onload='SpectrumSetUp()'>".to_string();
     let (limits, overview) = get_overview(spectrum);
+    let (graph_data, graph_boundaries) = spectrum_graph_boundaries(spectrum, fragments);
 
-    spectrum_top_buttons(&mut output, id, &limits);
+    spectrum_top_buttons(&mut output, id, &limits, &graph_boundaries).unwrap();
 
     write!(output, "<div class='wrapper unassigned'>").unwrap();
     create_ion_legend(&mut output, &format!("{id}-1"));
     render_peptide(&mut output, spectrum, overview);
     render_spectrum(&mut output, spectrum, limits, "first");
-    write!(output, "</div>").unwrap();
     // Spectrum graph
-    spectrum_graph(&mut output, spectrum, fragments);
+    spectrum_graph(&mut output, &graph_boundaries, &graph_data);
+    write!(output, "</div></div>").unwrap();
     // Spectrum table
     collapsible(
         &mut output,
@@ -37,6 +38,7 @@ fn spectrum_top_buttons(
     output: &mut String,
     id: &str,
     limits: &(MassOverCharge, f64, f64),
+    spectrum_graph_boundaries: &(f64, f64, f64, f64, f64, f64, f64, f64, f64, f64),
 ) -> core::fmt::Result {
     write!(output, "<div class='manual-zoom'>")?;
     write!(output, "<label for='{id}-mz-min'>Mz Min</label>")?;
@@ -99,11 +101,27 @@ fn spectrum_top_buttons(
     )?;
     write!(output, "<label for='{id}-compact'>Compact peptide</label>")?;
     write!(output, "</div>")?;
+    write!(output, "<div class='spectrum-graph-setup'>")?;
+    spectrum_graph_header(output, spectrum_graph_boundaries)?;
+    write!(output, "</div>")?;
     Ok(())
 }
 
-fn spectrum_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &[Fragment]) {
-    let data: Vec<_> = spectrum
+type Boundaries = (f64, f64, f64, f64, f64, f64, f64, f64, f64, f64);
+type SpectrumGraphData = Vec<(
+    String,
+    (f64, String),
+    (f64, String),
+    MassOverCharge,
+    Mass,
+    f64,
+)>;
+
+fn spectrum_graph_boundaries(
+    spectrum: &AnnotatedSpectrum,
+    fragments: &[Fragment],
+) -> (SpectrumGraphData, Boundaries) {
+    let data: SpectrumGraphData = spectrum
         .spectrum
         .iter()
         .map(|point| {
@@ -145,7 +163,7 @@ fn spectrum_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: 
             )
         })
         .collect();
-    let boundaries = data.iter().fold(
+    let bounds = data.iter().fold(
         (
             f64::MIN,
             f64::MAX,
@@ -173,15 +191,11 @@ fn spectrum_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: 
             )
         },
     );
+    (data, bounds)
+}
 
-    spectrum_graph_header(output, &boundaries).unwrap();
-    write!(
-        output,
-        "<div class='plot' style='--rel-max:{};--rel-min:{};--abs-max:{};--abs-min:{};--mz-min:{};--mz-max:{};--mass-min:{};--mass-max:{};--intensity-min:{};--intensity-max:{};'>",
-        boundaries.0, boundaries.1, boundaries.2, boundaries.3, boundaries.5, boundaries.4, boundaries.7, boundaries.6, boundaries.8, boundaries.9
-    )
-    .unwrap();
-    write!(output, "<div class='y-axis'>").unwrap();
+fn spectrum_graph(output: &mut String, boundaries: &Boundaries, data: &SpectrumGraphData) {
+    write!(output, "<div class='spectrum-graph-y-axis'>").unwrap();
     write!(output, "<span class='max abs'>{:.2}</span>", boundaries.2).unwrap();
     write!(output, "<span class='max rel'>{:.2}</span>", boundaries.0).unwrap();
     write!(
@@ -192,14 +206,16 @@ fn spectrum_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: 
     write!(output, "<span class='min abs'>{:.2}</span>", boundaries.3).unwrap();
     write!(output, "<span class='min rel'>{:.2}</span>", boundaries.1).unwrap();
     write!(output, "</div>").unwrap();
-    write!(output, "<div class='data'>").unwrap();
+    write!(
+    output,
+    "<div class='spectrum-graph' style='--rel-max:{};--rel-min:{};--abs-max:{};--abs-min:{};--intensity-min:{};--intensity-max:{};'>",
+    boundaries.0, boundaries.1, boundaries.2, boundaries.3, boundaries.5, boundaries.4
+)
+.unwrap();
     write!(output, "<div class='x-axis'>").unwrap();
-    write!(output, "<span class='min mz'>{:.2}</span>", boundaries.4).unwrap();
-    write!(output, "<span class='title mz'>mz</span>").unwrap();
-    write!(output, "<span class='max mz'>{:.2}</span>", boundaries.5).unwrap();
-    write!(output, "<span class='min mass'>{:.2}</span>", boundaries.6).unwrap();
-    write!(output, "<span class='title mass'>mass</span>").unwrap();
-    write!(output, "<span class='max mass'>{:.2}</span>", boundaries.7).unwrap();
+    write!(output, "<span class='min'>{:.2}</span>", boundaries.4).unwrap();
+    write!(output, "<span class='title'>mz</span>").unwrap();
+    write!(output, "<span class='max'>{:.2}</span>", boundaries.5).unwrap();
     write!(output, "</div>").unwrap();
     write!(
         output,
@@ -210,17 +226,15 @@ fn spectrum_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: 
     for point in data {
         write!(
             output,
-            "<span class='point {}' style='--rel:{};--abs:{};--mz:{};--mass:{};--intensity:{}' data-ppm='{}' data-abs='{}' data-mz='{}' data-mass='{}' data-intensity='{}' data-reference-fragment-rel='{}' data-reference-fragment-abs='{}'></span>",
+            "<span class='point {}' style='--rel:{};--abs:{};--mz:{};--intensity:{}' data-ppm='{}' data-abs='{}' data-mz='{}' data-intensity='{}' data-reference-fragment-rel='{}' data-reference-fragment-abs='{}'></span>",
             point.0,
             point.1.0,
             point.2.0,
             point.3.value,
-            point.4.value,
             point.5,
             point.1.0,
             point.2.0,
             point.3.value,
-            point.4.value,
             point.5,
             point.1.1,
             point.2.1,
@@ -228,15 +242,12 @@ fn spectrum_graph(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: 
         .unwrap();
     }
     write!(output, "</div>").unwrap();
-    write!(output, "</div>").unwrap();
-    write!(output, "</div>").unwrap();
 }
 
 fn spectrum_graph_header(
     output: &mut String,
     boundaries: &(f64, f64, f64, f64, f64, f64, f64, f64, f64, f64),
 ) -> std::fmt::Result {
-    write!(output, "<div class='graph spectrum-graph'>")?;
     write!(output, "<label for='absolute'><input type='radio' name='y-axis' id='absolute' value='absolute' checked/>Absolute</label>")?;
     write!(output, "<label for='relative'><input type='radio' name='y-axis' id='relative' value='relative'/>Relative</label>")?;
     write!(
@@ -385,7 +396,7 @@ fn render_spectrum(
 ) {
     write!(
         output,
-        "<div class='canvas-wrapper label' aria-hidden='true'>"
+        "<div class='canvas-wrapper label' aria-hidden='true' style='--min-mz:0;--max-mz:{};--max-intensity:{};' data-initial-max-mz='{}' data-initial-max-intensity='{}' data-initial-max-intensity-assigned='{}'>", limits.0.value, limits.2, limits.0.value, limits.2, limits.1
     )
     .unwrap();
     write!(output, "<div class='y-axis'><span class='n0'>0</span>").unwrap();
@@ -394,7 +405,7 @@ fn render_spectrum(
     write!(output, "<span>{:.2}</span>", 3.0 * limits.2 / 4.0).unwrap();
     write!(output, "<span class='last'>{:.2}</span>", limits.2).unwrap();
     write!(output, "</div>").unwrap();
-    write!(output, "<div class='canvas' style='--min-mz:0;--max-mz:{};--max-intensity:{};' data-initial-max-mz='{}' data-initial-max-intensity='{}' data-initial-max-intensity-assigned='{}'>", limits.0.value, limits.2, limits.0.value, limits.2, limits.1).unwrap();
+    write!(output, "<div class='canvas'>",).unwrap();
     write!(
         output,
         "<span class='selection {selection}' hidden='true'></span>"
@@ -445,7 +456,7 @@ fn render_spectrum(
     write!(output, "<span>{:.2}</span>", limits.0.value / 2.0).unwrap();
     write!(output, "<span>{:.2}</span>", 3.0 * limits.0.value / 4.0).unwrap();
     write!(output, "<span class='last'>{:.2}</span>", limits.0.value).unwrap();
-    write!(output, "</div></div>").unwrap();
+    write!(output, "</div>").unwrap();
 }
 
 fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
