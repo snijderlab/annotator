@@ -159,24 +159,13 @@ fn annotate_spectrum(
     model.ppm = MassOverCharge::new::<mz>(ppm);
     let peptide = rustyms::Peptide::pro_forma(peptide)?;
     let spectrum = &state.spectra[index];
+    let use_charge = charge.map_or(spectrum.charge, Charge::new::<e>);
     let fragments = if mass == "monoisotopic" {
-        generate_theoretical_fragments::<MonoIsotopic>(
-            &peptide,
-            charge.map_or(spectrum.charge, Charge::new::<e>),
-            &model,
-        )
+        generate_theoretical_fragments::<MonoIsotopic>(&peptide, use_charge, &model)
     } else if mass == "averageweight" {
-        generate_theoretical_fragments::<AverageWeight>(
-            &peptide,
-            charge.map_or(spectrum.charge, Charge::new::<e>),
-            &model,
-        )
+        generate_theoretical_fragments::<AverageWeight>(&peptide, use_charge, &model)
     } else if mass == "hecklib" {
-        generate_theoretical_fragments::<Hecklib>(
-            &peptide,
-            charge.map_or(spectrum.charge, Charge::new::<e>),
-            &model,
-        )
+        generate_theoretical_fragments::<Hecklib>(&peptide, use_charge, &model)
     } else {
         panic!("Unknown mass type");
     };
