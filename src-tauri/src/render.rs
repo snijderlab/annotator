@@ -1,6 +1,6 @@
 use std::{collections::HashSet, fmt::Write};
 
-use rustyms::{AnnotatedSpectrum, Fragment, FragmentType, Mass, MassOverCharge, Zero};
+use rustyms::{AnnotatedSpectrum, Charge, Fragment, FragmentType, Mass, MassOverCharge, Zero};
 
 use crate::html_builder::{HtmlElement, HtmlTag};
 
@@ -144,9 +144,9 @@ fn spectrum_top_buttons(
 
 type Boundaries = (f64, f64, f64, f64, f64, f64, f64, f64, f64, f64);
 type SpectrumGraphData = Vec<(
-    String,
-    (f64, String),
-    (f64, String),
+    Option<Fragment>,
+    (f64, Fragment),
+    (f64, Fragment),
     MassOverCharge,
     Mass,
     f64,
@@ -164,7 +164,16 @@ fn spectrum_graph_boundaries(
                 .iter()
                 .filter(|frag| frag.ion.to_string() == "c" || frag.ion.to_string() == "z")
                 .fold(
-                    ((f64::MAX, String::new()), (f64::MAX, String::new())),
+                    (
+                        (
+                            f64::MAX,
+                            Fragment::new(Mass::zero(), Charge::zero(), FragmentType::precursor),
+                        ),
+                        (
+                            f64::MAX,
+                            Fragment::new(Mass::zero(), Charge::zero(), FragmentType::precursor),
+                        ),
+                    ),
                     |acc, frag: &Fragment| {
                         let rel = ((frag.mz() - point.experimental_mz) / frag.mz()
                             * MassOverCharge::new::<rustyms::mz>(1e6))
@@ -174,12 +183,12 @@ fn spectrum_graph_boundaries(
                             if acc.0 .0.abs() < rel.abs() {
                                 acc.0
                             } else {
-                                (rel, frag.to_string())
+                                (rel, frag.clone())
                             },
                             if acc.1 .0.abs() < abs.abs() {
                                 acc.1
                             } else {
-                                (abs, frag.to_string())
+                                (abs, frag.clone())
                             },
                         )
                     },
@@ -188,8 +197,8 @@ fn spectrum_graph_boundaries(
                 point
                     .annotation
                     .as_ref()
-                    .map(|a| a.ion.to_string())
-                    .unwrap_or("unassigned".to_string()),
+                    .map(|a| Some(a.clone()))
+                    .unwrap_or(None),
                 distance.0,                           // rel (ppm)
                 distance.1,                           // abs (Da)
                 point.experimental_mz,                // mz
@@ -246,7 +255,7 @@ fn spectrum_graph(
     write!(output, "</div>").unwrap();
     write!(
     output,
-    "<div class='spectrum-graph' style='--rel-max:{};--rel-min:{};--abs-max:{};--abs-min:{};--intensity-min:{};--intensity-max:{};'>",
+    "<div class='spectrum-graph canvas' style='--rel-max:{};--rel-min:{};--abs-max:{};--abs-min:{};--intensity-min:{};--intensity-max:{};'>",
     boundaries.0, boundaries.1, boundaries.2, boundaries.3, boundaries.5, boundaries.4
 )
 .unwrap();
@@ -264,8 +273,8 @@ fn spectrum_graph(
     for point in data {
         write!(
             output,
-            "<span class='point {}' style='--rel:{};--abs:{};--mz:{};--intensity:{}' data-ppm='{}' data-abs='{}' data-mz='{}' data-intensity='{}' data-reference-fragment-rel='{}' data-reference-fragment-abs='{}'></span>",
-            point.0,
+            "<span class='point {}' style='--rel:{};--abs:{};--mz:{};--intensity:{}' data-ppm='{}' data-abs='{}' data-mz='{}' data-intensity='{}' data-reference-fragment-rel='{}' data-reference-fragment-abs='{}' data-pos='{}'></span>",
+            point.0.as_ref().map(|a| a.ion.to_string()).unwrap_or("unassigned".to_string()),
             point.1.0,
             point.2.0,
             point.3.value,
@@ -276,6 +285,7 @@ fn spectrum_graph(
             point.5,
             point.1.1,
             point.2.1,
+            point.0.as_ref().and_then(|a| a.ion.position().map(|p|p.sequence_index + 1)).unwrap_or(point.2.1.ion.position().map(|p| p.sequence_index + 1).unwrap_or(0))
         )
         .unwrap();
     }

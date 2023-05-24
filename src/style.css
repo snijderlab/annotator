@@ -171,12 +171,18 @@ pre {
     "sg-y-axis spectrum-graph";
 }
 
-.spectrum-graph {
+.spectrum .spectrum-graph {
   --graph-height: 500px;
   --graph-height-inc: calc(var(--graph-height) + 10px);
   --color: red;
   --radius: 50%;
   margin-top: 1rem;
+  display: flex;
+  flex-basis: 100%;
+  grid-area: spectrum-graph;
+  position: relative;
+  overflow: hidden;
+  border: none;
 }
 
 .spectrum-graph>label {
@@ -189,14 +195,6 @@ pre {
 .spectrum-graph label:has(+input:checked),
 .spectrum-graph label:has(input:checked) {
   border-color: var(--color-primary);
-}
-
-.spectrum-graph {
-  display: flex;
-  flex-basis: 100%;
-  grid-area: spectrum-graph;
-  position: relative;
-  overflow: hidden;
 }
 
 .spectrum-graph-y-axis {
@@ -305,78 +303,10 @@ pre {
   height: calc((var(--intensity-max) - var(--intensity)) / (var(--intensity-max) - var(--intensity-min)) * 6px + 2px);
 }
 
-.spectrum-graph .a {
-  --color: var(--color-primary);
-  z-index: 1;
-}
-
-.spectrum-graph .b {
-  --color: var(--color-secondary);
-  z-index: 1;
-}
-
-.spectrum-graph .c {
-  --color: var(--color-tertiary);
-  z-index: 1;
-}
-
-.spectrum-graph .d {
-  --color: var(--color-quaternary);
-  --radius: 0;
-  z-index: 1;
-}
-
-.spectrum-graph .v {
-  --color: var(--color-quinary);
-  --radius: 0;
-  z-index: 1;
-}
-
-.spectrum-graph .w {
-  --color: var(--color-primary);
-  --radius: 0;
-  z-index: 1;
-}
-
-.spectrum-graph .x {
-  --color: var(--color-quaternary);
-  z-index: 1;
-}
-
-.spectrum-graph .y {
-  --color: var(--color-quinary);
-  z-index: 1;
-}
-
-.spectrum-graph .z,
-.spectrum-graph .z· {
-  --color: var(--color-primary-s1);
-}
-
-.spectrum:has(.permanent) .spectrum-graph .point,
-.spectrum:has(.permanent):has(.wrapper.unassigned) .spectrum-graph .unassigned {
+.spectrum .spectrum-graph.highlight .point {
   opacity: 0.2;
 }
 
-.spectrum-graph .data .point.unassigned {
-  --color: var(--color-halfway);
-  z-index: 0;
-  opacity: 0;
-}
-
-.spectrum:has(.wrapper.unassigned) .spectrum-graph .unassigned {
-  opacity: 1;
-}
-
-.spectrum:has(.a.permanent) .spectrum-graph .a,
-.spectrum:has(.b.permanent) .spectrum-graph .b,
-.spectrum:has(.c.permanent) .spectrum-graph .c,
-.spectrum:has(.d.permanent) .spectrum-graph .d,
-.spectrum:has(.v.permanent) .spectrum-graph .v,
-.spectrum:has(.w.permanent) .spectrum-graph .w,
-.spectrum:has(.x.permanent) .spectrum-graph .x,
-.spectrum:has(.y.permanent) .spectrum-graph .y,
-.spectrum:has(.z.permanent) .spectrum-graph .z,
-.spectrum:has(.z.permanent) .spectrum-graph .z· {
+.spectrum .spectrum-graph.highlight .point.highlight {
   opacity: 1;
 }
