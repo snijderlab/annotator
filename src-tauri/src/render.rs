@@ -395,8 +395,10 @@ fn render_peptide(
         }
         write!(
             output,
-            "<span data-pos='{}'{classes} tabindex='0'>{}",
+            "<span data-pos='{}'{classes} tabindex='0' title='N terminal position: {}, C terminal position: {}'>{}",
             index + 1,
+            index + 1,
+            spectrum.peptide.sequence.len() - index,
             pos.0.char()
         )
         .unwrap();
