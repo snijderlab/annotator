@@ -99,9 +99,9 @@ button:hover {
 
 .input-settings textarea {
   min-height: 2rem;
-  min-width: 100%;
-  max-width: 100%;
   resize: vertical;
+  word-wrap: break-word;
+  white-space: pre-wrap;
 }
 
 .input-settings .wide {
