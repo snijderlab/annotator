@@ -31,3 +31,6 @@ LMLTDGYTRYADSVKGRFTLSADTS
 QLVESGGGLVQPGGSLRLSCAASGF
 QLVESGGGLVQPGGSLRLSCQTGF
 LVESGGGLVQPNSLRLSCAASGF
+
+## todo
+ - [ ] Add density plot along the y axis of the spectrum graph to see the density of all errors over the ppm range
