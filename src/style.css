@@ -263,6 +263,10 @@ pre {
   text-align: center;
 }
 
+.spectrum-graph .point.unassigned {
+  z-index: 1;
+}
+
 .spectrum-graph .point {
   width: 5px;
   height: 5px;
@@ -272,8 +276,7 @@ pre {
   top: calc(100% * (var(--abs-max) - var(--abs)) / (var(--abs-max) - var(--abs-min)));
   left: calc(100% * (1 - (var(--max-mz) - var(--mz)) / (var(--max-mz) - var(--min-mz))));
   display: block;
-  z-index: 1;
-  opacity: calc(var(--intensity) * 0.5 + 50%);
+  z-index: 2;
 }
 
 .spectrum:has(#relative:checked) .point {
@@ -302,8 +305,8 @@ pre {
 }
 
 .spectrum:has(#intensity:checked) .point {
-  width: calc((var(--intensity-max) - var(--intensity)) / (var(--intensity-max) - var(--intensity-min)) * 6px + 2px);
-  height: calc((var(--intensity-max) - var(--intensity)) / (var(--intensity-max) - var(--intensity-min)) * 6px + 2px);
+  width: calc((var(--intensity-max) - var(--intensity)) / var(--intensity-max) * 6px + 2px);
+  height: calc((var(--intensity-max) - var(--intensity)) / var(--intensity-max) * 6px + 2px);
 }
 
 .spectrum .spectrum-graph.highlight .point {
