@@ -173,7 +173,7 @@ fn annotate_spectrum(
     Ok((
         render::annotated_spectrum(&annotated, "spectrum", &fragments),
         render::fragment_table(&fragments),
-        format!("{annotated:?}"),
+        format!("{annotated:#?}\n{model:#?}"),
     ))
 }
 

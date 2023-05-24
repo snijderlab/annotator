@@ -1989,9 +1989,9 @@ checksum = "9f746c4065a8fa3fe23974dd82f15431cc8d40779821001404d10d2e79ca7d79"
 
 [[package]]
 name = "pdbtbx"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19395b7ac56e79e5990cb7b19c4c284b6fce53e919c9028337d0c7833845a34a"
+checksum = "7401028a784be1bc11a46c3acb64567eb4dc875b38152097012f83dec94c1f8c"
 dependencies = [
  "doc-cfg",
  "indexmap",
@@ -2465,9 +2465,9 @@ dependencies = [
 
 [[package]]
 name = "rstar"
-version = "0.9.3"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b40f1bfe5acdab44bc63e6699c28b74f75ec43afb59f3eda01e145aff86a25fa"
+checksum = "1f39465655a1e3d8ae79c6d9e007f4953bfc5d55297602df9dc38f9ae9f1359a"
 dependencies = [
  "heapless",
  "num-traits",
@@ -2506,7 +2506,7 @@ checksum = "4f3208ce4d8448b3f3e7d168a73f5e0c43a61e32930de3bceeccedb388b6bf06"
 [[package]]
 name = "rustyms"
 version = "0.1.0"
-source = "git+https://github.com/douweschulte/rustyms#977210320c599fdc64e5759c5e53b779d3d66d92"
+source = "git+https://github.com/douweschulte/rustyms#461f9a0567f47c766ed6b3ef69fb191c0c09bad5"
 dependencies = [
  "entab",
  "serde",
