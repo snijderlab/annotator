@@ -4,6 +4,36 @@ use rustyms::{AnnotatedSpectrum, Fragment, FragmentType, MassOverCharge, Zero};
 
 use crate::html_builder::{HtmlContent, HtmlElement, HtmlTag};
 
+pub fn fragment_table(fragments: &[Fragment]) -> String {
+    let mut output = "<table><thead><tr><th>Sequence Index</th><th>SeriesNumber</th><th>Ion</th><th>mz</th><th>Charge</th><th>Neutral loss</th></tr></thead><tbody>".to_string();
+    for fragment in fragments {
+        write!(
+            &mut output,
+            "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>",
+            fragment
+                .ion
+                .position()
+                .map(|p| p.sequence_index.to_string())
+                .unwrap_or("-".to_string()),
+            fragment
+                .ion
+                .position()
+                .map(|p| p.series_number.to_string())
+                .unwrap_or("-".to_string()),
+            fragment.ion,
+            fragment.mz().value,
+            fragment.charge.value,
+            fragment
+                .neutral_loss
+                .map(|n| n.to_string())
+                .unwrap_or("-".to_string()),
+        )
+        .unwrap();
+    }
+    write!(&mut output, "</tbody></table>").unwrap();
+    output
+}
+
 pub fn annotated_spectrum(
     spectrum: &AnnotatedSpectrum,
     id: &str,
@@ -12,7 +42,7 @@ pub fn annotated_spectrum(
     let mut output = "<div class='spectrum' onload='SpectrumSetUp()'>".to_string();
     let (limits, overview) = get_overview(spectrum);
 
-    spectrum_top_buttons(&mut output, id, &limits);
+    spectrum_top_buttons(&mut output, id, &limits).unwrap();
 
     write!(output, "<div class='wrapper unassigned'>").unwrap();
     create_ion_legend(&mut output, &format!("{id}-1"));

@@ -145,7 +145,7 @@ LVESGGGLVQPNSLRLSCAASGF
     <div id="spectrum-results-wrapper"></div>
     <details>
       <summary>Logs</summary>
-      <pre id="spectrum-fragments"></pre>
+      <div id="spectrum-fragments"></div>
       <pre id="spectrum-error-log"></pre>
     </details>
   </details>

@@ -67,7 +67,7 @@ async function annotate_spectrum() {
     ];
     var result = await invoke("annotate_spectrum", { index: Number(document.querySelector("#spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), mass: document.querySelector("#mass-system").value, charge: charge, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").value, cmodel: model });
     document.querySelector("#spectrum-results-wrapper").innerHTML = result[0];
-    document.querySelector("#spectrum-fragments").innerText = result[1];
+    document.querySelector("#spectrum-fragments").innerHTML = result[1];
     document.querySelector("#spectrum-error-log").innerText = result[2];
     SpectrumSetUp();
   } catch (error) {
