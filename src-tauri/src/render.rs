@@ -1,8 +1,8 @@
-use std::{collections::HashSet, error::Error, fmt::Write};
+use std::{collections::HashSet, fmt::Write};
 
 use rustyms::{AnnotatedSpectrum, Fragment, FragmentType, Mass, MassOverCharge, Zero};
 
-use crate::html_builder::{HtmlContent, HtmlElement, HtmlTag};
+use crate::html_builder::{HtmlElement, HtmlTag};
 
 pub fn fragment_table(fragments: &[Fragment]) -> String {
     let mut output = "<table><thead><tr><th>Sequence Index</th><th>SeriesNumber</th><th>Ion</th><th>mz</th><th>Charge</th><th>Neutral loss</th></tr></thead><tbody>".to_string();
@@ -50,7 +50,7 @@ pub fn annotated_spectrum(
     render_peptide(&mut output, spectrum, overview);
     render_spectrum(&mut output, spectrum, limits, "first");
     // Spectrum graph
-    spectrum_graph(&mut output, &graph_boundaries, &graph_data);
+    spectrum_graph(&mut output, &graph_boundaries, &graph_data, limits.0.value);
     write!(output, "</div></div>").unwrap();
     // Spectrum table
     collapsible(
@@ -229,7 +229,12 @@ fn spectrum_graph_boundaries(
     (data, bounds)
 }
 
-fn spectrum_graph(output: &mut String, boundaries: &Boundaries, data: &SpectrumGraphData) {
+fn spectrum_graph(
+    output: &mut String,
+    boundaries: &Boundaries,
+    data: &SpectrumGraphData,
+    x_max: f64,
+) {
     write!(output, "<div class='spectrum-graph-y-axis'>").unwrap();
     write!(output, "<span class='max'>{:.2}</span>", boundaries.2).unwrap();
     write!(
@@ -246,9 +251,9 @@ fn spectrum_graph(output: &mut String, boundaries: &Boundaries, data: &SpectrumG
 )
 .unwrap();
     write!(output, "<div class='x-axis'>").unwrap();
-    write!(output, "<span class='min'>{:.2}</span>", boundaries.4).unwrap();
+    write!(output, "<span class='min'>0</span>").unwrap();
     write!(output, "<span class='title'>mz</span>").unwrap();
-    write!(output, "<span class='max'>{:.2}</span>", boundaries.5).unwrap();
+    write!(output, "<span class='max'>{:.2}</span>", x_max).unwrap();
     write!(output, "</div>").unwrap();
     write!(
         output,
