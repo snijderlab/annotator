@@ -70,7 +70,7 @@ fn spectrum_top_buttons(
     limits: &(MassOverCharge, f64, f64),
     spectrum_graph_boundaries: &(f64, f64, f64, f64, f64, f64, f64, f64, f64, f64),
 ) -> core::fmt::Result {
-    write!(output, "<div class='manual-zoom'>")?;
+    write!(output, "<div class='settings manual-zoom'><p>Spectrum</p>")?;
     write!(output, "<label for='{id}-mz-min'>Mz Min</label>")?;
     write!(
         output,
@@ -92,8 +92,16 @@ fn spectrum_top_buttons(
         limits.2
     )?;
     write!(output, "</div>")?;
-    write!(output, "<div class='empty'></div>")?;
-    write!(output, "<div class='render-setup'>")?;
+    write!(
+        output,
+        "<div class='settings spectrum-graph-setup'><p>Spectrum graph</p>"
+    )?;
+    spectrum_graph_header(output, spectrum_graph_boundaries)?;
+    write!(output, "</div>")?;
+    write!(
+        output,
+        "<div class='settings render-setup'><p>Render setup</p>"
+    )?;
     write!(output, "<label for='{id}-width'>Width</label>")?;
     write!(
         output,
@@ -130,9 +138,6 @@ fn spectrum_top_buttons(
         "<input id='{id}-compact' class='compact' type='checkbox'/>",
     )?;
     write!(output, "<label for='{id}-compact'>Compact peptide</label>")?;
-    write!(output, "</div>")?;
-    write!(output, "<div class='spectrum-graph-setup'>")?;
-    spectrum_graph_header(output, spectrum_graph_boundaries)?;
     write!(output, "</div>")?;
     Ok(())
 }
@@ -226,15 +231,13 @@ fn spectrum_graph_boundaries(
 
 fn spectrum_graph(output: &mut String, boundaries: &Boundaries, data: &SpectrumGraphData) {
     write!(output, "<div class='spectrum-graph-y-axis'>").unwrap();
-    write!(output, "<span class='max abs'>{:.2}</span>", boundaries.2).unwrap();
-    write!(output, "<span class='max rel'>{:.2}</span>", boundaries.0).unwrap();
+    write!(output, "<span class='max'>{:.2}</span>", boundaries.2).unwrap();
     write!(
         output,
         "<span class='title abs'>Absolute distance to closest c/z ion (Da)</span><span class='title rel'>Relative distance to closest c/z ion (ppm)</span>"
     )
     .unwrap();
-    write!(output, "<span class='min abs'>{:.2}</span>", boundaries.3).unwrap();
-    write!(output, "<span class='min rel'>{:.2}</span>", boundaries.1).unwrap();
+    write!(output, "<span class='min'>{:.2}</span>", boundaries.3).unwrap();
     write!(output, "</div>").unwrap();
     write!(
     output,
@@ -278,30 +281,10 @@ fn spectrum_graph_header(
     output: &mut String,
     boundaries: &(f64, f64, f64, f64, f64, f64, f64, f64, f64, f64),
 ) -> std::fmt::Result {
-    write!(output, "<label for='absolute'><input type='radio' name='y-axis' id='absolute' value='absolute' checked/>Absolute</label>")?;
-    write!(output, "<label for='relative'><input type='radio' name='y-axis' id='relative' value='relative'/>Relative</label>")?;
-    write!(
-        output,
-        "<label for='mz'><input type='radio' name='x-axis' id='mz' value='mz' checked/>mz</label>"
-    )?;
-    write!(
-        output,
-        "<label for='mass'><input type='radio' name='x-axis' id='mass' value='mass'/>Mass</label>"
-    )?;
-    write!(output, "<label><input type='checkbox' name='intensity' id='intensity' value='intensity'/>Intensity</label>")?;
+    write!(output, "<input type='radio' name='y-axis' id='absolute' value='absolute' checked/><label for='absolute'>Absolute</label>")?;
+    write!(output, "<input type='radio' name='y-axis' id='relative' value='relative'/><label for='relative'>Relative</label>")?;
+    write!(output, "<input type='checkbox' name='intensity' id='intensity' value='intensity'/><label for='intensity'>Intensity</label>")?;
     write!(output, "<div class='manual-zoom'>")?;
-    write!(output, "<label for='x-min'>X Min</label>")?;
-    write!(
-        output,
-        "<input id='x-min' class='x-min' type='number' value='{}'/>",
-        boundaries.5
-    )?;
-    write!(output, "<label for='x-max'>X Max</label>")?;
-    write!(
-        output,
-        "<input id='x-max' class='x-max' type='number' value='{}'/>",
-        boundaries.4
-    )?;
     write!(output, "<label for='y-min'>Y Min</label>")?;
     write!(
         output,
