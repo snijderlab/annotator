@@ -34,3 +34,5 @@ LVESGGGLVQPNSLRLSCAASGF
 
 ## todo
  - [ ] Add density plot along the y axis of the spectrum graph to see the density of all errors over the ppm range
+ - [ ] Add N/C terminal highlighting option (shows all applicable ions in spectra, show all points relative to that side for spectrum-graph)
+ - [ ] Add N/C, N, or C positioning option for spectrum graph (shows all points relative to that series)

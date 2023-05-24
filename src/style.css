@@ -98,9 +98,14 @@ button:hover {
 }
 
 .input-settings textarea {
-  min-height: 7rem;
+  min-height: 2rem;
   min-width: 100%;
   max-width: 100%;
+  resize: vertical;
+}
+
+.input-settings .wide {
+  grid-column: 1/-1;
 }
 
 .input-settings button {
@@ -176,13 +181,12 @@ pre {
   --graph-height-inc: calc(var(--graph-height) + 10px);
   --color: red;
   --radius: 50%;
-  margin-top: 1rem;
   display: flex;
   flex-basis: 100%;
   grid-area: spectrum-graph;
   position: relative;
   overflow: hidden;
-  border: none;
+  border-bottom: none;
 }
 
 .spectrum-graph>label {
@@ -204,7 +208,6 @@ pre {
   height: var(--graph-height-inc);
   justify-content: space-between;
   align-items: flex-end;
-  border-right: 2px solid var(--color-foreground);
   padding-right: 2px;
   position: relative;
 }
