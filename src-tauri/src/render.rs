@@ -354,7 +354,9 @@ fn create_ion_legend(output: &mut String, id: &str) {
             <span class='ion x' tabindex='0'>x</span>
             <span class='ion y' tabindex='0'>y</span>
             <span class='ion z' tabindex='0'>z</span>
+            <span class='ion c-term' tabindex='0'>C-term</span>
         </div><div class='bottom'>
+            <span class='ion n-term' tabindex='0'>N-term</span>
             <span class='ion a' tabindex='0'>a</span>
             <span class='ion b' tabindex='0'>b</span>
             <span class='ion c' tabindex='0'>c</span>

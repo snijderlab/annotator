@@ -305,8 +305,8 @@ pre {
 }
 
 .spectrum:has(#intensity:checked) .point {
-  width: calc((var(--intensity-max) - var(--intensity)) / var(--intensity-max) * 6px + 2px);
-  height: calc((var(--intensity-max) - var(--intensity)) / var(--intensity-max) * 6px + 2px);
+  width: calc((var(--intensity)) / var(--intensity-max) * 6px + 2px);
+  height: calc((var(--intensity)) / var(--intensity-max) * 6px + 2px);
 }
 
 .spectrum .spectrum-graph.highlight .point {
