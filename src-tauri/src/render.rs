@@ -122,16 +122,27 @@ fn spectrum_top_buttons(
     )?;
     write!(
         output,
+        "<label for='{id}-peptide-stroke'>Peptide stroke width</label>"
+    )?;
+    write!(
+        output,
+        "<input id='{id}-peptide-stroke' class='stroke-peptide' type='text' value='2px'/>",
+    )?;
+    write!(
+        output,
         "<label for='{id}-fs-spectrum'>Spectrum font size</label>"
     )?;
     write!(
         output,
         "<input id='{id}-fs-spectrum' class='fs-spectrum' type='text' value='1rem'/>",
     )?;
-    write!(output, "<label for='{id}-stroke'>Stroke width</label>")?;
     write!(
         output,
-        "<input id='{id}-stroke' class='stroke' type='text' value='2px'/>",
+        "<label for='{id}-spectrum-stroke'>Spectrum stroke width</label>"
+    )?;
+    write!(
+        output,
+        "<input id='{id}-spectrum-stroke' class='stroke-spectrum' type='text' value='2px'/>",
     )?;
     write!(
         output,
@@ -252,6 +263,7 @@ fn spectrum_graph(
     )
     .unwrap();
     write!(output, "<span class='min'>{:.2}</span>", boundaries.3).unwrap();
+    density_graph::<256>(output, &data.iter().map(|p| p.2 .0).collect::<Vec<_>>());
     write!(output, "</div>").unwrap();
     write!(
     output,
@@ -428,16 +440,40 @@ fn render_spectrum(
 ) {
     write!(
         output,
-        "<div class='canvas-wrapper label' aria-hidden='true' style='--min-mz:0;--max-mz:{};--max-intensity:{};' data-initial-max-mz='{}' data-initial-max-intensity='{}' data-initial-max-intensity-assigned='{}'>", limits.0.value, limits.2, limits.0.value, limits.2, limits.1
+        "<div class='canvas-wrapper label' aria-hidden='true' >",
     )
     .unwrap();
-    write!(output, "<div class='y-axis'><span class='n0'>0</span>").unwrap();
-    write!(output, "<span>{:.2}</span>", limits.2 / 4.0).unwrap();
-    write!(output, "<span>{:.2}</span>", limits.2 / 2.0).unwrap();
-    write!(output, "<span>{:.2}</span>", 3.0 * limits.2 / 4.0).unwrap();
-    write!(output, "<span class='last'>{:.2}</span>", limits.2).unwrap();
+    write!(
+        output,
+        "<div class='y-axis'><span class='tick'><span class='n0'>0</span></span>"
+    )
+    .unwrap();
+    write!(
+        output,
+        "<span class='tick'><span>{:.2}</span></span>",
+        limits.2 / 4.0
+    )
+    .unwrap();
+    write!(
+        output,
+        "<span class='tick'><span>{:.2}</span></span>",
+        limits.2 / 2.0
+    )
+    .unwrap();
+    write!(
+        output,
+        "<span class='tick'><span>{:.2}</span></span>",
+        3.0 * limits.2 / 4.0
+    )
+    .unwrap();
+    write!(
+        output,
+        "<span class='tick'><span class='last'>{:.2}</span></span>",
+        limits.2
+    )
+    .unwrap();
     write!(output, "</div>").unwrap();
-    write!(output, "<div class='canvas'>",).unwrap();
+    write!(output, "<div class='canvas' style='--min-mz:0;--max-mz:{};--max-intensity:{};' data-initial-max-mz='{}' data-initial-max-intensity='{}' data-initial-max-intensity-assigned='{}'>",limits.0.value, limits.2, limits.0.value, limits.2, limits.1).unwrap();
     write!(
         output,
         "<span class='selection {selection}' hidden='true'></span>"
@@ -483,11 +519,35 @@ fn render_spectrum(
         }
     }
     write!(output, "</div>").unwrap();
-    write!(output, "<div class='x-axis'><span class='n0'>0</span>").unwrap();
-    write!(output, "<span>{:.2}</span>", limits.0.value / 4.0).unwrap();
-    write!(output, "<span>{:.2}</span>", limits.0.value / 2.0).unwrap();
-    write!(output, "<span>{:.2}</span>", 3.0 * limits.0.value / 4.0).unwrap();
-    write!(output, "<span class='last'>{:.2}</span>", limits.0.value).unwrap();
+    write!(
+        output,
+        "<div class='x-axis'><span class='tick'><span class='n0'>0</span></span>"
+    )
+    .unwrap();
+    write!(
+        output,
+        "<span class='tick'><span>{:.2}</span></span>",
+        limits.0.value / 4.0
+    )
+    .unwrap();
+    write!(
+        output,
+        "<span class='tick'><span>{:.2}</span></span>",
+        limits.0.value / 2.0
+    )
+    .unwrap();
+    write!(
+        output,
+        "<span class='tick'><span>{:.2}</span></span>",
+        3.0 * limits.0.value / 4.0
+    )
+    .unwrap();
+    write!(
+        output,
+        "<span class='tick'><span class='last'>{:.2}</span></span>",
+        limits.0.value
+    )
+    .unwrap();
     write!(output, "</div>").unwrap();
 }
 
@@ -574,4 +634,103 @@ fn collapsible(output: &mut String, id: &str, title: String, content: String) {
             .content(content),
     )
     .unwrap();
+}
+
+fn density_estimation<const STEPS: usize>(data: &[f64]) -> [f64; STEPS] {
+    let mut densities = [0.0; STEPS];
+    if data.is_empty() {
+        return densities;
+    }
+    //data.Sort();
+    let mut data = data.to_vec();
+    data.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+    let len = data.len() as f64;
+    let min_value = data.iter().copied().reduce(f64::min).unwrap_or(f64::MIN);
+    let max_value = data.iter().copied().reduce(f64::max).unwrap_or(f64::MAX);
+    let mean: f64 = data.iter().sum::<f64>() / len;
+    let stdev: f64 = data.iter().map(|p| (mean - p).powi(2)).sum::<f64>() / len;
+    let iqr: f64 = data.iter().rev().take(data.len() / 2).sum::<f64>() / len
+        - data.iter().take(data.len() / 2).sum::<f64>() / len;
+    let h = 0.9 * stdev.min(iqr / 1.34) * len.powf(-0.2);
+
+    // let kde = |x: f64| {
+    //     1.0 / ((2.0 * std::f64::consts::PI).sqrt() * len * h)
+    //         * data
+    //             .iter()
+    //             .map(|i| (-1.0 / (2.0 * h * h) * (x - i).powi(2)).exp())
+    //             .sum::<f64>()
+    // };
+
+    let gaussian_kernel =
+        |x: f64| 1.0 / (2.0 * std::f64::consts::PI).sqrt() * (-1.0 / 2.0 * x.powi(2)).exp();
+    let kde = |x: f64| {
+        1.0 / len
+            * h
+            * data
+                .iter()
+                .map(|i| gaussian_kernel((x - i) / h))
+                .sum::<f64>()
+    };
+
+    for (i, density) in densities.iter_mut().enumerate() {
+        *density = kde(min_value + (max_value - min_value) / (STEPS - 1) as f64 * i as f64);
+    }
+
+    densities
+}
+
+fn density_graph<const STEPS: usize>(output: &mut String, data: &[f64]) {
+    let densities = density_estimation::<STEPS>(data);
+    let max_density = densities
+        .iter()
+        .copied()
+        .reduce(f64::max)
+        .unwrap_or(f64::MAX);
+    let mut path = String::new();
+    for (i, density) in densities.iter().enumerate() {
+        write!(
+            &mut path,
+            "{}{} {}",
+            if i != 0 { " L " } else { "" },
+            (max_density - density) / max_density * 100.0,
+            i,
+        )
+        .unwrap();
+    }
+    write!(output, "<svg viewBox='-1 0 100 {}' preserveAspectRatio='none'><path class='line' d='M {}'></path><path class='volume' d='M 100 0 L {} L {} 0 Z'></path></svg>",
+STEPS-1,
+path,
+path, STEPS -1
+).unwrap();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::density_estimation;
+
+    #[test]
+    fn density_flat() {
+        let d = dbg!(density_estimation::<10>(&[1.0, 2.0, 3.0, 4.0, 5.0]));
+        assert!((d.iter().sum::<f64>() - 1.0).abs() < 0.005); // half a percent deviation from 1.0 density for the whole distribution
+        assert_eq!(
+            d.iter().copied().reduce(f64::min),
+            d.iter().copied().reduce(f64::max)
+        );
+    }
+
+    #[test]
+    fn density_peak() {
+        let d = dbg!(density_estimation::<10>(&[
+            1.0, 2.0, 3.0, 4.0, 5.0, 2.0, 3.0, 4.0, 3.0
+        ]));
+        assert!((d.iter().sum::<f64>() - 1.0).abs() < 0.005); // half a percent deviation from 1.0 density for the whole distribution
+        todo!()
+    }
+
+    #[test]
+    fn density_sample() {
+        let d = dbg!(density_estimation::<10>(&[-2.1, -1.3, -0.4, 1.9, 5.1, 6.2]));
+        assert!((d.iter().sum::<f64>() - 1.0).abs() < 0.005); // half a percent deviation from 1.0 density for the whole distribution
+        todo!()
+    }
 }

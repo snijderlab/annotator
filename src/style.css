@@ -97,6 +97,10 @@ button:hover {
   font-size: 1.2em;
 }
 
+.input-settings option {
+  background: var(--color-background);
+}
+
 .input-settings textarea {
   min-height: 2rem;
   resize: vertical;
@@ -237,6 +241,23 @@ pre {
 .spectrum-graph-y-axis::after,
 .spectrum-graph .x-axis::after {
   display: none;
+}
+
+.spectrum-graph-y-axis svg {
+  transform: translate(2px, 0);
+  position: absolute;
+  width: 2rem;
+  height: 100%;
+}
+
+.spectrum-graph-y-axis svg .line {
+  stroke: var(--color-primary);
+  stroke-width: var(--stroke-spectrum);
+  fill: transparent;
+}
+
+.spectrum-graph-y-axis svg .volume {
+  fill: var(--color-primary-o);
 }
 
 .spectrum-graph .x-axis {
