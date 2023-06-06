@@ -48,7 +48,7 @@ pub fn annotated_spectrum(
     write!(output, "<div class='wrapper unassigned'>").unwrap();
     create_ion_legend(&mut output, &format!("{id}-1"));
     render_peptide(&mut output, spectrum, overview);
-    render_spectrum(&mut output, spectrum, limits, "first");
+    render_spectrum(&mut output, spectrum, &graph_boundaries, limits, "first");
     // Spectrum graph
     spectrum_graph(&mut output, &graph_boundaries, &graph_data, limits.0.value);
     write!(output, "</div></div>").unwrap();
@@ -263,17 +263,20 @@ fn spectrum_graph(
     )
     .unwrap();
     write!(output, "<span class='min'>{:.2}</span>", boundaries.3).unwrap();
-    density_graph::<256>(output, &data.iter().map(|p| p.2 .0).collect::<Vec<_>>());
+    density_graph::<256>(
+        output,
+        &data.iter().map(|p| p.1 .0).collect::<Vec<_>>(),
+        "rel",
+    );
+    density_graph::<256>(
+        output,
+        &data.iter().map(|p| p.2 .0).collect::<Vec<_>>(),
+        "abs",
+    );
     write!(output, "</div>").unwrap();
-    write!(
-    output,
-    "<div class='spectrum-graph canvas' style='--rel-max:{};--rel-min:{};--abs-max:{};--abs-min:{};--intensity-min:{};--intensity-max:{};'>",
-    boundaries.0, boundaries.1, boundaries.2, boundaries.3, boundaries.5, boundaries.4
-)
-.unwrap();
+    write!(output, "<div class='spectrum-graph canvas'>",).unwrap();
     write!(output, "<div class='x-axis'>").unwrap();
     write!(output, "<span class='min'>0</span>").unwrap();
-    write!(output, "<span class='title'>mz</span>").unwrap();
     write!(output, "<span class='max'>{:.2}</span>", x_max).unwrap();
     write!(output, "</div>").unwrap();
     write!(
@@ -435,12 +438,14 @@ fn render_peptide(
 fn render_spectrum(
     output: &mut String,
     spectrum: &AnnotatedSpectrum,
+    boundaries: &Boundaries,
     limits: (MassOverCharge, f64, f64),
     selection: &str,
 ) {
     write!(
         output,
-        "<div class='canvas-wrapper label' aria-hidden='true' >",
+        "<div class='canvas-wrapper label' aria-hidden='true' style='--min-mz:0;--max-mz:{0};--max-intensity:{1};--y-max:{2};--y-min:{3};--abs-max-initial:{2};--abs-min-initial:{3};--rel-max-initial:{4};--rel-min-initial:{5};' data-initial-max-mz='{0}' data-initial-max-intensity='{1}' data-initial-max-intensity-assigned='{6}'>",
+        limits.0.value, limits.2, boundaries.2, boundaries.3, boundaries.0, boundaries.1, limits.1
     )
     .unwrap();
     write!(
@@ -473,7 +478,7 @@ fn render_spectrum(
     )
     .unwrap();
     write!(output, "</div>").unwrap();
-    write!(output, "<div class='canvas' style='--min-mz:0;--max-mz:{};--max-intensity:{};' data-initial-max-mz='{}' data-initial-max-intensity='{}' data-initial-max-intensity-assigned='{}'>",limits.0.value, limits.2, limits.0.value, limits.2, limits.1).unwrap();
+    write!(output, "<div class='canvas'>").unwrap();
     write!(
         output,
         "<span class='selection {selection}' hidden='true'></span>"
@@ -679,7 +684,7 @@ fn density_estimation<const STEPS: usize>(data: &[f64]) -> [f64; STEPS] {
     densities
 }
 
-fn density_graph<const STEPS: usize>(output: &mut String, data: &[f64]) {
+fn density_graph<const STEPS: usize>(output: &mut String, data: &[f64], class: &str) {
     let densities = density_estimation::<STEPS>(data);
     let max_density = densities
         .iter()
@@ -697,7 +702,7 @@ fn density_graph<const STEPS: usize>(output: &mut String, data: &[f64]) {
         )
         .unwrap();
     }
-    write!(output, "<svg viewBox='-1 0 100 {}' preserveAspectRatio='none'><path class='line' d='M {}'></path><path class='volume' d='M 100 0 L {} L {} 0 Z'></path></svg>",
+    write!(output, "<svg viewBox='-1 0 100 {}' preserveAspectRatio='none'><g class='density {class}'><path class='line' d='M {}'></path><path class='volume' d='M 100 0 L {} L {} 0 Z'></path></g></svg>",
 STEPS-1,
 path,
 path, STEPS -1
