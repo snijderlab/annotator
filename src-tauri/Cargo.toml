@@ -27,7 +27,7 @@ serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = {version = "1.2", features = ["dialog-open"] }
 pdbtbx = "0.10"
-rustyms = { git="https://github.com/douweschulte/rustyms"}
+rustyms = "*"
 proc_interface = { path="../src-proc-interface"}
 
 [features]

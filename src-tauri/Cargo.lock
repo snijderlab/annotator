@@ -2506,7 +2506,8 @@ checksum = "4f3208ce4d8448b3f3e7d168a73f5e0c43a61e32930de3bceeccedb388b6bf06"
 [[package]]
 name = "rustyms"
 version = "0.1.0"
-source = "git+https://github.com/douweschulte/rustyms#4332d08543a240acdfdec0cc9e49b29a691e7662"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "29c309d6273a61985ffe00d4a6cb255c3029c50183bd9796aa7bb322eccfa33e"
 dependencies = [
  "entab",
  "serde",
