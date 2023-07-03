@@ -646,16 +646,16 @@ fn density_estimation<const STEPS: usize>(data: &[f64]) -> [f64; STEPS] {
     if data.is_empty() {
         return densities;
     }
-    //data.Sort();
     let mut data = data.to_vec();
     data.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
     let len = data.len() as f64;
     let min_value = data.iter().copied().reduce(f64::min).unwrap_or(f64::MIN);
     let max_value = data.iter().copied().reduce(f64::max).unwrap_or(f64::MAX);
     let mean: f64 = data.iter().sum::<f64>() / len;
-    let stdev: f64 = data.iter().map(|p| (mean - p).powi(2)).sum::<f64>() / len;
-    let iqr: f64 = data.iter().rev().take(data.len() / 2).sum::<f64>() / len
-        - data.iter().take(data.len() / 2).sum::<f64>() / len;
+    let stdev: f64 = (data.iter().map(|p| (mean - p).powi(2)).sum::<f64>() / len).sqrt();
+    let half = len / 2.0;
+    let iqr: f64 = data.iter().rev().take(half.floor() as usize).sum::<f64>() / half
+        - data.iter().take(half.floor() as usize).sum::<f64>() / half;
     let h = 0.9 * stdev.min(iqr / 1.34) * len.powf(-0.2);
 
     // let kde = |x: f64| {
@@ -669,8 +669,7 @@ fn density_estimation<const STEPS: usize>(data: &[f64]) -> [f64; STEPS] {
     let gaussian_kernel =
         |x: f64| 1.0 / (2.0 * std::f64::consts::PI).sqrt() * (-1.0 / 2.0 * x.powi(2)).exp();
     let kde = |x: f64| {
-        1.0 / len
-            * h
+        1.0 / (len * h)
             * data
                 .iter()
                 .map(|i| gaussian_kernel((x - i) / h))
