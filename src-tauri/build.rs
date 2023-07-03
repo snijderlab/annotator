@@ -96,6 +96,8 @@ LVESGGGLVQPNSLRLSCAASGF
       </select>
       <label for="spectrum-charge">Max charge </label>
       <input type="number" id="spectrum-charge" value="" placeholder="Empty takes peptide charge from raw data" />
+      <label for="noise-threshold">Intensity noise filter</label>
+      <input type="number" id="noise-threshold" value="" min="0" max="1" placeholder="Empty does not filter" />
       <label for="spectrum-model">Model </label>
       <select id="spectrum-model">
       <option value="all">All</option>

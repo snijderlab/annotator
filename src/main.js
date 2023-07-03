@@ -53,6 +53,7 @@ function get_location(id) {
 async function annotate_spectrum() {
   try {
     var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);
+    var noise_threshold = document.querySelector("#noise-threshold").value == "" ? null : Number(document.querySelector("#noise-threshold").value);
     var model = [
       [get_location("#model-a-location"), document.querySelector("#model-a-loss").value.split(' ').filter(a => a != "")],
       [get_location("#model-b-location"), document.querySelector("#model-b-loss").value.split(' ').filter(a => a != "")],
@@ -65,7 +66,7 @@ async function annotate_spectrum() {
       [get_location("#model-z-location"), document.querySelector("#model-z-loss").value.split(' ').filter(a => a != "")],
       [get_location("#model-z-location"), document.querySelector("#model-precursor-loss").value.split(' ').filter(a => a != "")], // First element is discarded
     ];
-    var result = await invoke("annotate_spectrum", { index: Number(document.querySelector("#spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), mass: document.querySelector("#mass-system").value, charge: charge, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").value, cmodel: model });
+    var result = await invoke("annotate_spectrum", { index: Number(document.querySelector("#spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), mass: document.querySelector("#mass-system").value, charge: charge, noise_threshold: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").value, cmodel: model });
     document.querySelector("#spectrum-results-wrapper").innerHTML = result[0];
     document.querySelector("#spectrum-fragments").innerHTML = result[1];
     document.querySelector("#spectrum-error-log").innerText = result[2];
