@@ -23,10 +23,11 @@ async function load_cif() {
 async function load_mgf() {
   try {
     let result = await invoke("load_mgf", { path: document.querySelector("#load-mgf-path").dataset.filepath });
-    document.querySelector("#spectrum-error-log").innerText = result;
+    document.querySelector("#spectrum-log").innerText = result;
+    document.querySelector("#spectrum-error").innerText = "";
   } catch (error) {
     console.log(error);
-    document.querySelector("#spectrum-error-log").innerText = error;
+    document.querySelector("#spectrum-error").innerText = error;
   }
 }
 
@@ -69,25 +70,26 @@ async function annotate_spectrum() {
     var result = await invoke("annotate_spectrum", { index: Number(document.querySelector("#spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), mass: document.querySelector("#mass-system").value, charge: charge, noise_threshold: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").value, cmodel: model });
     document.querySelector("#spectrum-results-wrapper").innerHTML = result[0];
     document.querySelector("#spectrum-fragments").innerHTML = result[1];
-    document.querySelector("#spectrum-error-log").innerText = result[2];
+    document.querySelector("#spectrum-log").innerText = result[2];
+    document.querySelector("#spectrum-error").innerText = "";
     SpectrumSetUp();
   } catch (error) {
     console.log(error);
-    document.querySelector("#spectrum-error-log").innerText = error;
+    document.querySelector("#spectrum-error").innerText = error;
   }
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  sequenceInputA = document.querySelector("#greet-input-a");
-  sequenceInputB = document.querySelector("#greet-input-b");
-  sequenceType = document.querySelector("#input-alignment-type");
-  alignmentScore = document.querySelector("#reads-alignment");
-  document
-    .querySelector("#greet-button")
-    .addEventListener("click", () => align());
-  document
-    .querySelector("#load-button")
-    .addEventListener("click", () => load_cif());
+  // sequenceInputA = document.querySelector("#greet-input-a");
+  // sequenceInputB = document.querySelector("#greet-input-b");
+  // sequenceType = document.querySelector("#input-alignment-type");
+  // alignmentScore = document.querySelector("#reads-alignment");
+  // document
+  //   .querySelector("#greet-button")
+  //   .addEventListener("click", () => align());
+  // document
+  //   .querySelector("#load-button")
+  //   .addEventListener("click", () => load_cif());
   document
     .querySelector("#load-mgf-button")
     .addEventListener("click", () => load_mgf());

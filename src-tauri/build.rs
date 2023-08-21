@@ -1,12 +1,10 @@
 use std::io::Write;
-use std::time::Instant;
 use std::{fs::File, io::BufWriter};
 
 fn main() {
     let file = File::create("../src/index.html").unwrap();
     println!("{:?}", file.metadata());
     let mut writer = BufWriter::new(file);
-    let now = Instant::now();
     write!(
         writer,
 r#"<!DOCTYPE html>
@@ -24,7 +22,7 @@ r#"<!DOCTYPE html>
 </head>
 
 <body>
-<p>Made at {now:?}</p>
+<!--
   <details>
     <summary>Align</summary>
     <div class="input-settings">
@@ -74,9 +72,10 @@ LVESGGGLVQPNSLRLSCAASGF
       </div>
     </div>
   </details>
+  -->
   <details open>
+    <summary>Spectra</summary>
     <div class="input-settings">
-      <summary>Spectra</summary>
       <h2>Load spectra</h2>
       <label for="load-mgf-path">Path</label>
       <button type="button" onclick="select_file(this)" id="load-mgf-path">Select file</button>
@@ -92,7 +91,6 @@ LVESGGGLVQPNSLRLSCAASGF
       <select id="mass-system">
       <option value="monoisotopic">MonoIsotopic</option>
       <option value="averageweight">AverageWeight</option>
-      <option value="hecklib">Hecklib</option>
       </select>
       <label for="spectrum-charge">Max charge </label>
       <input type="number" id="spectrum-charge" value="" placeholder="Empty takes peptide charge from raw data" />
@@ -101,7 +99,6 @@ LVESGGGLVQPNSLRLSCAASGF
       <label for="spectrum-model">Model </label>
       <select id="spectrum-model">
       <option value="all">All</option>
-      <option value="really_all">Really all</option>
       <option value="ethcd">Ethcd</option>
       <option value="etcid">Etcid</option>
       <option value="cidhcd">CidHcd</option>
@@ -143,12 +140,13 @@ LVESGGGLVQPNSLRLSCAASGF
         <label class="wide" for="peptide">Peptide sequence </label>
         <textarea class="wide" id="peptide">VAEINPSNGGTTFNEKFKGGKATJ</textarea>
         <button id="annotate-button" type="button">Annotate</button>
-        </div>
+      </div>
+    <pre id="spectrum-error"></pre>
     <div id="spectrum-results-wrapper"></div>
     <details>
-      <summary>Logs</summary>
-      <div id="spectrum-fragments"></div>
-      <pre id="spectrum-error-log"></pre>
+    <summary>Logs</summary>
+    <div id="spectrum-fragments"></div>
+    <pre id="spectrum-log"></pre>
     </details>
   </details>
 </body>

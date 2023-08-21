@@ -105,6 +105,7 @@ button:hover {
   min-height: 2rem;
   resize: vertical;
   word-wrap: break-word;
+  word-break: break-all;
   white-space: pre-wrap;
 }
 
@@ -129,6 +130,11 @@ pre {
   word-wrap: break-word;
   white-space: pre-wrap;
   overflow: hidden;
+}
+
+#spectrum-error {
+  padding: 0 1rem;
+  color: red;
 }
 
 #spectrum-results-wrapper {

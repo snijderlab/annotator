@@ -160,9 +160,9 @@ fn annotate_spectrum(
     model.ppm = MassOverCharge::new::<mz>(ppm);
     let peptide = rustyms::Peptide::pro_forma(peptide)?;
     let mut spectrum = state.spectra[index].clone();
-    if let Some(threshold) = noise_threshold {
-        spectrum.noise_filter(threshold);
-    }
+    // if let Some(threshold) = noise_threshold {
+    //     spectrum.noise_filter(threshold);
+    // }
     let use_charge = charge.map_or(spectrum.charge, Charge::new::<e>);
     let fragments = if mass == "monoisotopic" {
         generate_theoretical_fragments::<MonoIsotopic>(&peptide, use_charge, &model)
