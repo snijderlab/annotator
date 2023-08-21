@@ -491,21 +491,22 @@ fn render_spectrum(
             None => {
                 write!(
                     output,
-                    "<span class='peak unassigned' style='--mz:{};--intensity:{};'></span>",
-                    peak.experimental_mz.value, peak.intensity
+                    "<span class='peak unassigned' style='--mz:{};--intensity:{};' data-label='{}'></span>",
+                    peak.experimental_mz.value, peak.intensity, (peak.experimental_mz.value * 10.0).round() / 10.0
                 )
                 .unwrap();
             }
             Some(f) => {
                 write!(
                     output,
-                    "<span class='peak {} label' style='--mz:{};--intensity:{};' data-pos='{}'>",
+                    "<span class='peak {} label' style='--mz:{};--intensity:{};' data-pos='{}' data-label='{}'>",
                     f.ion,
                     peak.experimental_mz.value,
                     peak.intensity,
                     f.ion
                         .position()
                         .map_or("*".to_string(), |i| (i.sequence_index + 1).to_string()),
+                    (peak.experimental_mz.value * 10.0).round() / 10.0,
                 )
                 .unwrap();
                 let ch = format!("{:+}", peak.charge.value);
