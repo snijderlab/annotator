@@ -1,8 +1,7 @@
 use std::{collections::HashSet, fmt::Write};
 
 use rustyms::{
-    AnnotatedSpectrum, AverageWeight, Charge, Fragment, FragmentType, HasMass, Mass,
-    MassOverCharge, MassSystem, MonoIsotopic, Zero,
+    AnnotatedSpectrum, Charge, Fragment, FragmentType, Mass, MassOverCharge, MolecularFormula, Zero,
 };
 
 use crate::html_builder::{HtmlElement, HtmlTag};
@@ -24,7 +23,7 @@ pub fn fragment_table(fragments: &[Fragment]) -> String {
                 .map(|p| p.series_number.to_string())
                 .unwrap_or("-".to_string()),
             fragment.ion,
-            fragment.mz().value,
+            fragment.mz().map_or(f64::NAN, |v| v.value),
             fragment.charge.value,
             fragment
                 .neutral_loss
@@ -56,7 +55,7 @@ pub fn annotated_spectrum(
     spectrum_graph(&mut output, &graph_boundaries, &graph_data, limits.0.value);
     write!(output, "</div></div>").unwrap();
     // General stats
-    general_stats(&mut output, &spectrum, &fragments);
+    general_stats(&mut output, spectrum, fragments);
     // Spectrum table
     collapsible(
         &mut output,
@@ -183,30 +182,44 @@ fn spectrum_graph_boundaries(
                     (
                         (
                             f64::MAX,
-                            Fragment::new(Mass::zero(), Charge::zero(), FragmentType::precursor),
+                            Fragment::new(
+                                MolecularFormula::default(),
+                                Charge::zero(),
+                                FragmentType::precursor,
+                                String::new(),
+                            ),
                         ),
                         (
                             f64::MAX,
-                            Fragment::new(Mass::zero(), Charge::zero(), FragmentType::precursor),
+                            Fragment::new(
+                                MolecularFormula::default(),
+                                Charge::zero(),
+                                FragmentType::precursor,
+                                String::new(),
+                            ),
                         ),
                     ),
                     |acc, frag: &Fragment| {
-                        let rel = ((frag.mz() - point.experimental_mz) / frag.mz()
-                            * MassOverCharge::new::<rustyms::mz>(1e6))
-                        .value;
-                        let abs = (frag.mz() - point.experimental_mz).value;
-                        (
-                            if acc.0 .0.abs() < rel.abs() {
-                                acc.0
-                            } else {
-                                (rel, frag.clone())
-                            },
-                            if acc.1 .0.abs() < abs.abs() {
-                                acc.1
-                            } else {
-                                (abs, frag.clone())
-                            },
-                        )
+                        if let Some(mz) = frag.mz() {
+                            let rel = ((mz - point.experimental_mz) / mz
+                                * MassOverCharge::new::<rustyms::mz>(1e6))
+                            .value;
+                            let abs = (mz - point.experimental_mz).value;
+                            (
+                                if acc.0 .0.abs() < rel.abs() {
+                                    acc.0
+                                } else {
+                                    (rel, frag.clone())
+                                },
+                                if acc.1 .0.abs() < abs.abs() {
+                                    acc.1
+                                } else {
+                                    (abs, frag.clone())
+                                },
+                            )
+                        } else {
+                            acc
+                        }
                     },
                 );
             (
@@ -414,7 +427,7 @@ fn render_peptide(
     }
     for (index, (pos, ions)) in spectrum.peptide.sequence.iter().zip(overview).enumerate() {
         let mut classes = String::new();
-        if pos.1.is_some() {
+        if !pos.modifications.is_empty() {
             write!(classes, " class='modification'").unwrap();
         }
         write!(
@@ -423,7 +436,7 @@ fn render_peptide(
             index + 1,
             index + 1,
             spectrum.peptide.sequence.len() - index,
-            pos.0.char()
+            pos.aminoacid.char()
         )
         .unwrap();
         for ion in ions {
@@ -624,8 +637,11 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
                 f.neutral_loss.map_or(String::new(), |v| v.to_string()),
                 peak.intensity,
                 peak.experimental_mz.value,
-                (f.mz() - peak.experimental_mz).abs().value,
-                ((f.mz() - peak.experimental_mz).abs() / f.mz() * 1e6).value,
+                f.mz()
+                    .map_or(f64::NAN, |v| (v - peak.experimental_mz).abs().value),
+                f.mz()
+                    .map_or(f64::NAN, |v| ((v - peak.experimental_mz).abs() / v * 1e6)
+                        .value),
                 f.charge.value,
                 f.ion
                     .position()
@@ -639,8 +655,15 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
 }
 
 fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &[Fragment]) {
-    let precursor_mass = spectrum.peptide.mass::<MonoIsotopic>().value;
-    let precursor_mass_avg = spectrum.peptide.mass::<AverageWeight>().value;
+    let precursor = if let Some(formula) = spectrum.peptide.formula() {
+        if let (Some(mono), Some(avg)) = (formula.monoisotopic_mass(), formula.average_weight()) {
+            format!("{:.3} Da | avg: {:.3} Da", mono.value, avg.value)
+        } else {
+            "No defined mass for precursor".to_string()
+        }
+    } else {
+        "No defined molecular formula for precursor".to_string()
+    };
     let num_annotated = spectrum
         .spectrum
         .iter()
@@ -651,7 +674,7 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
     write!(
         output,
         "<table class='general-stats'>
-    <tr><td>Precursor Mass</td><td>{precursor_mass:.3} Da | avg: {precursor_mass_avg:.3} Da</td></tr>
+    <tr><td>Precursor Mass</td><td>{precursor}</td></tr>
     <tr><td>Fragments found</td><td>{perc_fragments_found:.2} % ({num_annotated}/{})</td></tr>
     <tr><td>Peaks annotated</td><td>{perc_peaks_annotated:.2} % ({num_annotated}/{})</td></tr>
     </table>",

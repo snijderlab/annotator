@@ -6,10 +6,8 @@
 use itertools::Itertools;
 use mass_alignment::{template::Template, *};
 use pdbtbx::*;
-use rustyms::{
-    e, generate_theoretical_fragments, AverageWeight, Charge, Location, Model, NeutralLoss,
-};
-use rustyms::{mz, Hecklib, MassOverCharge, MonoIsotopic};
+use rustyms::{e, Charge, Location, Model, NeutralLoss};
+use rustyms::{mz, MassOverCharge};
 use state::State;
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -119,11 +117,12 @@ fn load_mgf(path: &str, state: ModifiableState) -> Result<String, String> {
 
 type ModelParameters = Vec<(Location, Vec<NeutralLoss>)>;
 
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 fn annotate_spectrum(
     index: usize,
     ppm: f64,
-    mass: &str,
+    _mass: &str,
     charge: Option<f64>,
     noise_threshold: Option<f64>,
     model: &str,
@@ -160,19 +159,13 @@ fn annotate_spectrum(
     model.ppm = MassOverCharge::new::<mz>(ppm);
     let peptide = rustyms::Peptide::pro_forma(peptide)?;
     let mut spectrum = state.spectra[index].clone();
-    // if let Some(threshold) = noise_threshold {
-    //     spectrum.noise_filter(threshold);
-    // }
+    if let Some(threshold) = noise_threshold {
+        spectrum.noise_filter(threshold);
+    }
     let use_charge = charge.map_or(spectrum.charge, Charge::new::<e>);
-    let fragments = if mass == "monoisotopic" {
-        generate_theoretical_fragments::<MonoIsotopic>(&peptide, use_charge, &model)
-    } else if mass == "averageweight" {
-        generate_theoretical_fragments::<AverageWeight>(&peptide, use_charge, &model)
-    } else if mass == "hecklib" {
-        generate_theoretical_fragments::<Hecklib>(&peptide, use_charge, &model)
-    } else {
-        panic!("Unknown mass type");
-    };
+    let fragments = peptide
+        .generate_theoretical_fragments(use_charge, &model)
+        .ok_or("The sequence requested does not have a defined mass (you used B/Z).".to_string())?;
     let annotated = spectrum.annotate(peptide, &fragments, &model);
     Ok((
         render::annotated_spectrum(&annotated, "spectrum", &fragments),
@@ -213,7 +206,7 @@ fn main() {
 
 #[test]
 fn deserialise_test() {
-    dbg!(serde_json::to_string(&vec![
+    let _ = dbg!(serde_json::to_string(&vec![
         (Location::SkipN(1), vec![NeutralLoss::Water]),
         (Location::All, vec![NeutralLoss::Water]),
         (Location::SkipNC(1, 2), vec![NeutralLoss::Water]),
