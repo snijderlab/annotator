@@ -520,7 +520,7 @@ fn render_spectrum(
                     (peak.experimental_mz.value * 10.0).round() / 10.0,
                 )
                 .unwrap();
-                let ch = format!("{:+}", peak.charge.value);
+                let ch = format!("{:+}", f.charge.value);
                 write!(
                     output,
                     "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch'>{}</sub></span></span>",
@@ -577,6 +577,7 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
             <tr>
                 <th>Position</th>
                 <th>Ion type</th>
+                <th>Loss</th>
                 <th>Intensity</th>
                 <th>mz Theoretical</th>
                 <th>mz Error (Th)</th>
@@ -593,6 +594,7 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
                 "<tr class='unassigned'>
                 <td>-</td>
                 <td>-</td>
+                <td>-</td>
                 <td>{:.2}</td>
                 <td>{:.2}</td>
                 <td>-</td>
@@ -607,6 +609,7 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
                 "<tr>
                 <td>{}</td>
                 <td>{}</td>
+                <td>{}</td>
                 <td>{:.2}</td>
                 <td>{:.2}</td>
                 <td>{:.5}</td>
@@ -618,6 +621,7 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
                     .position()
                     .map_or("*".to_string(), |i| (i.sequence_index + 1).to_string()),
                 f.ion,
+                f.neutral_loss.map_or(String::new(), |v| v.to_string()),
                 peak.intensity,
                 peak.experimental_mz.value,
                 (f.mz() - peak.experimental_mz).abs().value,
