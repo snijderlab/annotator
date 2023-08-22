@@ -1,6 +1,9 @@
 use std::{collections::HashSet, fmt::Write};
 
-use rustyms::{AnnotatedSpectrum, Charge, Fragment, FragmentType, Mass, MassOverCharge, Zero};
+use rustyms::{
+    AnnotatedSpectrum, AverageWeight, Charge, Fragment, FragmentType, HasMass, Mass,
+    MassOverCharge, MassSystem, MonoIsotopic, Zero,
+};
 
 use crate::html_builder::{HtmlElement, HtmlTag};
 
@@ -52,6 +55,8 @@ pub fn annotated_spectrum(
     // Spectrum graph
     spectrum_graph(&mut output, &graph_boundaries, &graph_data, limits.0.value);
     write!(output, "</div></div>").unwrap();
+    // General stats
+    general_stats(&mut output, &spectrum, &fragments);
     // Spectrum table
     collapsible(
         &mut output,
@@ -486,7 +491,11 @@ fn render_spectrum(
         "<span class='selection {selection}' hidden='true'></span>"
     )
     .unwrap();
-    write!(output, "<div class='zoom-out' tabindex='0'>Zoom Out</div>").unwrap();
+    write!(
+        output,
+        "<div class='zoom-out' tabindex='0'>Reset Zoom</div>"
+    )
+    .unwrap();
 
     for peak in &spectrum.spectrum {
         match &peak.annotation {
@@ -623,6 +632,29 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
     }
     write!(output, "</table>").unwrap();
     output
+}
+
+fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &[Fragment]) {
+    let precursor_mass = spectrum.peptide.mass::<MonoIsotopic>().value;
+    let precursor_mass_avg = spectrum.peptide.mass::<AverageWeight>().value;
+    let num_annotated = spectrum
+        .spectrum
+        .iter()
+        .filter(|p| p.annotation.is_some())
+        .count() as f64;
+    let perc_fragments_found = num_annotated / fragments.len() as f64 * 100.0;
+    let perc_peaks_annotated = num_annotated / spectrum.spectrum.len() as f64 * 100.0;
+    write!(
+        output,
+        "<table class='general-stats'>
+    <tr><td>Precursor Mass</td><td>{precursor_mass:.3} Da | avg: {precursor_mass_avg:.3} Da</td></tr>
+    <tr><td>Fragments found</td><td>{perc_fragments_found:.2} % ({num_annotated}/{})</td></tr>
+    <tr><td>Peaks annotated</td><td>{perc_peaks_annotated:.2} % ({num_annotated}/{})</td></tr>
+    </table>",
+        fragments.len(),
+        spectrum.spectrum.len()
+    )
+    .unwrap();
 }
 
 fn collapsible(output: &mut String, id: &str, title: String, content: String) {
