@@ -383,14 +383,16 @@ fn create_ion_legend(output: &mut String, id: &str) {
     <input id='{id}_unassigned' type='checkbox' checked class='unassigned'/>
     <label for='{id}_unassigned' class='unassigned' tabindex='0'>Unassigned</label>
     <label class='label'>
-        Ion
-        <sup>Charge</sup>
-        <sub style='margin-left:-6ch;margin-right:.5rem;'>Position</sub>
-        Show for top:
-        <input id='{id}_label' type='range' min='0' max='100' value='100'/>
-        <input id='{id}_label_value' type='number' min='0' max='100' value='100'/>
-        %
+    Ion
+    <sup>Charge</sup>
+    <sub style='margin-left:-6ch;margin-right:.5rem;'>Position</sub>
+    Show for top:
+    <input id='{id}_label' type='range' min='0' max='100' value='100'/>
+    <input id='{id}_label_value' type='number' min='0' max='100' value='100'/>
+    %
     </label>
+    <input id='{id}_mass_label' type='checkbox' class='mass-label'/>
+    <label for='{id}_mass_label' class='mass-label' tabindex='0'>Show top masses</label>
 </div>"
     )
     .unwrap();
