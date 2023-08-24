@@ -89,12 +89,17 @@ button:hover {
 .input-settings input,
 .input-settings textarea,
 .input-settings button,
-.input-settings select {
+.input-settings select,
+button {
   background: var(--color-background);
   color: var(--color-foreground);
   border: 2px solid var(--color-halfway);
   border-radius: 0;
   font-size: 1.2em;
+}
+
+button.print {
+  margin: 1em;
 }
 
 .input-settings option {

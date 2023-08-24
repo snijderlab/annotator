@@ -22,6 +22,7 @@ r#"<!DOCTYPE html>
 </head>
 
 <body>
+  <button class="print" onclick="window.print()">Export 🖶</button>
 <!--
   <details>
     <summary>Align</summary>
