@@ -1,6 +1,6 @@
 [package]
 name = "annotator"
-version = "0.1.0"
+version = "0.1.1"
 description = "Oxidised stepping stones for a new Stitch"
 authors = ["Douwe Schulte <d.schulte@uu.nl>"]
 license = "MIT"

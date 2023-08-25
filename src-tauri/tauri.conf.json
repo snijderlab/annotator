@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "annotator",
-    "version": "0.1.0"
+    "version": "0.1.1"
   },
   "tauri": {
     "allowlist": {
@@ -41,7 +41,9 @@
         "providerShortName": null,
         "signingIdentity": null
       },
-      "resources": [],
+      "resources": [
+        "../src/stitch-assets/*"
+      ],
       "shortDescription": "",
       "targets": "all",
       "windows": {
