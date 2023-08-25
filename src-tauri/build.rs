@@ -139,7 +139,7 @@ LVESGGGLVQPNSLRLSCAASGF
         <input type="text" id="model-precursor-loss" value="" class="col-2"/>
         </fieldset>
         <label class="wide" for="peptide">Peptide sequence </label>
-        <textarea class="wide" id="peptide">VAEINPSNGGTTFNEKFKGGKATJ</textarea>
+        <textarea class="wide" id="peptide"></textarea>
         <button id="annotate-button" type="button">Annotate</button>
       </div>
     <pre id="spectrum-error"></pre>

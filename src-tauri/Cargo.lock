@@ -51,6 +51,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "annotator"
+version = "0.1.0"
+dependencies = [
+ "itertools",
+ "pdbtbx",
+ "proc_interface",
+ "rustyms",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+]
+
+[[package]]
 name = "anyhow"
 version = "1.0.71"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1342,15 +1356,6 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.10.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
@@ -2374,9 +2379,11 @@ checksum = "4f3208ce4d8448b3f3e7d168a73f5e0c43a61e32930de3bceeccedb388b6bf06"
 
 [[package]]
 name = "rustyms"
-version = "0.3.1"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffb1fee3148a098d6ef3973dcafbca097e952d0a0c5c2302ed01c053f8857086"
 dependencies = [
- "itertools 0.11.0",
+ "itertools",
  "regex",
  "serde",
  "statrs",
@@ -2688,20 +2695,6 @@ dependencies = [
  "nalgebra",
  "num-traits",
  "rand 0.8.5",
-]
-
-[[package]]
-name = "stitch-oxide"
-version = "0.1.0"
-dependencies = [
- "itertools 0.10.5",
- "pdbtbx",
- "proc_interface",
- "rustyms",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
 ]
 
 [[package]]

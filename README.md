@@ -1,39 +1,18 @@
-# Tauri + Vanilla
+A simple tool to help you manually discover the depths of your spectra one spectrum at a time. It can load MGF files (only in centroid mode, also do not forget to deconvolute if you have TD data). Once loaded you can select a scan and add you annotation while tweaking the exact settings for generating the annotation. The annotation itself is interactive to help you discover what the spectrum means. Which you can then export as nice images for use in other environments. 
 
-This template should help get you started developing with Tauri in vanilla HTML, CSS and Javascript.
+## Peptide sequence
 
-## Recommended IDE Setup
+It uses the [ProForma](https://github.com/HUPO-PSI/ProForma) specification to specify the sequence, it does not handle every last detail of this specification yet, for details see [rustyms](https://github.com/snijderlab/rustyms). Here are some examples of valid sequences:
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+* `VAEINPSNGGTTFNEKFKGGKATJ` Normal aminoacids
+* `EM[L-methionine sulfoxide]EVEES[UNIMOD:21]PEK` Modifications using [unimod](http://www.unimod.org) and [PSI-MOD](https://www.ebi.ac.uk/ols/ontologies/mod)
+* `TFNEKF[+15.9949]KGGKATJ` Modifications using raw masses
+* `TFNEKF[Formula:O]KGGKATJ` Modifications using elemental formula
+* `TFNEKF[Glycan:HexNAc1Hex2]KGGKATJ` Modifications glycan compositions
+* `[+16]-TFNEKFKGGKATJ-[Methyl]` Terminal modifications
+* `<15N>TFNEKFKGGKATJ` Global isotope modifications (all Nitrogen is 15N)
+* `<[S-carboxamidomethyl-L-cysteine]@C>AVYYCSRWGGDGFYAMDYWGQG` Global modifications (all C are carboxamidomethylated)
 
-## Example input
+## Installing
 
-EVQLVESGGGLVQPGGSLRLSCAASGFTVSSNYMSWVRQAPGKGLEWVSVIYSGGSTYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYCARXXXXXXXXXXXXXXXXXXXX
-
-
-DLQLVESGGGLVGAKSPPGTLSAAASGFNL
-DLQLVESGGGLVGAKSPPGTLSAAASGFNL
-EVQLVESGGGLVQPGGSLSGAKYHSGFNL
-EVVQLVESGGGLVQPGGSLGVLSCAASGF
-DLQLVESGGGLVQPGGSLGVLSCAASGF
-DLQLVESGGGLVQPGTPLYWNAASGFNL
-DLQLVESGGGLVQPGGSLRLSCAASGF
-QVQLVESGGGLVQPGGSLRLSCAASGF
-EVQLVESGGGLPVQGGSLRLSCAADGF
-EVQLVESGGGLVQPGGSLRLSCAASGF
-EVQLVSGEGGLVQPGGSLRLSCAASGF
-QVELVESGGGLVQPGGSLRLSCAASGF
-TLSADTSKNTAYLQMNSLRAEDTAVY
-RFTLSADTSKNTAYLQMNSLRAEDTA
-QLVESGGGLVQPGGSLTHVAGAGHSGF
-SADTSKNTAYLQMNSLRAEDTAVYY
-LMLTDGYTRYADSVKGRFTLSADTS
-QLVESGGGLVQPGGSLRLSCAASGF
-QLVESGGGLVQPGGSLRLSCQTGF
-LVESGGGLVQPNSLRLSCAASGF
-
-## todo
- - [ ] Add density plot along the y axis of the spectrum graph to see the density of all errors over the ppm range
- - [ ] Add N/C terminal highlighting option (shows all applicable ions in spectra, show all points relative to that side for spectrum-graph)
- - [ ] Add N/C, N, or C positioning option for spectrum graph (shows all points relative to that series)
- - [ ] Ruisfilter
+See [releases](https://github.com/snijderlab/annotator/releases) for the latest release, here you will also find the prebuilt binaries for your architecture.

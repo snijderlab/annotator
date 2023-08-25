@@ -683,7 +683,7 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
     write!(
         output,
         "<table class='general-stats'>
-    <tr><td>Precursor Mass</td><td>{precursor}</td></tr>
+    <tr><td>Precursor Mass (M)</td><td>{precursor}</td></tr>
     <tr><td>Fragments found</td><td>{percentage_fragments_found:.2} % ({num_annotated}/{})</td></tr>
     <tr><td>Peaks annotated</td><td>{percentage_peaks_annotated:.2} % ({num_annotated}/{})</td></tr>
     <tr><td>Intensity annotated</td><td>{percentage_intensity_annotated:.2} %</td></tr>
