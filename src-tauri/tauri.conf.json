@@ -7,8 +7,8 @@
     "withGlobalTauri": true
   },
   "package": {
-    "productName": "stitch-oxide",
-    "version": "0.0.0"
+    "productName": "annotator",
+    "version": "0.1.0"
   },
   "tauri": {
     "allowlist": {
@@ -32,7 +32,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.stitch.stitch-oxide",
+      "identifier": "com.snijderlab.annotator",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
@@ -62,7 +62,7 @@
         "height": 600,
         "resizable": true,
         "alwaysOnTop": false,
-        "title": "Stitch[+Oxide]",
+        "title": "Annotator",
         "width": 800
       }
     ]

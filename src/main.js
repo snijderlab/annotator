@@ -1,25 +1,5 @@
 const { invoke } = window.__TAURI__.tauri;
 
-let sequenceInputA;
-let sequenceInputB;
-let sequenceType;
-let alignmentScore;
-
-async function align() {
-  alignmentScore.innerHTML = await invoke("align_sequences", { template: sequenceInputA.value, reads: sequenceInputB.value, alignmentType: sequenceType.value });
-}
-
-async function load_cif() {
-  try {
-    var result = await invoke("load_cif", { path: document.querySelector("#load-path").value, minLength: Number(document.querySelector("#load-min-length").value), warn: true });
-    sequenceInputB.value = result[0];
-    document.querySelector("#error-log").innerText = result[1];
-  } catch (error) {
-    console.log(error);
-    document.querySelector("#error-log").innerText = error;
-  }
-}
-
 async function load_mgf() {
   try {
     let result = await invoke("load_mgf", { path: document.querySelector("#load-mgf-path").dataset.filepath });

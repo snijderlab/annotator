@@ -8,14 +8,6 @@ repository = "https://github.com/snijderlab/annotator"
 edition = "2021"
 rust-version = "1.57"
 
-[lib]
-name = "mass_alignment"
-path = "alignment/src/lib.rs"
-
-[[bin]]
-name = "mass_alignment_bin"
-path = "alignment/src/bin.rs"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
@@ -27,7 +19,7 @@ serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.2", features = ["dialog-open"] }
 pdbtbx = "0.10"
-rustyms = "0.4.0"
+rustyms = "0.4.1"
 proc_interface = { path = "../src-proc-interface" }
 
 [features]
