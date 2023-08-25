@@ -41,7 +41,12 @@ pub fn annotated_spectrum(
     id: &str,
     fragments: &[Fragment],
 ) -> String {
-    let mut output = "<div class='spectrum' onload='SpectrumSetUp()'>".to_string();
+    let compact = if spectrum.peptide.len() > 40 {
+        " compact"
+    } else {
+        ""
+    };
+    let mut output = format!("<div class='spectrum{compact}' onload='SpectrumSetUp()'>");
     let (limits, overview) = get_overview(spectrum);
     let (graph_data, graph_boundaries) = spectrum_graph_boundaries(spectrum, fragments);
 
@@ -664,19 +669,24 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
     } else {
         "No defined molecular formula for precursor".to_string()
     };
-    let num_annotated = spectrum
+    let (num_annotated, intensity_annotated) = spectrum
         .spectrum
         .iter()
         .filter(|p| p.annotation.is_some())
-        .count() as f64;
-    let perc_fragments_found = num_annotated / fragments.len() as f64 * 100.0;
-    let perc_peaks_annotated = num_annotated / spectrum.spectrum.len() as f64 * 100.0;
+        .fold((0, 0.0), |(n, intensity), p| {
+            (n + 1, intensity + p.intensity)
+        });
+    let total_intensity: f64 = spectrum.spectrum.iter().map(|p| p.intensity).sum();
+    let percentage_fragments_found = num_annotated as f64 / fragments.len() as f64 * 100.0;
+    let percentage_peaks_annotated = num_annotated as f64 / spectrum.spectrum.len() as f64 * 100.0;
+    let percentage_intensity_annotated = intensity_annotated / total_intensity * 100.0;
     write!(
         output,
         "<table class='general-stats'>
     <tr><td>Precursor Mass</td><td>{precursor}</td></tr>
-    <tr><td>Fragments found</td><td>{perc_fragments_found:.2} % ({num_annotated}/{})</td></tr>
-    <tr><td>Peaks annotated</td><td>{perc_peaks_annotated:.2} % ({num_annotated}/{})</td></tr>
+    <tr><td>Fragments found</td><td>{percentage_fragments_found:.2} % ({num_annotated}/{})</td></tr>
+    <tr><td>Peaks annotated</td><td>{percentage_peaks_annotated:.2} % ({num_annotated}/{})</td></tr>
+    <tr><td>Intensity annotated</td><td>{percentage_intensity_annotated:.2} %</td></tr>
     </table>",
         fragments.len(),
         spectrum.spectrum.len()
