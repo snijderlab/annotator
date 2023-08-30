@@ -28,6 +28,7 @@ r#"<!DOCTYPE html>
     <label for="load-mgf-path">Path</label>
     <button type="button" onclick="select_file(this)" id="load-mgf-path">Select file</button>
     <button id="load-mgf-button" type="button">Load</button>
+    <pre id="loaded-path"></pre>
   </div>
   <div class="input-settings">
     <h2>Annotate</h2>
@@ -36,7 +37,7 @@ r#"<!DOCTYPE html>
     <label for="spectrum-ppm">PPM </label>
     <input type="number" id="spectrum-ppm" value="20" />
     <label for="mass-system">Mass type </label>
-    <select id="mass-system">
+    <select id="mass-system" disabled>
     <option value="monoisotopic">MonoIsotopic</option>
     <option value="averageweight">AverageWeight</option>
     </select>

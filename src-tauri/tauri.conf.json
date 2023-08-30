@@ -7,8 +7,7 @@
     "withGlobalTauri": true
   },
   "package": {
-    "productName": "annotator",
-    "version": "0.1.1"
+    "productName": "Annotator"
   },
   "tauri": {
     "allowlist": {

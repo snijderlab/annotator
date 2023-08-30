@@ -5,9 +5,11 @@ async function load_mgf() {
     let result = await invoke("load_mgf", { path: document.querySelector("#load-mgf-path").dataset.filepath });
     document.querySelector("#spectrum-log").innerText = result;
     document.querySelector("#spectrum-error").innerText = "";
+    document.querySelector("#loaded-path").innerText = document.querySelector("#load-mgf-path").dataset.filepath.split('\\').pop().split('/').pop();
   } catch (error) {
     console.log(error);
     document.querySelector("#spectrum-error").innerText = error;
+    document.querySelector("#loaded-path").innerText = "";
   }
 }
 

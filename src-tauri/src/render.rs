@@ -1,5 +1,6 @@
 use std::{collections::HashSet, fmt::Write};
 
+use itertools::Itertools;
 use rustyms::{
     AnnotatedSpectrum, Charge, Fragment, FragmentType, Mass, MassOverCharge, MolecularFormula, Zero,
 };
@@ -680,6 +681,19 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
     let percentage_fragments_found = num_annotated as f64 / fragments.len() as f64 * 100.0;
     let percentage_peaks_annotated = num_annotated as f64 / spectrum.spectrum.len() as f64 * 100.0;
     let percentage_intensity_annotated = intensity_annotated / total_intensity * 100.0;
+    let percentage_positions_covered = spectrum
+        .spectrum
+        .iter()
+        .filter_map(|p| {
+            p.annotation
+                .as_ref()
+                .and_then(|a| a.ion.position())
+                .map(|pos| pos.sequence_index)
+        })
+        .unique()
+        .count() as f64
+        / (spectrum.peptide.len() - 2) as f64
+        * 100.0;
     write!(
         output,
         "<table class='general-stats'>
@@ -687,6 +701,7 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
     <tr><td>Fragments found</td><td>{percentage_fragments_found:.2} % ({num_annotated}/{})</td></tr>
     <tr><td>Peaks annotated</td><td>{percentage_peaks_annotated:.2} % ({num_annotated}/{})</td></tr>
     <tr><td>Intensity annotated</td><td>{percentage_intensity_annotated:.2} %</td></tr>
+    <tr><td>Sequence positions covered</td><td>{percentage_positions_covered:.2} %</td></tr>
     </table>",
         fragments.len(),
         spectrum.spectrum.len()
