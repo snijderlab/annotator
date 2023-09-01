@@ -52,7 +52,7 @@ dependencies = [
 
 [[package]]
 name = "annotator"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "itertools",
  "rustyms",
