@@ -32,6 +32,13 @@ r#"<!DOCTYPE html>
     </div>
   <pre id="loaded-path"></pre>
   <div class="input-settings">
+    <h2>Load spectra</h2>
+    <label for="spectrum-index">Spectrum index</label>
+    <input type="number" id="details-spectrum-index" value="0" min="0" />
+    <pre id="spectrum-details"></pre>
+    </div>
+  <pre id="loaded-path"></pre>
+  <div class="input-settings">
     <h2>Annotate</h2>
     <label for="spectrum-index">Spectrum index</label>
     <input type="number" id="spectrum-index" value="0" />

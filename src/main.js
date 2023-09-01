@@ -6,6 +6,7 @@ async function load_mgf() {
     document.querySelector("#spectrum-log").innerText = result;
     document.querySelector("#spectrum-error").innerText = "";
     document.querySelector("#loaded-path").innerText = document.querySelector("#load-mgf-path").dataset.filepath.split('\\').pop().split('/').pop();
+    spectrum_details();
   } catch (error) {
     console.log(error);
     document.querySelector("#spectrum-error").innerText = error;
@@ -23,13 +24,24 @@ async function load_clipboard() {
         document.querySelector("#spectrum-log").innerText = result;
         document.querySelector("#spectrum-error").innerText = "";
         document.querySelector("#loaded-path").innerText = "Clipboard";
+        spectrum_details();
       } catch (error) {
         console.log(error);
         document.querySelector("#spectrum-error").innerText = error;
         document.querySelector("#loaded-path").innerText = "";
       }
     });
+}
 
+async function spectrum_details() {
+  try {
+    let result = await invoke("spectrum_details", { index: Number(document.querySelector("#details-spectrum-index").value) });
+    document.querySelector("#spectrum-details").innerText = result;
+  } catch (error) {
+    console.log(error);
+    document.querySelector("#spectrum-error").innerText = error;
+    document.querySelector("#spectrum-details").innerText = "ERROR";
+  }
 }
 
 function get_location(id) {
@@ -90,6 +102,10 @@ window.addEventListener("DOMContentLoaded", () => {
   document
     .querySelector("#load-clipboard")
     .addEventListener("click", () => load_clipboard());
+  let dsi = document
+    .querySelector("#details-spectrum-index");
+  dsi.addEventListener("change", () => spectrum_details())
+  dsi.addEventListener("focus", () => spectrum_details());
   document
     .querySelector("#annotate-button")
     .addEventListener("click", () => annotate_spectrum());

@@ -28,6 +28,25 @@ fn load_mgf(path: &str, state: ModifiableState) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn spectrum_details(index: usize, state: ModifiableState) -> String {
+    state.lock().unwrap().spectra.get(index).map_or(
+        "Spectrum index not valid".to_string(),
+        |spectrum| {
+            format!(
+                "{}\n{:.3}@{:.3}{:+.0}{:.3}",
+                spectrum.title,
+                spectrum.mass.value,
+                spectrum.rt.value,
+                spectrum.charge.value,
+                spectrum
+                    .intensity
+                    .map_or(String::new(), |i| format!(" I:{i}"))
+            )
+        },
+    )
+}
+
+#[tauri::command]
 fn load_clipboard(data: &str, state: ModifiableState) -> Result<String, String> {
     let lines = data.lines().collect_vec();
     if data.is_empty() {
@@ -135,7 +154,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             load_mgf,
             annotate_spectrum,
-            load_clipboard
+            load_clipboard,
+            spectrum_details
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
