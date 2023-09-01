@@ -47,13 +47,13 @@ pub fn annotated_spectrum(
     } else {
         ""
     };
-    let mut output = format!("<div class='spectrum{compact}' onload='SpectrumSetUp()'>");
+    let mut output = String::new(); //format!("<div class='spectrum{compact}' onload='SpectrumSetUp()'>");
     let (limits, overview) = get_overview(spectrum);
     let (graph_data, graph_boundaries) = spectrum_graph_boundaries(spectrum, fragments);
 
     spectrum_top_buttons(&mut output, id, &limits, &graph_boundaries).unwrap();
 
-    write!(output, "<div class='wrapper unassigned'>").unwrap();
+    //write!(output, "<div class='wrapper unassigned'>").unwrap();
     create_ion_legend(&mut output, &format!("{id}-1"));
     render_peptide(&mut output, spectrum, overview);
     render_spectrum(&mut output, spectrum, &graph_boundaries, limits, "first");
@@ -70,7 +70,7 @@ pub fn annotated_spectrum(
         spectrum_table(spectrum, &format!("{id}-table-1")),
     );
 
-    write!(output, "</div>").unwrap();
+    //write!(output, "</div>").unwrap();
     output
 }
 
@@ -101,64 +101,6 @@ fn spectrum_top_buttons(
         "<input id='{id}-intensity-max' class='intensity-max' type='number' value='{}'/>",
         limits.2
     )?;
-    write!(output, "</div>")?;
-    write!(
-        output,
-        "<div class='settings spectrum-graph-setup'><p>Spectrum graph</p>"
-    )?;
-    spectrum_graph_header(output, spectrum_graph_boundaries)?;
-    write!(output, "</div>")?;
-    write!(
-        output,
-        "<div class='settings render-setup'><p>Render setup</p>"
-    )?;
-    write!(output, "<label for='{id}-width'>Width</label>")?;
-    write!(
-        output,
-        "<input id='{id}-width' class='width' type='text' value='100%'/>",
-    )?;
-    write!(output, "<label for='{id}-height'>Height</label>")?;
-    write!(
-        output,
-        "<input id='{id}-height' class='height' type='text' value='250px'/>",
-    )?;
-    write!(
-        output,
-        "<label for='{id}-fs-peptide'>Peptide font size</label>"
-    )?;
-    write!(
-        output,
-        "<input id='{id}-fs-peptide' class='fs-peptide' type='text' value='1.25rem'/>",
-    )?;
-    write!(
-        output,
-        "<label for='{id}-peptide-stroke'>Peptide stroke width</label>"
-    )?;
-    write!(
-        output,
-        "<input id='{id}-peptide-stroke' class='stroke-peptide' type='text' value='2px'/>",
-    )?;
-    write!(
-        output,
-        "<label for='{id}-fs-spectrum'>Spectrum font size</label>"
-    )?;
-    write!(
-        output,
-        "<input id='{id}-fs-spectrum' class='fs-spectrum' type='text' value='1rem'/>",
-    )?;
-    write!(
-        output,
-        "<label for='{id}-spectrum-stroke'>Spectrum stroke width</label>"
-    )?;
-    write!(
-        output,
-        "<input id='{id}-spectrum-stroke' class='stroke-spectrum' type='text' value='2px'/>",
-    )?;
-    write!(
-        output,
-        "<input id='{id}-compact' class='compact' type='checkbox'/>",
-    )?;
-    write!(output, "<label for='{id}-compact'>Compact peptide</label>")?;
     write!(output, "</div>")?;
     Ok(())
 }
