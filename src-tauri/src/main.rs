@@ -3,8 +3,9 @@
     windows_subsystem = "windows"
 )]
 
-use rustyms::{e, Charge, Location, Model, NeutralLoss};
-use rustyms::{mz, MassOverCharge};
+use itertools::Itertools;
+use rustyms::MassOverCharge;
+use rustyms::{e, Charge, Location, Mass, Model, NeutralLoss, RawPeak, RawSpectrum, Time, Zero};
 use state::State;
 use std::sync::Mutex;
 
@@ -14,13 +15,8 @@ mod state;
 
 type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
 fn load_mgf(path: &str, state: ModifiableState) -> Result<String, String> {
-    //match rustyms::thermo::open(path) {
-    //    Ok(()) => Ok("loaded thermo".to_string()),
-    //    Err(err) => Err(err),
-    //}
     match rustyms::rawfile::mgf::open(path) {
         Ok(v) => {
             let count = v.len();
@@ -29,6 +25,47 @@ fn load_mgf(path: &str, state: ModifiableState) -> Result<String, String> {
         }
         Err(err) => Err(err),
     }
+}
+
+#[tauri::command]
+fn load_clipboard(data: &str, state: ModifiableState) -> Result<String, String> {
+    let lines = data.lines().collect_vec();
+    if data.is_empty() {
+        return Err("Empty clipboard".to_string());
+    }
+    if lines[0].trim() != "#	m/z	Res.	S/N	I	I %	FWHM" {
+        return Err("Not in the correct format".to_string());
+    }
+    let mut spectrum = Vec::new();
+    for (line_number, line) in lines.into_iter().enumerate().skip(1) {
+        let line_number = line_number + 1; // Humans like 1 based counting...
+        let cells = line.split('\t').collect_vec();
+        if cells.len() != 8 {
+            return Err(format!("Incorrect number of columns at line {line_number}"));
+        }
+        if let (Ok(mz), Ok(intensity)) = (cells[1].parse(), cells[4].parse()) {
+            spectrum.push(RawPeak {
+                mz: MassOverCharge::new::<rustyms::mz>(mz),
+                intensity,
+                charge: Charge::zero(),
+            })
+        } else {
+            return Err(format!(
+                "Could not read numbers at line {line_number} '{line}' '{}' '{}'",
+                cells[1], cells[4]
+            ));
+        }
+    }
+    state.lock().unwrap().spectra = vec![RawSpectrum {
+        title: "Clipboard".to_string(),
+        num_scans: 0,
+        rt: Time::zero(),
+        charge: Charge::new::<e>(1.0),
+        mass: Mass::zero(),
+        intensity: None,
+        spectrum,
+    }];
+    Ok("Loaded".to_string())
 }
 
 type ModelParameters = Vec<(Location, Vec<NeutralLoss>)>;
@@ -46,6 +83,7 @@ fn annotate_spectrum(
     state: ModifiableState,
     cmodel: ModelParameters,
 ) -> Result<(String, String, String), String> {
+    use rustyms::mz;
     let state = state.lock().unwrap();
     if index >= state.spectra.len() {
         return Err("Non existent spectrum index".to_string());
@@ -94,7 +132,11 @@ fn main() {
         .manage(Mutex::new(State {
             spectra: Vec::new(),
         }))
-        .invoke_handler(tauri::generate_handler![load_mgf, annotate_spectrum])
+        .invoke_handler(tauri::generate_handler![
+            load_mgf,
+            annotate_spectrum,
+            load_clipboard
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

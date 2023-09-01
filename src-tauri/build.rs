@@ -28,6 +28,7 @@ r#"<!DOCTYPE html>
     <label for="load-mgf-path">Path</label>
     <button type="button" onclick="select_file(this)" id="load-mgf-path">Select file</button>
     <button id="load-mgf-button" type="button">Load</button>
+    <button id="load-clipboard" type="button">Load Clipboard</button>
     </div>
   <pre id="loaded-path"></pre>
   <div class="input-settings">

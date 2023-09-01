@@ -13,6 +13,25 @@ async function load_mgf() {
   }
 }
 
+async function load_clipboard() {
+  navigator.clipboard
+    .readText()
+    .then(async (clipText) => {
+      try {
+        console.log(clipText);
+        let result = await invoke("load_clipboard", { data: clipText });
+        document.querySelector("#spectrum-log").innerText = result;
+        document.querySelector("#spectrum-error").innerText = "";
+        document.querySelector("#loaded-path").innerText = "Clipboard";
+      } catch (error) {
+        console.log(error);
+        document.querySelector("#spectrum-error").innerText = error;
+        document.querySelector("#loaded-path").innerText = "";
+      }
+    });
+
+}
+
 function get_location(id) {
   let loc = document.querySelector(id);
   let t = loc.children[0].options[Number(loc.children[0].value)].dataset.value;
@@ -65,19 +84,12 @@ async function annotate_spectrum() {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  // sequenceInputA = document.querySelector("#greet-input-a");
-  // sequenceInputB = document.querySelector("#greet-input-b");
-  // sequenceType = document.querySelector("#input-alignment-type");
-  // alignmentScore = document.querySelector("#reads-alignment");
-  // document
-  //   .querySelector("#greet-button")
-  //   .addEventListener("click", () => align());
-  // document
-  //   .querySelector("#load-button")
-  //   .addEventListener("click", () => load_cif());
   document
     .querySelector("#load-mgf-button")
     .addEventListener("click", () => load_mgf());
+  document
+    .querySelector("#load-clipboard")
+    .addEventListener("click", () => load_clipboard());
   document
     .querySelector("#annotate-button")
     .addEventListener("click", () => annotate_spectrum());
