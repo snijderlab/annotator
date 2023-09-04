@@ -86,7 +86,7 @@ async function annotate_spectrum() {
     document.querySelector("#spectrum-fragments").innerHTML = result[1];
     document.querySelector("#spectrum-log").innerText = result[2];
     document.querySelector("#spectrum-error").innerText = "";
-    document.querySelector("#spectrum-wrapper").className = "spectrum"; // Remove hidden class if this is the first run
+    document.querySelector("#spectrum-wrapper").classList.remove("hidden"); // Remove hidden class if this is the first run
     SetUpSpectrumInterface();
   } catch (error) {
     console.log(error);
