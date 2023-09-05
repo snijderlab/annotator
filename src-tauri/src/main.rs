@@ -52,11 +52,27 @@ fn load_clipboard(data: &str, state: ModifiableState) -> Result<String, String> 
     if data.is_empty() {
         return Err("Empty clipboard".to_string());
     }
-    if lines[0].trim() != "#	m/z	Res.	S/N	I	I %	FWHM" {
-        return Err("Not in the correct format".to_string());
-    }
+    let spectrum = match lines[0].trim() {
+        "#	m/z	Res.	S/N	I	I %	FWHM" => load_bruker_clipboard(&lines),
+        "m/z	Charge	Intensity	FragmentType	MassShift	Position" => load_stitch_clipboard(&lines),
+        _ => Err("Not a recognised format (Bruker/Stitch)".to_string()),
+    }?;
+
+    state.lock().unwrap().spectra = vec![RawSpectrum {
+        title: "Clipboard".to_string(),
+        num_scans: 0,
+        rt: Time::zero(),
+        charge: Charge::new::<e>(1.0),
+        mass: Mass::zero(),
+        intensity: None,
+        spectrum,
+    }];
+    Ok("Loaded".to_string())
+}
+
+fn load_bruker_clipboard(lines: &[&str]) -> Result<Vec<RawPeak>, String> {
     let mut spectrum = Vec::new();
-    for (line_number, line) in lines.into_iter().enumerate().skip(1) {
+    for (line_number, line) in lines.iter().enumerate().skip(1) {
         let line_number = line_number + 1; // Humans like 1 based counting...
         let cells = line.split('\t').collect_vec();
         if cells.len() != 8 {
@@ -75,16 +91,31 @@ fn load_clipboard(data: &str, state: ModifiableState) -> Result<String, String> 
             ));
         }
     }
-    state.lock().unwrap().spectra = vec![RawSpectrum {
-        title: "Clipboard".to_string(),
-        num_scans: 0,
-        rt: Time::zero(),
-        charge: Charge::new::<e>(1.0),
-        mass: Mass::zero(),
-        intensity: None,
-        spectrum,
-    }];
-    Ok("Loaded".to_string())
+    Ok(spectrum)
+}
+
+fn load_stitch_clipboard(lines: &[&str]) -> Result<Vec<RawPeak>, String> {
+    let mut spectrum = Vec::new();
+    for (line_number, line) in lines.iter().enumerate().skip(1) {
+        let line_number = line_number + 1; // Humans like 1 based counting...
+        let cells = line.split('\t').collect_vec();
+        if cells.len() != 6 {
+            return Err(format!("Incorrect number of columns at line {line_number}"));
+        }
+        if let (Ok(mz), Ok(intensity)) = (cells[0].parse(), cells[2].parse()) {
+            spectrum.push(RawPeak {
+                mz: MassOverCharge::new::<rustyms::mz>(mz),
+                intensity,
+                charge: Charge::zero(),
+            })
+        } else {
+            return Err(format!(
+                "Could not read numbers at line {line_number} '{line}' '{}' '{}'",
+                cells[0], cells[2]
+            ));
+        }
+    }
+    Ok(spectrum)
 }
 
 type ModelParameters = Vec<(Location, Vec<NeutralLoss>)>;
