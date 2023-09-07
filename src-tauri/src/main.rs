@@ -125,7 +125,6 @@ type ModelParameters = Vec<(Location, Vec<NeutralLoss>)>;
 fn annotate_spectrum(
     index: usize,
     ppm: f64,
-    _mass: &str,
     charge: Option<f64>,
     noise_threshold: Option<f64>,
     model: &str,

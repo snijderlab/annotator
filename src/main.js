@@ -1,20 +1,41 @@
 const { invoke } = window.__TAURI__.tauri;
 
-async function load_mgf() {
+/**
+* @param e: Element
+*/
+async function select_mgf_file(e) {
+  e.classList.add("loading")
+  let properties = {
+    //defaultPath: 'C:\\',
+    directory: false,
+    filters: [{
+      extensions: ['mgf'], name: "*"
+    }]
+  };
+  e.dataset.filepath = await window.__TAURI__.dialog.open(properties);
+  load_mgf(e);
+};
+
+/**
+* @param e: Element
+*/
+async function load_mgf(e) {
   try {
-    let result = await invoke("load_mgf", { path: document.querySelector("#load-mgf-path").dataset.filepath });
+    let result = await invoke("load_mgf", { path: e.dataset.filepath });
     document.querySelector("#spectrum-log").innerText = result;
-    document.querySelector("#spectrum-error").innerText = "";
-    document.querySelector("#loaded-path").innerText = document.querySelector("#load-mgf-path").dataset.filepath.split('\\').pop().split('/').pop();
+    document.querySelector("#loaded-path").classList.remove("error");
+    document.querySelector("#loaded-path").innerText = e.dataset.filepath.split('\\').pop().split('/').pop();
     spectrum_details();
   } catch (error) {
     console.log(error);
-    document.querySelector("#spectrum-error").innerText = error;
-    document.querySelector("#loaded-path").innerText = "";
+    document.querySelector("#loaded-path").classList.add("error");
+    document.querySelector("#loaded-path").innerText = error;
   }
+  e.classList.remove("loading")
 }
 
 async function load_clipboard() {
+  document.querySelector("#load-clipboard").classList.add("loading");
   navigator.clipboard
     .readText()
     .then(async (clipText) => {
@@ -22,14 +43,15 @@ async function load_clipboard() {
         console.log(clipText);
         let result = await invoke("load_clipboard", { data: clipText });
         document.querySelector("#spectrum-log").innerText = result;
-        document.querySelector("#spectrum-error").innerText = "";
+        document.querySelector("#loaded-path").classList.remove("error");
         document.querySelector("#loaded-path").innerText = "Clipboard";
         spectrum_details();
       } catch (error) {
         console.log(error);
-        document.querySelector("#spectrum-error").innerText = error;
-        document.querySelector("#loaded-path").innerText = "";
+        document.querySelector("#loaded-path").classList.add("error");
+        document.querySelector("#loaded-path").innerText = error;
       }
+      document.querySelector("#load-clipboard").classList.remove("loading")
     });
 }
 
@@ -65,7 +87,7 @@ function get_location(id) {
 
 //import { SpectrumSetUp } from "./stitch-assets/script.js";
 async function annotate_spectrum() {
-  document.querySelector("#annotate-button").className = "loading";
+  document.querySelector("#annotate-button").classList.add("loading");
   try {
     var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);
     var noise_threshold = document.querySelector("#noise-threshold").value == "" ? null : Number(document.querySelector("#noise-threshold").value);
@@ -81,7 +103,7 @@ async function annotate_spectrum() {
       [get_location("#model-z-location"), document.querySelector("#model-z-loss").value.split(' ').filter(a => a != "")],
       [get_location("#model-z-location"), document.querySelector("#model-precursor-loss").value.split(' ').filter(a => a != "")], // First element is discarded
     ];
-    var result = await invoke("annotate_spectrum", { index: Number(document.querySelector("#spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), mass: document.querySelector("#mass-system").value, charge: charge, noise_threshold: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").value, cmodel: model });
+    var result = await invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), charge: charge, noise_threshold: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").value, cmodel: model });
     document.querySelector("#spectrum-results-wrapper").innerHTML = result[0];
     document.querySelector("#spectrum-fragments").innerHTML = result[1];
     document.querySelector("#spectrum-log").innerText = result[2];
@@ -92,13 +114,13 @@ async function annotate_spectrum() {
     console.log(error);
     document.querySelector("#spectrum-error").innerText = error;
   }
-  document.querySelector("#annotate-button").className = "";
+  document.querySelector("#annotate-button").classList.remove("loading");
 }
 
 window.addEventListener("DOMContentLoaded", () => {
   document
-    .querySelector("#load-mgf-button")
-    .addEventListener("click", () => load_mgf());
+    .querySelector("#load-mgf-path")
+    .addEventListener("click", (event) => select_mgf_file(event.target));
   document
     .querySelector("#load-clipboard")
     .addEventListener("click", () => load_clipboard());

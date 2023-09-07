@@ -18,16 +18,15 @@ r#"<!DOCTYPE html>
   <title>Annotator</title>
   <script type="module" src="/main.js" defer></script>
   <script src="stitch-assets/script.js"></script>
-  <script src="/basic.js" defer></script>
 </head>
 
 <body>
   <button class="print" onclick="window.print()">Export 🖶</button>
   <div class="input-settings">
     <h2>Load spectra</h2>
-    <label for="load-mgf-path">Path</label>
-    <button type="button" onclick="select_file(this)" id="load-mgf-path">Select file</button>
-    <button id="load-mgf-button" type="button">Load</button>
+    <label for="load-mgf-path">File</label>
+    <button type="button" id="load-mgf-path">Select file</button>
+    <label for="load-clipboard">Clipboard</label>
     <button id="load-clipboard" type="button">Load Clipboard</button>
     </div>
   <pre id="loaded-path"></pre>
@@ -40,15 +39,8 @@ r#"<!DOCTYPE html>
   <pre id="loaded-path"></pre>
   <div class="input-settings">
     <h2>Annotate</h2>
-    <label for="spectrum-index">Spectrum index</label>
-    <input type="number" id="spectrum-index" value="0" />
     <label for="spectrum-ppm">PPM </label>
     <input type="number" id="spectrum-ppm" value="20" />
-    <label for="mass-system">Mass type </label>
-    <select id="mass-system" disabled>
-    <option value="monoisotopic">MonoIsotopic</option>
-    <option value="averageweight">AverageWeight</option>
-    </select>
     <label for="spectrum-charge">Max charge </label>
     <input type="number" id="spectrum-charge" value="" placeholder="Empty takes peptide charge from raw data" />
     <label for="noise-threshold">Intensity noise filter</label>
@@ -96,7 +88,7 @@ r#"<!DOCTYPE html>
       </fieldset>
       <label class="wide" for="peptide">Peptide sequence </label>
       <textarea class="wide" id="peptide"></textarea>
-      <button id="annotate-button" type="button">Annotate</button>
+      <button id="annotate-button" type="button" class="col-2">Annotate</button>
     </div>
   <pre id="spectrum-error"></pre>
   <div id='spectrum-wrapper' class="spectrum hidden" onload='SpectrumSetUp()'>

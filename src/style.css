@@ -77,7 +77,7 @@ button:hover {
 .input-settings {
   display: grid;
   grid-template-columns: 1fr 2fr 1fr 2fr;
-  gap: .5rem;
+  gap: .5rem 1rem;
 }
 
 @media (max-width: 1000px) {
@@ -127,7 +127,7 @@ button.print {
   grid-column: 1 /-1;
 }
 
-.input-settings button {
+.input-settings .col-2 {
   grid-column: 2;
 }
 
@@ -135,10 +135,11 @@ pre {
   word-wrap: break-word;
   white-space: pre-wrap;
   overflow: hidden;
+  padding: 0 1rem;
 }
 
-#spectrum-error {
-  padding: 0 1rem;
+#spectrum-error,
+.error {
   color: red;
 }
 
@@ -363,13 +364,13 @@ pre {
 }
 
 /* Loading animation */
-#annotate-button.loading {
+button.loading {
   pointer-events: none;
   border-color: var(--color-halfway);
   color: var(--color-halfway);
 }
 
-#annotate-button.loading::after {
+button.loading::after {
   content: ".";
   display: inline-block;
   animation: rotate 1s infinite linear;
