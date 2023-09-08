@@ -159,7 +159,7 @@ fn annotate_spectrum(
         _ => Model::all(),
     };
     model.ppm = MassOverCharge::new::<mz>(ppm);
-    let peptide = rustyms::Peptide::pro_forma(peptide)?;
+    let peptide = rustyms::ComplexPeptide::pro_forma(peptide)?;
     let mut spectrum = state.spectra[index].clone();
     if let Some(threshold) = noise_threshold {
         spectrum.noise_filter(threshold);
@@ -168,7 +168,7 @@ fn annotate_spectrum(
     let fragments = peptide
         .generate_theoretical_fragments(use_charge, &model)
         .ok_or("The sequence requested does not have a defined mass (you used B/Z).".to_string())?;
-    let annotated = spectrum.annotate(peptide, &fragments, &model);
+    let annotated = spectrum.annotate(peptide, &fragments);
     Ok((
         render::annotated_spectrum(&annotated, "spectrum", &fragments),
         render::fragment_table(&fragments),

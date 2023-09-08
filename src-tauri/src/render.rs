@@ -2,8 +2,23 @@ use std::{collections::HashSet, fmt::Write};
 
 use itertools::Itertools;
 use rustyms::{
-    AnnotatedSpectrum, Charge, Fragment, FragmentType, Mass, MassOverCharge, MolecularFormula, Zero,
+    AnnotatedSpectrum, Charge, ComplexPeptide, Fragment, FragmentType, LinearPeptide, Mass,
+    MassOverCharge, MolecularFormula, Zero,
 };
+
+// TODO: finish multimeric:
+// - [ ] Fix highlighting (now class based)
+// - [ ] Add highlighting on a peptide level (see all ions for one peptide)
+// - [ ] Fix the output if only one peptide is supplied
+// - [ ] Fix general stat table
+// - [ ] Check what is wrong with the annotation for chimeric model CidHcd
+// - [ ] Do some more thinking on the multi annotation display for single peaks
+// - [ ] Show peptides horizontally besides each other if there is space (justified to both page ends?)
+// - [ ] Show peptide number somewhere? (the number should be clear any ways, but maybe this is nice, or also nice to clearly separate both)
+// Some more general things:
+// - [ ] Make sure the change of sequence positions covered is correct
+// - [ ] Fix colour of precursor peaks
+// - [ ] Make all ion series automatically ignore the very last pos (with all AA, so not feasible to be generated)
 
 use crate::html_builder::{HtmlElement, HtmlTag};
 
@@ -42,18 +57,12 @@ pub fn annotated_spectrum(
     id: &str,
     fragments: &[Fragment],
 ) -> String {
-    let compact = if spectrum.peptide.len() > 40 {
-        " compact"
-    } else {
-        ""
-    };
-    let mut output = String::new(); //format!("<div class='spectrum{compact}' onload='SpectrumSetUp()'>");
+    let mut output = String::new();
     let (limits, overview) = get_overview(spectrum);
     let (graph_data, graph_boundaries) = spectrum_graph_boundaries(spectrum, fragments);
 
     spectrum_top_buttons(&mut output, id, &limits, &graph_boundaries).unwrap();
 
-    //write!(output, "<div class='wrapper unassigned'>").unwrap();
     create_ion_legend(&mut output, &format!("{id}-1"));
     render_peptide(&mut output, spectrum, overview);
     render_spectrum(&mut output, spectrum, &graph_boundaries, limits, "first");
@@ -107,7 +116,7 @@ fn spectrum_top_buttons(
 
 type Boundaries = (f64, f64, f64, f64, f64, f64, f64, f64, f64, f64);
 type SpectrumGraphData = Vec<(
-    Option<Fragment>,
+    Vec<Fragment>,
     (f64, Fragment),
     (f64, Fragment),
     MassOverCharge,
@@ -133,6 +142,7 @@ fn spectrum_graph_boundaries(
                             Fragment::new(
                                 MolecularFormula::default(),
                                 Charge::zero(),
+                                0,
                                 FragmentType::precursor,
                                 String::new(),
                             ),
@@ -142,6 +152,7 @@ fn spectrum_graph_boundaries(
                             Fragment::new(
                                 MolecularFormula::default(),
                                 Charge::zero(),
+                                0,
                                 FragmentType::precursor,
                                 String::new(),
                             ),
@@ -171,11 +182,7 @@ fn spectrum_graph_boundaries(
                     },
                 );
             (
-                point
-                    .annotation
-                    .as_ref()
-                    .map(|a| Some(a.clone()))
-                    .unwrap_or(None),
+                point.annotation.clone(),
                 distance.0,                           // rel (ppm)
                 distance.1,                           // abs (Da)
                 point.experimental_mz,                // mz
@@ -254,8 +261,8 @@ fn spectrum_graph(
     for point in data {
         write!(
             output,
-            "<span class='point {}' style='--rel:{};--abs:{};--mz:{};--intensity:{}' data-ppm='{}' data-abs='{}' data-mz='{}' data-intensity='{}' data-reference-fragment-rel='{}' data-reference-fragment-abs='{}' data-pos='{}'></span>",
-            point.0.as_ref().map(|a| a.ion.to_string()).unwrap_or("unassigned".to_string()),
+            "<span class='point {}' style='--rel:{};--abs:{};--mz:{};--intensity:{}' data-ppm='{}' data-abs='{}' data-mz='{}' data-intensity='{}' data-reference-fragment-rel='{}' data-reference-fragment-abs='{}'></span>",
+            get_classes(&point.0),
             point.1.0,
             point.2.0,
             point.3.value,
@@ -266,11 +273,133 @@ fn spectrum_graph(
             point.5,
             point.1.1,
             point.2.1,
-            point.0.as_ref().and_then(|a| a.ion.position().map(|p|p.sequence_index + 1)).unwrap_or(point.2.1.ion.position().map(|p| p.sequence_index + 1).unwrap_or(0))
         )
         .unwrap();
     }
     write!(output, "</div>").unwrap();
+}
+
+/// Get all applicable classes for a set of annotations.
+/// These are:
+///   * The ion type(s) (eg 'precursor', 'y')
+///   * The peptide(s) (eg 'p0', 'p1')
+///   * The position(s) (eg 'p0-2', 'p2-123')
+fn get_classes(annotations: &[Fragment]) -> String {
+    let mut output = Vec::new();
+    let mut shared_ion = annotations.get(0).map(|a| a.ion.to_string());
+    for annotation in annotations {
+        output.push(annotation.ion.to_string());
+        output.push(format!("p{}", annotation.peptide_index));
+        if let Some(pos) = annotation.ion.position() {
+            output.push(format!(
+                "p{}-{}",
+                annotation.peptide_index, pos.sequence_index
+            ));
+        }
+        if let Some(ion) = &shared_ion {
+            if *ion != annotation.ion.to_string() {
+                shared_ion = None;
+            }
+        }
+    }
+    if shared_ion.is_none() {
+        output.push("multi".to_string())
+    }
+    output = output.into_iter().unique().collect();
+    if annotations.is_empty() {
+        "unassigned".to_string()
+    } else {
+        format!("label {}", output.join(" "))
+    }
+}
+
+fn get_label(annotations: &[Fragment]) -> String {
+    if annotations.is_empty() {
+        String::new()
+    } else {
+        let mut shared_charge = Some(annotations[0].charge);
+        let mut shared_ion = Some(annotations[0].ion.to_string());
+        let mut shared_pos = Some(annotations[0].ion.position());
+        let mut shared_peptide = Some(annotations[0].peptide_index);
+        for a in annotations {
+            if let Some(charge) = shared_charge {
+                if charge != a.charge {
+                    shared_charge = None;
+                }
+            }
+            if let Some(ion) = &shared_ion {
+                if *ion != a.ion.to_string() {
+                    shared_ion = None;
+                }
+            }
+            if let Some(pos) = shared_pos {
+                if pos != a.ion.position() {
+                    shared_pos = None;
+                }
+            }
+            if let Some(peptide) = shared_peptide {
+                if peptide != a.peptide_index {
+                    shared_peptide = None;
+                }
+            }
+        }
+
+        if shared_charge.is_none()
+            && shared_ion.is_none()
+            && shared_pos.is_none()
+            && shared_peptide.is_none()
+        {
+            "*".to_string()
+        } else {
+            let charge_str = shared_charge
+                .map(|charge| format!("{:+}", charge.value))
+                .unwrap_or("*".to_string());
+            let ion_str = shared_ion.unwrap_or("*".to_string());
+            let pos_str = shared_pos
+                .map(|pos| {
+                    pos.map(|p| p.series_number.to_string())
+                        .unwrap_or(String::new())
+                })
+                .unwrap_or("*".to_string());
+            let peptide_str = shared_peptide
+                .map(|pep| (pep + 1).to_string())
+                .unwrap_or("*".to_string());
+
+            let multi = if annotations.len() > 1 {
+                let mut multi = String::new();
+                for annotation in annotations {
+                    let ch = format!("{:+}", annotation.charge.value);
+                    write!(
+                        multi,
+                        "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch'>{}p{}</sub></span>",
+                        annotation.ion,
+                        ch,
+                        ch.len(),
+                        annotation
+                            .ion
+                            .position()
+                            .map(|p| p.series_number.to_string())
+                            .unwrap_or(String::new()),
+                        annotation.peptide_index + 1,
+                    )
+                    .unwrap();
+                }
+                format!("<span class='multi'>{multi}</span>")
+            } else {
+                String::new()
+            };
+
+            format!(
+                "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch'>{}p{}</sub></span>{}",
+                ion_str,
+                charge_str,
+                charge_str.len(),
+                pos_str,
+                peptide_str,
+                multi
+            )
+        }
+    }
 }
 
 fn spectrum_graph_header(
@@ -297,21 +426,28 @@ fn spectrum_graph_header(
     Ok(())
 }
 
-fn get_overview(
-    spectrum: &AnnotatedSpectrum,
-) -> ((MassOverCharge, f64, f64), Vec<HashSet<FragmentType>>) {
-    let mut output = vec![HashSet::new(); spectrum.peptide.sequence.len()];
+type PositionCoverage = Vec<Vec<HashSet<FragmentType>>>;
+
+fn get_overview(spectrum: &AnnotatedSpectrum) -> ((MassOverCharge, f64, f64), PositionCoverage) {
+    let mut output: PositionCoverage = spectrum
+        .peptide
+        .peptides()
+        .iter()
+        .map(|p| vec![HashSet::new(); p.sequence.len()])
+        .collect();
     let mut max_mz: MassOverCharge = MassOverCharge::zero();
     let mut max_intensity: f64 = 0.0;
     let mut max_intensity_unassigned: f64 = 0.0;
     for peak in &spectrum.spectrum {
         max_mz = max_mz.max(peak.experimental_mz);
         max_intensity_unassigned = max_intensity_unassigned.max(peak.intensity);
-        if let Some(f) = &peak.annotation {
+        if !peak.annotation.is_empty() {
             max_intensity = max_intensity.max(peak.intensity);
-            f.ion
-                .position()
-                .map(|i| output[i.sequence_index].insert(f.ion));
+            peak.annotation.iter().for_each(|frag| {
+                frag.ion
+                    .position()
+                    .map(|i| output[frag.peptide_index][i.sequence_index].insert(frag.ion));
+            });
         }
     }
     (
@@ -364,26 +500,43 @@ fn create_ion_legend(output: &mut String, id: &str) {
     .unwrap();
 }
 
-fn render_peptide(
+fn render_peptide(output: &mut String, spectrum: &AnnotatedSpectrum, overview: PositionCoverage) {
+    write!(output, "<div class='complex-peptide'>").unwrap();
+    match &spectrum.peptide {
+        ComplexPeptide::Singular(peptide) => {
+            render_linear_peptide(output, peptide, &overview[0], 0)
+        }
+        ComplexPeptide::Multimeric(peptides) => {
+            for (index, peptide) in peptides.iter().enumerate() {
+                render_linear_peptide(output, peptide, &overview[index], index);
+            }
+        }
+    }
+    write!(output, "</div>").unwrap();
+}
+
+fn render_linear_peptide(
     output: &mut String,
-    spectrum: &AnnotatedSpectrum,
-    overview: Vec<HashSet<FragmentType>>,
+    peptide: &LinearPeptide,
+    overview: &[HashSet<FragmentType>],
+    peptide_index: usize,
 ) {
     write!(output, "<div class='peptide'>").unwrap();
-    if spectrum.peptide.n_term.is_some() {
+    if peptide.n_term.is_some() {
         write!(output, "<span class='modification term'></span>").unwrap();
     }
-    for (index, (pos, ions)) in spectrum.peptide.sequence.iter().zip(overview).enumerate() {
+    for (index, (pos, ions)) in peptide.sequence.iter().zip(overview).enumerate() {
         let mut classes = String::new();
         if !pos.modifications.is_empty() {
             write!(classes, " class='modification'").unwrap();
         }
         write!(
             output,
-            "<span data-pos='{}'{classes} tabindex='0' title='N terminal position: {}, C terminal position: {}'>{}",
+            "<span data-pos='{}-{}'{classes} tabindex='0' title='N terminal position: {}, C terminal position: {}'>{}",
+            peptide_index+1,
             index + 1,
             index + 1,
-            spectrum.peptide.sequence.len() - index,
+            peptide.sequence.len() - index,
             pos.aminoacid.char()
         )
         .unwrap();
@@ -397,7 +550,7 @@ fn render_peptide(
         }
         write!(output, "</span>").unwrap();
     }
-    if spectrum.peptide.c_term.is_some() {
+    if peptide.c_term.is_some() {
         write!(output, "<span class='modification term'></span>").unwrap();
     }
     write!(output, "</div>").unwrap();
@@ -459,42 +612,16 @@ fn render_spectrum(
     .unwrap();
 
     for peak in &spectrum.spectrum {
-        match &peak.annotation {
-            None => {
-                write!(
-                    output,
-                    "<span class='peak unassigned' style='--mz:{};--intensity:{};' data-label='{}'></span>",
-                    peak.experimental_mz.value, peak.intensity, (peak.experimental_mz.value * 10.0).round() / 10.0
-                )
-                .unwrap();
-            }
-            Some(f) => {
-                write!(
-                    output,
-                    "<span class='peak {} label' style='--mz:{};--intensity:{};' data-pos='{}' data-label='{}'>",
-                    f.ion,
-                    peak.experimental_mz.value,
-                    peak.intensity,
-                    f.ion
-                        .position()
-                        .map_or("*".to_string(), |i| (i.sequence_index + 1).to_string()),
-                    (peak.experimental_mz.value * 10.0).round() / 10.0,
-                )
-                .unwrap();
-                let ch = format!("{:+}", f.charge.value);
-                write!(
-                    output,
-                    "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch'>{}</sub></span></span>",
-                    f.ion,
-                    ch,
-                    ch.len(),
-                    f.ion
-                        .position()
-                        .map_or("*".to_string(), |i| i.series_number.to_string())
-                )
-                .unwrap();
-            }
-        }
+        write!(
+            output,
+            "<span class='peak {}' style='--mz:{};--intensity:{};' data-label='{}'>{}</span>",
+            get_classes(&peak.annotation),
+            peak.experimental_mz.value,
+            peak.intensity,
+            (peak.experimental_mz.value * 10.0).round() / 10.0,
+            get_label(&peak.annotation),
+        )
+        .unwrap();
     }
     write!(output, "</div>").unwrap();
     write!(
@@ -549,8 +676,8 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
     )
     .unwrap();
     for peak in &spectrum.spectrum {
-        match &peak.annotation {
-            None => write!(
+        if peak.annotation.is_empty() {
+            write!(
                 output,
                 "<tr class='unassigned'>
                 <td>-</td>
@@ -564,89 +691,143 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
                 <td>-</td>
             </tr>",
                 peak.intensity, peak.experimental_mz.value, peak.charge.value
-            ),
-            Some(f) => write!(
-                output,
-                "<tr>
-                <td>{}</td>
-                <td>{}</td>
-                <td>{}</td>
-                <td>{:.2}</td>
-                <td>{:.2}</td>
-                <td>{:.5}</td>
-                <td>{:.2}</td>
-                <td>{:+}</td>
-                <td>{}</td>
-            </tr>",
-                f.ion
-                    .position()
-                    .map_or("*".to_string(), |i| (i.sequence_index + 1).to_string()),
-                f.ion,
-                f.neutral_loss.map_or(String::new(), |v| v.to_string()),
-                peak.intensity,
-                peak.experimental_mz.value,
-                f.mz()
-                    .map_or(f64::NAN, |v| (v - peak.experimental_mz).abs().value),
-                f.mz()
-                    .map_or(f64::NAN, |v| ((v - peak.experimental_mz).abs() / v * 1e6)
-                        .value),
-                f.charge.value,
-                f.ion
-                    .position()
-                    .map_or("*".to_string(), |i| i.series_number.to_string()),
-            ),
+            )
+            .unwrap();
+        } else {
+            for annotation in &peak.annotation {
+                write!(
+                    output,
+                    "<tr>
+                    <td>{}</td>
+                    <td>{}</td>
+                    <td>{}</td>
+                    <td>{:.2}</td>
+                    <td>{:.2}</td>
+                    <td>{:.5}</td>
+                    <td>{:.2}</td>
+                    <td>{:+}</td>
+                    <td>{}</td>
+                </tr>",
+                    annotation
+                        .ion
+                        .position()
+                        .map_or("*".to_string(), |i| (i.sequence_index + 1).to_string()),
+                    annotation.ion,
+                    annotation
+                        .neutral_loss
+                        .map_or(String::new(), |v| v.to_string()),
+                    peak.intensity,
+                    peak.experimental_mz.value,
+                    annotation
+                        .mz()
+                        .map_or(f64::NAN, |v| (v - peak.experimental_mz).abs().value),
+                    annotation
+                        .mz()
+                        .map_or(f64::NAN, |v| ((v - peak.experimental_mz).abs() / v * 1e6)
+                            .value),
+                    annotation.charge.value,
+                    annotation
+                        .ion
+                        .position()
+                        .map_or("*".to_string(), |i| i.series_number.to_string()),
+                )
+                .unwrap();
+            }
         }
-        .unwrap()
     }
     write!(output, "</table>").unwrap();
     output
 }
 
 fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &[Fragment]) {
-    let precursor = if let Some(formula) = spectrum.peptide.formula() {
-        if let (Some(mono), Some(avg)) = (formula.monoisotopic_mass(), formula.average_weight()) {
-            format!("{:.3} Da | avg: {:.3} Da", mono.value, avg.value)
+    let mut mass_row = String::new();
+    let mut fragments_row = String::new();
+    let mut peaks_row = String::new();
+    let mut intensity_row = String::new();
+    let mut positions_row = String::new();
+
+    for (peptide_index, peptide) in spectrum.peptide.peptides().iter().enumerate() {
+        let precursor = if let Some(formula) = peptide.formula() {
+            if let (Some(mono), Some(avg)) = (formula.monoisotopic_mass(), formula.average_weight())
+            {
+                format!("{:.3} Da | avg: {:.3} Da", mono.value, avg.value)
+            } else {
+                "No defined mass for precursor".to_string()
+            }
         } else {
-            "No defined mass for precursor".to_string()
+            "No defined molecular formula for precursor".to_string()
+        };
+        let (num_annotated, intensity_annotated) = spectrum
+            .spectrum
+            .iter()
+            .filter(|p| {
+                p.annotation
+                    .iter()
+                    .any(|a| a.peptide_index == peptide_index)
+            })
+            .fold((0, 0.0), |(n, intensity), p| {
+                (n + 1, intensity + p.intensity)
+            });
+        let total_intensity: f64 = spectrum.spectrum.iter().map(|p| p.intensity).sum();
+        let percentage_fragments_found = num_annotated as f64 / fragments.len() as f64 * 100.0;
+        let percentage_peaks_annotated =
+            num_annotated as f64 / spectrum.spectrum.len() as f64 * 100.0;
+        let percentage_intensity_annotated = intensity_annotated / total_intensity * 100.0;
+        let percentage_positions_covered = spectrum
+            .spectrum
+            .iter()
+            .flat_map(|p| {
+                p.annotation
+                    .iter()
+                    .filter(|a| a.peptide_index == peptide_index)
+                    .filter_map(|a| a.ion.position())
+            })
+            .map(|pos| pos.sequence_index)
+            .unique()
+            .count() as f64
+            / peptide.len() as f64
+            * 100.0;
+        write!(mass_row, "<td>{precursor}</td>").unwrap();
+        write!(
+            fragments_row,
+            "<td>{percentage_fragments_found:.2} % ({num_annotated}/{})</td>",
+            fragments.len()
+        )
+        .unwrap();
+        write!(
+            peaks_row,
+            "<td>{percentage_peaks_annotated:.2} % ({num_annotated}/{})</td>",
+            spectrum.spectrum.len()
+        )
+        .unwrap();
+        write!(
+            intensity_row,
+            "<td>{percentage_intensity_annotated:.2} %</td>"
+        )
+        .unwrap();
+        write!(
+            positions_row,
+            "<td>{percentage_positions_covered:.2} %</td>"
+        )
+        .unwrap();
+    }
+
+    if spectrum.peptide.peptides().len() > 1 {
+        write!(output, "<tr><td>Stat</td>").unwrap();
+        for i in 0..spectrum.peptide.peptides().len() {
+            write!(output, "<td>{}</td>", i + 1).unwrap();
         }
-    } else {
-        "No defined molecular formula for precursor".to_string()
-    };
-    let (num_annotated, intensity_annotated) = spectrum
-        .spectrum
-        .iter()
-        .filter(|p| p.annotation.is_some())
-        .fold((0, 0.0), |(n, intensity), p| {
-            (n + 1, intensity + p.intensity)
-        });
-    let total_intensity: f64 = spectrum.spectrum.iter().map(|p| p.intensity).sum();
-    let percentage_fragments_found = num_annotated as f64 / fragments.len() as f64 * 100.0;
-    let percentage_peaks_annotated = num_annotated as f64 / spectrum.spectrum.len() as f64 * 100.0;
-    let percentage_intensity_annotated = intensity_annotated / total_intensity * 100.0;
-    let percentage_positions_covered = spectrum
-        .spectrum
-        .iter()
-        .filter_map(|p| {
-            p.annotation
-                .as_ref()
-                .and_then(|a| a.ion.position())
-                .map(|pos| pos.sequence_index)
-        })
-        .unique()
-        .count() as f64
-        / (spectrum.peptide.len() - 2) as f64
-        * 100.0;
+        write!(output, "</tr>").unwrap();
+    }
     write!(
         output,
         "<table class='general-stats'>
-    <tr><td>Precursor Mass (M)</td><td>{precursor}</td></tr>
-    <tr><td>Fragments found</td><td>{percentage_fragments_found:.2} % ({num_annotated}/{})</td></tr>
-    <tr><td>Peaks annotated</td><td>{percentage_peaks_annotated:.2} % ({num_annotated}/{})</td></tr>
-    <tr><td>Intensity annotated</td><td>{percentage_intensity_annotated:.2} %</td></tr>
-    <tr><td>Sequence positions covered</td><td>{percentage_positions_covered:.2} %</td></tr>
-    </table>",
-        fragments.len(),
-        spectrum.spectrum.len()
+    <tr><td>Precursor Mass (M)</td>{mass_row}</tr>
+    <tr><td>Fragments found</td>{fragments_row}</tr>
+    <tr><td>Peaks annotated</td>{peaks_row}</tr>
+    <tr><td>Intensity annotated</td>{intensity_row}</tr>
+    <tr><td>Sequence positions covered</td>{positions_row}</tr>
+    </table>"
     )
     .unwrap();
 }

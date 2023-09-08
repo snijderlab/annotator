@@ -119,41 +119,6 @@ r#"<!DOCTYPE html>
         <input id='y-max' class='y-max' type='number' value='20'/>
       </div>
     </div>
-    <!--
-    <div class='legend'>
-      <span class='title'>Ion legend</span>
-      <div class='ion-series'>
-          <div class='top'>
-              <span class='ion w' tabindex='0'>w</span>
-              <span class='ion x' tabindex='0'>x</span>
-              <span class='ion y' tabindex='0'>y</span>
-              <span class='ion z' tabindex='0'>z</span>
-              <span class='ion c-term' tabindex='0'>C-term</span>
-          </div><div class='bottom'>
-              <span class='ion n-term' tabindex='0'>N-term</span>
-              <span class='ion a' tabindex='0'>a</span>
-              <span class='ion b' tabindex='0'>b</span>
-              <span class='ion c' tabindex='0'>c</span>
-              <span class='ion d' tabindex='0'>d</span>
-              <span class='ion v' tabindex='0'>v</span>
-          </div>
-      </div>
-      <span class='other'>Other</span>
-      <input id='spectrum_unassigned' type='checkbox' checked class='unassigned'/>
-      <label for='spectrum_unassigned' class='unassigned' tabindex='0'>Unassigned</label>
-      <label class='label'>
-      Ion
-      <sup>Charge</sup>
-      <sub style='margin-left:-6ch;margin-right:.5rem;'>Position</sub>
-      Show for top:
-      <input id='spectrum_label' type='range' min='0' max='100' value='100'/>
-      <input id='spectrum_label_value' type='number' min='0' max='100' value='100'/>
-      %
-      </label>
-      <input id='spectrum_mass_label' type='checkbox' class='mass-label'/>
-      <label for='spectrum_mass_label' class='mass-label' tabindex='0'>Show top masses</label>
-    </div>
-    -->
     <div class='wrapper unassigned'  id="spectrum-results-wrapper">
     </div>
   </div>
