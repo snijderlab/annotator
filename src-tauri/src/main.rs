@@ -168,7 +168,7 @@ fn annotate_spectrum(
     let fragments = peptide
         .generate_theoretical_fragments(use_charge, &model)
         .ok_or("The sequence requested does not have a defined mass (you used B/Z).".to_string())?;
-    let annotated = spectrum.annotate(peptide, &fragments);
+    let annotated = spectrum.annotate(peptide, &fragments, &model);
     Ok((
         render::annotated_spectrum(&annotated, "spectrum", &fragments),
         render::fragment_table(&fragments),

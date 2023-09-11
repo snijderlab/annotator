@@ -119,7 +119,7 @@ r#"<!DOCTYPE html>
         <input id='y-max' class='y-max' type='number' value='20'/>
       </div>
     </div>
-    <div class='wrapper unassigned'  id="spectrum-results-wrapper">
+    <div class='wrapper show-unassigned'  id="spectrum-results-wrapper">
     </div>
   </div>
   <details>

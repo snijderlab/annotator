@@ -40,7 +40,6 @@ async function load_clipboard() {
     .readText()
     .then(async (clipText) => {
       try {
-        console.log(clipText);
         let result = await invoke("load_clipboard", { data: clipText });
         document.querySelector("#spectrum-log").innerText = result;
         document.querySelector("#loaded-path").classList.remove("error");

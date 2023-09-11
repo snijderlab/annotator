@@ -6,20 +6,6 @@ use rustyms::{
     MassOverCharge, MolecularFormula, Zero,
 };
 
-// TODO: finish multimeric:
-// - [ ] Fix highlighting (now class based)
-// - [ ] Add highlighting on a peptide level (see all ions for one peptide)
-// - [ ] Fix the output if only one peptide is supplied
-// - [ ] Fix general stat table
-// - [ ] Check what is wrong with the annotation for chimeric model CidHcd
-// - [ ] Do some more thinking on the multi annotation display for single peaks
-// - [ ] Show peptides horizontally besides each other if there is space (justified to both page ends?)
-// - [ ] Show peptide number somewhere? (the number should be clear any ways, but maybe this is nice, or also nice to clearly separate both)
-// Some more general things:
-// - [ ] Make sure the change of sequence positions covered is correct
-// - [ ] Fix colour of precursor peaks
-// - [ ] Make all ion series automatically ignore the very last pos (with all AA, so not feasible to be generated)
-
 use crate::html_builder::{HtmlElement, HtmlTag};
 
 pub fn fragment_table(fragments: &[Fragment]) -> String {
@@ -60,12 +46,20 @@ pub fn annotated_spectrum(
     let mut output = String::new();
     let (limits, overview) = get_overview(spectrum);
     let (graph_data, graph_boundaries) = spectrum_graph_boundaries(spectrum, fragments);
+    let multiple_peptides = !matches!(spectrum.peptide, ComplexPeptide::Singular(_));
 
     spectrum_top_buttons(&mut output, id, &limits, &graph_boundaries).unwrap();
 
     create_ion_legend(&mut output, &format!("{id}-1"));
-    render_peptide(&mut output, spectrum, overview);
-    render_spectrum(&mut output, spectrum, &graph_boundaries, limits, "first");
+    render_peptide(&mut output, spectrum, overview, multiple_peptides);
+    render_spectrum(
+        &mut output,
+        spectrum,
+        &graph_boundaries,
+        limits,
+        "first",
+        multiple_peptides,
+    );
     // Spectrum graph
     spectrum_graph(&mut output, &graph_boundaries, &graph_data, limits.0.value);
     write!(output, "</div></div>").unwrap();
@@ -76,7 +70,7 @@ pub fn annotated_spectrum(
         &mut output,
         &format!("{id}-table-1"),
         "Peaks table".to_string(),
-        spectrum_table(spectrum, &format!("{id}-table-1")),
+        spectrum_table(spectrum, &format!("{id}-table-1"), multiple_peptides),
     );
 
     //write!(output, "</div>").unwrap();
@@ -313,7 +307,7 @@ fn get_classes(annotations: &[Fragment]) -> String {
     }
 }
 
-fn get_label(annotations: &[Fragment]) -> String {
+fn get_label(annotations: &[Fragment], multiple_peptides: bool) -> String {
     if annotations.is_empty() {
         String::new()
     } else {
@@ -371,7 +365,7 @@ fn get_label(annotations: &[Fragment]) -> String {
                     let ch = format!("{:+}", annotation.charge.value);
                     write!(
                         multi,
-                        "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch'>{}p{}</sub></span>",
+                        "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch'>{}{}</sub></span>",
                         annotation.ion,
                         ch,
                         ch.len(),
@@ -380,7 +374,11 @@ fn get_label(annotations: &[Fragment]) -> String {
                             .position()
                             .map(|p| p.series_number.to_string())
                             .unwrap_or(String::new()),
-                        annotation.peptide_index + 1,
+                        if multiple_peptides {
+                            format!("p{}", annotation.peptide_index + 1)
+                        } else {
+                            String::new()
+                        },
                     )
                     .unwrap();
                 }
@@ -390,12 +388,16 @@ fn get_label(annotations: &[Fragment]) -> String {
             };
 
             format!(
-                "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch'>{}p{}</sub></span>{}",
+                "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch'>{}{}</sub></span>{}",
                 ion_str,
                 charge_str,
                 charge_str.len(),
                 pos_str,
-                peptide_str,
+                if multiple_peptides {
+                    format!("p{}", peptide_str)
+                } else {
+                    String::new()
+                },
                 multi
             )
         }
@@ -500,15 +502,20 @@ fn create_ion_legend(output: &mut String, id: &str) {
     .unwrap();
 }
 
-fn render_peptide(output: &mut String, spectrum: &AnnotatedSpectrum, overview: PositionCoverage) {
+fn render_peptide(
+    output: &mut String,
+    spectrum: &AnnotatedSpectrum,
+    overview: PositionCoverage,
+    multiple_peptides: bool,
+) {
     write!(output, "<div class='complex-peptide'>").unwrap();
     match &spectrum.peptide {
         ComplexPeptide::Singular(peptide) => {
-            render_linear_peptide(output, peptide, &overview[0], 0)
+            render_linear_peptide(output, peptide, &overview[0], 0, multiple_peptides)
         }
         ComplexPeptide::Multimeric(peptides) => {
             for (index, peptide) in peptides.iter().enumerate() {
-                render_linear_peptide(output, peptide, &overview[index], index);
+                render_linear_peptide(output, peptide, &overview[index], index, multiple_peptides);
             }
         }
     }
@@ -520,8 +527,12 @@ fn render_linear_peptide(
     peptide: &LinearPeptide,
     overview: &[HashSet<FragmentType>],
     peptide_index: usize,
+    multiple_peptides: bool,
 ) {
     write!(output, "<div class='peptide'>").unwrap();
+    if multiple_peptides {
+        write!(output, "<span class='name'>{peptide_index}</span>").unwrap();
+    }
     if peptide.n_term.is_some() {
         write!(output, "<span class='modification term'></span>").unwrap();
     }
@@ -533,8 +544,8 @@ fn render_linear_peptide(
         write!(
             output,
             "<span data-pos='{}-{}'{classes} tabindex='0' title='N terminal position: {}, C terminal position: {}'>{}",
-            peptide_index+1,
-            index + 1,
+            peptide_index,
+            index,
             index + 1,
             peptide.sequence.len() - index,
             pos.aminoacid.char()
@@ -562,6 +573,7 @@ fn render_spectrum(
     boundaries: &Boundaries,
     limits: (MassOverCharge, f64, f64),
     selection: &str,
+    multiple_peptides: bool,
 ) {
     write!(
         output,
@@ -619,7 +631,7 @@ fn render_spectrum(
             peak.experimental_mz.value,
             peak.intensity,
             (peak.experimental_mz.value * 10.0).round() / 10.0,
-            get_label(&peak.annotation),
+            get_label(&peak.annotation, multiple_peptides),
         )
         .unwrap();
     }
@@ -656,13 +668,14 @@ fn render_spectrum(
     write!(output, "</div>").unwrap();
 }
 
-fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
+fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str, multiple_peptides: bool) -> String {
     let mut output = String::new();
     write!(
         output,
         "<label class='background'><input type='checkbox'/>Show background peaks</label>
         <table id='{table_id}' class='wide-table'>
             <tr>
+                {}
                 <th>Position</th>
                 <th>Ion type</th>
                 <th>Loss</th>
@@ -672,7 +685,12 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
                 <th>mz Error (ppm)</th>
                 <th>Charge</th>
                 <th>Series Number</th>
-            </tr>"
+            </tr>",
+        if multiple_peptides {
+            "<th>Peptide</th>"
+        } else {
+            ""
+        }
     )
     .unwrap();
     for peak in &spectrum.spectrum {
@@ -680,6 +698,7 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
             write!(
                 output,
                 "<tr class='unassigned'>
+                {}
                 <td>-</td>
                 <td>-</td>
                 <td>-</td>
@@ -687,10 +706,12 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
                 <td>{:.2}</td>
                 <td>-</td>
                 <td>-</td>
-                <td>{:+}</td>
+                <td>-</td>
                 <td>-</td>
             </tr>",
-                peak.intensity, peak.experimental_mz.value, peak.charge.value
+                if multiple_peptides { "<td>-</td>" } else { "" },
+                peak.intensity,
+                peak.experimental_mz.value,
             )
             .unwrap();
         } else {
@@ -698,6 +719,7 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
                 write!(
                     output,
                     "<tr>
+                    {}
                     <td>{}</td>
                     <td>{}</td>
                     <td>{}</td>
@@ -708,6 +730,11 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str) -> String {
                     <td>{:+}</td>
                     <td>{}</td>
                 </tr>",
+                    if multiple_peptides {
+                        format!("<td>{}</td>", annotation.peptide_index + 1)
+                    } else {
+                        String::new()
+                    },
                     annotation
                         .ion
                         .position()
@@ -746,6 +773,7 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
     let mut intensity_row = String::new();
     let mut positions_row = String::new();
 
+    let total_intensity: f64 = spectrum.spectrum.iter().map(|p| p.intensity).sum();
     for (peptide_index, peptide) in spectrum.peptide.peptides().iter().enumerate() {
         let precursor = if let Some(formula) = peptide.formula() {
             if let (Some(mono), Some(avg)) = (formula.monoisotopic_mass(), formula.average_weight())
@@ -768,8 +796,11 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
             .fold((0, 0.0), |(n, intensity), p| {
                 (n + 1, intensity + p.intensity)
             });
-        let total_intensity: f64 = spectrum.spectrum.iter().map(|p| p.intensity).sum();
-        let percentage_fragments_found = num_annotated as f64 / fragments.len() as f64 * 100.0;
+        let total_fragments = fragments
+            .iter()
+            .filter(|f| f.peptide_index == peptide_index)
+            .count();
+        let percentage_fragments_found = num_annotated as f64 / total_fragments as f64 * 100.0;
         let percentage_peaks_annotated =
             num_annotated as f64 / spectrum.spectrum.len() as f64 * 100.0;
         let percentage_intensity_annotated = intensity_annotated / total_intensity * 100.0;
@@ -791,7 +822,7 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
         write!(
             fragments_row,
             "<td>{percentage_fragments_found:.2} % ({num_annotated}/{})</td>",
-            fragments.len()
+            total_fragments
         )
         .unwrap();
         write!(
@@ -812,17 +843,49 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
         .unwrap();
     }
 
+    write!(output, "<table class='general-stats'>").unwrap();
     if spectrum.peptide.peptides().len() > 1 {
-        write!(output, "<tr><td>Stat</td>").unwrap();
+        write!(output, "<tr><td>General Statistics</td>").unwrap();
         for i in 0..spectrum.peptide.peptides().len() {
-            write!(output, "<td>{}</td>", i + 1).unwrap();
+            write!(output, "<td>Peptide {}</td>", i + 1).unwrap();
         }
-        write!(output, "</tr>").unwrap();
+        write!(output, "<td>Combined</td></tr>").unwrap();
+        // Add a combined stats column
+        let (num_annotated, intensity_annotated) = spectrum
+            .spectrum
+            .iter()
+            .filter(|p| !p.annotation.is_empty())
+            .fold((0, 0.0), |(n, intensity), p| {
+                (n + 1, intensity + p.intensity)
+            });
+        let total_annotations: usize = spectrum.spectrum.iter().map(|a| a.annotation.len()).sum();
+        let percentage_fragments_found = total_annotations as f64 / fragments.len() as f64 * 100.0;
+        let percentage_peaks_annotated =
+            num_annotated as f64 / spectrum.spectrum.len() as f64 * 100.0;
+        let percentage_intensity_annotated = intensity_annotated / total_intensity * 100.0;
+        write!(mass_row, "<td>-</td>").unwrap();
+        write!(
+            fragments_row,
+            "<td>{percentage_fragments_found:.2} % ({total_annotations}/{})</td>",
+            fragments.len()
+        )
+        .unwrap();
+        write!(
+            peaks_row,
+            "<td>{percentage_peaks_annotated:.2} % ({num_annotated}/{})</td>",
+            spectrum.spectrum.len()
+        )
+        .unwrap();
+        write!(
+            intensity_row,
+            "<td>{percentage_intensity_annotated:.2} %</td>"
+        )
+        .unwrap();
+        write!(positions_row, "<td>-</td>").unwrap();
     }
     write!(
         output,
-        "<table class='general-stats'>
-    <tr><td>Precursor Mass (M)</td>{mass_row}</tr>
+        "<tr><td>Precursor Mass (M)</td>{mass_row}</tr>
     <tr><td>Fragments found</td>{fragments_row}</tr>
     <tr><td>Peaks annotated</td>{peaks_row}</tr>
     <tr><td>Intensity annotated</td>{intensity_row}</tr>
