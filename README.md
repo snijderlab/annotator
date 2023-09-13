@@ -12,6 +12,11 @@ It uses the [ProForma](https://github.com/HUPO-PSI/ProForma) specification to sp
 * `[+16]-TFNEKFKGGKATJ-[Methyl]` Terminal modifications
 * `<15N>TFNEKFKGGKATJ` Global isotope modifications (all Nitrogen is 15N)
 * `<[S-carboxamidomethyl-L-cysteine]@C>AVYYCSRWGGDGFYAMDYWGQG` Global modifications (all C are carboxamidomethylated)
+* `[UNIMOD:374]?TFNEKFCKGGCKATJ` Modifications where the location is unknown
+* `TFNEKFC[UNIMOD:374#g1]KGGC[#g1]KATJ` (identical to the one above)
+* `TFNEKF(CKGGCK)[UNIMOD:374#g1]ATJ` (identical to the one above)
+* `VAEINPSNGGTT+FNEKFKGGKATJ` Multimeric spectra, meaning two separate peptides are in your spectrum at the same time
+* `VAEINPSNGGTT/2[1Na+,1H+]` Defined charge and adduct ions
 
 ## Installing
 

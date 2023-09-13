@@ -685,6 +685,7 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str, multiple_peptide
                 <th>mz Error (ppm)</th>
                 <th>Charge</th>
                 <th>Series Number</th>
+                <th>Additional label</th>
             </tr>",
         if multiple_peptides {
             "<th>Peptide</th>"
@@ -704,6 +705,7 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str, multiple_peptide
                 <td>-</td>
                 <td>{:.2}</td>
                 <td>{:.2}</td>
+                <td>-</td>
                 <td>-</td>
                 <td>-</td>
                 <td>-</td>
@@ -728,6 +730,7 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str, multiple_peptide
                     <td>{:.5}</td>
                     <td>{:.2}</td>
                     <td>{:+}</td>
+                    <td>{}</td>
                     <td>{}</td>
                 </tr>",
                     if multiple_peptides {
@@ -757,6 +760,7 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str, multiple_peptide
                         .ion
                         .position()
                         .map_or("*".to_string(), |i| i.series_number.to_string()),
+                    annotation.label
                 )
                 .unwrap();
             }

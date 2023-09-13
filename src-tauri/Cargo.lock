@@ -2238,7 +2238,9 @@ checksum = "4f3208ce4d8448b3f3e7d168a73f5e0c43a61e32930de3bceeccedb388b6bf06"
 
 [[package]]
 name = "rustyms"
-version = "0.4.1"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7619e8b6b93d17826842b32702f7e63dc1ecd2f616f59d7f5b9a542f878ee23e"
 dependencies = [
  "itertools",
  "regex",
