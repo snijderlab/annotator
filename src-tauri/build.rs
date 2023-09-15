@@ -91,7 +91,7 @@ r#"<!DOCTYPE html>
       <input type="text" id="model-precursor-loss" value="" class="col-2"/>
       </fieldset>
       <label class="wide" for="peptide">Peptide sequence </label>
-      <textarea class="wide" id="peptide"></textarea>
+      <div class="peptide-input wide" id="peptide" contentEditable="true"></div>
       <button id="annotate-button" type="button" class="col-2">Annotate</button>
     </div>
   <pre id="spectrum-error"></pre>

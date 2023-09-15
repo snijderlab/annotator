@@ -29,26 +29,8 @@
   justify-content: center;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
 button {
   cursor: pointer;
-}
-
-button:hover {
-  border-color: #396cd8;
-}
-
-#greet-input {
-  margin-right: 5px;
 }
 
 .s:not(.swap) {
@@ -90,6 +72,7 @@ button:hover {
 .input-settings textarea,
 .input-settings button,
 .input-settings select,
+.peptide-input,
 button {
   background: var(--color-background);
   color: var(--color-foreground);
@@ -106,12 +89,18 @@ button.print {
   background: var(--color-background);
 }
 
-.input-settings textarea {
+.input-settings textarea,
+.peptide-input {
+  font-family: 'Roboto Mono', monospace;
   min-height: 2rem;
   resize: vertical;
   word-wrap: break-word;
   word-break: break-all;
   white-space: pre-wrap;
+}
+
+.peptide-input .error {
+  text-decoration: wavy underline var(--color-red);
 }
 
 .input-settings .wide {
