@@ -539,7 +539,13 @@ fn render_linear_peptide(
     for (index, (pos, ions)) in peptide.sequence.iter().zip(overview).enumerate() {
         let mut classes = String::new();
         if !pos.modifications.is_empty() {
-            write!(classes, " class='modification'").unwrap();
+            write!(classes, " modification").unwrap();
+        }
+        if !pos.possible_modifications.is_empty() {
+            write!(classes, " possible-modification").unwrap();
+        }
+        if !classes.is_empty() {
+            classes = format!(" class='{}'", classes.trim());
         }
         write!(
             output,
