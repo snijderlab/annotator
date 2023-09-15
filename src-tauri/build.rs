@@ -33,7 +33,11 @@ r#"<!DOCTYPE html>
   <div class="input-settings">
     <h2>Spectrum details</h2>
     <label for="spectrum-index">Spectrum index</label>
-    <input type="number" id="details-spectrum-index" value="0" min="0" />
+    <div class="combined-input">
+      <input type="number" id="details-spectrum-index" value="0" min="0" />
+      <span>/</span>
+      <span id="number-of-scans">0</span>
+    </div>
   </div>
   <pre id="spectrum-details"></pre>
   <pre id="loaded-path"></pre>

@@ -22,9 +22,10 @@ async function select_mgf_file(e) {
 async function load_mgf(e) {
   try {
     let result = await invoke("load_mgf", { path: e.dataset.filepath });
-    document.querySelector("#spectrum-log").innerText = result;
+    document.querySelector("#spectrum-log").innerText = "Loaded " + result + " spectra";
     document.querySelector("#loaded-path").classList.remove("error");
     document.querySelector("#loaded-path").innerText = e.dataset.filepath.split('\\').pop().split('/').pop();
+    document.querySelector("#number-of-scans").innerText = result;
     spectrum_details();
   } catch (error) {
     console.log(error);
@@ -41,9 +42,10 @@ async function load_clipboard() {
     .then(async (clipText) => {
       try {
         let result = await invoke("load_clipboard", { data: clipText });
-        document.querySelector("#spectrum-log").innerText = result;
+        document.querySelector("#spectrum-log").innerText = "Loaded " + result + " spectra";
         document.querySelector("#loaded-path").classList.remove("error");
         document.querySelector("#loaded-path").innerText = "Clipboard";
+        document.querySelector("#number-of-scans").innerText = result;
         spectrum_details();
       } catch (error) {
         console.log(error);

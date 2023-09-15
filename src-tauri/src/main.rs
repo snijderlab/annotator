@@ -16,12 +16,12 @@ mod state;
 type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
 
 #[tauri::command]
-fn load_mgf(path: &str, state: ModifiableState) -> Result<String, String> {
+fn load_mgf(path: &str, state: ModifiableState) -> Result<usize, String> {
     match rustyms::rawfile::mgf::open(path) {
         Ok(v) => {
             let count = v.len();
             state.lock().unwrap().spectra = v;
-            Ok(format!("Loaded {count} spectra"))
+            Ok(count)
         }
         Err(err) => Err(err),
     }
@@ -47,7 +47,7 @@ fn spectrum_details(index: usize, state: ModifiableState) -> String {
 }
 
 #[tauri::command]
-fn load_clipboard(data: &str, state: ModifiableState) -> Result<String, String> {
+fn load_clipboard(data: &str, state: ModifiableState) -> Result<usize, String> {
     let lines = data.lines().collect_vec();
     if data.is_empty() {
         return Err("Empty clipboard".to_string());
@@ -67,7 +67,7 @@ fn load_clipboard(data: &str, state: ModifiableState) -> Result<String, String> 
         intensity: None,
         spectrum,
     }];
-    Ok("Loaded".to_string())
+    Ok(1)
 }
 
 fn load_bruker_clipboard(lines: &[&str]) -> Result<Vec<RawPeak>, String> {

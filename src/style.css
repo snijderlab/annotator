@@ -131,6 +131,14 @@ button.print {
   grid-column: 2;
 }
 
+.input-settings .combined-input {
+  display: flex;
+}
+
+.input-settings .combined-input span {
+  margin-left: .5rem;
+}
+
 pre {
   word-wrap: break-word;
   white-space: pre-wrap;

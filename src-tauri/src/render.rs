@@ -531,7 +531,7 @@ fn render_linear_peptide(
 ) {
     write!(output, "<div class='peptide'>").unwrap();
     if multiple_peptides {
-        write!(output, "<span class='name'>{peptide_index}</span>").unwrap();
+        write!(output, "<span class='name'>{}</span>", peptide_index + 1).unwrap();
     }
     if peptide.n_term.is_some() {
         write!(output, "<span class='modification term'></span>").unwrap();
