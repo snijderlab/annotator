@@ -21,7 +21,7 @@ r#"<!DOCTYPE html>
 </head>
 
 <body>
-  <button class="print" onclick="window.print()">Export 🖶</button>
+  <button class="print" onclick="window.print()">Export</button>
   <div class="input-settings">
     <h2>Load spectra</h2>
     <label for="load-mgf-path">File</label>
