@@ -110,10 +110,17 @@ async function annotate_spectrum() {
     document.querySelector("#spectrum-log").innerText = result[2];
     document.querySelector("#spectrum-error").innerText = "";
     document.querySelector("#spectrum-wrapper").classList.remove("hidden"); // Remove hidden class if this is the first run
+    document.querySelector("#spectrum-error").classList.add("hidden");
     SetUpSpectrumInterface();
   } catch (error) {
     console.log(error);
-    document.querySelector("#spectrum-error").innerText = error;
+    document.querySelector("#spectrum-error").classList.remove("hidden");
+    document.querySelector("#spectrum-error").innerHTML = "<p class='title'>" + error.short_description + "</p><p class='description'>" + error.long_description + "</p>";
+    if (error.context.hasOwnProperty('Line')) {
+      let Line = error.context.Line;
+      console.log(Line.offset, Line.length);
+      document.querySelector("#peptide").innerHTML = Line.line.slice(0, Line.offset) + "<span class='error'>" + Line.line.slice(Line.offset, Line.offset + Line.length) + "</span>" + Line.line.slice(Line.offset + Line.length, Line.line.length);
+    }
   }
   document.querySelector("#annotate-button").classList.remove("loading");
 }

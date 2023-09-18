@@ -94,7 +94,7 @@ r#"<!DOCTYPE html>
       <div class="peptide-input wide" id="peptide" contentEditable="true"></div>
       <button id="annotate-button" type="button" class="col-2">Annotate</button>
     </div>
-  <pre id="spectrum-error"></pre>
+  <div id="spectrum-error" class="hidden"></div>
   <div id='spectrum-wrapper' class="spectrum hidden" onload='SpectrumSetUp()'>
     <div class='settings render-setup'><p>Render setup</p>
       <label for='spectrum-width'>Width</label>

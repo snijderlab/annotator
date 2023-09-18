@@ -4,6 +4,7 @@
 )]
 
 use itertools::Itertools;
+use rustyms::error::{Context, CustomError};
 use rustyms::MassOverCharge;
 use rustyms::{e, Charge, Location, Mass, Model, NeutralLoss, RawPeak, RawSpectrum, Time, Zero};
 use state::State;
@@ -156,11 +157,15 @@ fn annotate_spectrum(
     peptide: &str,
     state: ModifiableState,
     cmodel: ModelParameters,
-) -> Result<(String, String, String), String> {
+) -> Result<(String, String, String), CustomError> {
     use rustyms::mz;
     let state = state.lock().unwrap();
     if index >= state.spectra.len() {
-        return Err("Non existent spectrum index".to_string());
+        return Err(CustomError::error(
+            "Invalid settings",
+            "Non existent spectrum index",
+            Context::none(),
+        ));
     }
     let mut model = match model {
         "all" => Model::all(),
@@ -192,7 +197,11 @@ fn annotate_spectrum(
     let use_charge = charge.map_or(spectrum.charge, Charge::new::<e>);
     let fragments = peptide
         .generate_theoretical_fragments(use_charge, &model)
-        .ok_or("The sequence requested does not have a defined mass (you used B/Z).".to_string())?;
+        .ok_or(CustomError::error(
+            "Undefined mass",
+            "The sequence requested does not have a defined mass (you used B/Z)",
+            Context::none(),
+        ))?;
     let annotated = spectrum.annotate(peptide, &fragments, &model);
     Ok((
         render::annotated_spectrum(&annotated, "spectrum", &fragments),

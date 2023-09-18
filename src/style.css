@@ -101,7 +101,9 @@ button.print {
 }
 
 .peptide-input .error {
-  text-decoration: wavy underline var(--color-red);
+  text-decoration: underline;
+  text-decoration-style: wavy;
+  text-decoration-color: red;
 }
 
 .input-settings .wide {
@@ -136,8 +138,13 @@ pre {
   padding: 0 1rem;
 }
 
-#spectrum-error,
-.error {
+#spectrum-error {
+  margin: .5rem;
+  padding-left: .5rem;
+  border: 2px solid red;
+}
+
+#spectrum-error .title {
   color: red;
 }
 
