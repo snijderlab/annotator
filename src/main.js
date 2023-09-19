@@ -139,4 +139,10 @@ window.addEventListener("DOMContentLoaded", () => {
   document
     .querySelector("#annotate-button")
     .addEventListener("click", () => annotate_spectrum());
+  document
+    .querySelector("#peptide")
+    .addEventListener("focus", (event) => {
+      console.log(event.target.innerText);
+      event.target.innerHTML = event.target.innerText;
+    });
 });
