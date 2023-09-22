@@ -118,7 +118,6 @@ async function annotate_spectrum() {
     document.querySelector("#spectrum-error").innerHTML = "<p class='title'>" + error.short_description + "</p><p class='description'>" + error.long_description + "</p>";
     if (error.context.hasOwnProperty('Line')) {
       let Line = error.context.Line;
-      console.log(Line.offset, Line.length);
       document.querySelector("#peptide").innerHTML = Line.line.slice(0, Line.offset) + "<span class='error'>" + Line.line.slice(Line.offset, Line.offset + Line.length) + "</span>" + Line.line.slice(Line.offset + Line.length, Line.line.length);
     }
   }
@@ -142,7 +141,6 @@ window.addEventListener("DOMContentLoaded", () => {
   document
     .querySelector("#peptide")
     .addEventListener("focus", (event) => {
-      console.log(event.target.innerText);
       event.target.innerHTML = event.target.innerText;
     });
 });

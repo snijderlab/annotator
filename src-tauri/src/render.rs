@@ -448,7 +448,7 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> ((MassOverCharge, f64, f64), Po
             peak.annotation.iter().for_each(|frag| {
                 frag.ion
                     .position()
-                    .map(|i| output[frag.peptide_index][i.sequence_index].insert(frag.ion));
+                    .map(|i| output[frag.peptide_index][i.sequence_index].insert(frag.ion.clone()));
             });
         }
     }

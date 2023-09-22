@@ -185,6 +185,7 @@ fn annotate_spectrum(
             cmodel[8].to_owned(),
             cmodel[9].1.to_owned(),
             MassOverCharge::new::<mz>(ppm),
+            None,
         ),
         _ => Model::all(),
     };
