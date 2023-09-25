@@ -89,6 +89,7 @@ function get_location(id) {
 //import { SpectrumSetUp } from "./stitch-assets/script.js";
 async function annotate_spectrum() {
   document.querySelector("#annotate-button").classList.add("loading");
+  document.querySelector("#peptide").innerText = document.querySelector("#peptide").innerText.trim();
   try {
     var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);
     var noise_threshold = document.querySelector("#noise-threshold").value == "" ? null : Number(document.querySelector("#noise-threshold").value);
