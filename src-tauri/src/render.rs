@@ -21,12 +21,12 @@ pub fn fragment_table(fragments: &[Fragment], multiple_peptides: bool) -> String
                 pos.series_number.to_string(),
             )
         } else if let Some(pos) = fragment.ion.glycan_position() {
-            (pos.attachment.to_string(), pos.series_number.to_string())
+            (pos.attachment(), pos.series_number.to_string())
         } else if let FragmentType::InternalGlycan(breakages) = &fragment.ion {
             (
                 breakages
                     .get(0)
-                    .map(|b| b.position().attachment.to_string())
+                    .map(|b| b.position().attachment())
                     .unwrap_or("-".to_string()),
                 breakages
                     .iter()
@@ -792,7 +792,7 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str, multiple_peptide
                     )
                 } else if let Some(pos) = annotation.ion.glycan_position() {
                     (
-                        (pos.attachment + 1).to_string(),
+                        pos.attachment(),
                         format!("{}{}", pos.series_number, pos.branch_names()),
                         annotation.ion.label().to_string(),
                     )
@@ -800,7 +800,7 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str, multiple_peptide
                     (
                         breakages
                             .get(0)
-                            .map(|b| (b.position().attachment + 1).to_string())
+                            .map(|b| b.position().attachment())
                             .unwrap_or("-".to_string()),
                         "-".to_string(),
                         breakages
