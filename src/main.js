@@ -94,16 +94,16 @@ async function annotate_spectrum() {
     var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);
     var noise_threshold = document.querySelector("#noise-threshold").value == "" ? null : Number(document.querySelector("#noise-threshold").value);
     var model = [
-      [get_location("#model-a-location"), document.querySelector("#model-a-loss").value.split(' ').filter(a => a != "")],
-      [get_location("#model-b-location"), document.querySelector("#model-b-loss").value.split(' ').filter(a => a != "")],
-      [get_location("#model-c-location"), document.querySelector("#model-c-loss").value.split(' ').filter(a => a != "")],
-      [get_location("#model-d-location"), document.querySelector("#model-d-loss").value.split(' ').filter(a => a != "")],
-      [get_location("#model-v-location"), document.querySelector("#model-v-loss").value.split(' ').filter(a => a != "")],
-      [get_location("#model-w-location"), document.querySelector("#model-w-loss").value.split(' ').filter(a => a != "")],
-      [get_location("#model-x-location"), document.querySelector("#model-x-loss").value.split(' ').filter(a => a != "")],
-      [get_location("#model-y-location"), document.querySelector("#model-y-loss").value.split(' ').filter(a => a != "")],
-      [get_location("#model-z-location"), document.querySelector("#model-z-loss").value.split(' ').filter(a => a != "")],
-      [get_location("#model-z-location"), document.querySelector("#model-precursor-loss").value.split(' ').filter(a => a != "")], // First element is discarded
+      [get_location("#model-a-location"), document.querySelector("#model-a-loss").value],
+      [get_location("#model-b-location"), document.querySelector("#model-b-loss").value],
+      [get_location("#model-c-location"), document.querySelector("#model-c-loss").value],
+      [get_location("#model-d-location"), document.querySelector("#model-d-loss").value],
+      [get_location("#model-v-location"), document.querySelector("#model-v-loss").value],
+      [get_location("#model-w-location"), document.querySelector("#model-w-loss").value],
+      [get_location("#model-x-location"), document.querySelector("#model-x-loss").value],
+      [get_location("#model-y-location"), document.querySelector("#model-y-loss").value],
+      [get_location("#model-z-location"), document.querySelector("#model-z-loss").value],
+      [get_location("#model-z-location"), document.querySelector("#model-precursor-loss").value], // First element is discarded
     ];
     var result = await invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), charge: charge, noise_threshold: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").innerText, cmodel: model });
     document.querySelector("#spectrum-results-wrapper").innerHTML = result[0];

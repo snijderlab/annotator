@@ -150,7 +150,7 @@ fn load_sciex_clipboard(lines: &[&str]) -> Result<Vec<RawPeak>, String> {
     Ok(spectrum)
 }
 
-type ModelParameters = Vec<(Location, Vec<NeutralLoss>)>;
+type ModelParameters = Vec<(Location, String)>;
 
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
@@ -173,6 +173,15 @@ fn annotate_spectrum(
             Context::none(),
         ));
     }
+    let get_model_param = |(location, neutral_losses): &(Location, String)| match neutral_losses
+        .split(',')
+        .filter(|n| !n.is_empty())
+        .map(|n| n.parse())
+        .collect()
+    {
+        Ok(n) => Ok((location.clone(), n)),
+        Err(err) => Err(err),
+    };
     let mut model = match model {
         "all" => Model::all(),
         "ethcd" => Model::ethcd(),
@@ -180,16 +189,22 @@ fn annotate_spectrum(
         "cidhcd" => Model::cid_hcd(),
         "etd" => Model::etd(),
         "custom" => Model::new(
-            cmodel[0].to_owned(),
-            cmodel[1].to_owned(),
-            cmodel[2].to_owned(),
-            cmodel[3].to_owned(),
-            cmodel[4].to_owned(),
-            cmodel[5].to_owned(),
-            cmodel[6].to_owned(),
-            cmodel[7].to_owned(),
-            cmodel[8].to_owned(),
-            cmodel[9].1.to_owned(),
+            get_model_param(&cmodel[0])?,
+            get_model_param(&cmodel[1])?,
+            get_model_param(&cmodel[2])?,
+            get_model_param(&cmodel[3])?,
+            get_model_param(&cmodel[4])?,
+            get_model_param(&cmodel[5])?,
+            get_model_param(&cmodel[6])?,
+            get_model_param(&cmodel[7])?,
+            get_model_param(&cmodel[8])?,
+            cmodel[9]
+                .1
+                .to_owned()
+                .split(',')
+                .filter(|n| !n.is_empty())
+                .map(|n| n.parse::<NeutralLoss>())
+                .collect::<Result<Vec<NeutralLoss>, _>>()?,
             MassOverCharge::new::<mz>(ppm),
             None,
         ),
@@ -231,20 +246,4 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-}
-
-#[test]
-fn deserialise_test() {
-    let _ = dbg!(serde_json::to_string(&vec![
-        (Location::SkipN(1), vec![NeutralLoss::Water]),
-        (Location::All, vec![NeutralLoss::Water]),
-        (Location::SkipNC(1, 2), vec![NeutralLoss::Water]),
-        (
-            Location::TakeN { take: 1, skip: 2 },
-            vec![NeutralLoss::Water]
-        )
-    ]));
-    let text = r###"[[{"SkipN":1},["Water"]],[{"SkipN":1},["Water"]],[{"SkipN":1},["Water"]],[{"SkipN":1},["Water"]],[{"SkipN":1},["Water"]],["All",["Water"]],["All",["Water"]],["All",["Water"]],["All",["Water"]],["All",["Water"]]]"###;
-    let params: Result<ModelParameters, _> = dbg!(serde_json::from_str(text));
-    assert!(params.is_ok());
 }

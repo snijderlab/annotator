@@ -47,8 +47,8 @@ pub fn fragment_table(fragments: &[Fragment], multiple_peptides: bool) -> String
             fragment.charge.value,
             fragment
                 .neutral_loss
-                .map(|n| n.to_string())
-                .unwrap_or("-".to_string()),
+                .as_ref()
+                .map_or("-".to_string(), |n| n.to_string()),
             if multiple_peptides {
                 format!("<td>{}</td>", fragment.peptide_index + 1)
             } else {
@@ -358,7 +358,7 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
         let mut shared_pos = Some(annotations[0].ion.position_label());
         let mut shared_peptide = Some(annotations[0].peptide_index);
         let mut shared_glycan = Some(annotations[0].ion.glycan_position().map(|g| g.attachment()));
-        let mut shared_loss = Some(annotations[0].neutral_loss);
+        let mut shared_loss = Some(annotations[0].neutral_loss.clone());
         for a in annotations {
             if let Some(charge) = shared_charge {
                 if charge != a.charge {
@@ -385,8 +385,8 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                     shared_glycan = None;
                 }
             }
-            if let Some(loss) = shared_loss {
-                if loss != a.neutral_loss {
+            if let Some(loss) = &shared_loss {
+                if loss != &a.neutral_loss {
                     shared_loss = None;
                 }
             }
@@ -415,9 +415,9 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                 .unwrap_or(Some("*".to_string()))
                 .unwrap_or(String::new());
             let loss_str = shared_loss
-                .map(|o| o.map(|n| n.to_html()))
-                .unwrap_or(Some("*"))
-                .unwrap_or("");
+                .map(|o| o.map(|n| n.hill_notation_html()))
+                .unwrap_or(Some("*".to_string()))
+                .unwrap_or(String::new());
 
             let multi = if annotations.len() > 1 {
                 let mut multi = String::new();
@@ -448,7 +448,7 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                             } else {
                                 String::new()
                             },
-                            annotation.neutral_loss.map(|n| n.to_html()).unwrap_or_default(),
+                            annotation.neutral_loss.as_ref().map(|n| n.hill_notation_html()).unwrap_or_default(),
                         )
                         .unwrap();
                     } else {
@@ -470,7 +470,7 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                             } else {
                                 String::new()
                             },
-                            annotation.neutral_loss.map(|n| n.to_html()).unwrap_or_default(),
+                            annotation.neutral_loss.as_ref().map(|n| n.hill_notation_html()).unwrap_or_default(),
                         )
                         .unwrap();
                     }
@@ -505,8 +505,8 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                             String::new()
                         },
                         annotations[0]
-                            .neutral_loss
-                            .map(|n| n.to_html())
+                            .neutral_loss.as_ref()
+                            .map(|n| n.hill_notation_html())
                             .unwrap_or_default(),
                     )
                 } else {
@@ -917,6 +917,7 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str, multiple_peptide
                     label,
                     annotation
                         .neutral_loss
+                        .as_ref()
                         .map_or(String::new(), |v| v.to_string()),
                     peak.intensity,
                     peak.experimental_mz.value,
