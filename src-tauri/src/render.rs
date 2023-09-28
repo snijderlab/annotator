@@ -358,6 +358,7 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
         let mut shared_pos = Some(annotations[0].ion.position_label());
         let mut shared_peptide = Some(annotations[0].peptide_index);
         let mut shared_glycan = Some(annotations[0].ion.glycan_position().map(|g| g.attachment()));
+        let mut shared_loss = Some(annotations[0].neutral_loss);
         for a in annotations {
             if let Some(charge) = shared_charge {
                 if charge != a.charge {
@@ -384,6 +385,11 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                     shared_glycan = None;
                 }
             }
+            if let Some(loss) = shared_loss {
+                if loss != a.neutral_loss {
+                    shared_loss = None;
+                }
+            }
         }
 
         if shared_charge.is_none()
@@ -391,6 +397,7 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
             && shared_pos.is_none()
             && shared_peptide.is_none()
             && shared_glycan.is_none()
+            && shared_loss.is_none()
         {
             "*".to_string()
         } else {
@@ -407,6 +414,10 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
             let glycan_str = shared_glycan
                 .unwrap_or(Some("*".to_string()))
                 .unwrap_or(String::new());
+            let loss_str = shared_loss
+                .map(|o| o.map(|n| n.to_html()))
+                .unwrap_or(Some("*"))
+                .unwrap_or("");
 
             let multi = if annotations.len() > 1 {
                 let mut multi = String::new();
@@ -415,7 +426,7 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                         let ch = format!("{:+}", annotation.charge.value);
                         write!(
                             multi,
-                            "<span>{}<sup>{:+}</sup><sub style='margin-left:-{}ch'>{}{}</sub></span>",
+                            "<span>{}<sup>{:+}</sup><sub style='margin-left:-{}ch'>{}{}</sub>{}</span>",
                             breakages
                                 .iter()
                                 .filter(|b| !matches!(b, GlycanBreakPos::End(_)))
@@ -437,13 +448,14 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                             } else {
                                 String::new()
                             },
+                            annotation.neutral_loss.map(|n| n.to_html()).unwrap_or_default(),
                         )
                         .unwrap();
                     } else {
                         let ch = format!("{:+}", annotation.charge.value);
                         write!(
                             multi,
-                            "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch'>{}{}{}</sub></span>",
+                            "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch'>{}{}{}</sub>{}</span>",
                             annotation.ion.label(),
                             ch,
                             ch.len(),
@@ -458,6 +470,7 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                             } else {
                                 String::new()
                             },
+                            annotation.neutral_loss.map(|n| n.to_html()).unwrap_or_default(),
                         )
                         .unwrap();
                     }
@@ -473,7 +486,7 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
             if single_internal_glycan {
                 if let FragmentType::InternalGlycan(breakages) = &annotations[0].ion {
                     format!(
-                        "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch'>{}{}</sub></span>",
+                        "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch'>{}{}</sub>{}</span>",
                         breakages
                             .iter()
                             .filter(|b| !matches!(b, GlycanBreakPos::End(_)))
@@ -491,13 +504,17 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                         } else {
                             String::new()
                         },
+                        annotations[0]
+                            .neutral_loss
+                            .map(|n| n.to_html())
+                            .unwrap_or_default(),
                     )
                 } else {
                     unreachable!();
                 }
             } else {
                 format!(
-                    "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch'>{}{}{}</sub></span>{}",
+                    "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch'>{}{}{}</sub>{}</span>{}",
                     ion_str,
                     charge_str,
                     charge_str.len(),
@@ -512,6 +529,7 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                     } else {
                         String::new()
                     },
+                    loss_str,
                     multi
                 )
             }

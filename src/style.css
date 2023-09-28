@@ -90,6 +90,7 @@ button.print {
   background: var(--color-background);
 }
 
+pre,
 .input-settings textarea,
 .peptide-input {
   font-family: 'Roboto Mono', monospace;
@@ -98,6 +99,12 @@ button.print {
   word-wrap: break-word;
   word-break: break-all;
   white-space: pre-wrap;
+}
+
+pre {
+  min-height: 0;
+  padding: 0 1rem;
+  overflow: hidden;
 }
 
 .peptide-input .error {
@@ -129,13 +136,6 @@ button.print {
 
 .input-settings .combined-input span {
   margin-left: .5rem;
-}
-
-pre {
-  word-wrap: break-word;
-  white-space: pre-wrap;
-  overflow: hidden;
-  padding: 0 1rem;
 }
 
 #spectrum-error {

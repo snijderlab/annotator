@@ -34,14 +34,19 @@ fn spectrum_details(index: usize, state: ModifiableState) -> String {
         "Spectrum index not valid".to_string(),
         |spectrum| {
             format!(
-                "{}\n{:.3}@{:.3}{:+.0}{:.3}",
+                "{}\n{:.3}@{:.3}{:+.0}{:.3}{}",
                 spectrum.title,
                 spectrum.mass.value,
                 spectrum.rt.value,
                 spectrum.charge.value,
                 spectrum
                     .intensity
-                    .map_or(String::new(), |i| format!(" I:{i}"))
+                    .map_or(String::new(), |i| format!(" I:{i}")),
+                spectrum
+                    .sequence
+                    .as_ref()
+                    .map(|s| format!("\n{s}"))
+                    .unwrap_or_default()
             )
         },
     )
@@ -68,6 +73,7 @@ fn load_clipboard(data: &str, state: ModifiableState) -> Result<usize, String> {
         mass: Mass::zero(),
         intensity: None,
         spectrum,
+        sequence: None,
     }];
     Ok(1)
 }
