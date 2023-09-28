@@ -676,7 +676,7 @@ fn render_linear_peptide(
             write!(
                 output,
                 "<span class='corner {}'></span>",
-                ion.to_string().trim_end_matches('·')
+                ion.label().trim_end_matches('·')
             )
             .unwrap();
         }
