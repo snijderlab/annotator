@@ -426,7 +426,7 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                         let ch = format!("{:+}", annotation.charge.value);
                         write!(
                             multi,
-                            "<span>{}<sup>{:+}</sup><sub style='margin-left:-{}ch'>{}{}</sub>{}</span>",
+                            "<span>{}<sup>{:+}</sup><sub style='margin-left:-{}ch;min-width:{2}ch;display:inline-block;'>{}{}</sub>{}</span>",
                             breakages
                                 .iter()
                                 .filter(|b| !matches!(b, GlycanBreakPos::End(_)))
@@ -455,7 +455,7 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                         let ch = format!("{:+}", annotation.charge.value);
                         write!(
                             multi,
-                            "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch'>{}{}{}</sub>{}</span>",
+                            "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch;min-width:{2}ch;display:inline-block;'>{}{}{}</sub>{}</span>",
                             annotation.ion.label(),
                             ch,
                             ch.len(),
@@ -486,7 +486,7 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
             if single_internal_glycan {
                 if let FragmentType::InternalGlycan(breakages) = &annotations[0].ion {
                     format!(
-                        "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch'>{}{}</sub>{}</span>",
+                        "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch;min-width:{2}ch;display:inline-block;'>{}{}</sub>{}</span>",
                         breakages
                             .iter()
                             .filter(|b| !matches!(b, GlycanBreakPos::End(_)))
@@ -514,7 +514,7 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                 }
             } else {
                 format!(
-                    "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch'>{}{}{}</sub>{}</span>{}",
+                    "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch;min-width:{2}ch;display:inline-block;'>{}{}{}</sub>{}</span>{}",
                     ion_str,
                     charge_str,
                     charge_str.len(),
