@@ -9,7 +9,7 @@ async function select_mgf_file(e) {
     //defaultPath: 'C:\\',
     directory: false,
     filters: [{
-      extensions: ['mgf'], name: "*"
+      extensions: ['mgf', 'mgf.gz'], name: "*"
     }]
   };
   e.dataset.filepath = await window.__TAURI__.dialog.open(properties);
@@ -19,18 +19,55 @@ async function select_mgf_file(e) {
 /**
 * @param e: Element
 */
+async function select_identified_peptides_file(e) {
+  e.classList.add("loading")
+  let properties = {
+    //defaultPath: 'C:\\',
+    directory: false,
+    filters: [{
+      extensions: ['csv', 'csv.gz'], name: "*"
+    }]
+  };
+  e.dataset.filepath = await window.__TAURI__.dialog.open(properties);
+  load_identified_peptides(e);
+};
+
+/**
+* @param e: Element
+*/
 async function load_mgf(e) {
   try {
-    let result = await invoke("load_mgf", { path: e.dataset.filepath });
-    document.querySelector("#spectrum-log").innerText = "Loaded " + result + " spectra";
-    document.querySelector("#loaded-path").classList.remove("error");
-    document.querySelector("#loaded-path").innerText = e.dataset.filepath.split('\\').pop().split('/').pop();
-    document.querySelector("#number-of-scans").innerText = result;
-    spectrum_details();
+    invoke("load_mgf", { path: e.dataset.filepath }).then((result) => {
+      document.querySelector("#spectrum-log").innerText = "Loaded " + result + " spectra";
+      document.querySelector("#loaded-path").classList.remove("error");
+      document.querySelector("#loaded-path").innerText = e.dataset.filepath.split('\\').pop().split('/').pop();
+      document.querySelector("#number-of-scans").innerText = result;
+      spectrum_details();
+    });
   } catch (error) {
     console.log(error);
     document.querySelector("#loaded-path").classList.add("error");
     document.querySelector("#loaded-path").innerText = error;
+  }
+  e.classList.remove("loading")
+}
+
+/**
+* @param e: Element
+*/
+async function load_identified_peptides(e) {
+  try {
+    invoke("load_identified_peptides", { path: e.dataset.filepath }).then((result) => {
+      document.querySelector("#identified-peptides-log").innerText = "Loaded " + result + " peptides";
+      document.querySelector("#loaded-identified-peptides-path").classList.remove("error");
+      document.querySelector("#loaded-identified-peptides-path").innerText = e.dataset.filepath.split('\\').pop().split('/').pop();
+      document.querySelector("#number-of-identified-peptides").innerText = result;
+      spectrum_details();
+    });
+  } catch (error) {
+    console.log(error);
+    document.querySelector("#loaded-identified-peptides-path").classList.add("error");
+    document.querySelector("#loaded-identified-peptides-path").innerText = error;
   }
   e.classList.remove("loading")
 }
@@ -64,6 +101,17 @@ async function spectrum_details() {
     console.log(error);
     document.querySelector("#spectrum-error").innerText = error;
     document.querySelector("#spectrum-details").innerText = "ERROR";
+  }
+}
+
+async function identified_peptide_details() {
+  try {
+    let result = await invoke("identified_peptide_details", { index: Number(document.querySelector("#details-identified-peptide-index").value) });
+    document.querySelector("#identified-peptide-details").innerText = result;
+  } catch (error) {
+    console.log(error);
+    document.querySelector("#spectrum-error").innerText = error;
+    document.querySelector("#identified-peptide-details").innerText = "ERROR";
   }
 }
 
@@ -130,12 +178,19 @@ window.addEventListener("DOMContentLoaded", () => {
     .querySelector("#load-mgf-path")
     .addEventListener("click", (event) => select_mgf_file(event.target));
   document
+    .querySelector("#load-identified-peptides")
+    .addEventListener("click", (event) => select_identified_peptides_file(event.target));
+  document
     .querySelector("#load-clipboard")
     .addEventListener("click", () => load_clipboard());
   let dsi = document
     .querySelector("#details-spectrum-index");
   dsi.addEventListener("change", () => spectrum_details())
   dsi.addEventListener("focus", () => spectrum_details());
+  let dipi = document
+    .querySelector("#details-identified-peptide-index");
+  dipi.addEventListener("change", () => identified_peptide_details())
+  dipi.addEventListener("focus", () => identified_peptide_details());
   document
     .querySelector("#annotate-button")
     .addEventListener("click", () => annotate_spectrum());

@@ -4,9 +4,10 @@
 )]
 
 use itertools::Itertools;
-use rustyms::error::{Context, CustomError};
-use rustyms::MassOverCharge;
-use rustyms::{e, Charge, Location, Mass, Model, NeutralLoss, RawPeak, RawSpectrum, Time, Zero};
+use rustyms::{
+    e, identifications::IdentifiedPeptideSource, Charge, Context, CustomError, Location, Mass,
+    MassOverCharge, Model, NeutralLoss, RawPeak, RawSpectrum, Time, Zero,
+};
 use state::State;
 use std::sync::Mutex;
 
@@ -23,6 +24,18 @@ fn load_mgf(path: &str, state: ModifiableState) -> Result<usize, String> {
             let count = v.len();
             state.lock().unwrap().spectra = v;
             Ok(count)
+        }
+        Err(err) => Err(err),
+    }
+}
+
+#[tauri::command]
+fn load_identified_peptides(path: &str, state: ModifiableState) -> Result<usize, String> {
+    match rustyms::identifications::PeaksData::parse_file(path) {
+        Ok(p) => {
+            state.lock().unwrap().peptides =
+                p.filter_map(|pep| pep.ok()).map(|pep| pep.into()).collect();
+            Ok(state.lock().unwrap().peptides.len())
         }
         Err(err) => Err(err),
     }
@@ -47,6 +60,22 @@ fn spectrum_details(index: usize, state: ModifiableState) -> String {
                     .as_ref()
                     .map(|s| format!("\n{s}"))
                     .unwrap_or_default()
+            )
+        },
+    )
+}
+#[tauri::command]
+fn identified_peptide_details(index: usize, state: ModifiableState) -> String {
+    state.lock().unwrap().peptides.get(index).map_or(
+        "Identified peptide index not valid".to_string(),
+        |peptide| {
+            format!(
+                "{}{}\n{:?}",
+                peptide.peptide,
+                peptide
+                    .score
+                    .map_or(String::new(), |s| format!(" Score: {s}")),
+                peptide.metadata
             )
         },
     )
@@ -237,12 +266,15 @@ fn main() {
     tauri::Builder::default()
         .manage(Mutex::new(State {
             spectra: Vec::new(),
+            peptides: Vec::new(),
         }))
         .invoke_handler(tauri::generate_handler![
             load_mgf,
-            annotate_spectrum,
+            load_identified_peptides,
             load_clipboard,
-            spectrum_details
+            spectrum_details,
+            identified_peptide_details,
+            annotate_spectrum,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

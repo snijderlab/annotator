@@ -24,12 +24,15 @@ r#"<!DOCTYPE html>
   <button class="print" onclick="window.print()">Export</button>
   <div class="input-settings">
     <h2>Load spectra</h2>
-    <label for="load-mgf-path">File</label>
-    <button type="button" id="load-mgf-path">Select file</button>
+    <label for="load-mgf-path">Raw file</label>
+    <button type="button" id="load-mgf-path">Select raw file</button>
     <label for="load-clipboard">Clipboard</label>
     <button id="load-clipboard" type="button">Load Clipboard</button>
+    <label for="load-identified-peptides">Identified peptides</label>
+    <button id="load-identified-peptides" type="button">Select identified peptides file</button>
     </div>
   <pre id="loaded-path"></pre>
+  <pre id="loaded-identified-peptides-path"></pre>
   <div class="input-settings">
     <h2>Spectrum details</h2>
     <label for="spectrum-index">Spectrum index</label>
@@ -40,6 +43,15 @@ r#"<!DOCTYPE html>
     </div>
   </div>
   <pre id="spectrum-details"></pre>
+  <div class="input-settings">
+    <label for="spectrum-index">Identified peptide index</label>
+    <div class="combined-input">
+      <input type="number" id="details-identified-peptide-index" value="0" min="0" />
+      <span>/</span>
+      <span id="number-of-identified-peptides">0</span>
+    </div>
+  </div>
+  <details id="identified-peptide-details"></details>
   <pre id="loaded-path"></pre>
   <div class="input-settings">
     <h2>Annotate</h2>
@@ -130,6 +142,7 @@ r#"<!DOCTYPE html>
   <summary>Logs</summary>
   <div id="spectrum-fragments"></div>
   <pre id="spectrum-log"></pre>
+  <pre id="identified-peptides-log"></pre>
   </details>
 </body>
 
