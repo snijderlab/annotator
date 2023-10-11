@@ -17,6 +17,32 @@ impl HtmlElement {
         }
     }
 
+    pub fn table<H: Into<HtmlContent> + Clone, D: Into<HtmlContent> + Clone>(
+        header: Option<&[H]>,
+        data: &[&[D]],
+    ) -> Self {
+        let mut base = HtmlElement::new(HtmlTag::table);
+        if let Some(header) = header {
+            base = base.content(
+                HtmlElement::new(HtmlTag::thead).content(
+                    HtmlElement::new(HtmlTag::tr).children(
+                        header
+                            .iter()
+                            .map(|cell| HtmlElement::new(HtmlTag::th).content(cell.clone())),
+                    ),
+                ),
+            );
+        }
+        base.content(
+            HtmlElement::new(HtmlTag::tbody).children(data.iter().map(|row| {
+                HtmlElement::new(HtmlTag::tr).children(
+                    row.iter()
+                        .map(|cell| HtmlElement::new(HtmlTag::td).content(cell.clone())),
+                )
+            })),
+        )
+    }
+
     pub fn class(mut self, classes: impl Into<String>) -> Self {
         self.header
             .push(("class".to_string(), Some(classes.into())));
@@ -41,6 +67,11 @@ impl HtmlElement {
 
     pub fn content(mut self, content: impl Into<HtmlContent>) -> Self {
         content.into().add_to(&mut self.content);
+        self
+    }
+
+    pub fn children(mut self, content: impl IntoIterator<Item = impl Into<HtmlContent>>) -> Self {
+        self.extend(content);
         self
     }
 }

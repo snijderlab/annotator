@@ -51,7 +51,7 @@ r#"<!DOCTYPE html>
       <span id="number-of-identified-peptides">0</span>
     </div>
   </div>
-  <details id="identified-peptide-details"></details>
+  <div id="identified-peptide-details"></div>
   <pre id="loaded-path"></pre>
   <div class="input-settings">
     <h2>Annotate</h2>

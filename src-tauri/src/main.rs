@@ -11,7 +11,10 @@ use rustyms::{
 use state::State;
 use std::sync::Mutex;
 
+use crate::metadata_render::RenderToHtml;
+
 mod html_builder;
+mod metadata_render;
 mod render;
 mod state;
 
@@ -64,18 +67,20 @@ fn spectrum_details(index: usize, state: ModifiableState) -> String {
         },
     )
 }
+
 #[tauri::command]
 fn identified_peptide_details(index: usize, state: ModifiableState) -> String {
+    // TODO: show local confidence on the sequence (maybe as done in stitch before?)
     state.lock().unwrap().peptides.get(index).map_or(
         "Identified peptide index not valid".to_string(),
         |peptide| {
             format!(
-                "{}{}\n{:?}",
+                "{}{}\n{}",
                 peptide.peptide,
                 peptide
                     .score
                     .map_or(String::new(), |s| format!(" Score: {s}")),
-                peptide.metadata
+                peptide.metadata.to_html()
             )
         },
     )
