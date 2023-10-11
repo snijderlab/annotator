@@ -12,6 +12,7 @@ use state::State;
 use std::sync::Mutex;
 
 use crate::metadata_render::RenderToHtml;
+use serde::{Deserialize, Serialize};
 
 mod html_builder;
 mod metadata_render;
@@ -41,6 +42,35 @@ fn load_identified_peptides(path: &str, state: ModifiableState) -> Result<usize,
             Ok(state.lock().unwrap().peptides.len())
         }
         Err(err) => Err(err),
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct Settings {
+    peptide: String,
+    charge: Option<usize>,
+    mode: Option<String>,
+    scan_index: Option<usize>,
+}
+
+#[tauri::command]
+fn load_identified_peptide(index: usize, state: ModifiableState) -> Option<Settings> {
+    if let Ok(state) = state.lock() {
+        state.peptides.get(index).map(|peptide| Settings {
+            peptide: peptide.peptide.to_string(),
+            charge: peptide.metadata.charge(),
+            mode: peptide.metadata.mode().map(|s| s.to_string()),
+            scan_index: peptide.metadata.scan_number().and_then(|scan| {
+                state
+                    .spectra
+                    .iter()
+                    .enumerate()
+                    .find(|(_, s)| s.raw_scan_number.map_or(false, |s| scan == s))
+                    .map(|(i, _)| i)
+            }),
+        })
+    } else {
+        None
     }
 }
 
@@ -101,13 +131,9 @@ fn load_clipboard(data: &str, state: ModifiableState) -> Result<usize, String> {
 
     state.lock().unwrap().spectra = vec![RawSpectrum {
         title: "Clipboard".to_string(),
-        num_scans: 0,
-        rt: Time::zero(),
         charge: Charge::new::<e>(1.0),
-        mass: Mass::zero(),
-        intensity: None,
         spectrum,
-        sequence: None,
+        ..RawSpectrum::default()
     }];
     Ok(1)
 }
@@ -279,6 +305,7 @@ fn main() {
             load_clipboard,
             spectrum_details,
             identified_peptide_details,
+            load_identified_peptide,
             annotate_spectrum,
         ])
         .run(tauri::generate_context!())

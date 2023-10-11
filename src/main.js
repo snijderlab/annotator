@@ -121,6 +121,23 @@ async function identified_peptide_details() {
   }
 }
 
+async function load_identified_peptide() {
+  try {
+    let index = Number(document.querySelector("#details-identified-peptide-index").value);
+    let result = await invoke("load_identified_peptide", { index: index });
+    document.querySelector("#peptide").innerText = result.peptide;
+    document.querySelector("#spectrum-charge").value = result.charge;
+    document.querySelector("#spectrum-model").value = result.mode.toLowerCase();
+    document.querySelector("#details-spectrum-index").value = result.scan_index;
+    console.log(result)
+  } catch (error) {
+    console.log(error);
+    document.querySelector("#spectrum-error").innerText = error;
+    document.querySelector("#identified-peptide-details").innerText = "ERROR";
+  }
+}
+
+
 function get_location(id) {
   let loc = document.querySelector(id);
   let t = loc.children[0].options[Number(loc.children[0].value)].dataset.value;
@@ -186,6 +203,9 @@ window.addEventListener("DOMContentLoaded", () => {
   document
     .querySelector("#load-identified-peptides")
     .addEventListener("click", (event) => select_identified_peptides_file(event.target));
+  document
+    .querySelector("#load-identified-peptide")
+    .addEventListener("click", (event) => load_identified_peptide());
   document
     .querySelector("#load-clipboard")
     .addEventListener("click", () => load_clipboard());
