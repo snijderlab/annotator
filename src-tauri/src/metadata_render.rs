@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use rustyms::identifications::{MetaData, NovorData, OpairData, PeaksData};
+use rustyms::identifications::{FastaData, MetaData, NovorData, OpairData, PeaksData};
 
 use crate::html_builder::{HtmlContent, HtmlElement, HtmlTag};
 
@@ -13,6 +13,7 @@ impl RenderToHtml for MetaData {
             MetaData::Novor(n) => n.to_html(),
             MetaData::Peaks(p) => p.to_html(),
             MetaData::Opair(o) => o.to_html(),
+            MetaData::Fasta(f) => f.to_html(),
         }
     }
 }
@@ -239,6 +240,18 @@ impl RenderToHtml for OpairData {
                     ],
                     &["Version".to_string(), self.version.to_string()],
                 ],
+            ),
+        ])
+    }
+}
+
+impl RenderToHtml for FastaData {
+    fn to_html(&self) -> HtmlElement {
+        HtmlElement::new(HtmlTag::details).children([
+            HtmlElement::new(HtmlTag::summary).content(format!("MetaData Fasta read {}", self.id)),
+            HtmlElement::table::<HtmlContent, _>(
+                None,
+                &[&["Header".to_string(), self.full_header.to_string()]],
             ),
         ])
     }

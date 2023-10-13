@@ -5,8 +5,12 @@
 
 use itertools::Itertools;
 use rustyms::{
-    e, identifications::IdentifiedPeptideSource, Charge, Context, CustomError, Location, Mass,
-    MassOverCharge, Model, NeutralLoss, RawPeak, RawSpectrum, Time, Zero,
+    e,
+    identifications::{
+        FastaData, IdentifiedPeptide, IdentifiedPeptideSource, NovorData, OpairData, PeaksData,
+    },
+    Charge, Context, CustomError, Location, Mass, MassOverCharge, Model, NeutralLoss, RawPeak,
+    RawSpectrum, Time, Zero,
 };
 use state::State;
 use std::sync::Mutex;
@@ -34,14 +38,40 @@ fn load_mgf(path: &str, state: ModifiableState) -> Result<usize, String> {
 }
 
 #[tauri::command]
-fn load_identified_peptides(path: &str, state: ModifiableState) -> Result<usize, String> {
-    match rustyms::identifications::PeaksData::parse_file(path) {
-        Ok(p) => {
+fn load_identified_peptides(path: &str, state: ModifiableState) -> Result<(), String> {
+    let actual_extension = path
+        .rsplitn(2, '.')
+        .nth(0)
+        .map(|ex| {
+            (ex == "gz")
+                .then(|| path.rsplitn(3, '.').nth(1))
+                .flatten()
+                .unwrap_or(ex)
+        })
+        .map(|ex| ex.to_lowercase());
+    match actual_extension.as_deref() {
+        Some("csv") => PeaksData::parse_file(path)
+            .map(|peptides| {
+                state.lock().unwrap().peptides =
+                    peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()
+            })
+            .or_else(|_| {
+                NovorData::parse_file(path).map(|peptides| {
+                    state.lock().unwrap().peptides =
+                        peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()
+                })
+            })
+            .map_err(|_| "Could not be recognised as either a Peaks or Novor file".to_string()),
+        Some("psmtsv") => OpairData::parse_file(path).map(|peptides| {
             state.lock().unwrap().peptides =
-                p.filter_map(|pep| pep.ok()).map(|pep| pep.into()).collect();
-            Ok(state.lock().unwrap().peptides.len())
-        }
-        Err(err) => Err(err),
+                peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()
+        }),
+        Some("fasta") => FastaData::parse_file(path)
+            .map(|peptides| {
+                state.lock().unwrap().peptides = peptides.into_iter().map(|p| p.into()).collect()
+            })
+            .map_err(|err| err.to_string()),
+        _ => Err("Not a recognised extension".to_string()),
     }
 }
 
