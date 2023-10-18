@@ -1,10 +1,87 @@
 use itertools::Itertools;
-use rustyms::identifications::{FastaData, MetaData, NovorData, OpairData, PeaksData};
+use rustyms::identifications::{
+    FastaData, IdentifiedPeptide, MetaData, NovorData, OpairData, PeaksData,
+};
 
 use crate::html_builder::{HtmlContent, HtmlElement, HtmlTag};
 
 pub trait RenderToHtml {
     fn to_html(&self) -> HtmlElement;
+}
+
+impl RenderToHtml for IdentifiedPeptide {
+    fn to_html(&self) -> HtmlElement {
+        // Render the peptide with its local confidence
+        let mut peptide = HtmlElement::new(HtmlTag::div)
+            .class("original-sequence")
+            .style("--max-value:1");
+        let lc = self
+            .local_confidence
+            .clone()
+            .unwrap_or(vec![0.0; self.peptide.len()]);
+
+        if let Some(n) = self.peptide.n_term.as_ref() {
+            peptide = peptide.content(
+                HtmlElement::new(HtmlTag::div).style("--value:0").children([
+                    HtmlElement::new(HtmlTag::p).content("⚬".to_string()),
+                    HtmlElement::new(HtmlTag::p)
+                        .class("modification")
+                        .content(n.to_string()),
+                ]),
+            );
+        }
+
+        for (aa, confidence) in self.peptide.sequence.iter().zip(lc) {
+            peptide = peptide.content(
+                HtmlElement::new(HtmlTag::div)
+                    .style(format!("--value:{confidence}"))
+                    .children([
+                        HtmlElement::new(HtmlTag::p).content(aa.aminoacid.char().to_string()),
+                        HtmlElement::new(HtmlTag::p)
+                            .class("modification")
+                            .content(aa.modifications.iter().map(ToString::to_string).join(",")),
+                    ]),
+            );
+        }
+
+        if let Some(c) = self.peptide.c_term.as_ref() {
+            peptide = peptide.content(
+                HtmlElement::new(HtmlTag::div).style("--value:0").children([
+                    HtmlElement::new(HtmlTag::p).content("⚬".to_string()),
+                    HtmlElement::new(HtmlTag::p)
+                        .class("modification")
+                        .content(c.to_string()),
+                ]),
+            );
+        }
+
+        let mass = self
+            .peptide
+            .formula()
+            .unwrap()
+            .monoisotopic_mass()
+            .unwrap()
+            .value;
+        HtmlElement::new(HtmlTag::div).children([
+            HtmlElement::new(HtmlTag::p).content(format!(
+                "Score: {}, Length: {} AA, Mass: {:.3} Da, Charge: {}, Mz: {} Th, Mode: {}",
+                self.score.map_or(String::from("-"), |s| s.to_string()),
+                self.peptide.sequence.len(),
+                mass,
+                self.metadata
+                    .charge()
+                    .map_or("-".to_string(), |c| c.to_string()),
+                self.metadata
+                    .charge()
+                    .map_or("-".to_string(), |c| format!("{:.3}", mass / c as f64)),
+                self.metadata
+                    .mode()
+                    .map_or("-".to_string(), |c| c.to_string())
+            )),
+            peptide,
+            self.metadata.to_html(),
+        ])
+    }
 }
 
 impl RenderToHtml for MetaData {
@@ -20,9 +97,9 @@ impl RenderToHtml for MetaData {
 
 impl RenderToHtml for PeaksData {
     fn to_html(&self) -> HtmlElement {
-        HtmlElement::new(HtmlTag::details).children([
-            HtmlElement::new(HtmlTag::summary).content(format!(
-                "MetaData Peaks read {}",
+        HtmlElement::new(HtmlTag::div).children([
+            HtmlElement::new(HtmlTag::p).content(format!(
+                "Additional MetaData Peaks {}",
                 self.scan.iter().map(|i| i.to_string()).join(";")
             )),
             HtmlElement::table::<HtmlContent, _>(
@@ -42,26 +119,17 @@ impl RenderToHtml for PeaksData {
                         self.de_novo_score.to_optional_string(),
                     ],
                     &["ALC".to_string(), self.alc.to_string()],
-                    &["Length".to_string(), self.length.to_string()],
-                    &["mz".to_string(), self.mz.to_string()],
-                    &["z".to_string(), self.z.to_string()],
                     &["RT".to_string(), self.rt.to_string()],
                     &[
                         "Predicted RT".to_string(),
                         self.predicted_rt.to_optional_string(),
                     ],
                     &["Area".to_string(), self.area.to_optional_string()],
-                    &["Mass".to_string(), self.mass.to_string()],
                     &["ppm".to_string(), self.ppm.to_string()],
-                    &[
-                        format!("Tag (length {})", self.tag_length),
-                        self.tag.to_string(),
-                    ],
                     &[
                         "Post Translational Modifications".to_string(),
                         self.ptm.to_string(),
                     ],
-                    &["Mode".to_string(), self.mode.to_string()],
                     &[
                         "Accession".to_string(),
                         self.accession.as_ref().to_optional_string(),
@@ -75,18 +143,15 @@ impl RenderToHtml for PeaksData {
 
 impl RenderToHtml for NovorData {
     fn to_html(&self) -> HtmlElement {
-        HtmlElement::new(HtmlTag::details).children([
-            HtmlElement::new(HtmlTag::summary).content(format!(
-                "MetaData Novor read {}",
+        HtmlElement::new(HtmlTag::div).children([
+            HtmlElement::new(HtmlTag::p).content(format!(
+                "Additional MetaData Novor {}",
                 self.id.unwrap_or(self.scan)
             )),
             HtmlElement::table::<HtmlContent, _>(
                 None,
                 &[
                     &["Scan".to_string(), self.scan.to_string()],
-                    &["mz".to_string(), self.mz.to_string()],
-                    &["z".to_string(), self.z.to_string()],
-                    &["Mass".to_string(), self.mass.to_string()],
                     &["ppm".to_string(), self.ppm.to_string()],
                     &["Score".to_string(), self.score.to_string()],
                     &["ID".to_string(), self.id.to_optional_string()],
@@ -123,9 +188,9 @@ impl RenderToHtml for NovorData {
 
 impl RenderToHtml for OpairData {
     fn to_html(&self) -> HtmlElement {
-        HtmlElement::new(HtmlTag::details).children([
-            HtmlElement::new(HtmlTag::summary)
-                .content(format!("MetaData Opair read {}", self.scan)),
+        HtmlElement::new(HtmlTag::div).children([
+            HtmlElement::new(HtmlTag::p)
+                .content(format!("Additional MetaData Opair {}", self.scan)),
             HtmlElement::table::<HtmlContent, _>(
                 None,
                 &[
@@ -135,9 +200,6 @@ impl RenderToHtml for OpairData {
                         "Precursor scan number".to_string(),
                         self.precursor_scan_number.to_string(),
                     ],
-                    &["mz".to_string(), self.mz.to_string()],
-                    &["z".to_string(), self.z.to_string()],
-                    &["Mass".to_string(), self.mass.to_string()],
                     &[
                         "Theoretical Mass".to_string(),
                         self.theoretical_mass.to_string(),
@@ -247,8 +309,8 @@ impl RenderToHtml for OpairData {
 
 impl RenderToHtml for FastaData {
     fn to_html(&self) -> HtmlElement {
-        HtmlElement::new(HtmlTag::details).children([
-            HtmlElement::new(HtmlTag::summary).content(format!("MetaData Fasta read {}", self.id)),
+        HtmlElement::new(HtmlTag::div).children([
+            HtmlElement::new(HtmlTag::p).content(format!("Additional MetaData Fasta {}", self.id)),
             HtmlElement::table::<HtmlContent, _>(
                 None,
                 &[&["Header".to_string(), self.full_header.to_string()]],

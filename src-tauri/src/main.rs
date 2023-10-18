@@ -142,16 +142,7 @@ fn identified_peptide_details(index: usize, state: ModifiableState) -> String {
     // TODO: show local confidence on the sequence (maybe as done in stitch before?)
     state.lock().unwrap().peptides.get(index).map_or(
         "Identified peptide index not valid".to_string(),
-        |peptide| {
-            format!(
-                "{}{}\n{}",
-                peptide.peptide,
-                peptide
-                    .score
-                    .map_or(String::new(), |s| format!(" Score: {s}")),
-                peptide.metadata.to_html()
-            )
-        },
+        |peptide| peptide.to_html().to_string(),
     )
 }
 

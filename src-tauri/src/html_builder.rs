@@ -54,6 +54,11 @@ impl HtmlElement {
         self
     }
 
+    pub fn style(mut self, style: impl Into<String>) -> Self {
+        self.header.push(("style".to_string(), Some(style.into())));
+        self
+    }
+
     pub fn header(mut self, title: impl Into<String>, value: impl Into<String>) -> Self {
         self.header
             .push((title.into(), Some(value.into().replace('\'', "\""))));
