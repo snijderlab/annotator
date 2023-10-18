@@ -6,11 +6,9 @@
 use itertools::Itertools;
 use rustyms::{
     e,
-    identifications::{
-        FastaData, IdentifiedPeptide, IdentifiedPeptideSource, NovorData, OpairData, PeaksData,
-    },
-    Charge, Context, CustomError, Location, Mass, MassOverCharge, Model, NeutralLoss, RawPeak,
-    RawSpectrum, Time, Zero,
+    identifications::{FastaData, IdentifiedPeptideSource, NovorData, OpairData, PeaksData},
+    Charge, Context, CustomError, Location, MassOverCharge, Model, NeutralLoss, RawPeak,
+    RawSpectrum, Zero,
 };
 use state::State;
 use std::sync::Mutex;
@@ -38,13 +36,13 @@ fn load_mgf(path: &str, state: ModifiableState) -> Result<usize, String> {
 }
 
 #[tauri::command]
-fn load_identified_peptides(path: &str, state: ModifiableState) -> Result<(), String> {
+fn load_identified_peptides(path: &str, state: ModifiableState) -> Result<usize, String> {
     let actual_extension = path
-        .rsplitn(2, '.')
-        .nth(0)
+        .rsplit('.')
+        .next()
         .map(|ex| {
             (ex == "gz")
-                .then(|| path.rsplitn(3, '.').nth(1))
+                .then(|| path.rsplit('.').nth(1))
                 .flatten()
                 .unwrap_or(ex)
         })
@@ -72,7 +70,8 @@ fn load_identified_peptides(path: &str, state: ModifiableState) -> Result<(), St
             })
             .map_err(|err| err.to_string()),
         _ => Err("Not a recognised extension".to_string()),
-    }
+    }?;
+    Ok(state.lock().unwrap().peptides.len())
 }
 
 #[derive(Serialize, Deserialize)]
@@ -89,7 +88,17 @@ fn load_identified_peptide(index: usize, state: ModifiableState) -> Option<Setti
         state.peptides.get(index).map(|peptide| Settings {
             peptide: peptide.peptide.to_string(),
             charge: peptide.metadata.charge(),
-            mode: peptide.metadata.mode().map(|s| s.to_string()),
+            mode: peptide
+                .metadata
+                .mode()
+                .map(|s| {
+                    if s.to_lowercase() == "hcd" || s.to_lowercase() == "cid" {
+                        "CidHcd"
+                    } else {
+                        s
+                    }
+                })
+                .map(|s| s.to_string()),
             scan_index: peptide.metadata.scan_number().and_then(|scan| {
                 state
                     .spectra
