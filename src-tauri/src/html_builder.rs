@@ -19,7 +19,7 @@ impl HtmlElement {
 
     pub fn table<H: Into<HtmlContent> + Clone, D: Into<HtmlContent> + Clone>(
         header: Option<&[H]>,
-        data: &[&[D]],
+        data: &[impl AsRef<[D]>],
     ) -> Self {
         let mut base = HtmlElement::new(HtmlTag::table);
         if let Some(header) = header {
@@ -36,7 +36,8 @@ impl HtmlElement {
         base.content(
             HtmlElement::new(HtmlTag::tbody).children(data.iter().map(|row| {
                 HtmlElement::new(HtmlTag::tr).children(
-                    row.iter()
+                    row.as_ref()
+                        .iter()
                         .map(|cell| HtmlElement::new(HtmlTag::td).content(cell.clone())),
                 )
             })),

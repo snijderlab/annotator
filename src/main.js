@@ -36,43 +36,39 @@ async function select_identified_peptides_file(e) {
 * @param e: Element
 */
 async function load_mgf(e) {
-  try {
-    invoke("load_mgf", { path: e.dataset.filepath }).then((result) => {
-      document.querySelector("#spectrum-log").innerText = "Loaded " + result + " spectra";
-      document.querySelector("#loaded-path").classList.remove("error");
-      document.querySelector("#loaded-path").innerText = e.dataset.filepath.split('\\').pop().split('/').pop();
-      document.querySelector("#number-of-scans").innerText = result;
-      spectrum_details();
-      e.classList.remove("loading")
-    });
-  } catch (error) {
+  invoke("load_mgf", { path: e.dataset.filepath }).then((result) => {
+    document.querySelector("#spectrum-log").innerText = "Loaded " + result + " spectra";
+    document.querySelector("#loaded-path").classList.remove("error");
+    document.querySelector("#loaded-path").innerText = e.dataset.filepath.split('\\').pop().split('/').pop();
+    document.querySelector("#number-of-scans").innerText = result;
+    spectrum_details();
+    e.classList.remove("loading")
+  }).catch((error) => {
     console.log(error);
     document.querySelector("#loaded-path").classList.add("error");
     document.querySelector("#loaded-path").innerText = error;
     e.classList.remove("loading")
-  }
+  })
 }
 
 /**
 * @param e: Element
 */
 async function load_identified_peptides(e) {
-  try {
-    invoke("load_identified_peptides", { path: e.dataset.filepath }).then((result) => {
-      document.querySelector("#identified-peptides-log").innerText = "Loaded " + result + " peptides";
-      document.querySelector("#loaded-identified-peptides-path").classList.remove("error");
-      document.querySelector("#loaded-identified-peptides-path").innerText = e.dataset.filepath.split('\\').pop().split('/').pop();
-      document.querySelector("#number-of-identified-peptides").innerText = result;
-      displayed_identified_peptide = undefined;
-      identified_peptide_details();
-      e.classList.remove("loading")
-    });
-  } catch (error) {
+  invoke("load_identified_peptides", { path: e.dataset.filepath }).then((result) => {
+    document.querySelector("#identified-peptides-log").innerText = "Loaded " + result + " peptides";
+    document.querySelector("#loaded-identified-peptides-path").classList.remove("error");
+    document.querySelector("#loaded-identified-peptides-path").innerText = e.dataset.filepath.split('\\').pop().split('/').pop();
+    document.querySelector("#number-of-identified-peptides").innerText = result;
+    displayed_identified_peptide = undefined;
+    identified_peptide_details();
+    e.classList.remove("loading")
+  }).catch((error) => {
     console.log(error);
     document.querySelector("#loaded-identified-peptides-path").classList.add("error");
     document.querySelector("#loaded-identified-peptides-path").innerText = error;
     e.classList.remove("loading")
-  }
+  })
 }
 
 async function load_clipboard() {
@@ -102,6 +98,7 @@ async function spectrum_details() {
     document.querySelector("#spectrum-details").innerText = result;
   } catch (error) {
     console.log(error);
+    document.querySelector("#spectrum-error").classList.remove("hidden");
     document.querySelector("#spectrum-error").innerText = error;
     document.querySelector("#spectrum-details").innerText = "ERROR";
   }
@@ -118,8 +115,27 @@ async function identified_peptide_details() {
     }
   } catch (error) {
     console.log(error);
+    document.querySelector("#spectrum-error").classList.remove("hidden");
     document.querySelector("#spectrum-error").innerText = error;
     document.querySelector("#identified-peptide-details").innerText = "ERROR";
+  }
+}
+
+async function search_peptide() {
+  if (document.querySelector("#search-peptide-input").value != "") {
+    document.querySelector("#search-peptide").classList.add("loading");
+    invoke("search_peptide", { text: document.querySelector("#search-peptide-input").value }).then((result) => {
+      document.querySelector("#resulting-peptides").innerHTML = result;
+      document.querySelector("#search-peptide").classList.remove("loading");
+    }).catch((error) => {
+      console.log(error);
+      document.querySelector("#spectrum-error").classList.remove("hidden");
+      document.querySelector("#spectrum-error").innerText = error;
+      document.querySelector("#identified-peptide-details").innerText = "ERROR";
+      document.querySelector("#search-peptide").classList.remove("loading");
+    })
+  } else {
+    document.querySelector("#resulting-peptides").innerText = "";
   }
 }
 
@@ -134,6 +150,7 @@ async function load_identified_peptide() {
     console.log(result)
   } catch (error) {
     console.log(error);
+    document.querySelector("#spectrum-error").classList.remove("hidden");
     document.querySelector("#spectrum-error").innerText = error;
     document.querySelector("#identified-peptide-details").innerText = "ERROR";
   }
@@ -211,6 +228,12 @@ window.addEventListener("DOMContentLoaded", () => {
   document
     .querySelector("#load-clipboard")
     .addEventListener("click", () => load_clipboard());
+  document
+    .querySelector("#search-peptide")
+    .addEventListener("click", () => search_peptide());
+  document
+    .querySelector("#search-peptide-input")
+    .addEventListener("keypress", event => event.keyCode == 13 ? search_peptide() : {});
   let dsi = document
     .querySelector("#details-spectrum-index");
   dsi.addEventListener("change", () => spectrum_details())

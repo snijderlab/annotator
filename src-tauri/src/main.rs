@@ -4,7 +4,15 @@
 )]
 
 use itertools::Itertools;
-use rustyms::{error::*, identifications::*, model::*, spectrum::*, system::*, *};
+use rustyms::{
+    align::{align, BLOSUM62},
+    error::*,
+    identifications::*,
+    model::*,
+    spectrum::*,
+    system::*,
+    *,
+};
 use state::State;
 use std::sync::Mutex;
 
@@ -72,6 +80,60 @@ async fn load_identified_peptides<'a>(
     Ok(state.lock().unwrap().peptides.len())
 }
 
+#[tauri::command]
+async fn search_peptide<'a>(text: &'a str, state: ModifiableState<'a>) -> Result<String, String> {
+    let state = state
+        .lock()
+        .map_err(|_| "Search exception: State locked".to_string())?;
+    let search = ComplexPeptide::pro_forma(text)
+        .map_err(|err| err.to_string())?
+        .assume_linear();
+    let data = state
+        .peptides
+        .iter()
+        .enumerate()
+        .map(|(index, peptide)| {
+            (
+                index,
+                align(
+                    peptide.peptide.clone(),
+                    search.clone(),
+                    BLOSUM62,
+                    MassTolerance::Absolute(da(0.1)),
+                    align::Type::GlobalForB,
+                ),
+                peptide,
+            )
+        })
+        .sorted_unstable_by(|a, b| {
+            b.1.normalised_score
+                .partial_cmp(&a.1.normalised_score)
+                .unwrap()
+        })
+        .filter(|(_, alignment, _)| alignment.normalised_score > 0.0)
+        .take(25)
+        .map(|(index, _, peptide)| {
+            vec![
+                index.to_string(),
+                peptide.peptide.to_string(),
+                peptide
+                    .score
+                    .map(|score| score.to_string())
+                    .unwrap_or_default(),
+            ]
+        })
+        .collect::<Vec<_>>();
+    Ok(html_builder::HtmlElement::table(
+        Some(&[
+            "Index".to_string(),
+            "Sequence".to_string(),
+            "Score".to_string(),
+        ]),
+        &data,
+    )
+    .to_string())
+}
+
 #[derive(Serialize, Deserialize)]
 struct Settings {
     peptide: String,
@@ -80,10 +142,9 @@ struct Settings {
     scan_index: Option<usize>,
 }
 
-#[tauri::command]
-fn load_identified_peptide(index: usize, state: ModifiableState) -> Option<Settings> {
-    if let Ok(state) = state.lock() {
-        state.peptides.get(index).map(|peptide| Settings {
+impl Settings {
+    fn from_peptide(peptide: &IdentifiedPeptide, scan: Option<usize>) -> Self {
+        Self {
             peptide: peptide.peptide.to_string(),
             charge: peptide.metadata.charge(),
             mode: peptide
@@ -97,18 +158,30 @@ fn load_identified_peptide(index: usize, state: ModifiableState) -> Option<Setti
                     }
                 })
                 .map(|mode| mode.to_string()),
-            scan_index: peptide.metadata.scan_number().and_then(|scan| {
-                state
-                    .spectra
-                    .iter()
-                    .enumerate()
-                    .find(|(_, spectrum)| {
-                        spectrum
-                            .raw_scan_number
-                            .map_or(false, |spectrum_scan| scan == spectrum_scan)
-                    })
-                    .map(|(i, _)| i)
-            }),
+            scan_index: scan,
+        }
+    }
+}
+
+#[tauri::command]
+fn load_identified_peptide(index: usize, state: ModifiableState) -> Option<Settings> {
+    if let Ok(state) = state.lock() {
+        state.peptides.get(index).map(|peptide| {
+            Settings::from_peptide(
+                peptide,
+                peptide.metadata.scan_number().and_then(|scan| {
+                    state
+                        .spectra
+                        .iter()
+                        .enumerate()
+                        .find(|(_, spectrum)| {
+                            spectrum
+                                .raw_scan_number
+                                .map_or(false, |spectrum_scan| scan == spectrum_scan)
+                        })
+                        .map(|(i, _)| i)
+                }),
+            )
         })
     } else {
         None
@@ -335,6 +408,7 @@ fn main() {
             load_identified_peptides,
             load_clipboard,
             spectrum_details,
+            search_peptide,
             identified_peptide_details,
             load_identified_peptide,
             annotate_spectrum,
