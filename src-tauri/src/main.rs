@@ -4,12 +4,7 @@
 )]
 
 use itertools::Itertools;
-use rustyms::{
-    e,
-    identifications::{FastaData, IdentifiedPeptideSource, NovorData, OpairData, PeaksData},
-    Charge, Context, CustomError, Location, MassOverCharge, Model, NeutralLoss, RawPeak,
-    RawSpectrum, Zero,
-};
+use rustyms::{error::*, identifications::*, model::*, spectrum::*, system::*, *};
 use state::State;
 use std::sync::Mutex;
 
@@ -91,20 +86,24 @@ fn load_identified_peptide(index: usize, state: ModifiableState) -> Option<Setti
             mode: peptide
                 .metadata
                 .mode()
-                .map(|s| {
-                    if s.to_lowercase() == "hcd" || s.to_lowercase() == "cid" {
+                .map(|mode| {
+                    if mode.to_lowercase() == "hcd" || mode.to_lowercase() == "cid" {
                         "CidHcd"
                     } else {
-                        s
+                        mode
                     }
                 })
-                .map(|s| s.to_string()),
+                .map(|mode| mode.to_string()),
             scan_index: peptide.metadata.scan_number().and_then(|scan| {
                 state
                     .spectra
                     .iter()
                     .enumerate()
-                    .find(|(_, s)| s.raw_scan_number.map_or(false, |s| scan == s))
+                    .find(|(_, spectrum)| {
+                        spectrum
+                            .raw_scan_number
+                            .map_or(false, |spectrum_scan| scan == spectrum_scan)
+                    })
                     .map(|(i, _)| i)
             }),
         })
@@ -130,7 +129,7 @@ fn spectrum_details(index: usize, state: ModifiableState) -> String {
                 spectrum
                     .sequence
                     .as_ref()
-                    .map(|s| format!("\n{s}"))
+                    .map(|seq| format!("\n{seq}"))
                     .unwrap_or_default()
             )
         },
@@ -176,11 +175,11 @@ fn load_bruker_clipboard(lines: &[&str]) -> Result<Vec<RawPeak>, String> {
         if cells.len() != 8 {
             return Err(format!("Incorrect number of columns at line {line_number}"));
         }
-        if let (Ok(mz), Ok(intensity)) = (cells[1].parse(), cells[4].parse()) {
+        if let (Ok(mass_over_charge), Ok(intensity)) = (cells[1].parse(), cells[4].parse()) {
             spectrum.push(RawPeak {
-                mz: MassOverCharge::new::<rustyms::mz>(mz),
+                mz: MassOverCharge::new::<mz>(mass_over_charge),
                 intensity,
-                charge: Charge::zero(),
+                charge: Charge::new::<e>(0.0),
             })
         } else {
             return Err(format!(
@@ -200,11 +199,11 @@ fn load_stitch_clipboard(lines: &[&str]) -> Result<Vec<RawPeak>, String> {
         if cells.len() != 6 {
             return Err(format!("Incorrect number of columns at line {line_number}"));
         }
-        if let (Ok(mz), Ok(intensity)) = (cells[0].parse(), cells[2].parse()) {
+        if let (Ok(mass_over_charge), Ok(intensity)) = (cells[0].parse(), cells[2].parse()) {
             spectrum.push(RawPeak {
-                mz: MassOverCharge::new::<rustyms::mz>(mz),
+                mz: MassOverCharge::new::<mz>(mass_over_charge),
                 intensity,
-                charge: Charge::zero(),
+                charge: Charge::new::<e>(0.0),
             })
         } else {
             return Err(format!(
@@ -224,11 +223,11 @@ fn load_sciex_clipboard(lines: &[&str]) -> Result<Vec<RawPeak>, String> {
         if cells.len() != 2 {
             return Err(format!("Incorrect number of columns at line {line_number}"));
         }
-        if let (Ok(mz), Ok(intensity)) = (cells[0].parse(), cells[1].parse()) {
+        if let (Ok(mass_over_charge), Ok(intensity)) = (cells[0].parse(), cells[1].parse()) {
             spectrum.push(RawPeak {
-                mz: MassOverCharge::new::<rustyms::mz>(mz),
+                mz: MassOverCharge::new::<mz>(mass_over_charge),
                 intensity,
-                charge: Charge::zero(),
+                charge: Charge::new::<e>(0.0),
             })
         } else {
             return Err(format!(
@@ -254,7 +253,6 @@ fn annotate_spectrum(
     state: ModifiableState,
     cmodel: ModelParameters,
 ) -> Result<(String, String, String), CustomError> {
-    use rustyms::mz;
     let state = state.lock().unwrap();
     if index >= state.spectra.len() {
         return Err(CustomError::error(
@@ -315,7 +313,7 @@ fn annotate_spectrum(
             "The sequence requested does not have a defined mass (you used B/Z amino acids)",
             Context::none(),
         ))?;
-    let annotated = spectrum.annotate(peptide, &fragments, &model);
+    let annotated = spectrum.annotate(peptide, &fragments, &model, MassMode::Monoisotopic);
     Ok((
         render::annotated_spectrum(&annotated, "spectrum", &fragments),
         render::fragment_table(&fragments, multiple_peptides),

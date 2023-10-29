@@ -120,6 +120,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f1e31e207a6b8fb791a38ea3105e6cb541f55e4d029902d3039a4ad07cc4105"
 
 [[package]]
+name = "bincode"
+version = "1.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2263,8 +2272,11 @@ checksum = "4f3208ce4d8448b3f3e7d168a73f5e0c43a61e32930de3bceeccedb388b6bf06"
 
 [[package]]
 name = "rustyms"
-version = "0.5.0"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aaa9fa422531aa38a394830e81839afbb5ec80e8e5238c3d515ac60b993fee54"
 dependencies = [
+ "bincode",
  "flate2",
  "itertools",
  "regex",
@@ -3173,6 +3185,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8362194c7a9845a7a7f3562173d6e1da3f24f7132018cb78fe77a5b4474187b2"
 dependencies = [
  "num-traits",
+ "serde",
  "typenum",
 ]
 

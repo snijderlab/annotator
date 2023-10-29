@@ -2,8 +2,8 @@ use std::{collections::HashSet, fmt::Write};
 
 use itertools::Itertools;
 use rustyms::{
-    AnnotatedSpectrum, Charge, ComplexPeptide, Fragment, FragmentType, GlycanBreakPos,
-    LinearPeptide, Mass, MassOverCharge, Modification, MolecularFormula, Zero,
+    fragment::*, system::*, AnnotatedSpectrum, ComplexPeptide, LinearPeptide, MassMode,
+    Modification, MolecularFormula,
 };
 
 use crate::html_builder::{HtmlElement, HtmlTag};
@@ -43,7 +43,9 @@ pub fn fragment_table(fragments: &[Fragment], multiple_peptides: bool) -> String
             sequence_index,
             series_number,
             fragment.ion.label(),
-            fragment.mz().map_or(f64::NAN, |v| v.value),
+            fragment
+                .mz(MassMode::Monoisotopic)
+                .map_or(f64::NAN, |v| v.value),
             fragment.charge.value,
             fragment
                 .neutral_loss
@@ -73,8 +75,8 @@ pub fn annotated_spectrum(
     let multiple_glycans = spectrum.peptide.peptides().iter().any(|p| {
         p.sequence
             .iter()
-            .filter(|s| {
-                s.modifications
+            .filter(|seq| {
+                seq.modifications
                     .iter()
                     .any(|m| matches!(m, Modification::GlycanStructure(_)))
             })
@@ -170,7 +172,7 @@ fn spectrum_graph_boundaries(
                             f64::MAX,
                             Fragment::new(
                                 MolecularFormula::default(),
-                                Charge::zero(),
+                                Charge::new::<e>(0.0),
                                 0,
                                 FragmentType::precursor,
                                 String::new(),
@@ -180,7 +182,7 @@ fn spectrum_graph_boundaries(
                             f64::MAX,
                             Fragment::new(
                                 MolecularFormula::default(),
-                                Charge::zero(),
+                                Charge::new::<e>(0.0),
                                 0,
                                 FragmentType::precursor,
                                 String::new(),
@@ -188,11 +190,12 @@ fn spectrum_graph_boundaries(
                         ),
                     ),
                     |acc, frag: &Fragment| {
-                        if let Some(mz) = frag.mz() {
-                            let rel = ((mz - point.experimental_mz) / mz
-                                * MassOverCharge::new::<rustyms::mz>(1e6))
+                        if let Some(mass_over_charge) = frag.mz(MassMode::Monoisotopic) {
+                            let rel = ((mass_over_charge - point.experimental_mz)
+                                / mass_over_charge
+                                * MassOverCharge::new::<rustyms::system::mz>(1e6))
                             .value;
-                            let abs = (mz - point.experimental_mz).value;
+                            let abs = (mass_over_charge - point.experimental_mz).value;
                             (
                                 if acc.0 .0.abs() < rel.abs() {
                                     acc.0
@@ -570,7 +573,7 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> ((MassOverCharge, f64, f64), Po
         .iter()
         .map(|p| vec![HashSet::new(); p.sequence.len()])
         .collect();
-    let mut max_mz: MassOverCharge = MassOverCharge::zero();
+    let mut max_mz: MassOverCharge = MassOverCharge::new::<mz>(0.0);
     let mut max_intensity: f64 = 0.0;
     let mut max_intensity_unassigned: f64 = 0.0;
     for peak in &spectrum.spectrum {
@@ -922,10 +925,10 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str, multiple_peptide
                     peak.intensity,
                     peak.experimental_mz.value,
                     annotation
-                        .mz()
+                        .mz(MassMode::Monoisotopic)
                         .map_or(f64::NAN, |v| (v - peak.experimental_mz).abs().value),
                     annotation
-                        .mz()
+                        .mz(MassMode::Monoisotopic)
                         .map_or(f64::NAN, |v| ((v - peak.experimental_mz).abs() / v * 1e6)
                             .value),
                     annotation.charge.value,
