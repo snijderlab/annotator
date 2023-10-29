@@ -43,13 +43,14 @@ async function load_mgf(e) {
       document.querySelector("#loaded-path").innerText = e.dataset.filepath.split('\\').pop().split('/').pop();
       document.querySelector("#number-of-scans").innerText = result;
       spectrum_details();
+      e.classList.remove("loading")
     });
   } catch (error) {
     console.log(error);
     document.querySelector("#loaded-path").classList.add("error");
     document.querySelector("#loaded-path").innerText = error;
+    e.classList.remove("loading")
   }
-  e.classList.remove("loading")
 }
 
 /**
@@ -64,13 +65,14 @@ async function load_identified_peptides(e) {
       document.querySelector("#number-of-identified-peptides").innerText = result;
       displayed_identified_peptide = undefined;
       identified_peptide_details();
+      e.classList.remove("loading")
     });
   } catch (error) {
     console.log(error);
     document.querySelector("#loaded-identified-peptides-path").classList.add("error");
     document.querySelector("#loaded-identified-peptides-path").innerText = error;
+    e.classList.remove("loading")
   }
-  e.classList.remove("loading")
 }
 
 async function load_clipboard() {

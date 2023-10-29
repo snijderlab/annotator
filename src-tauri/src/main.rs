@@ -19,7 +19,7 @@ mod state;
 type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
 
 #[tauri::command]
-fn load_mgf(path: &str, state: ModifiableState) -> Result<usize, String> {
+async fn load_mgf<'a>(path: &'a str, state: ModifiableState<'a>) -> Result<usize, String> {
     match rustyms::rawfile::mgf::open(path) {
         Ok(v) => {
             let count = v.len();
@@ -31,7 +31,10 @@ fn load_mgf(path: &str, state: ModifiableState) -> Result<usize, String> {
 }
 
 #[tauri::command]
-fn load_identified_peptides(path: &str, state: ModifiableState) -> Result<usize, String> {
+async fn load_identified_peptides<'a>(
+    path: &'a str,
+    state: ModifiableState<'a>,
+) -> Result<usize, String> {
     let actual_extension = path
         .rsplit('.')
         .next()
