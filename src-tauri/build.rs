@@ -43,15 +43,6 @@ r#"<!DOCTYPE html>
     </div>
   </div>
   <pre id="spectrum-details"></pre>
-    <div class="input-settings">
-    <label for="spectrum-index">Identified peptide index</label>
-    <div class="combined-input">
-      <input type="number" id="details-identified-peptide-index" value="0" min="0" />
-      <span>/</span>
-      <span id="number-of-identified-peptides">0</span>
-    </div>
-    <button id="load-identified-peptide" type="button">Load identified peptide</button>
-  </div>
   <div class="input-settings">
     <label for="search-peptide-input">Search peptide</label>
     <div class="combined-input">
@@ -60,6 +51,15 @@ r#"<!DOCTYPE html>
     </div>
   </div>
   <div id="resulting-peptides"></div>
+  <div class="input-settings">
+    <label for="spectrum-index">Identified peptide index</label>
+    <div class="combined-input">
+      <input type="number" id="details-identified-peptide-index" value="0" min="0" />
+      <span>/</span>
+      <span id="number-of-identified-peptides">0</span>
+    </div>
+    <button id="load-identified-peptide" type="button">Load identified peptide</button>
+  </div>
   <div id="identified-peptide-details"></div>
   <pre id="loaded-path"></pre>
   <div class="input-settings">

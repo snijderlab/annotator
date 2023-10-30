@@ -12,8 +12,10 @@ async function select_mgf_file(e) {
       extensions: ['mgf', 'mgf.gz'], name: "*"
     }]
   };
-  e.dataset.filepath = await window.__TAURI__.dialog.open(properties);
-  load_mgf(e);
+  window.__TAURI__.dialog.open(properties).then((result) => {
+    e.dataset.filepath = result;
+    load_mgf(e);
+  })
 };
 
 /**
@@ -28,8 +30,10 @@ async function select_identified_peptides_file(e) {
       extensions: ["csv", "csv.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz"], name: "*"
     }]
   };
-  e.dataset.filepath = await window.__TAURI__.dialog.open(properties);
-  load_identified_peptides(e);
+  window.__TAURI__.dialog.open(properties).then((result) => {
+    e.dataset.filepath = result;
+    load_identified_peptides(e);
+  })
 };
 
 /**
@@ -76,48 +80,46 @@ async function load_clipboard() {
   navigator.clipboard
     .readText()
     .then(async (clipText) => {
-      try {
-        let result = await invoke("load_clipboard", { data: clipText });
+      invoke("load_clipboard", { data: clipText }).then((result) => {
         document.querySelector("#spectrum-log").innerText = "Loaded " + result + " spectra";
         document.querySelector("#loaded-path").classList.remove("error");
         document.querySelector("#loaded-path").innerText = "Clipboard";
         document.querySelector("#number-of-scans").innerText = result;
         spectrum_details();
-      } catch (error) {
+      }).catch((error) => {
+        document.querySelector("#load-clipboard").classList.remove("loading")
         console.log(error);
         document.querySelector("#loaded-path").classList.add("error");
         document.querySelector("#loaded-path").innerText = error;
-      }
-      document.querySelector("#load-clipboard").classList.remove("loading")
+        document.querySelector("#load-clipboard").classList.remove("loading")
+      })
     });
 }
 
 async function spectrum_details() {
-  try {
-    let result = await invoke("spectrum_details", { index: Number(document.querySelector("#details-spectrum-index").value) });
-    document.querySelector("#spectrum-details").innerText = result;
-  } catch (error) {
+  invoke("spectrum_details", { index: Number(document.querySelector("#details-spectrum-index").value) }).then(
+    (result) => document.querySelector("#spectrum-details").innerText = result
+  ).catch((error) => {
     console.log(error);
     document.querySelector("#spectrum-error").classList.remove("hidden");
     document.querySelector("#spectrum-error").innerText = error;
     document.querySelector("#spectrum-details").innerText = "ERROR";
-  }
+  })
 }
 
 let displayed_identified_peptide = undefined;
 async function identified_peptide_details() {
-  try {
-    let index = Number(document.querySelector("#details-identified-peptide-index").value);
-    if (displayed_identified_peptide != index) {
-      let result = await invoke("identified_peptide_details", { index: index });
+  let index = Number(document.querySelector("#details-identified-peptide-index").value);
+  if (displayed_identified_peptide != index) {
+    invoke("identified_peptide_details", { index: index }).then((result) => {
       document.querySelector("#identified-peptide-details").innerHTML = result;
       displayed_identified_peptide = index;
-    }
-  } catch (error) {
-    console.log(error);
-    document.querySelector("#spectrum-error").classList.remove("hidden");
-    document.querySelector("#spectrum-error").innerText = error;
-    document.querySelector("#identified-peptide-details").innerText = "ERROR";
+    }).catch((error) => {
+      console.log(error);
+      document.querySelector("#spectrum-error").classList.remove("hidden");
+      document.querySelector("#spectrum-error").innerText = error;
+      document.querySelector("#identified-peptide-details").innerText = "ERROR";
+    })
   }
 }
 
@@ -140,20 +142,19 @@ async function search_peptide() {
 }
 
 async function load_identified_peptide() {
-  try {
-    let index = Number(document.querySelector("#details-identified-peptide-index").value);
-    let result = await invoke("load_identified_peptide", { index: index });
+  let index = Number(document.querySelector("#details-identified-peptide-index").value);
+  invoke("load_identified_peptide", { index: index }).then((result) => {
     document.querySelector("#peptide").innerText = result.peptide;
     document.querySelector("#spectrum-charge").value = result.charge;
     document.querySelector("#spectrum-model").value = result.mode.toLowerCase();
     document.querySelector("#details-spectrum-index").value = result.scan_index;
     console.log(result)
-  } catch (error) {
+  }).catch((error) => {
     console.log(error);
     document.querySelector("#spectrum-error").classList.remove("hidden");
     document.querySelector("#spectrum-error").innerText = error;
     document.querySelector("#identified-peptide-details").innerText = "ERROR";
-  }
+  })
 }
 
 
@@ -180,22 +181,21 @@ function get_location(id) {
 async function annotate_spectrum() {
   document.querySelector("#annotate-button").classList.add("loading");
   document.querySelector("#peptide").innerText = document.querySelector("#peptide").innerText.trim();
-  try {
-    var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);
-    var noise_threshold = document.querySelector("#noise-threshold").value == "" ? null : Number(document.querySelector("#noise-threshold").value);
-    var model = [
-      [get_location("#model-a-location"), document.querySelector("#model-a-loss").value],
-      [get_location("#model-b-location"), document.querySelector("#model-b-loss").value],
-      [get_location("#model-c-location"), document.querySelector("#model-c-loss").value],
-      [get_location("#model-d-location"), document.querySelector("#model-d-loss").value],
-      [get_location("#model-v-location"), document.querySelector("#model-v-loss").value],
-      [get_location("#model-w-location"), document.querySelector("#model-w-loss").value],
-      [get_location("#model-x-location"), document.querySelector("#model-x-loss").value],
-      [get_location("#model-y-location"), document.querySelector("#model-y-loss").value],
-      [get_location("#model-z-location"), document.querySelector("#model-z-loss").value],
-      [get_location("#model-z-location"), document.querySelector("#model-precursor-loss").value], // First element is discarded
-    ];
-    var result = await invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), charge: charge, noise_threshold: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").innerText, cmodel: model });
+  var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);
+  var noise_threshold = document.querySelector("#noise-threshold").value == "" ? null : Number(document.querySelector("#noise-threshold").value);
+  var model = [
+    [get_location("#model-a-location"), document.querySelector("#model-a-loss").value],
+    [get_location("#model-b-location"), document.querySelector("#model-b-loss").value],
+    [get_location("#model-c-location"), document.querySelector("#model-c-loss").value],
+    [get_location("#model-d-location"), document.querySelector("#model-d-loss").value],
+    [get_location("#model-v-location"), document.querySelector("#model-v-loss").value],
+    [get_location("#model-w-location"), document.querySelector("#model-w-loss").value],
+    [get_location("#model-x-location"), document.querySelector("#model-x-loss").value],
+    [get_location("#model-y-location"), document.querySelector("#model-y-loss").value],
+    [get_location("#model-z-location"), document.querySelector("#model-z-loss").value],
+    [get_location("#model-z-location"), document.querySelector("#model-precursor-loss").value], // First element is discarded
+  ];
+  invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), charge: charge, noise_threshold: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").innerText, cmodel: model }).then((result) => {
     document.querySelector("#spectrum-results-wrapper").innerHTML = result[0];
     document.querySelector("#spectrum-fragments").innerHTML = result[1];
     document.querySelector("#spectrum-log").innerText = result[2];
@@ -203,7 +203,7 @@ async function annotate_spectrum() {
     document.querySelector("#spectrum-wrapper").classList.remove("hidden"); // Remove hidden class if this is the first run
     document.querySelector("#spectrum-error").classList.add("hidden");
     SetUpSpectrumInterface();
-  } catch (error) {
+  }).catch((error) => {
     console.log(error);
     document.querySelector("#spectrum-error").classList.remove("hidden");
     document.querySelector("#spectrum-error").innerHTML = "<p class='title'>" + error.short_description + "</p><p class='description'>" + error.long_description + "</p>";
@@ -211,7 +211,7 @@ async function annotate_spectrum() {
       let Line = error.context.Line;
       document.querySelector("#peptide").innerHTML = Line.line.slice(0, Line.offset) + "<span class='error'>" + Line.line.slice(Line.offset, Line.offset + Line.length) + "</span>" + Line.line.slice(Line.offset + Line.length, Line.line.length);
     }
-  }
+  })
   document.querySelector("#annotate-button").classList.remove("loading");
 }
 
@@ -250,4 +250,16 @@ window.addEventListener("DOMContentLoaded", () => {
     .addEventListener("focus", (event) => {
       event.target.innerHTML = event.target.innerText;
     });
+
+  // Refresh interface for hot reload
+  invoke("refresh").then((result) => {
+    document.querySelector("#number-of-scans").innerText = result[0];
+    if (result[0] > 0) {
+      spectrum_details();
+    }
+    document.querySelector("#number-of-identified-peptides").innerText = result[1];
+    if (result[1] > 0) {
+      identified_peptide_details();
+    }
+  })
 });

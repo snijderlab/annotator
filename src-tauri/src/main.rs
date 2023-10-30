@@ -27,6 +27,12 @@ mod state;
 type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
 
 #[tauri::command]
+fn refresh(state: ModifiableState) -> (usize, usize) {
+    let state = state.lock().unwrap();
+    (state.spectra.len(), state.peptides.len())
+}
+
+#[tauri::command]
 async fn load_mgf<'a>(path: &'a str, state: ModifiableState<'a>) -> Result<usize, String> {
     match rustyms::rawfile::mgf::open(path) {
         Ok(v) => {
@@ -404,6 +410,7 @@ fn main() {
             peptides: Vec::new(),
         }))
         .invoke_handler(tauri::generate_handler![
+            refresh,
             load_mgf,
             load_identified_peptides,
             load_clipboard,
