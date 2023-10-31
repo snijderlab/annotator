@@ -325,15 +325,15 @@ type ModelParameters = Vec<(Location, String)>;
 
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
-fn annotate_spectrum(
+async fn annotate_spectrum<'a>(
     index: usize,
     ppm: f64,
     charge: Option<f64>,
     noise_threshold: Option<f64>,
-    model: &str,
-    peptide: &str,
-    state: ModifiableState,
+    model: &'a str,
+    peptide: &'a str,
     cmodel: ModelParameters,
+    state: ModifiableState<'a>,
 ) -> Result<(String, String, String), CustomError> {
     let state = state.lock().unwrap();
     if index >= state.spectra.len() {

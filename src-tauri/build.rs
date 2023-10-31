@@ -22,14 +22,10 @@ r#"<!DOCTYPE html>
 
 <body>
   <button class="print" onclick="window.print()">Export</button>
-  <div class="input-settings">
-    <h2>Load spectra</h2>
-    <label for="load-mgf-path">Raw file</label>
-    <button type="button" id="load-mgf-path">Select raw file</button>
-    <label for="load-clipboard">Clipboard</label>
-    <button id="load-clipboard" type="button">Load Clipboard</button>
-    <label for="load-identified-peptides">Identified peptides</label>
-    <button id="load-identified-peptides" type="button">Select identified peptides file</button>
+  <div class="input-flex">
+    <button type="button" id="load-mgf-path">Load raw file</button>
+    <button type="button" id="load-clipboard">Load Clipboard</button>
+    <button type="button" id="load-identified-peptides">Load identified peptides file</button>
   </div>
   <pre id="loaded-path"></pre>
   <pre id="loaded-identified-peptides-path"></pre>
@@ -43,24 +39,32 @@ r#"<!DOCTYPE html>
     </div>
   </div>
   <pre id="spectrum-details"></pre>
-  <div class="input-settings">
-    <label for="search-peptide-input">Search peptide</label>
-    <div class="combined-input">
-      <input id="search-peptide-input" type="text"></input>
-      <button id="search-peptide">🔍</button>
+    
+  <h2>Peptide details</h2>
+  <div class="resize-wrapper">
+    <div>
+      <div class="input-flex">
+        <label for="search-peptide-input">Search peptide</label>
+        <div class="combined-input">
+          <input id="search-peptide-input" type="text"></input>
+          <button id="search-peptide">🔍</button>
+        </div>
+      </div>
+      <div id="resulting-peptides">Go and search!</div>
+    </div>
+    <div>
+      <div class="input-flex">
+        <label for="spectrum-index">Identified peptide index</label>
+        <div class="combined-input">
+          <input type="number" id="details-identified-peptide-index" value="0" min="0" />
+          <span>/</span>
+          <span id="number-of-identified-peptides">0</span>
+        </div>
+        <button id="load-identified-peptide" type="button">Load identified peptide</button>
+      </div>
+      <div id="identified-peptide-details"></div>
     </div>
   </div>
-  <div id="resulting-peptides"></div>
-  <div class="input-settings">
-    <label for="spectrum-index">Identified peptide index</label>
-    <div class="combined-input">
-      <input type="number" id="details-identified-peptide-index" value="0" min="0" />
-      <span>/</span>
-      <span id="number-of-identified-peptides">0</span>
-    </div>
-    <button id="load-identified-peptide" type="button">Load identified peptide</button>
-  </div>
-  <div id="identified-peptide-details"></div>
   <pre id="loaded-path"></pre>
   <div class="input-settings">
     <h2>Annotate</h2>

@@ -203,6 +203,7 @@ async function annotate_spectrum() {
     document.querySelector("#spectrum-wrapper").classList.remove("hidden"); // Remove hidden class if this is the first run
     document.querySelector("#spectrum-error").classList.add("hidden");
     SetUpSpectrumInterface();
+    document.querySelector("#annotate-button").classList.remove("loading");
   }).catch((error) => {
     console.log(error);
     document.querySelector("#spectrum-error").classList.remove("hidden");
@@ -211,8 +212,8 @@ async function annotate_spectrum() {
       let Line = error.context.Line;
       document.querySelector("#peptide").innerHTML = Line.line.slice(0, Line.offset) + "<span class='error'>" + Line.line.slice(Line.offset, Line.offset + Line.length) + "</span>" + Line.line.slice(Line.offset + Line.length, Line.line.length);
     }
+    document.querySelector("#annotate-button").classList.remove("loading");
   })
-  document.querySelector("#annotate-button").classList.remove("loading");
 }
 
 window.addEventListener("DOMContentLoaded", () => {

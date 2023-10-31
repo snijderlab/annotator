@@ -69,10 +69,19 @@ button {
   }
 }
 
-.input-settings input,
-.input-settings textarea,
-.input-settings button,
-.input-settings select,
+.input-flex {
+  display: flex;
+  flex-direction: row;
+  gap: .5rem;
+  padding: 1rem 0;
+  align-items: stretch;
+  justify-content: space-evenly;
+}
+
+:is(.input-settings, .input-flex) input,
+:is(.input-settings, .input-flex) textarea,
+:is(.input-settings, .input-flex) button,
+:is(.input-settings, .input-flex) select,
 .peptide-input,
 button {
   background: var(--color-background);
@@ -86,12 +95,12 @@ button.print {
   margin: 1em;
 }
 
-.input-settings option {
+:is(.input-settings, .input-flex) option {
   background: var(--color-background);
 }
 
 pre,
-.input-settings textarea,
+:is(.input-settings, .input-flex) textarea,
 .peptide-input {
   font-family: 'Roboto Mono', monospace;
   min-height: 2rem;
@@ -117,7 +126,7 @@ pre {
   grid-column: 1/-1;
 }
 
-.input-settings button {
+:is(.input-settings, .input-flex) button {
   color: var(--color-primary);
   border-color: var(--color-primary);
 }
@@ -130,11 +139,11 @@ pre {
   grid-column: 2;
 }
 
-.input-settings .combined-input {
+:is(.input-settings, .input-flex) .combined-input {
   display: flex;
 }
 
-.input-settings .combined-input span {
+:is(.input-settings, .input-flex) .combined-input span {
   margin-left: .5rem;
 }
 
@@ -390,4 +399,35 @@ button.loading::after {
   100% {
     transform: rotate(360deg);
   }
+}
+
+/* resize wrapper */
+.resize-wrapper {
+  width: 100%;
+  border-top: 2px solid var(--color-halfway);
+  border-bottom: 2px solid var(--color-halfway);
+  resize: vertical;
+  min-height: 100px;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+
+.resize-wrapper>div {
+  padding: .5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 10%;
+  overflow: hidden;
+  overflow-y: scroll;
+}
+
+.resize-wrapper>div:not(:last-child) {
+  resize: horizontal;
+  border-right: 2px solid var(--color-halfway);
+}
+
+.resize-wrapper>div:last-child {
+  flex: 1;
 }
