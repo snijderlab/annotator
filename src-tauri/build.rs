@@ -37,32 +37,37 @@ r#"<!DOCTYPE html>
       <span>/</span>
       <span id="number-of-scans">0</span>
     </div>
+    <label for="scan-number">Scan number</label>
+    <input type="number" id="scan-number" value="0" min="0" />
   </div>
   <pre id="spectrum-details"></pre>
-    
-  <h2>Peptide details</h2>
-  <div class="resize-wrapper">
-    <div>
-      <div class="input-flex">
-        <label for="search-peptide-input">Search peptide</label>
-        <div class="combined-input">
-          <input id="search-peptide-input" type="text"></input>
-          <button id="search-peptide">🔍</button>
+  
+  <div id="peptides" style="display:none">
+    <h2>Peptide details</h2>
+    <div class="resize-wrapper">
+      <div>
+        <div class="input-flex">
+          <label for="search-peptide-input">Search peptide</label>
+          <div class="combined-input">
+            <input id="search-peptide-input" type="text"></input>
+            <button id="search-peptide">🔍</button>
+          </div>
         </div>
+        <div id="resulting-peptides">Go and search!</div>
       </div>
-      <div id="resulting-peptides">Go and search!</div>
-    </div>
-    <div>
-      <div class="input-flex">
-        <label for="spectrum-index">Identified peptide index</label>
-        <div class="combined-input">
-          <input type="number" id="details-identified-peptide-index" value="0" min="0" />
-          <span>/</span>
-          <span id="number-of-identified-peptides">0</span>
+      <div class="resize"></div>
+      <div>
+        <div class="input-flex">
+          <label for="spectrum-index">Identified peptide index</label>
+          <div class="combined-input">
+            <input type="number" id="details-identified-peptide-index" value="0" min="0" />
+            <span>/</span>
+            <span id="number-of-identified-peptides">0</span>
+          </div>
+          <button id="load-identified-peptide" type="button">Load identified peptide</button>
         </div>
-        <button id="load-identified-peptide" type="button">Load identified peptide</button>
+        <div id="identified-peptide-details"></div>
       </div>
-      <div id="identified-peptide-details"></div>
     </div>
   </div>
   <pre id="loaded-path"></pre>

@@ -25,6 +25,11 @@
   src: url('stitch-assets/RobotoMono-VariableFont.ttf');
 }
 
+body {
+  padding: .5rem;
+  overflow-y: scroll;
+}
+
 .row {
   display: flex;
   justify-content: center;
@@ -89,10 +94,6 @@ button {
   border: 2px solid var(--color-halfway);
   border-radius: 0;
   font-size: 1.2em;
-}
-
-button.print {
-  margin: 1em;
 }
 
 :is(.input-settings, .input-flex) option {
@@ -403,14 +404,42 @@ button.loading::after {
 
 /* resize wrapper */
 .resize-wrapper {
-  width: 100%;
+  width: calc(100% + 1rem);
+  margin: 0 -0.5rem;
   border-top: 2px solid var(--color-halfway);
-  border-bottom: 2px solid var(--color-halfway);
   resize: vertical;
   min-height: 100px;
   display: flex;
   flex-direction: row;
   overflow: hidden;
+  padding-bottom: 2px;
+  background-color: var(--color-halfway);
+}
+
+.resize-wrapper>.resize {
+  width: 2px;
+  min-width: 2px;
+  max-width: 2px;
+  flex: 0 0 2px;
+  padding: 0;
+  margin: 0;
+  background-color: var(--color-halfway);
+  border-left: 2px solid var(--color-background);
+  cursor: col-resize;
+  overflow: hidden;
+}
+
+.resize-wrapper.active {
+  cursor: col-resize;
+}
+
+.resize-wrapper.active>.resize {
+  background-color: var(--color-primary);
+}
+
+.resize-wrapper.active * {
+  pointer-events: none;
+  user-select: none;
 }
 
 .resize-wrapper>div {
@@ -421,13 +450,38 @@ button.loading::after {
   min-width: 10%;
   overflow: hidden;
   overflow-y: scroll;
+  background-color: var(--color-background);
 }
 
-.resize-wrapper>div:not(:last-child) {
-  resize: horizontal;
-  border-right: 2px solid var(--color-halfway);
+.resize-wrapper>div:first-child {
+  width: 50%;
 }
 
 .resize-wrapper>div:last-child {
   flex: 1;
+}
+
+.resize-wrapper>div table {
+  width: 100%;
+  max-width: 100%;
+  table-layout: auto;
+  word-break: break-all;
+}
+
+/* file drop hover */
+
+html.file-drop-hover::before {
+  content: "Drop here";
+  display: flex;
+  vertical-align: middle;
+  justify-content: center;
+  align-items: center;
+  font-size: 3em;
+  color: var(--color-background);
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: color-mix(in oklab, var(--color-primary) 20%, #00000000);
 }

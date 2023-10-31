@@ -1,10 +1,31 @@
 const { invoke } = window.__TAURI__.tauri;
 
+const { listen } = window.__TAURI__.event
+
+listen('tauri://file-drop', event => {
+  document.querySelector("html").classList.remove("file-drop-hover");
+  for (let i = 0; i < event.payload.length; i++) {
+    let file = event.payload[i];
+    if (file.toLowerCase().endsWith(".mgf") || file.toLowerCase().endsWith(".mgf.gz")) {
+      load_mgf(file);
+    } else {
+      load_identified_peptides(file);
+    }
+  }
+})
+
+listen('tauri://file-drop-hover', event => {
+  document.querySelector("html").classList.add("file-drop-hover");
+})
+
+listen('tauri://file-drop-cancelled', event => {
+  document.querySelector("html").classList.remove("file-drop-hover");
+})
+
 /**
 * @param e: Element
 */
 async function select_mgf_file(e) {
-  e.classList.add("loading")
   let properties = {
     //defaultPath: 'C:\\',
     directory: false,
@@ -14,7 +35,7 @@ async function select_mgf_file(e) {
   };
   window.__TAURI__.dialog.open(properties).then((result) => {
     e.dataset.filepath = result;
-    load_mgf(e);
+    load_mgf(e.dataset.filepath);
   })
 };
 
@@ -22,7 +43,6 @@ async function select_mgf_file(e) {
 * @param e: Element
 */
 async function select_identified_peptides_file(e) {
-  e.classList.add("loading")
   let properties = {
     //defaultPath: 'C:\\',
     directory: false,
@@ -32,46 +52,43 @@ async function select_identified_peptides_file(e) {
   };
   window.__TAURI__.dialog.open(properties).then((result) => {
     e.dataset.filepath = result;
-    load_identified_peptides(e);
+    load_identified_peptides(e.dataset.filepath);
   })
 };
 
-/**
-* @param e: Element
-*/
-async function load_mgf(e) {
-  invoke("load_mgf", { path: e.dataset.filepath }).then((result) => {
+async function load_mgf(path) {
+  document.querySelector("#load-mgf-path").classList.add("loading")
+  invoke("load_mgf", { path: path }).then((result) => {
     document.querySelector("#spectrum-log").innerText = "Loaded " + result + " spectra";
     document.querySelector("#loaded-path").classList.remove("error");
-    document.querySelector("#loaded-path").innerText = e.dataset.filepath.split('\\').pop().split('/').pop();
+    document.querySelector("#loaded-path").innerText = path.split('\\').pop().split('/').pop();
     document.querySelector("#number-of-scans").innerText = result;
     spectrum_details();
-    e.classList.remove("loading")
+    document.querySelector("#load-mgf-path").classList.remove("loading")
   }).catch((error) => {
     console.log(error);
     document.querySelector("#loaded-path").classList.add("error");
     document.querySelector("#loaded-path").innerText = error;
-    e.classList.remove("loading")
+    document.querySelector("#load-mgf-path").classList.remove("loading")
   })
 }
 
-/**
-* @param e: Element
-*/
-async function load_identified_peptides(e) {
-  invoke("load_identified_peptides", { path: e.dataset.filepath }).then((result) => {
+async function load_identified_peptides(path) {
+  document.querySelector("#load-identified-peptides").classList.add("loading")
+  invoke("load_identified_peptides", { path: path }).then((result) => {
     document.querySelector("#identified-peptides-log").innerText = "Loaded " + result + " peptides";
     document.querySelector("#loaded-identified-peptides-path").classList.remove("error");
-    document.querySelector("#loaded-identified-peptides-path").innerText = e.dataset.filepath.split('\\').pop().split('/').pop();
+    document.querySelector("#loaded-identified-peptides-path").innerText = path.split('\\').pop().split('/').pop();
     document.querySelector("#number-of-identified-peptides").innerText = result;
+    document.querySelector("#peptides").style.display = "block";
     displayed_identified_peptide = undefined;
     identified_peptide_details();
-    e.classList.remove("loading")
+    document.querySelector("#load-identified-peptides").classList.remove("loading")
   }).catch((error) => {
     console.log(error);
     document.querySelector("#loaded-identified-peptides-path").classList.add("error");
     document.querySelector("#loaded-identified-peptides-path").innerText = error;
-    e.classList.remove("loading")
+    document.querySelector("#load-identified-peptides").classList.remove("loading")
   })
 }
 
@@ -94,6 +111,19 @@ async function load_clipboard() {
         document.querySelector("#load-clipboard").classList.remove("loading")
       })
     });
+}
+
+async function find_scan_number() {
+  invoke("find_scan_number", { scanNumber: Number(document.querySelector("#scan-number").value) }).then(
+    (result) => {
+      document.querySelector("#details-spectrum-index").value = result;
+      spectrum_details();
+    }
+  ).catch((error) => {
+    console.log(error);
+    document.querySelector("#spectrum-error").classList.remove("hidden");
+    document.querySelector("#spectrum-error").innerText = error;
+  })
 }
 
 async function spectrum_details() {
@@ -216,7 +246,34 @@ async function annotate_spectrum() {
   })
 }
 
+/** @param e {MouseEvent}  */
+function resizeDown(e) {
+  document.querySelector(".resize-wrapper").classList.add("active");
+  document.querySelector(".resize-wrapper").dataset.start_x = e.clientX;
+  document.querySelector(".resize-wrapper").dataset.left_width = document.querySelector(".resize-wrapper").firstElementChild.getBoundingClientRect().width - 16;
+  document.addEventListener("mousemove", resizeMove);
+  document.addEventListener("mouseup", resizeUp);
+  document.querySelector(".resize-wrapper").style.userSelect = 'none';
+}
+
+/** @param e {MouseEvent}  */
+function resizeMove(e) {
+  let wrapper = document.querySelector(".resize-wrapper");
+  let first = wrapper.firstElementChild;
+  first.style.width =
+    Math.max(10, Math.min(90, (Number(wrapper.dataset.left_width) + (e.clientX - Number(wrapper.dataset.start_x))) /
+      wrapper.getBoundingClientRect().width * 100)) + "%";
+  e.preventDefault();
+}
+
+function resizeUp() {
+  document.querySelector(".resize-wrapper").classList.remove("active");
+  document.removeEventListener("mousemove", resizeMove);
+  document.removeEventListener("mouseup", resizeUp);
+}
+
 window.addEventListener("DOMContentLoaded", () => {
+  document.querySelector(".resize").addEventListener("mousedown", resizeDown);
   document
     .querySelector("#load-mgf-path")
     .addEventListener("click", (event) => select_mgf_file(event.target));
@@ -230,19 +287,12 @@ window.addEventListener("DOMContentLoaded", () => {
     .querySelector("#load-clipboard")
     .addEventListener("click", () => load_clipboard());
   document
-    .querySelector("#search-peptide")
+    .querySelector("#search-peptide", search_peptide)
     .addEventListener("click", () => search_peptide());
-  document
-    .querySelector("#search-peptide-input")
-    .addEventListener("keypress", event => event.keyCode == 13 ? search_peptide() : {});
-  let dsi = document
-    .querySelector("#details-spectrum-index");
-  dsi.addEventListener("change", () => spectrum_details())
-  dsi.addEventListener("focus", () => spectrum_details());
-  let dipi = document
-    .querySelector("#details-identified-peptide-index");
-  dipi.addEventListener("change", () => identified_peptide_details())
-  dipi.addEventListener("focus", () => identified_peptide_details());
+  enter_event("#search-peptide-input", search_peptide)
+  enter_event("#scan-number", find_scan_number)
+  add_event("#details-spectrum-index", ["change", "focus"], spectrum_details)
+  add_event("#details-identified-peptide-index", ["change", "focus"], identified_peptide_details)
   document
     .querySelector("#annotate-button")
     .addEventListener("click", () => annotate_spectrum());
@@ -260,7 +310,20 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     document.querySelector("#number-of-identified-peptides").innerText = result[1];
     if (result[1] > 0) {
+      document.querySelector("#peptides").style.display = "block";
       identified_peptide_details();
     }
   })
 });
+
+function add_event(selector, events, callback) {
+  for (let i = 0; i < events.length; i++) {
+    document.querySelector(selector).addEventListener(events[i], callback);
+  }
+}
+
+function enter_event(selector, callback) {
+  document
+    .querySelector(selector)
+    .addEventListener("keypress", event => event.keyCode == 13 ? callback(event) : {});
+}

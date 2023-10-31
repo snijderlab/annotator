@@ -195,12 +195,23 @@ fn load_identified_peptide(index: usize, state: ModifiableState) -> Option<Setti
 }
 
 #[tauri::command]
+fn find_scan_number(scan_number: usize, state: ModifiableState) -> Result<usize, &'static str> {
+    state
+        .lock()
+        .unwrap()
+        .spectra
+        .iter()
+        .position(|scan| scan.raw_scan_number == Some(scan_number))
+        .ok_or("Could not find scan number")
+}
+
+#[tauri::command]
 fn spectrum_details(index: usize, state: ModifiableState) -> String {
     state.lock().unwrap().spectra.get(index).map_or(
         "Spectrum index not valid".to_string(),
         |spectrum| {
             format!(
-                "{}\n{:.3}@{:.3}{:+.0}{:.3}{}",
+                "{}\n{:.3}@{:.3}{:+.0}{:.3}{}{}",
                 spectrum.title,
                 spectrum.mass.value,
                 spectrum.rt.value,
@@ -208,6 +219,9 @@ fn spectrum_details(index: usize, state: ModifiableState) -> String {
                 spectrum
                     .intensity
                     .map_or(String::new(), |i| format!(" I:{i}")),
+                spectrum
+                    .raw_scan_number
+                    .map_or(String::new(), |i| format!(" raw scan number:{i}")),
                 spectrum
                     .sequence
                     .as_ref()
@@ -414,6 +428,7 @@ fn main() {
             load_mgf,
             load_identified_peptides,
             load_clipboard,
+            find_scan_number,
             spectrum_details,
             search_peptide,
             identified_peptide_details,
