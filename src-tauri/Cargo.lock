@@ -52,7 +52,7 @@ dependencies = [
 
 [[package]]
 name = "annotator"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "itertools",
  "rustyms",
@@ -2272,9 +2272,9 @@ checksum = "4f3208ce4d8448b3f3e7d168a73f5e0c43a61e32930de3bceeccedb388b6bf06"
 
 [[package]]
 name = "rustyms"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aaa9fa422531aa38a394830e81839afbb5ec80e8e5238c3d515ac60b993fee54"
+checksum = "f23debea739a4be4f2393e1472b6afecc2babded1d392b6d7581af48a6d7fe08"
 dependencies = [
  "bincode",
  "flate2",
