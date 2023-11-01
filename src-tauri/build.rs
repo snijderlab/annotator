@@ -23,7 +23,7 @@ r#"<!DOCTYPE html>
 <body>
   <button class="print" onclick="window.print()">Export</button>
   <div class="input-flex">
-    <button type="button" id="load-mgf-path">Load raw file</button>
+    <button type="button" id="load-mgf-path">Load raw data file</button>
     <button type="button" id="load-clipboard">Load Clipboard</button>
     <button type="button" id="load-identified-peptides">Load identified peptides file</button>
   </div>

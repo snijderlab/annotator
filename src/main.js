@@ -301,6 +301,7 @@ window.addEventListener("DOMContentLoaded", () => {
     .addEventListener("focus", (event) => {
       event.target.innerHTML = event.target.innerText;
     });
+  enter_event("#peptide", annotate_spectrum)
 
   // Refresh interface for hot reload
   invoke("refresh").then((result) => {
@@ -325,5 +326,5 @@ function add_event(selector, events, callback) {
 function enter_event(selector, callback) {
   document
     .querySelector(selector)
-    .addEventListener("keypress", event => event.keyCode == 13 ? callback(event) : {});
+    .addEventListener("keypress", event => { if (event.keyCode == 13) { callback(event); event.preventDefault(); } else { } });
 }
