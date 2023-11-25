@@ -128,8 +128,8 @@ pre {
 }
 
 :is(.input-settings, .input-flex) button {
-  color: var(--color-primary);
-  border-color: var(--color-primary);
+  color: var(--color-blue);
+  border-color: var(--color-blue);
 }
 
 .input-settings h2 {
@@ -233,7 +233,7 @@ pre {
 
 .spectrum-graph label:has(+input:checked),
 .spectrum-graph label:has(input:checked) {
-  border-color: var(--color-primary);
+  border-color: var(--color-blue);
 }
 
 .spectrum-graph-y-axis {
@@ -285,13 +285,13 @@ pre {
 }
 
 .spectrum-graph-y-axis svg .line {
-  stroke: var(--color-primary);
+  stroke: var(--color-blue);
   stroke-width: var(--stroke-spectrum);
   fill: transparent;
 }
 
 .spectrum-graph-y-axis svg .volume {
-  fill: var(--color-primary-o);
+  fill: var(--color-blue-o);
 }
 
 .spectrum-graph .x-axis {
@@ -434,7 +434,7 @@ button.loading::after {
 }
 
 .resize-wrapper.active>.resize {
-  background-color: var(--color-primary);
+  background-color: var(--color-blue);
 }
 
 .resize-wrapper.active * {
@@ -483,5 +483,5 @@ html.file-drop-hover::before {
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: color-mix(in oklab, var(--color-primary) 20%, #00000000);
+  background-color: color-mix(in oklab, var(--color-blue) 20%, #00000000);
 }
