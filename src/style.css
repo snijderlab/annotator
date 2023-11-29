@@ -13,6 +13,11 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+  --color-background-darker: color-mix(in oklab, var(--color-background) 80%, black);
+  --color-primary-darker: color-mix(in oklab, var(--color-primary) 20%, black);
+  --color-primary-darker-o: color-mix(in oklab, var(--color-primary-darker) 30%, transparent);
+  --color-primary-lighter-o: color-mix(in oklab, color-mix(in oklab, var(--color-primary) 60%, white) 20%, transparent);
+  --color-foreground: color-mix(in oklab, #D4D4D4 90%, black)
 }
 
 @font-face {
@@ -28,6 +33,30 @@
 body {
   padding: .5rem;
   overflow-y: scroll;
+  --padding-inline: 1rem;
+  --content-max-width: 1200px;
+  --breakout-max-width: 1500px;
+
+  --breakout-size: calc((var(--breakout-max-width) - var(--content-max-width)) / 2);
+
+  display: grid;
+  grid-template-columns:
+    [full-width-start] minmax(var(--padding-inline), 1fr) [breakout-start] minmax(0, var(--breakout-size)) [content-start] min(100% - (var(--padding-inline) * 2),
+      var(--content-max-width)) [content-end] minmax(0, var(--breakout-size)) [breakout-end] minmax(var(--padding-inline), 1fr) [full-width-end];
+}
+
+body>*:not(.print) {
+  grid-column: content;
+}
+
+body>details {
+  margin-top: 2rem;
+  grid-column: full-width;
+}
+
+button.print {
+  width: fit-content;
+  margin: 1rem;
 }
 
 .row {
@@ -65,7 +94,30 @@ button {
 .input-settings {
   display: grid;
   grid-template-columns: 1fr 2fr 1fr 2fr;
+  align-items: center;
   gap: .5rem 1rem;
+  border: none;
+  padding: 1em;
+  border-radius: 0.25rem;
+  box-shadow: 8px 8px 20px 0px var(--color-background-darker), -8px -8px 20px 0px var(--color-halfway-o);
+}
+
+.settings {
+  border: none !important;
+  box-shadow: 8px 8px 20px 0px var(--color-background-darker), -8px -8px 20px 0px var(--color-halfway-o);
+  align-items: center;
+  padding: 1rem !important;
+}
+
+.input-settings>legend {
+  font-weight: bolder;
+  text-align: right;
+  color: var(--color-foreground);
+  font-size: 1.2rem;
+  padding: .5em;
+  background: var(--color-background);
+  border-radius: 0.25rem;
+  box-shadow: 8px 8px 20px 0px var(--color-background-darker), -8px -8px 20px 0px var(--color-halfway-o);
 }
 
 @media (max-width: 1000px) {
@@ -91,9 +143,21 @@ button {
 button {
   background: var(--color-background);
   color: var(--color-foreground);
-  border: 2px solid var(--color-halfway);
+  border: none;
   border-radius: 0;
-  font-size: 1.2em;
+  font-size: 1.05em;
+  min-height: 2.5rem;
+  padding: 0 .5rem;
+  border-radius: 0.25rem;
+  box-shadow: inset 8px 8px 20px 0px var(--color-background-darker), inset -8px -8px 20px 0px var(--color-halfway-o);
+}
+
+.settings input,
+.spectrum input[type=radio]+label:not([for^=collapsible]),
+.spectrum input[type=checkbox]+label:not([for^=collapsible]) {
+  padding: .5rem;
+  border: none !important;
+  box-shadow: inset 8px 8px 20px 0px var(--color-background-darker), inset -8px -8px 20px 0px var(--color-halfway-o);
 }
 
 :is(.input-settings, .input-flex) option {
@@ -111,10 +175,28 @@ pre,
   white-space: pre-wrap;
 }
 
+.peptide-input {
+  min-height: 4rem;
+  margin-bottom: 2rem;
+}
+
 pre {
   min-height: 0;
   padding: 0 1rem;
   overflow: hidden;
+  color: var(--color-halfway);
+  border: none;
+}
+
+pre,
+#spectrum-wrapper {
+  border-radius: 0.25rem;
+  margin-left: 1rem;
+  box-shadow: inset 8px 8px 20px 0px var(--color-background-darker), inset -8px -8px 20px 0px var(--color-halfway-o);
+}
+
+pre:not(:empty) {
+  padding: 1rem;
 }
 
 .peptide-input .error {
@@ -129,7 +211,27 @@ pre {
 
 :is(.input-settings, .input-flex) button {
   color: var(--color-primary);
-  border-color: var(--color-primary);
+  border-width: 2px;
+  border-image: linear-gradient(-30deg in oklab,
+      color-mix(in oklab, var(--color-primary) 70%, var(--color-background)),
+      color-mix(in oklab, var(--color-primary) 50%, var(--color-background)));
+  background: linear-gradient(30deg in oklab,
+      color-mix(in oklab, var(--color-primary) 70%, var(--color-background)),
+      color-mix(in oklab, var(--color-primary) 50%, var(--color-background)));
+  background: var(--color-background);
+  border: none;
+  border-radius: 0.25rem;
+  box-shadow: 8px 8px 15px 0px var(--color-primary-darker-o), -8px -8px 15px 0px var(--color-primary-lighter-o);
+}
+
+:is(.input-settings, .input-flex) button:hover {
+  /* border-image: linear-gradient(30deg in oklab,
+      color-mix(in oklab, var(--color-primary) 70%, var(--color-background)),
+      color-mix(in oklab, var(--color-primary) 50%, var(--color-background)));
+  background: linear-gradient(-30deg in oklab,
+      color-mix(in oklab, var(--color-primary) 70%, var(--color-background)),
+      color-mix(in oklab, var(--color-primary) 50%, var(--color-background))); */
+  box-shadow: inset 8px 8px 15px 0px var(--color-primary-darker-o), inset -8px -8px 15px 0px var(--color-primary-lighter-o);
 }
 
 .input-settings h2 {
@@ -142,6 +244,7 @@ pre {
 
 :is(.input-settings, .input-flex) .combined-input {
   display: flex;
+  align-items: center;
 }
 
 :is(.input-settings, .input-flex) .combined-input span {
@@ -151,7 +254,7 @@ pre {
 #spectrum-error {
   margin: .5rem;
   padding-left: .5rem;
-  border: 2px solid red;
+  border: var(--line-width) solid red;
 }
 
 #spectrum-error .title {
@@ -159,7 +262,8 @@ pre {
 }
 
 #spectrum-wrapper {
-  padding: 1em;
+  padding: 2em 1em;
+  margin-top: 2rem;
 }
 
 .hidden {
@@ -205,8 +309,7 @@ pre {
 .spectrum .canvas-wrapper {
   height: calc(2 * var(--height));
   grid-template-rows: 1fr 2em 1fr;
-  grid-template-areas:
-    "y-axis canvas"
+  grid-template-areas: "y-axis canvas"
     ". x-axis"
     "sg-y-axis spectrum-graph";
 }
@@ -225,7 +328,7 @@ pre {
 }
 
 .spectrum-graph>label {
-  border: 2px solid var(--color-halfway);
+  border: var(--line-width) solid var(--color-halfway);
   padding: .25rem;
   user-select: none;
   border-radius: 5px;
@@ -243,7 +346,7 @@ pre {
   height: var(--graph-height-inc);
   justify-content: space-between;
   align-items: flex-end;
-  padding-right: 2px;
+  padding-right: var(--line-width);
   position: relative;
   overflow: hidden;
 }
@@ -252,7 +355,7 @@ pre {
   content: "";
   display: block;
   position: absolute;
-  height: 2px;
+  height: var(--line-width);
   width: calc(100vw - 200% - 55px);
   left: 100%;
   background-color: var(--color-foreground);
@@ -278,7 +381,7 @@ pre {
 }
 
 .spectrum-graph-y-axis svg {
-  transform: translate(2px, 0);
+  transform: translate(var(--line-width), 0);
   position: absolute;
   width: 2rem;
   height: 100%;
@@ -297,7 +400,7 @@ pre {
 .spectrum-graph .x-axis {
   position: absolute;
   width: 100%;
-  border-top: 2px solid var(--color-foreground);
+  border-top: var(--line-width) solid var(--color-foreground);
   top: clamp(0px, calc(var(--y-max) / (var(--y-max) - var(--y-min)) * 100% - 1px), 100%);
   pointer-events: none;
 }
@@ -306,7 +409,7 @@ pre {
   top: unset !important;
   bottom: 0px !important;
   border-top: none;
-  border-bottom: 2px solid var(--color-foreground);
+  border-bottom: var(--line-width) solid var(--color-foreground);
 }
 
 .spectrum-graph .point.unassigned {
@@ -330,7 +433,7 @@ pre {
 }
 
 .spectrum-graph .ruler {
-  border-top: 2px dashed var(--color-foreground);
+  border-top: var(--line-width) dashed var(--color-foreground);
   width: 100%;
   height: 0;
   left: 0;
@@ -351,8 +454,8 @@ pre {
 }
 
 .spectrum:has(#intensity:checked) .point {
-  width: calc((var(--intensity)) / var(--max-intensity) * 6px + 2px);
-  height: calc((var(--intensity)) / var(--max-intensity) * 6px + 2px);
+  width: calc((var(--intensity)) / var(--max-intensity) * 6px + var(--line-width));
+  height: calc((var(--intensity)) / var(--max-intensity) * 6px + var(--line-width));
 }
 
 .spectrum .spectrum-graph.highlight .point {
@@ -374,8 +477,7 @@ pre {
 }
 
 .spectrum-graph-y-axis .density {
-  transform:
-    scale(1, var(--scale)) translate(0, var(--translate));
+  transform: scale(1, var(--scale)) translate(0, var(--translate));
 }
 
 /* Loading animation */
@@ -406,25 +508,25 @@ button.loading::after {
 .resize-wrapper {
   width: calc(100% + 1rem);
   margin: 0 -0.5rem;
-  border-top: 2px solid var(--color-halfway);
+  border-top: var(--line-width) solid var(--color-halfway);
   resize: vertical;
   min-height: 100px;
   display: flex;
   flex-direction: row;
   overflow: hidden;
-  padding-bottom: 2px;
+  padding-bottom: var(--line-width);
   background-color: var(--color-halfway);
 }
 
 .resize-wrapper>.resize {
-  width: 2px;
-  min-width: 2px;
-  max-width: 2px;
-  flex: 0 0 2px;
+  width: var(--line-width);
+  min-width: var(--line-width);
+  max-width: var(--line-width);
+  flex: 0 0 var(--line-width);
   padding: 0;
   margin: 0;
   background-color: var(--color-halfway);
-  border-left: 2px solid var(--color-background);
+  border-left: var(--line-width) solid var(--color-background);
   cursor: col-resize;
   overflow: hidden;
 }

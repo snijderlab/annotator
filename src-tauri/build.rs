@@ -29,8 +29,8 @@ r#"<!DOCTYPE html>
   </div>
   <pre id="loaded-path"></pre>
   <pre id="loaded-identified-peptides-path"></pre>
-  <div class="input-settings">
-    <h2>Spectrum details</h2>
+  <fieldset class="input-settings">
+    <legend align="right">Spectrum details</legend>
     <label for="spectrum-index">Spectrum index</label>
     <div class="combined-input">
       <input type="number" id="details-spectrum-index" value="0" min="0" />
@@ -39,7 +39,7 @@ r#"<!DOCTYPE html>
     </div>
     <label for="scan-number">Scan number</label>
     <input type="number" id="scan-number" value="0" min="0" />
-  </div>
+  </fieldset>
   <pre id="spectrum-details"></pre>
   
   <div id="peptides" style="display:none">
@@ -71,8 +71,8 @@ r#"<!DOCTYPE html>
     </div>
   </div>
   <pre id="loaded-path"></pre>
-  <div class="input-settings">
-    <h2>Annotate</h2>
+  <fieldset class="input-settings">
+    <legend align="right">Annotate</legend>
     <label for="spectrum-ppm">PPM </label>
     <input type="number" id="spectrum-ppm" value="20" />
     <label for="spectrum-charge">Max charge </label>
@@ -123,7 +123,7 @@ r#"<!DOCTYPE html>
       <label class="wide" for="peptide">Peptide sequence </label>
       <div class="peptide-input wide" id="peptide" contentEditable="plaintext-only"></div>
       <button id="annotate-button" type="button" class="col-2">Annotate</button>
-    </div>
+    </fieldset>
   <div id="spectrum-error" class="hidden"></div>
   <div id='spectrum-wrapper' class="spectrum hidden" onload='SpectrumSetUp()'>
     <div class='settings render-setup'><p>Render setup</p>
