@@ -1,4 +1,5 @@
-@layer std, bg;
+@layer styles, std, bg;
+@import url("stitch-assets/styles.css") layer(styles);
 
 :root {
   font-size: 1rem;
@@ -51,24 +52,44 @@ html {
     --pos: 70%;
     --start: 30%;
     --end: 60%;
-    --color: var(--color-background);
+    --clr: var(--color-background);
   }
 
-  .input-settings {
+  .input-settings,
+  .settings {
     /* background-color: var(--color-tertiary); */
     position: relative;
     border-radius: 2rem;
+    border: none;
     padding: 2rem;
     --color: var(--color-tertiary);
-    box-shadow: -5px 18px 25px -15px color-mix(in oklab, var(--color) 50%, transparent);
+    /* box-shadow: -5px 18px 25px -15px color-mix(in oklab, var(--color) 50%, transparent); */
     background-color: color-mix(in oklab, var(--color) 50%, transparent);
   }
 
   #peptides {
     /* background-color: var(--color-tertiary); */
+    color: #1E1E1E;
     position: relative;
     --color: var(--color-secondary);
-    box-shadow: -5px 18px 25px -15px color-mix(in oklab, var(--color) 50%, transparent);
+    /* box-shadow: -5px 18px 25px -15px color-mix(in oklab, var(--color) 50%, transparent); */
+    background-color: color-mix(in oklab, var(--color) 50%, transparent);
+  }
+
+  .print {
+    position: relative;
+    --color: var(--color-quinary);
+    border: none;
+    /* box-shadow: -5px 18px 25px -15px color-mix(in oklab, var(--color) 50%, transparent); */
+    background-color: color-mix(in oklab, var(--color) 50%, transparent);
+  }
+
+  #spectrum-wrapper {
+    color: #1E1E1E;
+    position: relative;
+    --color: var(--color-secondary);
+    border: none;
+    /* box-shadow: -5px 18px 25px -15px color-mix(in oklab, var(--color) 50%, transparent); */
     background-color: color-mix(in oklab, var(--color) 50%, transparent);
   }
 
@@ -82,7 +103,7 @@ html {
 
   pre:not(:empty) {
     padding: 2rem;
-    box-shadow: -5px 18px 25px -15px color-mix(in oklab, var(--color) 50%, transparent);
+    /* box-shadow: -5px 18px 25px -15px color-mix(in oklab, var(--color) 50%, transparent); */
     background-color: color-mix(in oklab, var(--color) 50%, transparent);
   }
 
@@ -90,42 +111,35 @@ html {
     position: relative;
     --color: var(--color-primary);
     border: none;
-    box-shadow: -5px 18px 25px -15px color-mix(in oklab, var(--color) 100%, transparent);
+    padding: .5rem 1rem;
+    /* box-shadow: -5px 18px 25px -15px color-mix(in oklab, var(--color) 100%, transparent); */
     background-color: color-mix(in oklab, var(--color) 50%, transparent);
   }
 
   .input-settings::before,
-  #peptides::before {
+  .settings::before,
+  #peptides::before,
+  #spectrum-wrapper::before,
+  pre::before,
+  :is(.input-settings, .input-flex) button::before,
+  .print::before {
     --pos: 50%;
     --start: 5%;
     --end: 80%;
-    --color: color-mix(in oklab, color-mix(in oklab, var(--color-tertiary) 50%, var(--color-foreground)) 50%, transparent);
-    border-radius: inherit;
-  }
-
-  pre::before {
-    --pos: 50%;
-    --start: 5%;
-    --end: 80%;
-    --color: color-mix(in oklab, color-mix(in oklab, var(--color-quaternary) 50%, var(--color-foreground)) 50%, transparent);
-    border-radius: inherit;
-  }
-
-  :is(.input-settings, .input-flex) button::before {
-    --pos: 50%;
-    --start: 5%;
-    --end: 80%;
-    --color: color-mix(in oklab, color-mix(in oklab, var(--color-primary) 50%, var(--color-foreground)) 50%, transparent);
+    --clr: color-mix(in oklab, color-mix(in oklab, var(--color) 50%, var(--color-foreground)) 50%, transparent);
     border-radius: inherit;
   }
 
   body::before,
+  .settings::before,
   .input-settings::before,
   :is(.input-settings, .input-flex) button::before,
   pre::before,
-  #peptides::before {
-    background: radial-gradient(circle at var(--pos), transparent var(--start), var(--color) var(--end));
-    mask: var(--noise), radial-gradient(circle at var(--pos), transparent var(--start), var(--color) calc(var(--end) + 10%));
+  #peptides::before,
+  #spectrum-wrapper::before,
+  .print::before {
+    background: radial-gradient(circle at var(--pos), transparent var(--start), var(--clr) var(--end));
+    mask: var(--noise), radial-gradient(circle at var(--pos), transparent var(--start), var(--clr) calc(var(--end) + 10%));
     content: "";
     position: absolute;
     top: 0;
@@ -149,7 +163,8 @@ html {
   }
 
   body>details,
-  #peptides {
+  #peptides,
+  #spectrum-wrapper {
     margin-top: 2rem;
     grid-column: full-width;
   }
@@ -207,18 +222,22 @@ html {
     justify-content: space-evenly;
   }
 
-  :is(.input-settings, .input-flex) input,
-  :is(.input-settings, .input-flex) textarea,
-  :is(.input-settings, .input-flex) button,
-  :is(.input-settings, .input-flex) select,
+  :is(.input-settings, .input-flex, .settings) input,
+  :is(.input-settings, .input-flex, .settings) textarea,
+  :is(.input-settings, .input-flex, .settings) button,
+  :is(.input-settings, .input-flex, .settings) select,
   .peptide-input,
   button {
     background: transparent;
-    color: var(--color-foreground);
-    border: 2px solid color-mix(in oklab, var(--color-foreground) 50%, transparent);
+    color: currentColor;
+    border: 2px solid color-mix(in oklab, currentColor 50%, transparent);
     border-radius: .25rem;
     font-size: 1.2em;
     appearance: none;
+  }
+
+  td {
+    border: 2px solid color-mix(in oklab, currentColor 50%, transparent);
   }
 
   :is(.input-settings, .input-flex) option {
@@ -345,7 +364,7 @@ html {
   }
 
   .spectrum-graph>label {
-    border: 2px solid var(--color-halfway);
+    border: 2px solid color-mix(in oklab, var(--color-foreground) 50%, transparent);
     padding: .25rem;
     user-select: none;
     border-radius: 5px;
@@ -353,7 +372,7 @@ html {
 
   .spectrum-graph label:has(+input:checked),
   .spectrum-graph label:has(input:checked) {
-    border-color: var(--color-primary);
+    border-color: color-mix(in oklab, var(--color-primary) 50%, transparent);
   }
 
   .spectrum-graph-y-axis {
@@ -426,7 +445,7 @@ html {
     top: unset !important;
     bottom: 0px !important;
     border-top: none;
-    border-bottom: 2px solid var(--color-foreground);
+    border-bottom: 2px solid color-mix(in oklab, var(--color-foreground) 50%, transparent);
   }
 
   .spectrum-graph .point.unassigned {
@@ -450,7 +469,7 @@ html {
   }
 
   .spectrum-graph .ruler {
-    border-top: 2px dashed var(--color-foreground);
+    border-top: 2px solid color-mix(in oklab, var(--color-foreground) 50%, transparent);
     width: 100%;
     height: 0;
     left: 0;
@@ -501,7 +520,7 @@ html {
   /* Loading animation */
   button.loading {
     pointer-events: none;
-    border-color: var(--color-halfway);
+    border-color: color-mix(in oklab, var(--color-foreground) 50%, transparent);
     color: var(--color-halfway);
   }
 
@@ -524,9 +543,8 @@ html {
 
   /* resize wrapper */
   .resize-wrapper {
-    width: calc(100% + 1rem);
-    margin: 0 -0.5rem;
-    border-top: 2px solid var(--color-halfway);
+    width: 100%;
+    border-top: 2px solid color-mix(in oklab, var(--color-foreground) 50%, transparent);
     resize: vertical;
     min-height: 100px;
     display: flex;
@@ -544,7 +562,7 @@ html {
     padding: 0;
     margin: 0;
     background-color: color-mix(in oklab, var(--color-halfway) 50%, transparent);
-    border-left: 2px solid var(--color-background);
+    border-left: 2px solid color-mix(in oklab, var(--color-foreground) 50%, transparent);
     cursor: col-resize;
     overflow: hidden;
   }
