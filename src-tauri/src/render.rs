@@ -165,7 +165,9 @@ fn spectrum_graph_boundaries(
         .map(|point| {
             let distance = fragments
                 .iter()
-                .filter(|frag| frag.ion.to_string() == "c" || frag.ion.to_string() == "z")
+                .filter(|frag| {
+                    matches!(frag.ion, FragmentType::c(_)) || matches!(frag.ion, FragmentType::z(_))
+                })
                 .fold(
                     (
                         (

@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use rustyms::identifications::{
-    FastaData, IdentifiedPeptide, MetaData, NovorData, OpairData, PeaksData,
+    FastaData, IdentifiedPeptide, MaxQuantData, MetaData, NovorData, OpairData, PeaksData,
 };
 
 use crate::html_builder::{HtmlContent, HtmlElement, HtmlTag};
@@ -70,10 +70,10 @@ impl RenderToHtml for IdentifiedPeptide {
                 mass,
                 self.metadata
                     .charge()
-                    .map_or("-".to_string(), |c| c.to_string()),
+                    .map_or("-".to_string(), |c| c.value.to_string()),
                 self.metadata
                     .charge()
-                    .map_or("-".to_string(), |c| format!("{:.3}", mass / c as f64)),
+                    .map_or("-".to_string(), |c| format!("{:.3}", mass / c.value)),
                 self.metadata
                     .mode()
                     .map_or("-".to_string(), |c| c.to_string())
@@ -91,6 +91,8 @@ impl RenderToHtml for MetaData {
             MetaData::Peaks(p) => p.to_html(),
             MetaData::Opair(o) => o.to_html(),
             MetaData::Fasta(f) => f.to_html(),
+            MetaData::MaxQuant(m) => m.to_html(),
+            MetaData::None => HtmlElement::new(HtmlTag::i).content("No metadata"),
         }
     }
 }
@@ -119,10 +121,10 @@ impl RenderToHtml for PeaksData {
                         self.de_novo_score.to_optional_string(),
                     ],
                     &["ALC".to_string(), self.alc.to_string()],
-                    &["RT".to_string(), self.rt.to_string()],
+                    &["RT".to_string(), self.rt.value.to_string()],
                     &[
                         "Predicted RT".to_string(),
-                        self.predicted_rt.to_optional_string(),
+                        self.predicted_rt.map(|v| v.value).to_optional_string(),
                     ],
                     &["Area".to_string(), self.area.to_optional_string()],
                     &["ppm".to_string(), self.ppm.to_string()],
@@ -160,8 +162,14 @@ impl RenderToHtml for NovorData {
                         self.spectra_id.to_optional_string(),
                     ],
                     &["Fraction".to_string(), self.fraction.to_optional_string()],
-                    &["RT".to_string(), self.rt.to_optional_string()],
-                    &["Mass error".to_string(), self.mass_err.to_optional_string()],
+                    &[
+                        "RT".to_string(),
+                        self.rt.map(|v| v.value).to_optional_string(),
+                    ],
+                    &[
+                        "Mass error".to_string(),
+                        self.mass_err.map(|v| v.value).to_optional_string(),
+                    ],
                     &["Protein".to_string(), self.protein.to_optional_string()],
                     &[
                         "Protein Start".to_string(),
@@ -195,16 +203,19 @@ impl RenderToHtml for OpairData {
                 None,
                 &[
                     &["File name".to_string(), self.file_name.to_string()],
-                    &["RT".to_string(), self.rt.to_string()],
+                    &["RT".to_string(), self.rt.value.to_string()],
                     &[
                         "Precursor scan number".to_string(),
                         self.precursor_scan_number.to_string(),
                     ],
                     &[
                         "Theoretical Mass".to_string(),
-                        self.theoretical_mass.to_string(),
+                        self.theoretical_mass.value.to_string(),
                     ],
-                    &["Glycan Mass".to_string(), self.glycan_mass.to_string()],
+                    &[
+                        "Glycan Mass".to_string(),
+                        self.glycan_mass.value.to_string(),
+                    ],
                     &["Accession".to_string(), self.accession.to_string()],
                     &["Organism".to_string(), self.organism.to_string()],
                     &["Protein name".to_string(), self.protein_name.to_string()],
@@ -299,6 +310,177 @@ impl RenderToHtml for OpairData {
                         "All site specific localisation probabilities".to_string(),
                         self.all_site_specific_localisation_probabilities
                             .to_string(),
+                    ],
+                    &["Version".to_string(), self.version.to_string()],
+                ],
+            ),
+        ])
+    }
+}
+
+impl RenderToHtml for MaxQuantData {
+    fn to_html(&self) -> HtmlElement {
+        HtmlElement::new(HtmlTag::div).children([
+            HtmlElement::new(HtmlTag::p).content(format!(
+                "Additional MetaData MaxQuant {}",
+                self.id.unwrap_or(self.scan_number)
+            )),
+            HtmlElement::table::<HtmlContent, _>(
+                None,
+                &[
+                    &["Raw file".to_string(), self.raw_file.to_string()],
+                    &["Scan number".to_string(), self.scan_number.to_string()],
+                    &["Scan index".to_string(), self.scan_index.to_string()],
+                    &["Modifications".to_string(), self.modifications.to_string()],
+                    &["Proteins".to_string(), self.proteins.to_string()],
+                    &[
+                        "Modified sequence".to_string(),
+                        self.sequence.as_ref().to_optional_string(),
+                    ],
+                    &["Charge".to_string(), self.z.value.to_string()],
+                    &["Fragmentation".to_string(), self.fragmentation.to_string()],
+                    &["Mass analyzer".to_string(), self.mass_analyser.to_string()],
+                    &["Type".to_string(), self.ty.to_string()],
+                    &[
+                        "Scan event number".to_string(),
+                        self.scan_event_number.to_string(),
+                    ],
+                    &["Pep".to_string(), self.pep.to_string()],
+                    &["Score".to_string(), self.score.to_string()],
+                    &[
+                        "Precursor full scan number".to_string(),
+                        self.precursor.to_optional_string(),
+                    ],
+                    &[
+                        "Precursor intensity".to_string(),
+                        self.precursor_intensity.to_string(),
+                    ],
+                    &[
+                        "Precursor apex fraction".to_string(),
+                        self.precursor_apex_function.to_string(),
+                    ],
+                    &[
+                        "Precursor apex offset".to_string(),
+                        self.precursor_apex_offset.to_string(),
+                    ],
+                    &[
+                        "Precursor apex offset time".to_string(),
+                        self.precursor_apex_offset_time.to_string(),
+                    ],
+                    &[
+                        "Missed cleavages".to_string(),
+                        self.missed_cleavages.to_optional_string(),
+                    ],
+                    &[
+                        "Isotope index".to_string(),
+                        self.isotope_index.to_optional_string(),
+                    ],
+                    &[
+                        "M/z".to_string(),
+                        self.mz.map(|v| v.value).to_optional_string(),
+                    ],
+                    &[
+                        "Mass".to_string(),
+                        self.mass.map(|v| v.value).to_optional_string(),
+                    ],
+                    &[
+                        "Mass error [da]".to_string(),
+                        self.mass_error_da.map(|v| v.value).to_optional_string(),
+                    ],
+                    &[
+                        "Mass error [ppm]".to_string(),
+                        self.mass_error_ppm.to_optional_string(),
+                    ],
+                    &[
+                        "Simple mass error [ppm]".to_string(),
+                        self.simple_mass_error_ppm.to_optional_string(),
+                    ],
+                    &[
+                        "Retention time".to_string(),
+                        self.retention_time.map(|v| v.value).to_optional_string(),
+                    ],
+                    &[
+                        "Number of matches".to_string(),
+                        self.number_of_matches.to_optional_string(),
+                    ],
+                    &[
+                        "Intensity coverage".to_string(),
+                        self.intensity_coverage.to_optional_string(),
+                    ],
+                    &[
+                        "Peak coverage".to_string(),
+                        self.peak_coverage.to_optional_string(),
+                    ],
+                    &[
+                        "Delta score".to_string(),
+                        self.delta_score.to_optional_string(),
+                    ],
+                    &[
+                        "Score diff".to_string(),
+                        self.score_diff.to_optional_string(),
+                    ],
+                    &[
+                        "Localization prob".to_string(),
+                        self.localisation_probability.to_optional_string(),
+                    ],
+                    &[
+                        "All modified sequences".to_string(),
+                        self.all_modified_sequences
+                            .as_ref()
+                            .map(|v| v.iter().map(ToString::to_string).join(","))
+                            .unwrap_or("-".to_string()),
+                    ],
+                    &["Id".to_string(), self.id.to_optional_string()],
+                    &[
+                        "Protein group ids".to_string(),
+                        self.protein_group_ids
+                            .as_ref()
+                            .map(|v| v.iter().map(ToString::to_string).join(","))
+                            .unwrap_or("-".to_string()),
+                    ],
+                    &[
+                        "Peptide id".to_string(),
+                        self.peptide_id.to_optional_string(),
+                    ],
+                    &[
+                        "Mod. peptide id".to_string(),
+                        self.modified_peptide_id.to_optional_string(),
+                    ],
+                    &[
+                        "Evidence id".to_string(),
+                        self.evidence_id.to_optional_string(),
+                    ],
+                    &[
+                        "Base peak intensity".to_string(),
+                        self.base_peak_intensity.to_optional_string(),
+                    ],
+                    &[
+                        "Total ion current".to_string(),
+                        self.total_ion_current.to_optional_string(),
+                    ],
+                    &[
+                        "Collision energy".to_string(),
+                        self.collision_energy.to_optional_string(),
+                    ],
+                    &[
+                        "DN sequence".to_string(),
+                        self.dn_sequence.as_ref().to_optional_string(),
+                    ],
+                    &[
+                        "DN combined score".to_string(),
+                        self.dn_combined_score.to_optional_string(),
+                    ],
+                    &[
+                        "DN N terminal mass left".to_string(),
+                        self.dn_n_mass.map(|v| v.value).to_optional_string(),
+                    ],
+                    &[
+                        "DN C terminal mass left".to_string(),
+                        self.dn_c_mass.map(|v| v.value).to_optional_string(),
+                    ],
+                    &[
+                        "DN mass left".to_string(),
+                        self.dn_missing_mass.map(|v| v.value).to_optional_string(),
                     ],
                     &["Version".to_string(), self.version.to_string()],
                 ],
