@@ -152,7 +152,7 @@ impl Settings {
     fn from_peptide(peptide: &IdentifiedPeptide, scan: Option<usize>) -> Self {
         Self {
             peptide: peptide.peptide.to_string(),
-            charge: peptide.metadata.charge(),
+            charge: peptide.metadata.charge().map(|v| v.value as usize),
             mode: peptide
                 .metadata
                 .mode()
