@@ -20,4 +20,14 @@ It uses the [ProForma](https://github.com/HUPO-PSI/ProForma) specification to sp
 
 ## Installing
 
+### Using winget
+
+On windows use `winget install --id Snijderlab.Annotator`.
+
+### From binary 
+
 See [releases](https://github.com/snijderlab/annotator/releases) for the latest release, here you will also find the prebuilt binaries for your architecture.
+
+### From source
+
+To build from source. Clone the repository. And build with cargo. Make sure you have installed [Rust](https://www.rust-lang.org/tools/install) and [Tauri](https://tauri.app/) beforehand.
