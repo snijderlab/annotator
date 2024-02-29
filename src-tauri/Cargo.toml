@@ -1,6 +1,6 @@
 [package]
 name = "annotator"
-version = "0.2.1"
+version = "0.2.2"
 description = "Spectrum annotator"
 authors = ["Douwe Schulte <d.schulte@uu.nl>"]
 license = "MIT"
