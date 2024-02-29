@@ -1,6 +1,9 @@
 use itertools::Itertools;
-use rustyms::identifications::{
-    FastaData, IdentifiedPeptide, MaxQuantData, MetaData, NovorData, OpairData, PeaksData,
+use rustyms::{
+    identification::{
+        FastaData, IdentifiedPeptide, MaxQuantData, MetaData, NovorData, OpairData, PeaksData,
+    },
+    MultiChemical,
 };
 
 use crate::html_builder::{HtmlContent, HtmlElement, HtmlTag};
@@ -55,13 +58,7 @@ impl RenderToHtml for IdentifiedPeptide {
             );
         }
 
-        let mass = self
-            .peptide
-            .formula()
-            .unwrap()
-            .monoisotopic_mass()
-            .unwrap()
-            .value;
+        let mass = self.peptide.formulas()[0].monoisotopic_mass().value;
         HtmlElement::new(HtmlTag::div).children([
             HtmlElement::new(HtmlTag::p).content(format!(
                 "Score: {}, Length: {} AA, Mass: {:.3} Da, Charge: {}, Mz: {} Th, Mode: {}",

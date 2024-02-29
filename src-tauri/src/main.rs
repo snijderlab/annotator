@@ -5,9 +5,9 @@
 
 use itertools::Itertools;
 use rustyms::{
-    align::{align, BLOSUM62},
+    align::{align, matrix::BLOSUM62, Alignment},
     error::*,
-    identifications::*,
+    identification::*,
     model::*,
     spectrum::*,
     system::*,
@@ -40,7 +40,7 @@ async fn load_mgf<'a>(path: &'a str, state: ModifiableState<'a>) -> Result<usize
             state.lock().unwrap().spectra = v;
             Ok(count)
         }
-        Err(err) => Err(err),
+        Err(err) => Err(err.to_string()),
     }
 }
 
@@ -91,9 +91,7 @@ async fn search_peptide<'a>(text: &'a str, state: ModifiableState<'a>) -> Result
     let state = state
         .lock()
         .map_err(|_| "Search exception: State locked".to_string())?;
-    let search = ComplexPeptide::pro_forma(text)
-        .map_err(|err| err.to_string())?
-        .assume_linear();
+    let search = LinearPeptide::pro_forma(text).map_err(|err| err.to_string())?;
     let data = state
         .peptides
         .iter()
@@ -101,22 +99,18 @@ async fn search_peptide<'a>(text: &'a str, state: ModifiableState<'a>) -> Result
         .map(|(index, peptide)| {
             (
                 index,
-                align(
-                    peptide.peptide.clone(),
-                    search.clone(),
+                align::<4>(
+                    &peptide.peptide,
+                    &search,
                     BLOSUM62,
-                    MassTolerance::Absolute(da(0.1)),
-                    align::Type::GlobalForB,
+                    Tolerance::new_absolute(da(0.1)),
+                    align::AlignType::GLOBAL_B,
                 ),
                 peptide,
             )
         })
-        .sorted_unstable_by(|a, b| {
-            b.1.normalised_score
-                .partial_cmp(&a.1.normalised_score)
-                .unwrap()
-        })
-        .filter(|(_, alignment, _)| alignment.normalised_score > 0.0)
+        .sorted_unstable_by(|a, b| b.1.cmp(&a.1))
+        .filter(|(_, alignment, _)| alignment.normalised_score() > 0.0)
         .take(25)
         .map(|(index, _, peptide)| {
             vec![
@@ -254,12 +248,12 @@ fn load_clipboard(data: &str, state: ModifiableState) -> Result<usize, String> {
         _ => Err("Not a recognised format (Bruker/Stitch/Sciex)".to_string()),
     }?;
 
-    state.lock().unwrap().spectra = vec![RawSpectrum {
-        title: "Clipboard".to_string(),
-        charge: Charge::new::<e>(1.0),
-        spectrum,
-        ..RawSpectrum::default()
-    }];
+    let mut new_spectrum = RawSpectrum::default();
+    new_spectrum.extend(spectrum);
+    new_spectrum.title = "Clipboard".to_string();
+    new_spectrum.charge = Charge::new::<e>(1.0);
+
+    state.lock().unwrap().spectra = vec![new_spectrum];
     Ok(1)
 }
 
@@ -335,6 +329,15 @@ fn load_sciex_clipboard(lines: &[&str]) -> Result<Vec<RawPeak>, String> {
     Ok(spectrum)
 }
 
+#[derive(Debug, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
+pub enum NoiseFilter {
+    #[default]
+    None,
+    Relative(f64),
+    Absolute(f64),
+    TopX(f64, usize),
+}
+
 type ModelParameters = Vec<(Location, String)>;
 
 #[allow(clippy::too_many_arguments)]
@@ -343,7 +346,7 @@ async fn annotate_spectrum<'a>(
     index: usize,
     ppm: f64,
     charge: Option<f64>,
-    noise_threshold: Option<f64>,
+    filter: NoiseFilter,
     model: &'a str,
     peptide: &'a str,
     cmodel: ModelParameters,
@@ -398,17 +401,16 @@ async fn annotate_spectrum<'a>(
     let peptide = rustyms::ComplexPeptide::pro_forma(peptide)?;
     let multiple_peptides = peptide.peptides().len() != 1;
     let mut spectrum = state.spectra[index].clone();
-    if let Some(threshold) = noise_threshold {
-        spectrum.noise_filter(threshold);
+    dbg!(&filter, &charge, &spectrum);
+    match filter {
+        NoiseFilter::None => (),
+        NoiseFilter::Relative(i) => spectrum.relative_noise_filter(i),
+        NoiseFilter::Absolute(i) => spectrum.absolute_noise_filter(i),
+        NoiseFilter::TopX(size, t) => spectrum.top_x_filter(size, t),
     }
+    dbg!(&spectrum);
     let use_charge = charge.map_or(spectrum.charge, Charge::new::<e>);
-    let fragments = peptide
-        .generate_theoretical_fragments(use_charge, &model)
-        .ok_or(CustomError::error(
-            "Undefined mass",
-            "The sequence requested does not have a defined mass (you used B/Z amino acids)",
-            Context::none(),
-        ))?;
+    let fragments = peptide.generate_theoretical_fragments(use_charge, &model);
     let annotated = spectrum.annotate(peptide, &fragments, &model, MassMode::Monoisotopic);
     Ok((
         render::annotated_spectrum(&annotated, "spectrum", &fragments),

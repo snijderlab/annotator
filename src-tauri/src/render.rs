@@ -2,8 +2,8 @@ use std::{collections::HashSet, fmt::Write};
 
 use itertools::Itertools;
 use rustyms::{
-    fragment::*, system::*, AnnotatedSpectrum, ComplexPeptide, LinearPeptide, MassMode,
-    Modification, MolecularFormula,
+    fragment::*, spectrum::PeakSpectrum, system::*, AnnotatedSpectrum, ComplexPeptide,
+    LinearPeptide, MassMode, Modification, MolecularFormula, MultiChemical,
 };
 
 use crate::html_builder::{HtmlElement, HtmlTag};
@@ -43,9 +43,7 @@ pub fn fragment_table(fragments: &[Fragment], multiple_peptides: bool) -> String
             sequence_index,
             series_number,
             fragment.ion.label(),
-            fragment
-                .mz(MassMode::Monoisotopic)
-                .map_or(f64::NAN, |v| v.value),
+            fragment.mz(MassMode::Monoisotopic).value,
             fragment.charge.value,
             fragment
                 .neutral_loss
@@ -160,8 +158,7 @@ fn spectrum_graph_boundaries(
     fragments: &[Fragment],
 ) -> (SpectrumGraphData, Boundaries) {
     let data: SpectrumGraphData = spectrum
-        .spectrum
-        .iter()
+        .spectrum()
         .map(|point| {
             let distance = fragments
                 .iter()
@@ -192,27 +189,23 @@ fn spectrum_graph_boundaries(
                         ),
                     ),
                     |acc, frag: &Fragment| {
-                        if let Some(mass_over_charge) = frag.mz(MassMode::Monoisotopic) {
-                            let rel = ((mass_over_charge - point.experimental_mz)
-                                / mass_over_charge
-                                * MassOverCharge::new::<rustyms::system::mz>(1e6))
-                            .value;
-                            let abs = (mass_over_charge - point.experimental_mz).value;
-                            (
-                                if acc.0 .0.abs() < rel.abs() {
-                                    acc.0
-                                } else {
-                                    (rel, frag.clone())
-                                },
-                                if acc.1 .0.abs() < abs.abs() {
-                                    acc.1
-                                } else {
-                                    (abs, frag.clone())
-                                },
-                            )
-                        } else {
-                            acc
-                        }
+                        let mass_over_charge = frag.mz(MassMode::Monoisotopic);
+                        let rel = ((mass_over_charge - point.experimental_mz) / mass_over_charge
+                            * MassOverCharge::new::<rustyms::system::mz>(1e6))
+                        .value;
+                        let abs = (mass_over_charge - point.experimental_mz).value;
+                        (
+                            if acc.0 .0.abs() < rel.abs() {
+                                acc.0
+                            } else {
+                                (rel, frag.clone())
+                            },
+                            if acc.1 .0.abs() < abs.abs() {
+                                acc.1
+                            } else {
+                                (abs, frag.clone())
+                            },
+                        )
                     },
                 );
             (
@@ -221,7 +214,7 @@ fn spectrum_graph_boundaries(
                 distance.1,                           // abs (Da)
                 point.experimental_mz,                // mz
                 point.experimental_mz * point.charge, // mass
-                point.intensity,                      // intensity
+                point.intensity.0,                    // intensity
             )
         })
         .collect();
@@ -578,11 +571,11 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> ((MassOverCharge, f64, f64), Po
     let mut max_mz: MassOverCharge = MassOverCharge::new::<mz>(0.0);
     let mut max_intensity: f64 = 0.0;
     let mut max_intensity_unassigned: f64 = 0.0;
-    for peak in &spectrum.spectrum {
+    for peak in spectrum.spectrum() {
         max_mz = max_mz.max(peak.experimental_mz);
-        max_intensity_unassigned = max_intensity_unassigned.max(peak.intensity);
+        max_intensity_unassigned = max_intensity_unassigned.max(peak.intensity.0);
         if !peak.annotation.is_empty() {
-            max_intensity = max_intensity.max(peak.intensity);
+            max_intensity = max_intensity.max(peak.intensity.0);
             peak.annotation.iter().for_each(|frag| {
                 frag.ion
                     .position()
@@ -656,6 +649,7 @@ fn render_peptide(
                 render_linear_peptide(output, peptide, &overview[index], index, multiple_peptides);
             }
         }
+        _ => panic!("Unhandled complex peptide type"),
     }
     write!(output, "</div>").unwrap();
 }
@@ -768,7 +762,7 @@ fn render_spectrum(
     )
     .unwrap();
 
-    for peak in &spectrum.spectrum {
+    for peak in spectrum.spectrum() {
         write!(
             output,
             "<span class='peak {}' style='--mz:{};--intensity:{};' data-label='{}'>{}</span>",
@@ -839,7 +833,7 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str, multiple_peptide
         }
     )
     .unwrap();
-    for peak in &spectrum.spectrum {
+    for peak in spectrum.spectrum() {
         if peak.annotation.is_empty() {
             write!(
                 output,
@@ -926,13 +920,13 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str, multiple_peptide
                         .map_or(String::new(), |v| v.to_string()),
                     peak.intensity,
                     peak.experimental_mz.value,
-                    annotation
-                        .mz(MassMode::Monoisotopic)
-                        .map_or(f64::NAN, |v| (v - peak.experimental_mz).abs().value),
-                    annotation
-                        .mz(MassMode::Monoisotopic)
-                        .map_or(f64::NAN, |v| ((v - peak.experimental_mz).abs() / v * 1e6)
-                            .value),
+                    (annotation.mz(MassMode::Monoisotopic) - peak.experimental_mz)
+                        .abs()
+                        .value,
+                    ((annotation.mz(MassMode::Monoisotopic) - peak.experimental_mz).abs()
+                        / annotation.mz(MassMode::Monoisotopic)
+                        * 1e6)
+                        .value,
                     annotation.charge.value,
                     series_number,
                     annotation.label
@@ -952,28 +946,28 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
     let mut intensity_row = String::new();
     let mut positions_row = String::new();
 
-    let total_intensity: f64 = spectrum.spectrum.iter().map(|p| p.intensity).sum();
+    let total_intensity: f64 = spectrum.spectrum().map(|p| p.intensity.0).sum();
     for (peptide_index, peptide) in spectrum.peptide.peptides().iter().enumerate() {
-        let precursor = if let Some(formula) = peptide.formula() {
-            if let (Some(mono), Some(avg)) = (formula.monoisotopic_mass(), formula.average_weight())
-            {
-                format!("{:.3} Da | avg: {:.3} Da", mono.value, avg.value)
-            } else {
-                "No defined mass for precursor".to_string()
-            }
-        } else {
-            "No defined molecular formula for precursor".to_string()
-        };
-        let (num_annotated, intensity_annotated) = spectrum
-            .spectrum
+        let precursor = peptide
+            .formulas()
             .iter()
+            .map(|f| {
+                format!(
+                    "{:.3} Da | avg: {:.3} Da",
+                    f.monoisotopic_mass().value,
+                    f.average_weight().value
+                )
+            })
+            .join(", ");
+        let (num_annotated, intensity_annotated) = spectrum
+            .spectrum()
             .filter(|p| {
                 p.annotation
                     .iter()
                     .any(|a| a.peptide_index == peptide_index)
             })
             .fold((0, 0.0), |(n, intensity), p| {
-                (n + 1, intensity + p.intensity)
+                (n + 1, intensity + p.intensity.0)
             });
         let total_fragments = fragments
             .iter()
@@ -981,11 +975,10 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
             .count();
         let percentage_fragments_found = num_annotated as f64 / total_fragments as f64 * 100.0;
         let percentage_peaks_annotated =
-            num_annotated as f64 / spectrum.spectrum.len() as f64 * 100.0;
+            num_annotated as f64 / spectrum.spectrum().len() as f64 * 100.0;
         let percentage_intensity_annotated = intensity_annotated / total_intensity * 100.0;
         let percentage_positions_covered = spectrum
-            .spectrum
-            .iter()
+            .spectrum()
             .flat_map(|p| {
                 p.annotation
                     .iter()
@@ -1007,7 +1000,7 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
         write!(
             peaks_row,
             "<td>{percentage_peaks_annotated:.2} % ({num_annotated}/{})</td>",
-            spectrum.spectrum.len()
+            spectrum.spectrum().count()
         )
         .unwrap();
         write!(
@@ -1031,16 +1024,15 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
         write!(output, "<td>Combined</td></tr>").unwrap();
         // Add a combined stats column
         let (num_annotated, intensity_annotated) = spectrum
-            .spectrum
-            .iter()
+            .spectrum()
             .filter(|p| !p.annotation.is_empty())
             .fold((0, 0.0), |(n, intensity), p| {
-                (n + 1, intensity + p.intensity)
+                (n + 1, intensity + p.intensity.0)
             });
-        let total_annotations: usize = spectrum.spectrum.iter().map(|a| a.annotation.len()).sum();
+        let total_annotations: usize = spectrum.spectrum().map(|a| a.annotation.len()).sum();
         let percentage_fragments_found = total_annotations as f64 / fragments.len() as f64 * 100.0;
         let percentage_peaks_annotated =
-            num_annotated as f64 / spectrum.spectrum.len() as f64 * 100.0;
+            num_annotated as f64 / spectrum.spectrum().len() as f64 * 100.0;
         let percentage_intensity_annotated = intensity_annotated / total_intensity * 100.0;
         write!(mass_row, "<td>-</td>").unwrap();
         write!(
@@ -1052,7 +1044,7 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
         write!(
             peaks_row,
             "<td>{percentage_peaks_annotated:.2} % ({num_annotated}/{})</td>",
-            spectrum.spectrum.len()
+            spectrum.spectrum().len()
         )
         .unwrap();
         write!(

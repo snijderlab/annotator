@@ -22,6 +22,7 @@ r#"<!DOCTYPE html>
 
 <body>
   <button class="print" onclick="window.print()">Export</button>
+  <!-- <button class="print" id="abort">Abort</button> -->
   <div class="input-flex">
     <button type="button" id="load-mgf-path">Load raw data file</button>
     <button type="button" id="load-clipboard">Load Clipboard</button>
@@ -77,8 +78,20 @@ r#"<!DOCTYPE html>
     <input type="number" id="spectrum-ppm" value="20" />
     <label for="spectrum-charge">Max charge </label>
     <input type="number" id="spectrum-charge" value="" placeholder="Empty takes peptide charge from raw data" />
-    <label for="noise-threshold">Intensity noise filter</label>
-    <input type="number" id="noise-threshold" value="" min="0" max="1" placeholder="Empty does not filter" />
+    
+    
+    <label for="noise-filter">Noise filter</label>
+    <div id="noise-filter" class="noise-filter select-input">
+      <select onchange="this.className=this.options[Number(this.value)].dataset.cls;">
+        <option value="0" data-cls="arg-0" data-value="None" selected>None</option>
+        <option value="1" data-cls="arg-1" data-value="Relative">Relative intensity</option>
+        <option value="2" data-cls="arg-1" data-value="Absolute">Absolute intensity</option>
+        <option value="3" data-cls="arg-2" data-value="TopX">TopX</option>
+      </select>
+      <input type="number" value="1" min="0">
+      <input type="number" value="1" min="0">
+    </div>
+
     <label for="spectrum-model">Model </label>
     <select id="spectrum-model">
     <option value="all">All</option>
@@ -97,7 +110,7 @@ r#"<!DOCTYPE html>
         write!(
             writer,
             r#"<label>{0}</label>
-          <div id="model-{0}-location" class="location">
+          <div id="model-{0}-location" class="location select-input">
         <select onchange="this.className=this.options[Number(this.value)].dataset.cls;">
           <option value="0" data-cls="arg-0" data-value="All">All</option>
           <option value="1" data-cls="arg-0" data-value="None" selected>None</option>
@@ -110,7 +123,7 @@ r#"<!DOCTYPE html>
           <input type="number" value="1" min="1">
           <input type="number" value="1" min="1">
           </div>
-          <input type="text" id="model-{0}-loss" value=""/>"#,
+          <input type="text" id="model-{0}-loss" value="" title="Supply all losses as +/- followed by the chemical formula, supply multiple by separating them by commas. Example: '+H2O,-H2O'."/>"#,
             ion
         )
         .unwrap();

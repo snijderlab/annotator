@@ -1,6 +1,7 @@
 const { invoke } = window.__TAURI__.tauri;
 
 const { listen } = window.__TAURI__.event
+// const controller = new AbortController();
 
 listen('tauri://file-drop', event => {
   document.querySelector("html").classList.remove("file-drop-hover");
@@ -21,6 +22,11 @@ listen('tauri://file-drop-hover', event => {
 listen('tauri://file-drop-cancelled', event => {
   document.querySelector("html").classList.remove("file-drop-hover");
 })
+
+// function abort() {
+//   console.log(controller);
+//   controller.abort("User manual abort");
+// }
 
 /**
 * @param e: Element
@@ -207,12 +213,29 @@ function get_location(id) {
   }
 }
 
+function get_noise_filter(id) {
+  let loc = document.querySelector(id);
+  let t = loc.children[0].options[Number(loc.children[0].value)].dataset.value;
+  if (["Relative", "Absolute"].includes(t)) {
+    let obj = {};
+    obj[t] = Number(loc.children[1].value);
+    return obj;
+  } else if (t == "TopX") {
+    let obj = {};
+    obj[t] = [Number(loc.children[1].value), Number(loc.children[2].value)];
+    return obj;
+  } else {
+    return t;
+  }
+}
+
 //import { SpectrumSetUp } from "./stitch-assets/script.js";
 async function annotate_spectrum() {
   document.querySelector("#annotate-button").classList.add("loading");
   document.querySelector("#peptide").innerText = document.querySelector("#peptide").innerText.trim();
   var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);
-  var noise_threshold = document.querySelector("#noise-threshold").value == "" ? null : Number(document.querySelector("#noise-threshold").value);
+  var noise_threshold = get_noise_filter("#noise-filter");
+  console.log(noise_threshold, charge);
   var model = [
     [get_location("#model-a-location"), document.querySelector("#model-a-loss").value],
     [get_location("#model-b-location"), document.querySelector("#model-b-loss").value],
@@ -225,7 +248,7 @@ async function annotate_spectrum() {
     [get_location("#model-z-location"), document.querySelector("#model-z-loss").value],
     [get_location("#model-z-location"), document.querySelector("#model-precursor-loss").value], // First element is discarded
   ];
-  invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), charge: charge, noise_threshold: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").innerText, cmodel: model }).then((result) => {
+  invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), charge: charge, filter: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").innerText, cmodel: model }).then((result) => {
     document.querySelector("#spectrum-results-wrapper").innerHTML = result[0];
     document.querySelector("#spectrum-fragments").innerHTML = result[1];
     document.querySelector("#spectrum-log").innerText = result[2];

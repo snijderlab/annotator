@@ -1,4 +1,4 @@
-use rustyms::{identifications::IdentifiedPeptide, RawSpectrum};
+use rustyms::{identification::IdentifiedPeptide, RawSpectrum};
 
 pub struct State {
     pub spectra: Vec<RawSpectrum>,
