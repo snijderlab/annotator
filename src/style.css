@@ -485,3 +485,9 @@ html.file-drop-hover::before {
   right: 0;
   background-color: color-mix(in oklab, var(--color-primary) 20%, #00000000);
 }
+
+/* Search */
+
+.match {
+  color: var(--color-primary);
+}

@@ -112,10 +112,17 @@ async fn search_peptide<'a>(text: &'a str, state: ModifiableState<'a>) -> Result
         .sorted_unstable_by(|a, b| b.1.cmp(&a.1))
         .filter(|(_, alignment, _)| alignment.normalised_score() > 0.0)
         .take(25)
-        .map(|(index, _, peptide)| {
+        .map(|(index, alignment, peptide)| {
+            let start = alignment.start_a();
+            let end = alignment.start_a() + alignment.len_a();
             vec![
                 index.to_string(),
-                peptide.peptide.to_string(),
+                format!(
+                    "{}<span class='match'>{}</span>{}",
+                    peptide.peptide.sub_peptide(..start).to_string(),
+                    peptide.peptide.sub_peptide(start..end).to_string(),
+                    peptide.peptide.sub_peptide(end..).to_string(),
+                ),
                 peptide
                     .score
                     .map(|score| score.to_string())

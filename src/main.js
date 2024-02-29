@@ -261,7 +261,7 @@ async function annotate_spectrum() {
     console.log(error);
     document.querySelector("#spectrum-error").classList.remove("hidden");
     document.querySelector("#spectrum-error").innerHTML = "<p class='title'>" + error.short_description + "</p><p class='description'>" + error.long_description + "</p>";
-    if (error.context.hasOwnProperty('Line')) {
+    if (error.context.hasOwnProperty('Line') && error.context.Line.line == document.querySelector("#peptide").innerText) {
       let Line = error.context.Line;
       document.querySelector("#peptide").innerHTML = Line.line.slice(0, Line.offset) + "<span class='error'>" + Line.line.slice(Line.offset, Line.offset + Line.length) + "</span>" + Line.line.slice(Line.offset + Line.length, Line.line.length);
     }
