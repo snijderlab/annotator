@@ -401,19 +401,17 @@ async fn annotate_spectrum<'a>(
     let peptide = rustyms::ComplexPeptide::pro_forma(peptide)?;
     let multiple_peptides = peptide.peptides().len() != 1;
     let mut spectrum = state.spectra[index].clone();
-    dbg!(&filter, &charge, &spectrum);
     match filter {
         NoiseFilter::None => (),
         NoiseFilter::Relative(i) => spectrum.relative_noise_filter(i),
         NoiseFilter::Absolute(i) => spectrum.absolute_noise_filter(i),
         NoiseFilter::TopX(size, t) => spectrum.top_x_filter(size, t),
     }
-    dbg!(&spectrum);
     let use_charge = charge.map_or(spectrum.charge, Charge::new::<e>);
     let fragments = peptide.generate_theoretical_fragments(use_charge, &model);
     let annotated = spectrum.annotate(peptide, &fragments, &model, MassMode::Monoisotopic);
     Ok((
-        render::annotated_spectrum(&annotated, "spectrum", &fragments),
+        render::annotated_spectrum(&annotated, "spectrum", &fragments, &model),
         render::fragment_table(&fragments, multiple_peptides),
         format!("{annotated:#?}\n{model:#?}"),
     ))

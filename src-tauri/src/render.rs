@@ -2,8 +2,9 @@ use std::{collections::HashSet, fmt::Write};
 
 use itertools::Itertools;
 use rustyms::{
-    fragment::*, spectrum::PeakSpectrum, system::*, AnnotatedSpectrum, ComplexPeptide,
-    LinearPeptide, MassMode, Modification, MolecularFormula, MultiChemical,
+    fragment::*, model::Location, spectrum::PeakSpectrum, system::*, AnnotatedSpectrum,
+    ComplexPeptide, Element, LinearPeptide, MassMode, Model, Modification, MolecularFormula,
+    MultiChemical,
 };
 
 use crate::html_builder::{HtmlElement, HtmlTag};
@@ -65,10 +66,12 @@ pub fn annotated_spectrum(
     spectrum: &AnnotatedSpectrum,
     id: &str,
     fragments: &[Fragment],
+    model: &Model,
 ) -> String {
     let mut output = String::new();
     let (limits, overview) = get_overview(spectrum);
-    let (graph_data, graph_boundaries) = spectrum_graph_boundaries(spectrum, fragments);
+    let (graph_data, graph_boundaries, ions) =
+        spectrum_graph_boundaries(spectrum, fragments, model);
     let multiple_peptides = !matches!(spectrum.peptide, ComplexPeptide::Singular(_));
     let multiple_glycans = spectrum.peptide.peptides().iter().any(|p| {
         p.sequence
@@ -96,7 +99,13 @@ pub fn annotated_spectrum(
         multiple_glycans,
     );
     // Spectrum graph
-    spectrum_graph(&mut output, &graph_boundaries, &graph_data, limits.0.value);
+    spectrum_graph(
+        &mut output,
+        &graph_boundaries,
+        &graph_data,
+        &ions,
+        limits.0.value,
+    );
     write!(output, "</div></div>").unwrap();
     // General stats
     general_stats(&mut output, spectrum, fragments);
@@ -156,15 +165,45 @@ type SpectrumGraphData = Vec<(
 fn spectrum_graph_boundaries(
     spectrum: &AnnotatedSpectrum,
     fragments: &[Fragment],
-) -> (SpectrumGraphData, Boundaries) {
+    model: &Model,
+) -> (SpectrumGraphData, Boundaries, String) {
+    // let n = if model.c.0 != Location::None {
+    //     FragmentType::c(_)
+    // } else if model.b.0 != Location::None {
+    //     FragmentType::b(_)
+    // } else {
+    //     FragmentType::a(_)
+    // };
+    // let c = if model.z.0 != Location::None {
+    //     FragmentType::z(_)
+    // } else if model.y.0 != Location::None {
+    //     FragmentType::y(_)
+    // } else {
+    //     FragmentType::x(_)
+    // };
+    fn filter(model: &Model, ion: &FragmentType) -> bool {
+        let n = if model.c.0 != Location::None {
+            matches!(ion, FragmentType::c(_))
+        } else if model.b.0 != Location::None {
+            matches!(ion, FragmentType::b(_))
+        } else {
+            matches!(ion, FragmentType::a(_))
+        };
+        let c = if model.z.0 != Location::None {
+            matches!(ion, FragmentType::z(_))
+        } else if model.y.0 != Location::None {
+            matches!(ion, FragmentType::y(_))
+        } else {
+            matches!(ion, FragmentType::x(_))
+        };
+        n || c
+    }
     let data: SpectrumGraphData = spectrum
         .spectrum()
         .map(|point| {
             let distance = fragments
                 .iter()
-                .filter(|frag| {
-                    matches!(frag.ion, FragmentType::c(_)) || matches!(frag.ion, FragmentType::z(_))
-                })
+                .filter(|frag| filter(model, &frag.ion))
                 .fold(
                     (
                         (
@@ -246,20 +285,35 @@ fn spectrum_graph_boundaries(
             )
         },
     );
-    (data, bounds)
+    let n = if model.c.0 != Location::None {
+        "c"
+    } else if model.b.0 != Location::None {
+        "b"
+    } else {
+        "a"
+    };
+    let c = if model.z.0 != Location::None {
+        "z"
+    } else if model.y.0 != Location::None {
+        "y"
+    } else {
+        "x"
+    };
+    (data, bounds, format!("{n}/{c}"))
 }
 
 fn spectrum_graph(
     output: &mut String,
     boundaries: &Boundaries,
     data: &SpectrumGraphData,
+    ions: &str,
     x_max: f64,
 ) {
     write!(output, "<div class='spectrum-graph-y-axis'>").unwrap();
     write!(output, "<span class='max'>{:.2}</span>", boundaries.2).unwrap();
     write!(
         output,
-        "<span class='title abs'>Absolute distance to closest c/z ion (Da)</span><span class='title rel'>Relative distance to closest c/z ion (ppm)</span>"
+        "<span class='title abs'>Absolute distance to closest {ions} ion (Da)</span><span class='title rel'>Relative distance to closest {ions} ion (ppm)</span>"
     )
     .unwrap();
     write!(output, "<span class='min'>{:.2}</span>", boundaries.3).unwrap();
@@ -404,18 +458,18 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                 .unwrap_or("*".to_string());
             let ion_str = shared_ion.unwrap_or("*");
             let pos_str = shared_pos
-                .map(|pos| pos.unwrap_or(String::new()))
+                .map(|pos| pos.unwrap_or_default())
                 .unwrap_or("*".to_string());
             let peptide_str = shared_peptide
                 .map(|pep| (pep + 1).to_string())
                 .unwrap_or("*".to_string());
             let glycan_str = shared_glycan
                 .unwrap_or(Some("*".to_string()))
-                .unwrap_or(String::new());
+                .unwrap_or_default();
             let loss_str = shared_loss
                 .map(|o| o.map(|n| n.hill_notation_html()))
                 .unwrap_or(Some("*".to_string()))
-                .unwrap_or(String::new());
+                .unwrap_or_default();
 
             let multi = if annotations.len() > 1 {
                 let mut multi = String::new();
@@ -702,6 +756,67 @@ fn render_linear_peptide(
     if peptide.c_term.is_some() {
         write!(output, "<span class='modification term'></span>").unwrap();
     }
+    if let Some(charge_carriers) = &peptide.charge_carriers {
+        // TODO: When rustyms is updated use the display impl here
+        write!(output, "<span class='charge-carriers'>/",).unwrap();
+        write!(
+            output,
+            "{}",
+            charge_carriers
+                .charge_carriers
+                .iter()
+                .map(|c| c.0)
+                .sum::<isize>()
+        )
+        .unwrap();
+        if !charge_carriers.charge_carriers.iter().all(|c| {
+            c.1 == MolecularFormula::new(&[(Element::H, None, 1), (Element::Electron, None, -1)])
+                .unwrap()
+        }) {
+            write!(output, "[").unwrap();
+            let mut first = true;
+            for (amount, formula) in &charge_carriers.charge_carriers {
+                if first {
+                    first = false;
+                } else {
+                    write!(output, ",").unwrap();
+                }
+                let electron_index = formula
+                    .elements()
+                    .iter()
+                    .position(|el| el.0 == Element::Electron);
+                let charge = electron_index.map(|ei| match -formula.elements()[ei].2 {
+                    1 => "+".to_string(),
+                    -1 => "-".to_string(),
+                    n => n.to_string(),
+                });
+                if let (Some(electron_index), Some(charge), 2) =
+                    (electron_index, &charge, formula.elements().len())
+                {
+                    let element_index = 1 - electron_index;
+                    write!(
+                        output,
+                        "{}{}{}",
+                        amount,
+                        formula.elements()[element_index].0,
+                        charge
+                    )
+                    .unwrap();
+                } else {
+                    write!(
+                        output,
+                        "{}({}){}",
+                        amount,
+                        formula,
+                        charge.unwrap_or_default()
+                    )
+                    .unwrap();
+                }
+            }
+            write!(output, "]").unwrap();
+        }
+        write!(output, "</span>").unwrap();
+    }
     write!(output, "</div>").unwrap();
 }
 
@@ -874,7 +989,7 @@ fn spectrum_table(spectrum: &AnnotatedSpectrum, table_id: &str, multiple_peptide
                 } else if let FragmentType::InternalGlycan(breakages) = &annotation.ion {
                     (
                         breakages
-                            .get(0)
+                            .first()
                             .map(|b| b.position().attachment())
                             .unwrap_or("-".to_string()),
                         "-".to_string(),

@@ -18,7 +18,7 @@ itertools = "0.12"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.2", features = ["dialog-open", "updater"] }
-rustyms = { version = "0.8", default-features = false, features = [
+rustyms = { version = "0.8.2", default-features = false, features = [
     "identification",
     "align",
 ] }
