@@ -369,9 +369,17 @@ fn spectrum_graph(
 fn get_classes(annotations: &[Fragment]) -> String {
     let mut output = Vec::new();
     let mut shared_ion = annotations.get(0).map(|a| a.ion.to_string());
+    let mut first_peptide_index = None;
     for annotation in annotations {
         output.push(annotation.ion.label().to_string());
         output.push(format!("p{}", annotation.peptide_index));
+        if let Some(num) = first_peptide_index {
+            if num != annotation.peptide_index {
+                output.push("mp".to_string());
+            }
+        } else {
+            first_peptide_index = Some(annotation.peptide_index);
+        }
         if let Some(pos) = annotation.ion.position() {
             output.push(format!(
                 "p{}-{}",
@@ -670,13 +678,15 @@ fn create_ion_legend(output: &mut String, id: &str) {
             <span class='ion v' tabindex='0'>v</span>
         </div>
         <div class='side'>
-            <span class='ion precursor'>Precursor</span>
-            <span class='ion multi'>Multi</span>
+            <span class='ion precursor' tabindex='0'>Precursor</span>
+            <span class='ion multi mp' tabindex='0'>Multi</span>
             <span class='other'>Other</span>
         </div>
     </div>
-    <input id='{id}_unassigned' type='checkbox' checked class='unassigned'/>
-    <label for='{id}_unassigned' class='unassigned' tabindex='0'>Unassigned</label>
+    <input id='{id}_unassigned' type='checkbox' checked class='show-unassigned'/>
+    <label for='{id}_unassigned' class='show-unassigned' tabindex='0'>Unassigned</label>
+    <input id='{id}_legend_peptide' type='checkbox' class='legend-peptide'/>
+    <label for='{id}_legend_peptide' class='legend-peptide' tabindex='0'>Peptide</label>
 
     <label class='has-slider label'>
         Ion
@@ -906,7 +916,7 @@ fn render_spectrum(
     for peak in fragments {
         write!(
             output,
-            "<span class='fragment peak {}' style='--mz:{};' data-label='{}'>{}</span>",
+            "<span class='theoretical peak {}' style='--mz:{};' data-label='{}'>{}</span>",
             get_classes(&[peak.clone()]),
             peak.mz(MassMode::Monoisotopic).value,
             (peak.mz(MassMode::Monoisotopic).value * 10.0).round() / 10.0,
