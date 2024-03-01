@@ -154,8 +154,20 @@ r#"<!DOCTYPE html>
       <input id='spectrum-spectrum-stroke' class='stroke-spectrum' type='text' value='2px'/>
       <input id='spectrum-compact' class='compact' type='checkbox'/>
       <label for='spectrum-compact'>Compact peptide</label>
-      <input id='show-theoretical' class='show-theoretical' type='checkbox'/>
-      <label for='show-theoretical'>Show theoretical spectrum</label>
+      <input id='theoretical' class='theoretical' type='checkbox'/>
+      <label for='theoretical'>Theoretical spectrum</label>
+      <label for='colour'>Colour peptide</label>
+      <select name='colour' id='colour'>
+        <option value='red'>Red</option>
+        <option value='green'>Green</option>
+        <option value='blue'>Blue</option>
+        <option value='yellow'>Yellow</option>
+        <option value='purple'>Purple</option>
+        <option value='remove'>Remove</option>
+      </select>
+      <input id='apply-colour' class='apply-colour' type='checkbox'/>
+      <label for='apply-colour'>Apply</label>
+      <button id='clear-colour' class='clear-colour'>Clear</button>
     </div>
     <div class='settings spectrum-graph-setup'><p>Spectrum graph</p>
       <input type='radio' name='y-axis' id='absolute' value='absolute' checked/><label for='absolute'>Absolute</label>
