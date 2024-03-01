@@ -92,6 +92,7 @@ pub fn annotated_spectrum(
     render_spectrum(
         &mut output,
         spectrum,
+        fragments,
         &graph_boundaries,
         limits,
         "first",
@@ -823,6 +824,7 @@ fn render_linear_peptide(
 fn render_spectrum(
     output: &mut String,
     spectrum: &AnnotatedSpectrum,
+    fragments: &[Fragment],
     boundaries: &Boundaries,
     limits: (MassOverCharge, f64, f64),
     selection: &str,
@@ -886,6 +888,17 @@ fn render_spectrum(
             peak.intensity,
             (peak.experimental_mz.value * 10.0).round() / 10.0,
             get_label(&peak.annotation, multiple_peptides, multiple_glycans),
+        )
+        .unwrap();
+    }
+    for peak in fragments {
+        write!(
+            output,
+            "<span class='fragment peak {}' style='--mz:{};' data-label='{}'>{}</span>",
+            get_classes(&[peak.clone()]),
+            peak.mz(MassMode::Monoisotopic).value,
+            (peak.mz(MassMode::Monoisotopic).value * 10.0).round() / 10.0,
+            get_label(&[peak.clone()], multiple_peptides, multiple_glycans),
         )
         .unwrap();
     }

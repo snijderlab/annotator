@@ -154,6 +154,8 @@ r#"<!DOCTYPE html>
       <input id='spectrum-spectrum-stroke' class='stroke-spectrum' type='text' value='2px'/>
       <input id='spectrum-compact' class='compact' type='checkbox'/>
       <label for='spectrum-compact'>Compact peptide</label>
+      <input id='show-theoretical' class='show-theoretical' type='checkbox'/>
+      <label for='show-theoretical'>Show theoretical spectrum</label>
     </div>
     <div class='settings spectrum-graph-setup'><p>Spectrum graph</p>
       <input type='radio' name='y-axis' id='absolute' value='absolute' checked/><label for='absolute'>Absolute</label>
