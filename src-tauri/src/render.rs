@@ -660,7 +660,8 @@ fn create_ion_legend(output: &mut String, id: &str) {
             <span class='ion y' tabindex='0'>y</span>
             <span class='ion z' tabindex='0'>z</span>
             <span class='ion c-term' tabindex='0'>C-term</span>
-        </div><div class='bottom'>
+        </div>
+        <div class='bottom'>
             <span class='ion n-term' tabindex='0'>N-term</span>
             <span class='ion a' tabindex='0'>a</span>
             <span class='ion b' tabindex='0'>b</span>
@@ -668,8 +669,12 @@ fn create_ion_legend(output: &mut String, id: &str) {
             <span class='ion d' tabindex='0'>d</span>
             <span class='ion v' tabindex='0'>v</span>
         </div>
+        <div class='side'>
+            <span class='ion precursor'>Precursor</span>
+            <span class='ion multi'>Multi</span>
+            <span class='other'>Other</span>
+        </div>
     </div>
-    <span class='other'>Other</span>
     <input id='{id}_unassigned' type='checkbox' checked class='unassigned'/>
     <label for='{id}_unassigned' class='unassigned' tabindex='0'>Unassigned</label>
 
