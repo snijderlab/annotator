@@ -139,7 +139,8 @@ r#"<!DOCTYPE html>
     </div>
   <div id="spectrum-error" class="hidden"></div>
   <div id='spectrum-wrapper' class="spectrum hidden" onload='SpectrumSetUp()'>
-    <div class='settings render-setup'><p>Render setup</p>
+    <fieldset class='collapsable collapsed settings render-setup'>
+      <legend>Graphics settings</legend>
       <label for='spectrum-width'>Width</label>
       <input id='spectrum-width' class='width' type='text' value='100%'/>
       <label for='spectrum-height'>Height</label>
@@ -152,38 +153,85 @@ r#"<!DOCTYPE html>
       <input id='spectrum-fs-spectrum' class='fs-spectrum' type='text' value='1rem'/>
       <label for='spectrum-spectrum-stroke'>Spectrum stroke width</label>
       <input id='spectrum-spectrum-stroke' class='stroke-spectrum' type='text' value='2px'/>
-      <input id='spectrum-compact' class='compact' type='checkbox'/>
-      <label for='spectrum-compact' title='Display the peptide ion support in a more compact way' tabindex='0'>Compact peptide</label>
-      <input id='theoretical' class='theoretical' type='checkbox'/>
-      <label for='theoretical' title='Show the theoretical peptide spectrum on the x axis' tabindex='0'>Theoretical spectrum</label>
+    </fieldset>
+
+    <fieldset class='collapsable collapsed settings spectrum-graph-setup'>
+      <legend>Spectrum graph settings</legend>
+
+      <div class='select-box' id='spectrum-graph-type'>
+        <input type='radio' name='spectrum-graph-type' value='absolute' id='spectrum-graph-type-absolute' checked>
+        <label for='spectrum-graph-type-absolute'>Absolute</label>
+        <input type='radio' name='spectrum-graph-type' value='relative' id='spectrum-graph-type-relative'>
+        <label for='spectrum-graph-type-relative'>Relative</label>
+      </div>
+
+      <input type='checkbox' name='intensity' id='intensity' value='intensity' switch/>
+      <label for='intensity'>Intensity</label>
       
-      <input id='colour-red' class='colour' data-value='red' type='checkbox'/>
-      <label for='colour-red' class='colour red' title='Annotate regions in a peptide in red' tabindex='0'></label>
-      <input id='colour-green' class='colour' data-value='green' type='checkbox'/>
-      <label for='colour-green' class='colour green' title='Annotate regions in a peptide in green' tabindex='0'></label>
-      <input id='colour-blue' class='colour' data-value='blue' type='checkbox'/>
-      <label for='colour-blue' class='colour blue' title='Annotate regions in a peptide in blue' tabindex='0'></label>
-      <input id='colour-yellow' class='colour' data-value='yellow' type='checkbox'/>
-      <label for='colour-yellow' class='colour yellow' title='Annotate regions in a peptide in yellow' tabindex='0'></label>
-      <input id='colour-purple'  class='colour' data-value='purple' type='checkbox'/>
-      <label for='colour-purple' class='colour purple' title='Annotate regions in a peptide in purple' tabindex='0'></label>
-      <input id='colour-remove' class='colour' data-value='remove' type='checkbox'/>
-      <label for='colour-remove' class='colour remove' title='Remove the annotation for regions in a peptide' tabindex='0'>X</label>
-      <button id='clear-colour' class='clear-colour' title='remove all annotations on (all) peptide(s)' tabindex='0'>Clear</button>
-    </div>
-    <div class='settings spectrum-graph-setup'><p>Spectrum graph</p>
-      <input type='radio' name='y-axis' id='absolute' value='absolute' checked/><label for='absolute'>Absolute</label>
-      <input type='radio' name='y-axis' id='relative' value='relative'/><label for='relative'>Relative</label>
-      <input type='checkbox' name='intensity' id='intensity' value='intensity'/><label for='intensity'>Intensity</label>
       <div class='manual-zoom'>
         <label for='y-min'>Y Min</label>
         <input id='y-min' class='y-min' type='number' value='-20'/>
         <label for='y-max'>Y Max</label>
         <input id='y-max' class='y-max' type='number' value='20'/>
       </div>
-    </div>
-    <div class='wrapper show-unassigned'  id="spectrum-results-wrapper">
-    </div>
+    </fieldset>
+
+    <fieldset class='settings'>
+      <legend>Peptide settings</legend>
+      <input id='spectrum-compact' class='compact' type='checkbox' switch/>
+      <label for='spectrum-compact' title='Display the peptide ion support in a more compact way' tabindex='0'>Compact peptide</label>
+
+      <input id='colour-highlight' class='colour' data-value='highlight' type='checkbox'/>
+      <label for='colour-highlight' class='colour highlight' title='Highlight a regions in a peptide' tabindex='0'>Highlight</label>
+
+      <div class='peptide-annotation-colours'>
+        <input id='colour-red' class='colour' data-value='red' type='checkbox'/>
+        <label for='colour-red' class='colour red' title='Annotate regions in a peptide in red' tabindex='0'></label>
+        <input id='colour-green' class='colour' data-value='green' type='checkbox'/>
+        <label for='colour-green' class='colour green' title='Annotate regions in a peptide in green' tabindex='0'></label>
+        <input id='colour-blue' class='colour' data-value='blue' type='checkbox'/>
+        <label for='colour-blue' class='colour blue' title='Annotate regions in a peptide in blue' tabindex='0'></label>
+        <input id='colour-yellow' class='colour' data-value='yellow' type='checkbox'/>
+        <label for='colour-yellow' class='colour yellow' title='Annotate regions in a peptide in yellow' tabindex='0'></label>
+        <input id='colour-purple'  class='colour' data-value='purple' type='checkbox'/>
+        <label for='colour-purple' class='colour purple' title='Annotate regions in a peptide in purple' tabindex='0'></label>
+        <input id='colour-remove' class='colour' data-value='remove' type='checkbox'/>
+      </div>
+
+      <label for='colour-remove' class='colour remove' title='Remove the annotation for regions in a peptide' tabindex='0'>X</label>
+      <button id='clear-colour' class='clear-colour' title='remove all annotations on (all) peptide(s)' tabindex='0'>Clear</button>
+    </fieldset>
+
+    <fieldset class='settings'>
+      <legend>Spectrum settings</legend>
+      <input id='theoretical' class='theoretical' type='checkbox' switch/>
+      <label for='theoretical' title='Show the theoretical peptide spectrum on the x axis' tabindex='0'>Theoretical spectrum</label>
+      <input id='unassigned' class='unassigned' type='checkbox' switch checked/>
+      <label for='unassigned' title='Show the unassigned peaks in the spectrum' tabindex='0'>Unassigned</label>
+
+      <div class='select-box' id='peak-colour'>
+        <input type='radio' name='peak-colour' value='ion' id='peak-colour-ion' checked>
+        <label for='peak-colour-ion'>Ion</label>
+        <input type='radio' name='peak-colour' value='peptide' id='peak-colour-peptide'>
+        <label for='peak-colour-peptide'>Peptide</label>
+      </div>
+
+      <label class='has-slider label'>
+        Show labels for top:
+        <input id='spectrum_label' type='range' min='0' max='100' value='100'/>
+        <input id='spectrum_label_value' type='number' min='0' max='100' value='100'/>
+        %
+      </label>
+      
+      <label class='has-slider masses'>
+        Show masses for top:
+        <input id='spectrum_masses' type='range' min='0' max='100' value='0'/>
+        <input id='spectrum_masses_value' type='number' min='0' max='100' value='0'/>
+        %
+      </label>
+      <p>zoom stuff</p>
+    </fieldset>
+    <div class='wrapper show-unassigned'  id="spectrum-results-wrapper"></div>
   </div>
   <details>
   <summary>Logs</summary>
