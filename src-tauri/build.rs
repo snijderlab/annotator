@@ -153,23 +153,23 @@ r#"<!DOCTYPE html>
       <label for='spectrum-spectrum-stroke'>Spectrum stroke width</label>
       <input id='spectrum-spectrum-stroke' class='stroke-spectrum' type='text' value='2px'/>
       <input id='spectrum-compact' class='compact' type='checkbox'/>
-      <label for='spectrum-compact'>Compact peptide</label>
+      <label for='spectrum-compact' title='Display the peptide ion support in a more compact way'>Compact peptide</label>
       <input id='theoretical' class='theoretical' type='checkbox'/>
-      <label for='theoretical'>Theoretical spectrum</label>
+      <label for='theoretical' title='Show the theoretical peptide spectrum on the x axis'>Theoretical spectrum</label>
       
       <input id='colour-red' class='colour' data-value='red' type='checkbox'/>
-      <label for='colour-red' class='colour red'></label>
+      <label for='colour-red' class='colour red' title='Annotate regions in a peptide in red'></label>
       <input id='colour-green' class='colour' data-value='green' type='checkbox'/>
-      <label for='colour-green' class='colour green'></label>
+      <label for='colour-green' class='colour green' title='Annotate regions in a peptide in green'></label>
       <input id='colour-blue' class='colour' data-value='blue' type='checkbox'/>
-      <label for='colour-blue' class='colour blue'></label>
+      <label for='colour-blue' class='colour blue' title='Annotate regions in a peptide in blue'></label>
       <input id='colour-yellow' class='colour' data-value='yellow' type='checkbox'/>
-      <label for='colour-yellow' class='colour yellow'></label>
+      <label for='colour-yellow' class='colour yellow' title='Annotate regions in a peptide in yellow'></label>
       <input id='colour-purple'  class='colour' data-value='purple' type='checkbox'/>
-      <label for='colour-purple' class='colour purple'></label>
+      <label for='colour-purple' class='colour purple' title='Annotate regions in a peptide in purple'></label>
       <input id='colour-remove' class='colour' data-value='remove' type='checkbox'/>
-      <label for='colour-remove' class='colour remove'>X</label>
-      <button id='clear-colour' class='clear-colour'>Clear</button>
+      <label for='colour-remove' class='colour remove' title='Remove the annotation for regions in a peptide'>X</label>
+      <button id='clear-colour' class='clear-colour' title='remove all annotations on (all) peptide(s)'>Clear</button>
     </div>
     <div class='settings spectrum-graph-setup'><p>Spectrum graph</p>
       <input type='radio' name='y-axis' id='absolute' value='absolute' checked/><label for='absolute'>Absolute</label>
