@@ -156,17 +156,19 @@ r#"<!DOCTYPE html>
       <label for='spectrum-compact'>Compact peptide</label>
       <input id='theoretical' class='theoretical' type='checkbox'/>
       <label for='theoretical'>Theoretical spectrum</label>
-      <label for='colour'>Colour peptide</label>
-      <select name='colour' id='colour'>
-        <option value='red'>Red</option>
-        <option value='green'>Green</option>
-        <option value='blue'>Blue</option>
-        <option value='yellow'>Yellow</option>
-        <option value='purple'>Purple</option>
-        <option value='remove'>Remove</option>
-      </select>
-      <input id='apply-colour' class='apply-colour' type='checkbox'/>
-      <label for='apply-colour'>Apply</label>
+      
+      <input id='colour-red' class='colour' data-value='red' type='checkbox'/>
+      <label for='colour-red' class='colour red'></label>
+      <input id='colour-green' class='colour' data-value='green' type='checkbox'/>
+      <label for='colour-green' class='colour green'></label>
+      <input id='colour-blue' class='colour' data-value='blue' type='checkbox'/>
+      <label for='colour-blue' class='colour blue'></label>
+      <input id='colour-yellow' class='colour' data-value='yellow' type='checkbox'/>
+      <label for='colour-yellow' class='colour yellow'></label>
+      <input id='colour-purple'  class='colour' data-value='purple' type='checkbox'/>
+      <label for='colour-purple' class='colour purple'></label>
+      <input id='colour-remove' class='colour' data-value='remove' type='checkbox'/>
+      <label for='colour-remove' class='colour remove'>X</label>
       <button id='clear-colour' class='clear-colour'>Clear</button>
     </div>
     <div class='settings spectrum-graph-setup'><p>Spectrum graph</p>
