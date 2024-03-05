@@ -67,7 +67,7 @@ pub fn annotated_spectrum(
     id: &str,
     fragments: &[Fragment],
     model: &Model,
-) -> String {
+) -> (String, Limits) {
     let mut output = String::new();
     let (limits, overview) = get_overview(spectrum);
     let (graph_data, graph_boundaries, ions) =
@@ -91,7 +91,7 @@ pub fn annotated_spectrum(
         spectrum,
         fragments,
         &graph_boundaries,
-        limits,
+        &limits,
         "first",
         multiple_peptides,
         multiple_glycans,
@@ -102,7 +102,7 @@ pub fn annotated_spectrum(
         &graph_boundaries,
         &graph_data,
         &ions,
-        limits.0.value,
+        limits.mz.value,
     );
     write!(output, "</div></div>").unwrap();
     // General stats
@@ -116,7 +116,7 @@ pub fn annotated_spectrum(
     );
 
     //write!(output, "</div>").unwrap();
-    output
+    (output, limits)
 }
 
 type Boundaries = (f64, f64, f64, f64, f64, f64, f64, f64, f64, f64);
@@ -564,33 +564,15 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
     }
 }
 
-fn spectrum_graph_header(
-    output: &mut String,
-    boundaries: &(f64, f64, f64, f64, f64, f64, f64, f64, f64, f64),
-) -> std::fmt::Result {
-    write!(output, "<input type='radio' name='y-axis' id='absolute' value='absolute' checked/><label for='absolute'>Absolute</label>")?;
-    write!(output, "<input type='radio' name='y-axis' id='relative' value='relative'/><label for='relative'>Relative</label>")?;
-    write!(output, "<input type='checkbox' name='intensity' id='intensity' value='intensity'/><label for='intensity'>Intensity</label>")?;
-    write!(output, "<div class='manual-zoom'>")?;
-    write!(output, "<label for='y-min'>Y Min</label>")?;
-    write!(
-        output,
-        "<input id='y-min' class='y-min' type='number' value='{}'/>",
-        boundaries.3
-    )?;
-    write!(output, "<label for='y-max'>Y Max</label>")?;
-    write!(
-        output,
-        "<input id='y-max' class='y-max' type='number' value='{}'/>",
-        boundaries.2
-    )?;
-    write!(output, "</div>")?;
-    Ok(())
-}
-
 type PositionCoverage = Vec<Vec<HashSet<FragmentType>>>;
 
-fn get_overview(spectrum: &AnnotatedSpectrum) -> ((MassOverCharge, f64, f64), PositionCoverage) {
+pub struct Limits {
+    pub mz: MassOverCharge,
+    pub intensity: f64,
+    pub intensity_unassigned: f64,
+}
+
+fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
     let mut output: PositionCoverage = spectrum
         .peptide
         .peptides()
@@ -613,11 +595,11 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> ((MassOverCharge, f64, f64), Po
         }
     }
     (
-        (
-            max_mz * 1.01,
-            max_intensity.max(max_intensity_unassigned) * 1.01,
-            max_intensity_unassigned * 1.01,
-        ),
+        Limits {
+            mz: max_mz * 1.01,
+            intensity: max_intensity * 1.01,
+            intensity_unassigned: max_intensity_unassigned * 1.01,
+        },
         output,
     )
 }
@@ -760,7 +742,7 @@ fn render_spectrum(
     spectrum: &AnnotatedSpectrum,
     fragments: &[Fragment],
     boundaries: &Boundaries,
-    limits: (MassOverCharge, f64, f64),
+    limits: &Limits,
     selection: &str,
     multiple_peptides: bool,
     multiple_glycans: bool,
@@ -768,7 +750,7 @@ fn render_spectrum(
     write!(
         output,
         "<div class='canvas-wrapper label' aria-hidden='true' style='--min-mz:0;--max-mz:{0};--max-intensity:{1};--y-max:{2};--y-min:{3};--abs-max-initial:{2};--abs-min-initial:{3};--rel-max-initial:{4};--rel-min-initial:{5};' data-initial-max-mz='{0}' data-initial-max-intensity='{1}' data-initial-max-intensity-assigned='{6}'>",
-        limits.0.value, limits.2, boundaries.2, boundaries.3, boundaries.0, boundaries.1, limits.1
+        limits.mz.value, limits.intensity_unassigned, boundaries.2, boundaries.3, boundaries.0, boundaries.1, limits.intensity
     )
     .unwrap();
     write!(
@@ -779,25 +761,25 @@ fn render_spectrum(
     write!(
         output,
         "<span class='tick'><span>{:.2}</span></span>",
-        limits.2 / 4.0
+        limits.intensity_unassigned / 4.0
     )
     .unwrap();
     write!(
         output,
         "<span class='tick'><span>{:.2}</span></span>",
-        limits.2 / 2.0
+        limits.intensity_unassigned / 2.0
     )
     .unwrap();
     write!(
         output,
         "<span class='tick'><span>{:.2}</span></span>",
-        3.0 * limits.2 / 4.0
+        3.0 * limits.intensity_unassigned / 4.0
     )
     .unwrap();
     write!(
         output,
         "<span class='tick'><span class='last'>{:.2}</span></span>",
-        limits.2
+        limits.intensity_unassigned
     )
     .unwrap();
     write!(output, "</div>").unwrap();
@@ -845,25 +827,25 @@ fn render_spectrum(
     write!(
         output,
         "<span class='tick'><span>{:.2}</span></span>",
-        limits.0.value / 4.0
+        limits.mz.value / 4.0
     )
     .unwrap();
     write!(
         output,
         "<span class='tick'><span>{:.2}</span></span>",
-        limits.0.value / 2.0
+        limits.mz.value / 2.0
     )
     .unwrap();
     write!(
         output,
         "<span class='tick'><span>{:.2}</span></span>",
-        3.0 * limits.0.value / 4.0
+        3.0 * limits.mz.value / 4.0
     )
     .unwrap();
     write!(
         output,
         "<span class='tick'><span class='last'>{:.2}</span></span>",
-        limits.0.value
+        limits.mz.value
     )
     .unwrap();
     write!(output, "</div>").unwrap();

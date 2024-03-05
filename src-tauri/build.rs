@@ -138,24 +138,27 @@ r#"<!DOCTYPE html>
       <button id="annotate-button" type="button" class="col-2">Annotate</button>
     </div>
   <div id="spectrum-error" class="hidden"></div>
-  <div id='spectrum-wrapper' class="spectrum" onload='SpectrumSetUp()'>
+  <div id='spectrum-wrapper' class="spectrum show-unassigned hidden" onload='SpectrumSetUp()'>
     <div class='all-settings'>
-      <fieldset class='collapsable collapsed settings render-setup'>
+      <fieldset class='settings graphics-settings'>
         <legend>Graphics settings</legend>
-        <label class='row' for='spectrum-width'><span>Width</span><input id='spectrum-width' class='width' type='text' value='100%'/></label>
-        <label class='row' for='spectrum-height'><span>Height</span><input id='spectrum-height' class='height' type='text' value='250px'/></label>
-        <label class='row' for='spectrum-fs-peptide'><span>Peptide font size</span><input id='spectrum-fs-peptide' class='fs-peptide' type='text' value='1.25rem'/></label>
-        <label class='row' for='spectrum-peptide-stroke'><span>Peptide stroke width</span><input id='spectrum-peptide-stroke' class='stroke-peptide' type='text' value='2px'/></label>
-        <label class='row' for='spectrum-fs-spectrum'><span>Spectrum font size</span><input id='spectrum-fs-spectrum' class='fs-spectrum' type='text' value='1rem'/></label>
-        <label class='row' for='spectrum-spectrum-stroke'><span>Spectrum stroke width</span><input id='spectrum-spectrum-stroke' class='stroke-spectrum' type='text' value='2px'/></label>
+        <label class='row align' for='spectrum-width'><span>Width</span><input id='spectrum-width' class='width' type='text' value='100%'/></label>
+        <label class='row align' for='spectrum-height'><span>Height</span><input id='spectrum-height' class='height' type='text' value='250px'/></label>
+        <label class='row align' for='spectrum-fs-peptide'><span>Peptide font size</span><input id='spectrum-fs-peptide' class='fs-peptide' type='text' value='1.25rem'/></label>
+        <label class='row align' for='spectrum-peptide-stroke'><span>Peptide stroke width</span><input id='spectrum-peptide-stroke' class='stroke-peptide' type='text' value='2px'/></label>
+        <label class='row align' for='spectrum-fs-spectrum'><span>Spectrum font size</span><input id='spectrum-fs-spectrum' class='fs-spectrum' type='text' value='1rem'/></label>
+        <label class='row align' for='spectrum-spectrum-stroke'><span>Spectrum stroke width</span><input id='spectrum-spectrum-stroke' class='stroke-spectrum' type='text' value='2px'/></label>
       </fieldset>
 
-      <fieldset class='collapsable collapsed settings spectrum-graph-setup'>
+      <fieldset class='settings spectrum-graph-settings'>
         <legend>Spectrum graph settings</legend>
 
-        <div class='select-box' id='spectrum-graph-type'>
-          <label for='spectrum-graph-type-absolute' tabindex='0'><input type='radio' name='spectrum-graph-type' value='absolute' id='spectrum-graph-type-absolute' checked>Absolute</label>
-          <label for='spectrum-graph-type-relative' tabindex='0'><input type='radio' name='spectrum-graph-type' value='relative' id='spectrum-graph-type-relative'>Relative</label>
+        <div class='row'>
+          <span class='title'>Y axis mode</span>
+          <div class='select-box' id='spectrum-graph-type'>
+            <label for='spectrum-graph-type-absolute' tabindex='0'><input type='radio' name='spectrum-graph-type' value='absolute' id='spectrum-graph-type-absolute' checked>Absolute</label>
+            <label for='spectrum-graph-type-relative' tabindex='0'><input type='radio' name='spectrum-graph-type' value='relative' id='spectrum-graph-type-relative'>Relative</label>
+          </div>
         </div>
 
         <label for='intensity'><input type='checkbox' name='intensity' id='intensity' value='intensity' switch/>Intensity</label>
@@ -163,67 +166,73 @@ r#"<!DOCTYPE html>
         <div class='manual-zoom'>
           <span>Y</span>
           <label for='y-min'>min</label>
-          <input id='y-min' class='y-min' type='number' value='-20'/>
+          <input id='spectrum-graph-y-min' class='y-min' type='number' value='-20'/>
           <label for='y-max'>max</label>
-          <input id='y-max' class='y-max' type='number' value='20'/>
+          <input id='spectrum-graph-y-max' class='y-max' type='number' value='20'/>
         </div>
       </fieldset>
 
-      <fieldset class='settings'>
+      <fieldset class='settings peptide-settings'>
         <legend>Peptide settings</legend>
         <label for='spectrum-compact' title='Display the peptide ion support in a more compact way'><input id='spectrum-compact' class='compact' type='checkbox' switch/>Compact peptide</label>
 
-        <div class='select-box' id='highlight'>
-          <label title='Highlight a regions in a peptide' tabindex='0'><input type='radio' name='highlight' value='highlight' id='highlight-highlight' checked>Highlight</label>
-          <label title='Annotate regions in a peptide in red' class='colour' tabindex='0'><input type='radio' name='highlight' value='red' id='highlight-red'></label>
-          <label title='Annotate regions in a peptide in green' class='colour' tabindex='0'><input type='radio' name='highlight' value='green' id='highlight-green'></label>
-          <label title='Annotate regions in a peptide in blue' class='colour' tabindex='0'><input type='radio' name='highlight' value='blue' id='highlight-blue'></label>
-          <label title='Annotate regions in a peptide in yellow' class='colour' tabindex='0'><input type='radio' name='highlight' value='yellow' id='highlight-yellow'></label>
-          <label title='Annotate regions in a peptide in purple' class='colour' tabindex='0'><input type='radio' name='highlight' value='purple' id='highlight-purple'></label>
-          <label title='Remove the annotation for regions in a peptide' tabindex='0'><input type='radio' name='highlight' value='remove' id='highlight-remove'>X</label>
+        <div class='row'>
+          <span class='title'>Highlight</span>
+          <div class='select-box' id='highlight'>
+            <label title='Highlight a region in a peptide, while not overriding the ion colours' tabindex='0'><input type='radio' name='highlight' value='highlight' id='highlight-highlight' checked>Default</label>
+            <label title='Annotate regions in a peptide in red' class='colour' tabindex='0'><input type='radio' name='highlight' value='red' id='highlight-red'></label>
+            <label title='Annotate regions in a peptide in green' class='colour' tabindex='0'><input type='radio' name='highlight' value='green' id='highlight-green'></label>
+            <label title='Annotate regions in a peptide in blue' class='colour' tabindex='0'><input type='radio' name='highlight' value='blue' id='highlight-blue'></label>
+            <label title='Annotate regions in a peptide in yellow' class='colour' tabindex='0'><input type='radio' name='highlight' value='yellow' id='highlight-yellow'></label>
+            <label title='Annotate regions in a peptide in purple' class='colour' tabindex='0'><input type='radio' name='highlight' value='purple' id='highlight-purple'></label>
+            <label title='Remove the annotation for regions in a peptide' tabindex='0'><input type='radio' name='highlight' value='remove' id='highlight-remove'>X</label>
+          </div>
         </div>
 
         <button id='clear-colour' class='clear-colour' title='Remove all annotations on all peptides' tabindex='0'>Clear</button>
       </fieldset>
 
-      <fieldset class='settings'>
+      <fieldset class='settings spectrum-settings'>
         <legend>Spectrum settings</legend>
         
         <label for='theoretical' title='Show the theoretical peptide spectrum on the x axis'><input id='theoretical' class='theoretical' type='checkbox' switch/>Theoretical spectrum</label>
         
         <label for='unassigned' title='Show the unassigned peaks in the spectrum'><input id='unassigned' class='unassigned' type='checkbox' switch checked/>Unassigned</label>
 
-        <div class='select-box' id='peak-colour'>
-          <label for='peak-colour-ion' tabindex='0'><input type='radio' name='peak-colour' value='ion' id='peak-colour-ion' checked>Ion</label>
-          <label for='peak-colour-peptide' tabindex='0'><input type='radio' name='peak-colour' value='peptide' id='peak-colour-peptide'>Peptide</label>
+        <div class='row'>
+          <span class='title'>Ion colouration mode</span>
+          <div class='select-box' id='peak-colour'>
+            <label for='peak-colour-ion' tabindex='0'><input type='radio' name='peak-colour' value='ion' id='peak-colour-ion' checked>Ion</label>
+            <label for='peak-colour-peptide' tabindex='0'><input type='radio' name='peak-colour' value='peptide' id='peak-colour-peptide'>Peptide</label>
+          </div>
         </div>
 
-        <label class='has-slider label row'>
+        <label class='has-slider label row align'>
           <span>Show labels for top:</span>
-          <input id='spectrum_label' type='range' min='0' max='100' value='100'/>
-          <input id='spectrum_label_value' type='number' min='0' max='100' value='100'/>
+          <input id='spectrum-label' type='range' min='0' max='100' value='100'/>
+          <input id='spectrum-label-value' type='number' min='0' max='100' value='100'/>
           %
         </label>
         
-        <label class='has-slider masses row'>
+        <label class='has-slider masses row align'>
           <span>Show masses for top:</span>
-          <input id='spectrum_masses' type='range' min='0' max='100' value='0'/>
-          <input id='spectrum_masses_value' type='number' min='0' max='100' value='0'/>
+          <input id='spectrum-masses' type='range' min='0' max='100' value='0'/>
+          <input id='spectrum-masses-value' type='number' min='0' max='100' value='0'/>
           %
         </label>
         
         <div>
           <span>Mz</span>
           <label for='spectrum-mz-min'>min</label>
-          <input id='spectrum-mz-min' class='mz-min' type='number' value='0'/>
+          <input id='spectrum-mz-min' class='mz-min' type='number' value='0' minimum='0'/>
           <label for='spectrum-mz-max'>max</label>
-          <input id='spectrum-mz-max' class='mz-max' type='number' value='42'/>
+          <input id='spectrum-mz-max' class='mz-max' type='number' value='42' minimum='0'/>
         </div>
 
         <div>
           <span>Intensity</span>
           <label for='spectrum-intensity-max'>max</label>
-          <input id='spectrum-intensity-max' class='intensity-max' type='number' value='42'/>
+          <input id='spectrum-intensity-max' class='intensity-max' type='number' value='42' minimum='0'/>
         </div>
       </fieldset>
     </div>
@@ -255,10 +264,10 @@ r#"<!DOCTYPE html>
     <div class='wrapper show-unassigned' id="spectrum-results-wrapper"></div>
   </div>
   <details>
-  <summary>Logs</summary>
-  <div id="spectrum-fragments"></div>
-  <pre id="spectrum-log"></pre>
-  <pre id="identified-peptides-log"></pre>
+    <summary>Logs</summary>
+    <div id="spectrum-fragments"></div>
+    <pre id="spectrum-log"></pre>
+    <pre id="identified-peptides-log"></pre>
   </details>
 </body>
 

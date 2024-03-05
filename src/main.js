@@ -239,7 +239,6 @@ async function annotate_spectrum() {
   document.querySelector("#peptide").innerText = document.querySelector("#peptide").innerText.trim();
   var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);
   var noise_threshold = get_noise_filter("#noise-filter");
-  console.log(noise_threshold, charge);
   var model = [
     [get_location("#model-a-location"), document.querySelector("#model-a-loss").value],
     [get_location("#model-b-location"), document.querySelector("#model-b-loss").value],
@@ -253,12 +252,15 @@ async function annotate_spectrum() {
     [get_location("#model-z-location"), document.querySelector("#model-precursor-loss").value], // First element is discarded
   ];
   invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), charge: charge, filter: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").innerText, cmodel: model }).then((result) => {
-    document.querySelector("#spectrum-results-wrapper").innerHTML = result[0];
-    document.querySelector("#spectrum-fragments").innerHTML = result[1];
-    document.querySelector("#spectrum-log").innerText = result[2];
+    console.log(result);
+    document.querySelector("#spectrum-results-wrapper").innerHTML = result.spectrum;
+    document.querySelector("#spectrum-fragments").innerHTML = result.fragment_table;
+    document.querySelector("#spectrum-log").innerText = result.log;
     document.querySelector("#spectrum-error").innerText = "";
     document.querySelector("#spectrum-wrapper").classList.remove("hidden"); // Remove hidden class if this is the first run
     document.querySelector("#spectrum-error").classList.add("hidden");
+    document.querySelector("#spectrum-mz-max").value = result.mz_max;
+    document.querySelector("#spectrum-intensity-max").value = result.intensity_max;
     SetUpSpectrumInterface();
     document.querySelector("#annotate-button").classList.remove("loading");
   }).catch((error) => {

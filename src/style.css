@@ -307,7 +307,7 @@ pre {
   z-index: 2;
 }
 
-.spectrum:has(#relative:checked) .point {
+.spectrum.spectrum-graph-relative .point {
   top: calc(100% * (var(--y-max) - var(--rel)) / (var(--y-max) - var(--y-min)));
 }
 
@@ -327,12 +327,12 @@ pre {
   display: block;
 }
 
-.spectrum:has(#relative:checked) .abs,
-.spectrum:has(#absolute:checked) .rel {
+.spectrum.spectrum-graph-relative .abs,
+.spectrum.spectrum-graph-absolute .rel {
   display: none;
 }
 
-.spectrum:has(#intensity:checked) .point {
+.spectrum.spectrum-graph-intensity .point {
   width: calc((var(--intensity)) / var(--max-intensity) * 6px + 2px);
   height: calc((var(--intensity)) / var(--max-intensity) * 6px + 2px);
 }

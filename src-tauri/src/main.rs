@@ -347,6 +347,15 @@ pub enum NoiseFilter {
 
 type ModelParameters = Vec<(Location, String)>;
 
+#[derive(Debug, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
+pub struct AnnotationResult {
+    pub spectrum: String,
+    pub fragment_table: String,
+    pub logs: String,
+    pub mz_max: f64,
+    pub intensity_max: f64,
+}
+
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
 async fn annotate_spectrum<'a>(
@@ -358,7 +367,7 @@ async fn annotate_spectrum<'a>(
     peptide: &'a str,
     cmodel: ModelParameters,
     state: ModifiableState<'a>,
-) -> Result<(String, String, String), CustomError> {
+) -> Result<AnnotationResult, CustomError> {
     let state = state.lock().unwrap();
     if index >= state.spectra.len() {
         return Err(CustomError::error(
@@ -417,11 +426,14 @@ async fn annotate_spectrum<'a>(
     let use_charge = charge.map_or(spectrum.charge, Charge::new::<e>);
     let fragments = peptide.generate_theoretical_fragments(use_charge, &model);
     let annotated = spectrum.annotate(peptide, &fragments, &model, MassMode::Monoisotopic);
-    Ok((
-        render::annotated_spectrum(&annotated, "spectrum", &fragments, &model),
-        render::fragment_table(&fragments, multiple_peptides),
-        format!("{annotated:#?}\n{model:#?}"),
-    ))
+    let (spectrum, limits) = render::annotated_spectrum(&annotated, "spectrum", &fragments, &model);
+    Ok(AnnotationResult {
+        spectrum,
+        fragment_table: render::fragment_table(&fragments, multiple_peptides),
+        logs: format!("{annotated:#?}\n{model:#?}"),
+        mz_max: limits.mz.value,
+        intensity_max: limits.intensity,
+    })
 }
 
 fn main() {
