@@ -85,9 +85,6 @@ pub fn annotated_spectrum(
             > 1
     });
 
-    spectrum_top_buttons(&mut output, id, &limits, &graph_boundaries).unwrap();
-
-    create_ion_legend(&mut output, &format!("{id}-1"));
     render_peptide(&mut output, spectrum, overview, multiple_peptides);
     render_spectrum(
         &mut output,
@@ -120,37 +117,6 @@ pub fn annotated_spectrum(
 
     //write!(output, "</div>").unwrap();
     output
-}
-
-fn spectrum_top_buttons(
-    output: &mut String,
-    id: &str,
-    limits: &(MassOverCharge, f64, f64),
-    spectrum_graph_boundaries: &(f64, f64, f64, f64, f64, f64, f64, f64, f64, f64),
-) -> core::fmt::Result {
-    write!(output, "<div class='settings manual-zoom'><p>Spectrum</p>")?;
-    write!(output, "<label for='{id}-mz-min'>Mz Min</label>")?;
-    write!(
-        output,
-        "<input id='{id}-mz-min' class='mz-min' type='number' value='0'/>"
-    )?;
-    write!(output, "<label for='{id}-mz-max'>Mz Max</label>")?;
-    write!(
-        output,
-        "<input id='{id}-mz-max' class='mz-max' type='number' value='{}'/>",
-        limits.0.value
-    )?;
-    write!(
-        output,
-        "<label for='{id}-intensity-max'>Intensity Max</label>"
-    )?;
-    write!(
-        output,
-        "<input id='{id}-intensity-max' class='intensity-max' type='number' value='{}'/>",
-        limits.2
-    )?;
-    write!(output, "</div>")?;
-    Ok(())
 }
 
 type Boundaries = (f64, f64, f64, f64, f64, f64, f64, f64, f64, f64);
@@ -654,60 +620,6 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> ((MassOverCharge, f64, f64), Po
         ),
         output,
     )
-}
-
-fn create_ion_legend(output: &mut String, id: &str) {
-    write!(
-        output,
-        "<div class='legend'>
-    <span class='title'>Ion legend</span>
-    <div class='ion-series'>
-        <div class='top'>
-            <span class='ion w' tabindex='0'>w</span>
-            <span class='ion x' tabindex='0'>x</span>
-            <span class='ion y' tabindex='0'>y</span>
-            <span class='ion z' tabindex='0'>z</span>
-            <span class='ion c-term' tabindex='0'>C-term</span>
-        </div>
-        <div class='bottom'>
-            <span class='ion n-term' tabindex='0'>N-term</span>
-            <span class='ion a' tabindex='0'>a</span>
-            <span class='ion b' tabindex='0'>b</span>
-            <span class='ion c' tabindex='0'>c</span>
-            <span class='ion d' tabindex='0'>d</span>
-            <span class='ion v' tabindex='0'>v</span>
-        </div>
-        <div class='side'>
-            <span class='ion precursor' tabindex='0'>Precursor</span>
-            <span class='ion multi mp' tabindex='0'>Multi</span>
-            <span class='other'>Other</span>
-        </div>
-    </div>
-    <input id='{id}_unassigned' type='checkbox' checked class='show-unassigned'/>
-    <label for='{id}_unassigned' class='show-unassigned' tabindex='0'>Unassigned</label>
-    <input id='{id}_legend_peptide' type='checkbox' class='legend-peptide'/>
-    <label for='{id}_legend_peptide' class='legend-peptide' tabindex='0'>Peptide</label>
-
-    <label class='has-slider label'>
-        Ion
-        <sup>Charge</sup>
-        <sub style='margin-left:-6ch;margin-right:.5rem;'>Position</sub>
-
-        Show labels for top:
-        <input id='{id}_label' type='range' min='0' max='100' value='100'/>
-        <input id='{id}_label_value' type='number' min='0' max='100' value='100'/>
-        %
-    </label>
-    
-    <label class='has-slider masses'>
-        Show masses for top:
-        <input id='{id}_masses' type='range' min='0' max='100' value='0'/>
-        <input id='{id}_masses_value' type='number' min='0' max='100' value='0'/>
-        %
-    </label>
-</div>"
-    )
-    .unwrap();
 }
 
 fn render_peptide(

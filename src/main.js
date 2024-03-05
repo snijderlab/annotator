@@ -40,8 +40,10 @@ async function select_mgf_file(e) {
     }]
   };
   window.__TAURI__.dialog.open(properties).then((result) => {
-    e.dataset.filepath = result;
-    load_mgf(e.dataset.filepath);
+    if (result != null) {
+      e.dataset.filepath = result;
+      load_mgf(e.dataset.filepath);
+    }
   })
 };
 
@@ -57,8 +59,10 @@ async function select_identified_peptides_file(e) {
     }]
   };
   window.__TAURI__.dialog.open(properties).then((result) => {
-    e.dataset.filepath = result;
-    load_identified_peptides(e.dataset.filepath);
+    if (result != null) {
+      e.dataset.filepath = result;
+      load_identified_peptides(e.dataset.filepath);
+    }
   })
 };
 

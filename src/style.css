@@ -83,19 +83,6 @@ button {
   justify-content: space-evenly;
 }
 
-:is(.input-settings, .input-flex) input,
-:is(.input-settings, .input-flex) textarea,
-:is(.input-settings, .input-flex) button,
-:is(.input-settings, .input-flex) select,
-.peptide-input,
-button {
-  background: var(--color-background);
-  color: var(--color-foreground);
-  border: 2px solid var(--color-halfway);
-  border-radius: 0;
-  font-size: 1.2em;
-}
-
 :is(.input-settings, .input-flex) option {
   background: var(--color-background);
 }
@@ -125,11 +112,6 @@ pre {
 
 .input-settings .wide {
   grid-column: 1/-1;
-}
-
-:is(.input-settings, .input-flex) button {
-  color: var(--color-primary);
-  border-color: var(--color-primary);
 }
 
 .input-settings h2 {
@@ -379,13 +361,13 @@ pre {
 }
 
 /* Loading animation */
-button.loading {
+.loading {
   pointer-events: none;
   border-color: var(--color-halfway);
-  color: var(--color-halfway);
+  background-color: var(--color-halfway);
 }
 
-button.loading::after {
+.loading::after {
   content: ".";
   display: inline-block;
   animation: rotate 1s infinite linear;
