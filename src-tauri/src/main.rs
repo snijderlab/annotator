@@ -345,7 +345,20 @@ pub enum NoiseFilter {
     TopX(f64, usize),
 }
 
-type ModelParameters = Vec<(Location, String)>;
+#[derive(Debug, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
+pub struct ModelParameters {
+    pub a: (Location, String),
+    pub b: (Location, String),
+    pub c: (Location, String),
+    pub d: (Location, String),
+    pub v: (Location, String),
+    pub w: (Location, String),
+    pub x: (Location, String),
+    pub y: (Location, String),
+    pub z: (Location, String),
+    pub precursor: String,
+    pub glycan: (bool, String),
+}
 
 #[derive(Debug, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
 pub struct AnnotationResult {
@@ -392,24 +405,37 @@ async fn annotate_spectrum<'a>(
         "cidhcd" => Model::cid_hcd(),
         "etd" => Model::etd(),
         "custom" => Model::new(
-            get_model_param(&cmodel[0])?,
-            get_model_param(&cmodel[1])?,
-            get_model_param(&cmodel[2])?,
-            get_model_param(&cmodel[3])?,
-            get_model_param(&cmodel[4])?,
-            get_model_param(&cmodel[5])?,
-            get_model_param(&cmodel[6])?,
-            get_model_param(&cmodel[7])?,
-            get_model_param(&cmodel[8])?,
-            cmodel[9]
-                .1
+            get_model_param(&cmodel.a)?,
+            get_model_param(&cmodel.b)?,
+            get_model_param(&cmodel.c)?,
+            get_model_param(&cmodel.d)?,
+            get_model_param(&cmodel.v)?,
+            get_model_param(&cmodel.w)?,
+            get_model_param(&cmodel.x)?,
+            get_model_param(&cmodel.y)?,
+            get_model_param(&cmodel.z)?,
+            cmodel
+                .precursor
                 .to_owned()
                 .split(',')
                 .filter(|n| !n.is_empty())
                 .map(|n| n.parse::<NeutralLoss>())
                 .collect::<Result<Vec<NeutralLoss>, _>>()?,
             MassOverCharge::new::<mz>(ppm),
-            None,
+            cmodel
+                .glycan
+                .0
+                .then(|| {
+                    cmodel
+                        .glycan
+                        .1
+                        .to_owned()
+                        .split(',')
+                        .filter(|n| !n.is_empty())
+                        .map(|n| n.parse::<NeutralLoss>())
+                        .collect::<Result<Vec<NeutralLoss>, _>>()
+                })
+                .invert()?,
         ),
         _ => Model::all(),
     };
@@ -456,4 +482,21 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+pub trait InvertResult<T, E> {
+    /// # Errors
+    /// If any of the errors contained within has an error.
+    fn invert(self) -> Result<Option<T>, E>;
+}
+
+impl<T, E> InvertResult<T, E> for Option<Result<T, E>> {
+    fn invert(self) -> Result<Option<T>, E> {
+        self.map_or_else(|| Ok(None), |o| o.map(|v| Some(v)))
+    }
+}
+impl<T, E> InvertResult<T, E> for Option<Result<Option<T>, E>> {
+    fn invert(self) -> Result<Option<T>, E> {
+        self.map_or_else(|| Ok(None), |o| o)
+    }
 }

@@ -239,18 +239,19 @@ async function annotate_spectrum() {
   document.querySelector("#peptide").innerText = document.querySelector("#peptide").innerText.trim();
   var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);
   var noise_threshold = get_noise_filter("#noise-filter");
-  var model = [
-    [get_location("#model-a-location"), document.querySelector("#model-a-loss").value],
-    [get_location("#model-b-location"), document.querySelector("#model-b-loss").value],
-    [get_location("#model-c-location"), document.querySelector("#model-c-loss").value],
-    [get_location("#model-d-location"), document.querySelector("#model-d-loss").value],
-    [get_location("#model-v-location"), document.querySelector("#model-v-loss").value],
-    [get_location("#model-w-location"), document.querySelector("#model-w-loss").value],
-    [get_location("#model-x-location"), document.querySelector("#model-x-loss").value],
-    [get_location("#model-y-location"), document.querySelector("#model-y-loss").value],
-    [get_location("#model-z-location"), document.querySelector("#model-z-loss").value],
-    [get_location("#model-z-location"), document.querySelector("#model-precursor-loss").value], // First element is discarded
-  ];
+  var model = {
+    a: [get_location("#model-a-location"), document.querySelector("#model-a-loss").value],
+    b: [get_location("#model-b-location"), document.querySelector("#model-b-loss").value],
+    c: [get_location("#model-c-location"), document.querySelector("#model-c-loss").value],
+    d: [get_location("#model-d-location"), document.querySelector("#model-d-loss").value],
+    v: [get_location("#model-v-location"), document.querySelector("#model-v-loss").value],
+    w: [get_location("#model-w-location"), document.querySelector("#model-w-loss").value],
+    x: [get_location("#model-x-location"), document.querySelector("#model-x-loss").value],
+    y: [get_location("#model-y-location"), document.querySelector("#model-y-loss").value],
+    z: [get_location("#model-z-location"), document.querySelector("#model-z-loss").value],
+    precursor: document.querySelector("#model-precursor-loss").value,
+    glycan: [document.querySelector("#model-glycan-enabled").value == "on", document.querySelector("#model-glycan-loss").value],
+  };
   invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), charge: charge, filter: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").innerText, cmodel: model }).then((result) => {
     console.log(result);
     document.querySelector("#spectrum-results-wrapper").innerHTML = result.spectrum;

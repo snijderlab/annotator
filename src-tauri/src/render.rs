@@ -789,11 +789,6 @@ fn render_spectrum(
         "<span class='selection {selection}' hidden='true'></span>"
     )
     .unwrap();
-    write!(
-        output,
-        "<div class='zoom-out' tabindex='0'>Reset Zoom</div>"
-    )
-    .unwrap();
 
     for peak in spectrum.spectrum() {
         write!(

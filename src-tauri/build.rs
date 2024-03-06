@@ -131,14 +131,17 @@ r#"<!DOCTYPE html>
     write!(
         writer,
         r#"<label>precursor</label>
-      <input type="text" id="model-precursor-loss" value="" class="col-2"/>
+        <input type="text" id="model-precursor-loss" value="" class="col-2"/>
+        <label>glycan</label>
+        <label><input id='model-glycan-enabled' type='checkbox' switch/>Enable</label>
+        <input type="text" id="model-glycan-loss" value=""/>
       </fieldset>
       <label class="wide" for="peptide">Peptide sequence </label>
       <div class="peptide-input wide" id="peptide" contentEditable="plaintext-only"></div>
       <button id="annotate-button" type="button" class="col-2">Annotate</button>
     </div>
   <div id="spectrum-error" class="hidden"></div>
-  <div id='spectrum-wrapper' class="spectrum show-unassigned hidden" onload='SpectrumSetUp()'>
+  <div id='spectrum-wrapper' class="spectrum show-unassigned" onload='SpectrumSetUp()'>
     <div class='all-settings'>
       <fieldset class='settings graphics-settings'>
         <legend>Graphics settings</legend>
@@ -234,6 +237,8 @@ r#"<!DOCTYPE html>
           <label for='spectrum-intensity-max'>max</label>
           <input id='spectrum-intensity-max' class='intensity-max' type='number' value='42' minimum='0'/>
         </div>
+
+        <button id='reset-zoom' class='reset-zoom' title='Reset the zoom to the default' tabindex='0'>Reset zoom</button>
       </fieldset>
     </div>
     <div class='legend'>
@@ -257,6 +262,7 @@ r#"<!DOCTYPE html>
           <div class='side'>
               <span class='ion precursor' tabindex='0'>Precursor</span>
               <span class='ion multi mp' tabindex='0'>Multi</span>
+              <span class='ion glycan' tabindex='0'>Glycan</span>
               <span class='other'>Other</span>
           </div>
       </div>
