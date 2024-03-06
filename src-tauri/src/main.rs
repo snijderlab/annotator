@@ -116,7 +116,7 @@ async fn search_peptide<'a>(text: &'a str, state: ModifiableState<'a>) -> Result
             let start = alignment.start_a();
             let end = alignment.start_a() + alignment.len_a();
             vec![
-                index.to_string(),
+                format!("<a onclick=\"document.getElementById('details-identified-peptide-index').value={0};document.getElementById('details-identified-peptide-index').dispatchEvent(new FocusEvent('focus'))\">{0}</a>", index.to_string()),
                 format!(
                     "{}<span class='match'>{}</span>{}",
                     peptide.peptide.sub_peptide(..start).to_string(),
@@ -134,7 +134,7 @@ async fn search_peptide<'a>(text: &'a str, state: ModifiableState<'a>) -> Result
         Some(&[
             "Index".to_string(),
             "Sequence".to_string(),
-            "Score".to_string(),
+            "Peptide Score".to_string(),
         ]),
         &data,
     )
@@ -455,7 +455,7 @@ async fn annotate_spectrum<'a>(
     let (spectrum, limits) = render::annotated_spectrum(&annotated, "spectrum", &fragments, &model);
     Ok(AnnotationResult {
         spectrum,
-        fragment_table: render::fragment_table(&fragments, multiple_peptides),
+        fragment_table: render::spectrum_table(&annotated, &fragments, multiple_peptides),
         logs: format!("{annotated:#?}\n{model:#?}"),
         mz_max: limits.mz.value,
         intensity_max: limits.intensity,

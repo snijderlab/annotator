@@ -255,7 +255,7 @@ async function annotate_spectrum() {
   invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), charge: charge, filter: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").innerText, cmodel: model }).then((result) => {
     console.log(result);
     document.querySelector("#spectrum-results-wrapper").innerHTML = result.spectrum;
-    document.querySelector("#spectrum-fragments").innerHTML = result.fragment_table;
+    document.querySelector("#spectrum-fragment-table").innerHTML = result.fragment_table;
     document.querySelector("#spectrum-log").innerText = result.log;
     document.querySelector("#spectrum-error").innerText = "";
     document.querySelector("#spectrum-wrapper").classList.remove("hidden"); // Remove hidden class if this is the first run
@@ -302,8 +302,10 @@ function resizeUp() {
   document.removeEventListener("mouseup", resizeUp);
 }
 
+// Setup
 window.addEventListener("DOMContentLoaded", () => {
   document.querySelector(".resize").addEventListener("mousedown", resizeDown);
+  document.querySelectorAll(".collapsible>legend").forEach(element => element.addEventListener("click", (e) => document.getElementById(e.target.parentElement.dataset.linkedItem).toggleAttribute("checked")));
   document
     .querySelector("#load-mgf-path")
     .addEventListener("click", (event) => select_mgf_file(event.target));

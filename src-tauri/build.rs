@@ -51,7 +51,7 @@ r#"<!DOCTYPE html>
           <label for="search-peptide-input">Search peptide</label>
           <div class="combined-input">
             <input id="search-peptide-input" type="text"></input>
-            <button id="search-peptide">🔍</button>
+            <button id="search-peptide" class='square-left'>Search</button>
           </div>
         </div>
         <div id="resulting-peptides">Go and search!</div>
@@ -141,7 +141,7 @@ r#"<!DOCTYPE html>
       <button id="annotate-button" type="button" class="col-2">Annotate</button>
     </div>
   <div id="spectrum-error" class="hidden"></div>
-  <div id='spectrum-wrapper' class="spectrum show-unassigned" onload='SpectrumSetUp()'>
+  <div id='spectrum-wrapper' class="spectrum show-unassigned hidden" onload='SpectrumSetUp()'>
     <div class='all-settings'>
       <fieldset class='settings graphics-settings'>
         <legend>Graphics settings</legend>
@@ -268,13 +268,22 @@ r#"<!DOCTYPE html>
       </div>
     </div>
     <div class='wrapper show-unassigned' id="spectrum-results-wrapper"></div>
+
+    <input type="checkbox" id="collapsible-fragment-table">
+    <fieldset class="collapsible" data-linked-item="collapsible-fragment-table">
+      <legend>Fragment Table</legend>
+      <div class="collapsible-content" id="spectrum-fragment-table"></div>
+    </fieldset>
+
   </div>
-  <details>
-    <summary>Logs</summary>
-    <div id="spectrum-fragments"></div>
-    <pre id="spectrum-log"></pre>
-    <pre id="identified-peptides-log"></pre>
-  </details>
+
+  <input type="checkbox" id="collapsible-logs">
+  <fieldset class="collapsible" data-linked-item="collapsible-logs">
+    <legend>Logs</legend>
+    <div class="collapsible-content" id="spectrum-fragments"></div>
+    <pre class="collapsible-content" id="spectrum-log"></pre>
+    <pre class="collapsible-content" id="identified-peptides-log"></pre>
+  </fieldset>
 </body>
 
 </html>"#
