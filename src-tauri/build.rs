@@ -182,7 +182,7 @@ r#"<!DOCTYPE html>
         <div class='row'>
           <span class='title'>Highlight</span>
           <div class='select-box' id='highlight'>
-            <label title='Highlight a region in a peptide, while not overriding the ion colours' tabindex='0'><input type='radio' name='highlight' value='highlight' id='highlight-highlight' checked>Default</label>
+            <label title='Highlight a region in a peptide, while not overriding the ion colours' tabindex='0'><input type='radio' name='highlight' value='default' id='highlight-default' checked>Default</label>
             <label title='Annotate regions in a peptide in red' class='colour' tabindex='0'><input type='radio' name='highlight' value='red' id='highlight-red'></label>
             <label title='Annotate regions in a peptide in green' class='colour' tabindex='0'><input type='radio' name='highlight' value='green' id='highlight-green'></label>
             <label title='Annotate regions in a peptide in blue' class='colour' tabindex='0'><input type='radio' name='highlight' value='blue' id='highlight-blue'></label>
