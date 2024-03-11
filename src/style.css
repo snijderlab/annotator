@@ -144,6 +144,14 @@ pre {
   display: none;
 }
 
+.updating {
+  /* background-color: color-mix(in oklab, var(--color-halfway) 10%, var(--color-background)); */
+
+  & * {
+    display: none !important;
+  }
+}
+
 .custom-model {
   grid-column: 1 / -1;
   display: none;

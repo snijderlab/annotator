@@ -76,7 +76,7 @@ async function load_mgf(path) {
     spectrum_details();
     document.querySelector("#load-mgf-path").classList.remove("loading")
   }).catch((error) => {
-    console.log(error);
+    console.error(error);
     document.querySelector("#loaded-path").classList.add("error");
     document.querySelector("#loaded-path").innerText = error;
     document.querySelector("#load-mgf-path").classList.remove("loading")
@@ -95,7 +95,7 @@ async function load_identified_peptides(path) {
     identified_peptide_details();
     document.querySelector("#load-identified-peptides").classList.remove("loading")
   }).catch((error) => {
-    console.log(error);
+    console.error(error);
     document.querySelector("#loaded-identified-peptides-path").classList.add("error");
     document.querySelector("#loaded-identified-peptides-path").innerText = error;
     document.querySelector("#load-identified-peptides").classList.remove("loading")
@@ -115,7 +115,7 @@ async function load_clipboard() {
         spectrum_details();
       }).catch((error) => {
         document.querySelector("#load-clipboard").classList.remove("loading")
-        console.log(error);
+        console.error(error);
         document.querySelector("#loaded-path").classList.add("error");
         document.querySelector("#loaded-path").innerText = error;
         document.querySelector("#load-clipboard").classList.remove("loading")
@@ -130,7 +130,7 @@ async function find_scan_number() {
       spectrum_details();
     }
   ).catch((error) => {
-    console.log(error);
+    console.error(error);
     document.querySelector("#spectrum-error").classList.remove("hidden");
     document.querySelector("#spectrum-error").innerText = error;
   })
@@ -140,7 +140,7 @@ async function spectrum_details() {
   invoke("spectrum_details", { index: Number(document.querySelector("#details-spectrum-index").value) }).then(
     (result) => document.querySelector("#spectrum-details").innerText = result
   ).catch((error) => {
-    console.log(error);
+    console.error(error);
     document.querySelector("#spectrum-error").classList.remove("hidden");
     document.querySelector("#spectrum-error").innerText = error;
     document.querySelector("#spectrum-details").innerText = "ERROR";
@@ -155,7 +155,7 @@ async function identified_peptide_details() {
       document.querySelector("#identified-peptide-details").innerHTML = result;
       displayed_identified_peptide = index;
     }).catch((error) => {
-      console.log(error);
+      console.error(error);
       document.querySelector("#spectrum-error").classList.remove("hidden");
       document.querySelector("#spectrum-error").innerText = error;
       document.querySelector("#identified-peptide-details").innerText = "ERROR";
@@ -170,7 +170,7 @@ async function search_peptide() {
       document.querySelector("#resulting-peptides").innerHTML = result;
       document.querySelector("#search-peptide").classList.remove("loading");
     }).catch((error) => {
-      console.log(error);
+      console.error(error);
       document.querySelector("#spectrum-error").classList.remove("hidden");
       document.querySelector("#spectrum-error").innerText = error;
       document.querySelector("#identified-peptide-details").innerText = "ERROR";
@@ -188,9 +188,9 @@ async function load_identified_peptide() {
     document.querySelector("#spectrum-charge").value = result.charge;
     document.querySelector("#spectrum-model").value = result.mode.toLowerCase();
     document.querySelector("#details-spectrum-index").value = result.scan_index;
-    console.log(result)
+    console.error(result)
   }).catch((error) => {
-    console.log(error);
+    console.error(error);
     document.querySelector("#spectrum-error").classList.remove("hidden");
     document.querySelector("#spectrum-error").innerText = error;
     document.querySelector("#identified-peptide-details").innerText = "ERROR";
@@ -253,7 +253,6 @@ async function annotate_spectrum() {
     glycan: [document.querySelector("#model-glycan-enabled").value == "on", document.querySelector("#model-glycan-loss").value],
   };
   invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), charge: charge, filter: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").innerText, cmodel: model }).then((result) => {
-    console.log(result);
     document.querySelector("#spectrum-results-wrapper").innerHTML = result.spectrum;
     document.querySelector("#spectrum-fragment-table").innerHTML = result.fragment_table;
     document.querySelector("#spectrum-log").innerText = result.log;
@@ -262,10 +261,14 @@ async function annotate_spectrum() {
     document.querySelector("#spectrum-error").classList.add("hidden");
     document.querySelector("#spectrum-mz-max").value = result.mz_max;
     document.querySelector("#spectrum-intensity-max").value = result.intensity_max;
+    document.querySelector("#spectrum-label").value = 90;
+    document.querySelector("#spectrum-label-value").value = 90;
+    document.querySelector("#spectrum-masses").value = 0;
+    document.querySelector("#spectrum-masses-value").value = 0;
     SetUpSpectrumInterface();
     document.querySelector("#annotate-button").classList.remove("loading");
   }).catch((error) => {
-    console.log(error);
+    console.error(error);
     document.querySelector("#spectrum-error").classList.remove("hidden");
     document.querySelector("#spectrum-error").innerHTML = "<p class='title'>" + error.short_description + "</p><p class='description'>" + error.long_description + "</p>";
     if (error.context.hasOwnProperty('Line') && error.context.Line.line == document.querySelector("#peptide").innerText) {

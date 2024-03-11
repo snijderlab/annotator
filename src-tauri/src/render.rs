@@ -365,7 +365,7 @@ fn get_classes(annotations: &[Fragment]) -> String {
     if annotations.is_empty() {
         "unassigned".to_string()
     } else {
-        format!("label {}", output.join(" "))
+        output.join(" ")
     }
 }
 
@@ -776,7 +776,7 @@ fn render_spectrum(
     )
     .unwrap();
     write!(output, "</div>").unwrap();
-    write!(output, "<div class='canvas'>").unwrap();
+    write!(output, "<div class='canvas spectrum'>").unwrap();
     write!(
         output,
         "<span class='selection {selection}' hidden='true'></span>"
@@ -786,11 +786,16 @@ fn render_spectrum(
     for peak in spectrum.spectrum() {
         write!(
             output,
-            "<span class='peak {}' style='--mz:{};--intensity:{};' data-label='{}'>{}</span>",
+            "<span class='peak {}' style='--mz:{};--intensity:{};' data-label='{}' {}>{}</span>",
             get_classes(&peak.annotation),
             peak.experimental_mz.value,
             peak.intensity,
             (peak.experimental_mz.value * 10.0).round() / 10.0,
+            if peak.intensity.0 / limits.intensity >= 0.1 {
+                "data-show-label='true'"
+            } else {
+                ""
+            },
             get_label(&peak.annotation, multiple_peptides, multiple_glycans),
         )
         .unwrap();
