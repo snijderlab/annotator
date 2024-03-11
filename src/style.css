@@ -200,7 +200,6 @@ pre {
 .spectrum .spectrum-graph {
   --graph-height: 500px;
   --graph-height-inc: calc(var(--graph-height) + 10px);
-  --color: red;
   --radius: 50%;
   display: flex;
   flex-basis: 100%;

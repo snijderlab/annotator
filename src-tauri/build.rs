@@ -141,7 +141,7 @@ r#"<!DOCTYPE html>
       <button id="annotate-button" type="button" class="col-2">Annotate</button>
     </div>
   <div id="spectrum-error" class="hidden"></div>
-  <div id='spectrum-wrapper' class="spectrum show-unassigned hidden" onload='SpectrumSetUp()'>
+  <div id='spectrum-wrapper' class="spectrum show-unassigned hidden legend-ion" onload='SpectrumSetUp()'>
     <div class='all-settings'>
       <fieldset class='settings graphics-settings'>
         <legend>Graphics settings</legend>
@@ -190,9 +190,9 @@ r#"<!DOCTYPE html>
             <label title='Annotate regions in a peptide in purple' class='colour' tabindex='0'><input type='radio' name='highlight' value='purple' id='highlight-purple'></label>
             <label title='Remove the annotation for regions in a peptide' tabindex='0'><input type='radio' name='highlight' value='remove' id='highlight-remove'>X</label>
           </div>
+          <button id='clear-colour' class='clear-colour' title='Remove all annotations on all peptides' tabindex='0'>Clear</button>
         </div>
 
-        <button id='clear-colour' class='clear-colour' title='Remove all annotations on all peptides' tabindex='0'>Clear</button>
       </fieldset>
 
       <fieldset class='settings spectrum-settings'>
@@ -207,6 +207,7 @@ r#"<!DOCTYPE html>
           <div class='select-box' id='peak-colour'>
             <label for='peak-colour-ion' tabindex='0'><input type='radio' name='peak-colour' value='ion' id='peak-colour-ion' checked>Ion</label>
             <label for='peak-colour-peptide' tabindex='0'><input type='radio' name='peak-colour' value='peptide' id='peak-colour-peptide'>Peptide</label>
+            <label for='peak-colour-none' tabindex='0'><input type='radio' name='peak-colour' value='none' id='peak-colour-none'>None</label>
           </div>
         </div>
 
@@ -223,6 +224,16 @@ r#"<!DOCTYPE html>
           <input id='spectrum-masses-value' type='number' min='0' max='100' value='0'/>
           %
         </label>
+
+        <div class='row'>
+          <span class='title'>Manually force show</span>
+          <div class='select-box' id='force-show'>
+            <label tabindex='0'><input type='radio' name='force-show' value='none' id='force-show-none' checked>None</label>
+            <label tabindex='0'><input type='radio' name='force-show' value='label' id='force-show-label'>Label</label>
+            <label tabindex='0'><input type='radio' name='force-show' value='mass' id='force-show-mass'>Mass</label>
+          </div>
+          <button tabindex='0' id='force-show-clear'>Clear</button>
+        </div>
         
         <div>
           <span>Mz</span>

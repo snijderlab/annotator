@@ -776,7 +776,7 @@ fn render_spectrum(
     )
     .unwrap();
     write!(output, "</div>").unwrap();
-    write!(output, "<div class='canvas spectrum'>").unwrap();
+    write!(output, "<div class='canvas canvas-spectrum'>").unwrap();
     write!(
         output,
         "<span class='selection {selection}' hidden='true'></span>"
