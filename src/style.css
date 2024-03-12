@@ -25,9 +25,27 @@
   src: url('stitch-assets/RobotoMono-VariableFont.ttf');
 }
 
+html {
+  min-height: 100%;
+}
+
 body {
   padding: .5rem;
+  min-height: 100vh;
+  box-sizing: border-box;
   overflow-y: scroll;
+  display: flex;
+  flex-direction: column;
+  justify-items: stretch;
+}
+
+.grow {
+  flex-grow: 1;
+  height: 2rem;
+}
+
+.print {
+  align-self: baseline;
 }
 
 .row {
@@ -455,16 +473,34 @@ html.file-drop-hover::before {
   align-items: center;
   font-size: 3em;
   color: var(--color-background);
-  position: absolute;
+  position: fixed;
   top: 0;
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: color-mix(in oklab, var(--color-primary) 20%, #00000000);
+  background-color: color-mix(in oklab, var(--color-primary) 20%, transparent);
 }
 
 /* Search */
 
 .match {
   color: var(--color-primary);
+}
+
+/* Footer */
+
+footer {
+  background-color: var(--color-halfway-bg);
+  display: flex;
+  margin: -.5rem;
+  padding: 1rem;
+  gap: 2rem;
+  justify-content: center;
+
+  &>* {
+    display: block;
+    color: var(--color-halfway-fg);
+    padding: 0;
+    margin: 0;
+  }
 }
