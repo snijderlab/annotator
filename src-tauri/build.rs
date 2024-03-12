@@ -1,6 +1,31 @@
 use std::io::Write;
 use std::{fs::File, io::BufWriter};
 
+fn create_loss_modal(id: &str) -> String {
+    format!(
+        r#"<div><button onclick='document.getElementById("model-{id}-loss-selection-dialog").showModal();'>Select</button><output id='model-{id}-loss-selection-output'>0 selected</output>
+  <dialog id="model-{id}-loss-selection-dialog" onclose='var num = 0; document.getElementsByName("model-{id}-loss-selection").forEach(e=>num += e.checked);document.getElementById("model-{id}-loss-selection-output").innerText = num + " selected";'>
+    <p>Losses</p>
+    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H2O"/>Water</label>
+    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H4O2"/>Double water</label>
+    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H6O3"/>Triple water</label>
+    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H"/>Hydrogen</label>
+    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H2"/>Double hydrogen</label>
+    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H3"/>Triple hydrogen</label>
+    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-NH3"/>Ammonia</label>
+    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-CO"/>Carbon monoxide</label>
+    <p>Gains</p>
+    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H2O"/>Water</label>
+    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H4O2"/>Double water</label>
+    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H6O3"/>Triple water</label>
+    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H"/>Hydrogen</label>
+    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H2"/>Double hydrogen</label>
+    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H3"/>Triple hydrogen</label>
+    <button autofocus onclick='this.parentElement.close()'>Close</button>
+  </dialog></div>"#
+    )
+}
+
 fn main() {
     let file = File::create("../src/index.html").unwrap();
     println!("{:?}", file.metadata());
@@ -94,18 +119,18 @@ r#"<!DOCTYPE html>
 
     <label for="spectrum-model">Model </label>
     <select id="spectrum-model">
-    <option value="all">All</option>
-    <option value="ethcd">Ethcd</option>
-    <option value="etcid">Etcid</option>
-    <option value="cidhcd">CidHcd</option>
-    <option value="etd">Etd</option>
+    <option value="all" title="All possible ions with single water loss from all">All</option>
+    <option value="ethcd" title="b+c+w+y+z+glycan with single water loss from all">EThcD/ETcaD</option>
+    <option value="cidhcd" title="a+b+y+precursor with single water loss and d with no losses">CID/HCD</option>
+    <option value="etd" title="c with no losses, y+z with single water loss and precursor with single water and ammonia loss">ETD</option>
     <option value="custom">Custom</option>
     </select>
     <fieldset class="custom-model">
     <legend>Custom model</legend>
     <p>Ion</p>
     <p>Location</p>
-    <p>Loss</p>"#).unwrap();
+    <p>Loss</p>
+    <p>Custom loss</p>"#).unwrap();
     for ion in ["a", "b", "c", "d", "v", "w", "x", "y", "z"] {
         write!(
             writer,
@@ -123,18 +148,22 @@ r#"<!DOCTYPE html>
           <input type="number" value="1" min="1">
           <input type="number" value="1" min="1">
           </div>
+          {1}
           <input type="text" id="model-{0}-loss" value="" title="Supply all losses as +/- followed by the chemical formula, supply multiple by separating them by commas. Example: '+H2O,-H2O'."/>"#,
-            ion
+            ion, create_loss_modal(ion)
         )
         .unwrap();
     }
     write!(
         writer,
         r#"<label>precursor</label>
-        <input type="text" id="model-precursor-loss" value="" class="col-2"/>
+        <div class="empty"></div>
+        {}
+        <input type="text" id="model-precursor-loss" value="" title="Supply all losses as +/- followed by the chemical formula, supply multiple by separating them by commas. Example: '+H2O,-H2O'."/>
         <label>glycan</label>
         <label><input id='model-glycan-enabled' type='checkbox' switch/>Enable</label>
-        <input type="text" id="model-glycan-loss" value=""/>
+        {}
+        <input type="text" id="model-glycan-loss" value="" title="Supply all losses as +/- followed by the chemical formula, supply multiple by separating them by commas. Example: '+H2O,-H2O'."/>
       </fieldset>
       <label class="wide" for="peptide">Peptide sequence </label>
       <div class="peptide-input wide" id="peptide" contentEditable="plaintext-only"></div>
@@ -297,7 +326,9 @@ r#"<!DOCTYPE html>
   </fieldset>
 </body>
 
-</html>"#
+</html>"#,
+create_loss_modal("precursor"),
+create_loss_modal("glycan")
     )
     .unwrap();
     tauri_build::build()

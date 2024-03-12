@@ -233,6 +233,26 @@ function get_noise_filter(id) {
   }
 }
 
+function get_losses(ion) {
+  let loss = ""
+  document.getElementsByName("model-" + ion + "-loss-selection").forEach(element => {
+    if (element.checked) {
+      if (loss == "") {
+        loss = element.value;
+      } else {
+        loss += "," + element.value;
+      }
+    }
+  });
+  let custom = document.querySelector("#model-" + ion + "-loss").value;
+  if (loss == "") {
+    loss = custom;
+  } else {
+    loss += "," + custom;
+  }
+  return loss;
+}
+
 //import { SpectrumSetUp } from "./stitch-assets/script.js";
 async function annotate_spectrum() {
   document.querySelector("#annotate-button").classList.add("loading");
@@ -240,17 +260,17 @@ async function annotate_spectrum() {
   var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);
   var noise_threshold = get_noise_filter("#noise-filter");
   var model = {
-    a: [get_location("#model-a-location"), document.querySelector("#model-a-loss").value],
-    b: [get_location("#model-b-location"), document.querySelector("#model-b-loss").value],
-    c: [get_location("#model-c-location"), document.querySelector("#model-c-loss").value],
-    d: [get_location("#model-d-location"), document.querySelector("#model-d-loss").value],
-    v: [get_location("#model-v-location"), document.querySelector("#model-v-loss").value],
-    w: [get_location("#model-w-location"), document.querySelector("#model-w-loss").value],
-    x: [get_location("#model-x-location"), document.querySelector("#model-x-loss").value],
-    y: [get_location("#model-y-location"), document.querySelector("#model-y-loss").value],
-    z: [get_location("#model-z-location"), document.querySelector("#model-z-loss").value],
-    precursor: document.querySelector("#model-precursor-loss").value,
-    glycan: [document.querySelector("#model-glycan-enabled").value == "on", document.querySelector("#model-glycan-loss").value],
+    a: [get_location("#model-a-location"), get_losses("a")],
+    b: [get_location("#model-b-location"), get_losses("b")],
+    c: [get_location("#model-c-location"), get_losses("c")],
+    d: [get_location("#model-d-location"), get_losses("d")],
+    v: [get_location("#model-v-location"), get_losses("v")],
+    w: [get_location("#model-w-location"), get_losses("w")],
+    x: [get_location("#model-x-location"), get_losses("x")],
+    y: [get_location("#model-y-location"), get_losses("y")],
+    z: [get_location("#model-z-location"), get_losses("z")],
+    precursor: get_losses("precursor"),
+    glycan: [document.querySelector("#model-glycan-enabled").value == "on", get_losses("glycan")],
   };
   invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), charge: charge, filter: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").innerText, cmodel: model }).then((result) => {
     document.querySelector("#spectrum-results-wrapper").innerHTML = result.spectrum;
