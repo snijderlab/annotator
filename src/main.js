@@ -181,6 +181,25 @@ async function search_peptide() {
   }
 }
 
+async function search_modification() {
+  if (document.querySelector("#search-modification").value != "") {
+    document.querySelector("#search-modification-button").classList.add("loading");
+    invoke("search_modification", { text: document.querySelector("#search-modification").value, tolerance: Number(document.querySelector("#search-modification-tolerance").value) }).then((result) => {
+      document.querySelector("#search-modification-result").innerHTML = result;
+      document.querySelector("#search-modification-button").classList.remove("loading");
+      document.querySelector("#search-modification-error").classList.add("hidden");
+    }).catch((error) => {
+      console.error(error);
+      document.querySelector("#search-modification-result").innerText = "ERROR";
+      document.querySelector("#search-modification-error").classList.remove("hidden");
+      document.querySelector("#search-modification-error").innerText = error;
+      document.querySelector("#search-modification-button").classList.remove("loading");
+    })
+  } else {
+    document.querySelector("#resulting-modification-result").innerText = "";
+  }
+}
+
 async function load_identified_peptide() {
   let index = Number(document.querySelector("#details-identified-peptide-index").value);
   invoke("load_identified_peptide", { index: index }).then((result) => {
@@ -344,7 +363,11 @@ window.addEventListener("DOMContentLoaded", () => {
   document
     .querySelector("#search-peptide", search_peptide)
     .addEventListener("click", () => search_peptide());
+  document
+    .querySelector("#search-modification-button")
+    .addEventListener("click", () => search_modification());
   enter_event("#search-peptide-input", search_peptide)
+  enter_event("#search-modification", search_modification)
   enter_event("#scan-number", find_scan_number)
   add_event("#details-spectrum-index", ["change", "focus"], spectrum_details)
   add_event("#details-identified-peptide-index", ["change", "focus"], identified_peptide_details)

@@ -9,6 +9,8 @@ use rustyms::{
     error::*,
     identification::*,
     model::*,
+    modification::{GnoComposition, Ontology, ReturnModification},
+    placement_rule::PlacementRule,
     spectrum::*,
     system::*,
     *,
@@ -16,7 +18,10 @@ use rustyms::{
 use state::State;
 use std::sync::Mutex;
 
-use crate::metadata_render::RenderToHtml;
+use crate::{
+    html_builder::{HtmlElement, HtmlTag},
+    metadata_render::RenderToHtml,
+};
 use serde::{Deserialize, Serialize};
 
 mod html_builder;
@@ -147,6 +152,141 @@ async fn search_peptide<'a>(
         &data,
     )
     .to_string())
+}
+
+#[tauri::command]
+async fn search_modification(text: &str, tolerance: f64) -> Result<String, String> {
+    let modification = if text.is_empty() {
+        Err("Empty".to_string())
+    } else {
+        Modification::try_from(text, 0..text.len(), &mut Vec::new())
+            .map(|m| match m {
+                ReturnModification::Defined(d) => Ok(d),
+                _ => Err(
+                    "Can not define ambiguous modifications for the modifications parameter"
+                        .to_string(),
+                ),
+            })
+            .map_err(|err| err.to_string())
+    }??;
+    let tolerance = Tolerance::new_absolute(Mass::new::<dalton>(tolerance));
+
+    if let Modification::Mass(mass) = modification {
+        let mut data = vec![];
+        for ontology in &[Ontology::Unimod, Ontology::Psimod, Ontology::Gnome] {
+            for (id, _, modification) in ontology.lookup() {
+                if tolerance.within(
+                    &mass.into_inner(),
+                    &modification.formula().monoisotopic_mass(),
+                ) {
+                    data.push([
+                        modification.to_string(),
+                        format!("{}:{}", ontology.name(), id),
+                        format!("{:.5} Da", modification.formula().monoisotopic_mass().value),
+                        format!(
+                            "<span class='formula'>{}</pan>",
+                            modification.formula().hill_notation_html()
+                        ),
+                    ])
+                }
+            }
+        }
+        Ok(html_builder::HtmlElement::table(
+            Some(&["Name", "Id", "Monoisotopic mass", "Formula"]),
+            &data,
+        )
+        .to_string())
+    } else if let Modification::Formula(formula) = modification {
+        let mut data = vec![];
+        for ontology in &[Ontology::Unimod, Ontology::Psimod, Ontology::Gnome] {
+            for (id, _, modification) in ontology.lookup() {
+                if modification.formula() == formula {
+                    data.push([
+                        modification.to_string(),
+                        format!("{}:{}", ontology.name(), id),
+                    ])
+                }
+            }
+        }
+        Ok(format!(
+            "<p>Formula <span class='formula'>{}</span> monoisotopic mass {:.5} Da average mass {:.5} Da</p>{}",
+            formula.hill_notation_html(),
+            formula.monoisotopic_mass().value,
+            formula.average_weight().value,
+            html_builder::HtmlElement::table(Some(&["Name", "Id"]), &data,)
+        ))
+    } else {
+        let mut output = HtmlElement::new(HtmlTag::div);
+
+        output = output.content(HtmlElement::new(HtmlTag::p).content(format!(
+            "Formula <span class='formula'>{}</pan> monoisotopic mass {:.5} Da average mass {:.5} Da",
+            modification.formula().hill_notation_html(),
+            modification.formula().monoisotopic_mass().value,
+            modification.formula().average_weight().value,
+        )));
+
+        if let Modification::Predefined(_, rules, ontology, name, index) = modification {
+            output = output.content(
+                HtmlElement::new(HtmlTag::a)
+                    .content(format!(
+                        "Ontology: {ontology}, name: {name}, index: {index}"
+                    ))
+                    .header(
+                        "href",
+                        if ontology == Ontology::Unimod {
+                            format!("https://www.unimod.org/modifications_view.php?editid1={index}")
+                        } else if ontology == Ontology::Psimod {
+                            "https://github.com/HUPO-PSI/psi-mod-CV".to_string()
+                        } else {
+                            "none".to_string()
+                        },
+                    )
+                    .header("target", "_blank"),
+            );
+            output = output.content(HtmlElement::new(HtmlTag::p).content("Placement rules"));
+            let mut ul = HtmlElement::new(HtmlTag::ul);
+
+            for rule in rules {
+                match rule {
+                    PlacementRule::AminoAcid(aa, pos) => {
+                        ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!(
+                            "{}@{}",
+                            aa.iter().map(|a| a.char()).collect::<String>(),
+                            pos
+                        )));
+                    }
+                    PlacementRule::PsiModification(index, pos) => {
+                        ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!(
+                            "{}@{}",
+                            Ontology::Psimod.find_id(index).unwrap(),
+                            pos
+                        )));
+                    }
+                    PlacementRule::Terminal(pos) => {
+                        ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!("{}", pos)));
+                    }
+                }
+            }
+            output = output.content(ul);
+        } else if let Modification::Gno(composition, name) = modification {
+            output = output.content(
+                HtmlElement::new(HtmlTag::p).content(format!("Ontology: Gnome, name: {name}")),
+            );
+            match composition {
+                GnoComposition::Mass(_) => {
+                    output =
+                        output.content(HtmlElement::new(HtmlTag::p).content("Only mass known"));
+                }
+                GnoComposition::Structure(structure) => {
+                    output = output.content(
+                        HtmlElement::new(HtmlTag::p).content(format!("Structure: {structure}")),
+                    );
+                }
+            }
+        }
+
+        Ok(output.to_string())
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -484,6 +624,7 @@ fn main() {
             find_scan_number,
             spectrum_details,
             search_peptide,
+            search_modification,
             identified_peptide_details,
             load_identified_peptide,
             annotate_spectrum,

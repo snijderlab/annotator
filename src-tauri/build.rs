@@ -321,12 +321,25 @@ fn main() {
     
       </div>
     
+      <input type="checkbox" id="collapsible-tools">
+      <fieldset class="collapsible" data-linked-item="collapsible-tools">
+        <legend>Tools</legend>
+        <div class="flex-input collapsible-content">
+          <label for="search-modification">Modification</label>
+          <input id="search-modification" type="text"></input>
+          <label for="search-modification-tolerance" title="If searching for a numeric modification, the tolerance on the mass">Tolerance (in Da)</label>
+          <input id="search-modification-tolerance" type="number" value="0.1" min="0"></input>
+          <button id="search-modification-button">Search</button>
+        </div>
+        <div class="collapsible-content" id="search-modification-result"></div>
+        <pre class="collapsible-content hidden" id="search-modification-error"></pre>
+      </fieldset>
       <input type="checkbox" id="collapsible-logs">
       <fieldset class="collapsible" data-linked-item="collapsible-logs">
-        <legend>Logs</legend>
-        <div class="collapsible-content" id="spectrum-fragments"></div>
-        <pre class="collapsible-content" id="spectrum-log"></pre>
-        <pre class="collapsible-content" id="identified-peptides-log"></pre>
+      <legend>Logs</legend>
+      <div class="collapsible-content" id="spectrum-fragments"></div>
+      <pre class="collapsible-content" id="spectrum-log"></pre>
+      <pre class="collapsible-content" id="identified-peptides-log"></pre>
       </fieldset>
       <div class="grow"></div>
       <footer>
