@@ -99,6 +99,7 @@ button {
   padding: 1rem 0;
   align-items: stretch;
   justify-content: space-evenly;
+  flex-wrap: wrap;
 }
 
 :is(.input-settings, .input-flex) option {

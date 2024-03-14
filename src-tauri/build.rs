@@ -76,10 +76,12 @@ fn main() {
           <div>
             <div class="input-flex">
               <label for="search-peptide-input">Search peptide</label>
-              <div class="combined-input">
-                <input id="search-peptide-input" type="text"></input>
-                <button id="search-peptide" class='square-left'>Search</button>
-              </div>
+              <input id="search-peptide-input" type="text"></input>
+              <label for="search-peptide-minimal-match">Minimal match score</label>
+              <input id="search-peptide-minimal-match" type="number" min="0" max="1" value="0"></input>
+              <label for="search-peptide-minimal-peptide">Minimal peptide score</label>
+              <input id="search-peptide-minimal-peptide" type="number" min="0" max="1" value="0"></input>
+              <button id="search-peptide">Search</button>
             </div>
             <div id="resulting-peptides">Go and search!</div>
           </div>
@@ -121,18 +123,18 @@ fn main() {
     
         <label for="spectrum-model">Model </label>
         <select id="spectrum-model">
-        <option value="all" title="All possible ions with single water loss from all">All</option>
-        <option value="ethcd" title="b+c+w+y+z+glycan with single water loss from all">EThcD/ETcaD</option>
-        <option value="cidhcd" title="a+b+y+precursor with single water loss and d with no losses">CID/HCD</option>
-        <option value="etd" title="c with no losses, y+z with single water loss and precursor with single water and ammonia loss">ETD</option>
-        <option value="custom">Custom</option>
+          <option value="all" title="All possible ions with single water loss from all">All</option>
+          <option value="ethcd" title="b+c+w+y+z+glycan with single water loss from all">EThcD/ETcaD</option>
+          <option value="cidhcd" title="a+b+y+precursor with single water loss and d with no losses">CID/HCD</option>
+          <option value="etd" title="c with no losses, y+z with single water loss and precursor with single water and ammonia loss">ETD</option>
+          <option value="custom">Custom</option>
         </select>
         <fieldset class="custom-model">
-        <legend>Custom model</legend>
-        <p>Ion</p>
-        <p>Location</p>
-        <p>Loss</p>
-        <p>Custom loss</p>"#).unwrap();
+          <legend>Custom model</legend>
+          <p>Ion</p>
+          <p>Location</p>
+          <p>Loss</p>
+          <p>Custom loss</p>"#).unwrap();
     for ion in ["a", "b", "c", "d", "v", "w", "x", "y", "z"] {
         write!(
                 writer,

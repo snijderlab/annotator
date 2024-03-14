@@ -87,7 +87,12 @@ async fn load_identified_peptides<'a>(
 }
 
 #[tauri::command]
-async fn search_peptide<'a>(text: &'a str, state: ModifiableState<'a>) -> Result<String, String> {
+async fn search_peptide<'a>(
+    text: &'a str,
+    minimal_match_score: f64,
+    minimal_peptide_score: f64,
+    state: ModifiableState<'a>,
+) -> Result<String, String> {
     let state = state
         .lock()
         .map_err(|_| "Search exception: State locked".to_string())?;
@@ -95,6 +100,7 @@ async fn search_peptide<'a>(text: &'a str, state: ModifiableState<'a>) -> Result
     let data = state
         .peptides
         .iter()
+        .filter(|p| p.score.map_or(true, |score| score >= minimal_peptide_score))
         .enumerate()
         .map(|(index, peptide)| {
             (
@@ -110,7 +116,7 @@ async fn search_peptide<'a>(text: &'a str, state: ModifiableState<'a>) -> Result
             )
         })
         .sorted_unstable_by(|a, b| b.1.cmp(&a.1))
-        .filter(|(_, alignment, _)| alignment.normalised_score() > 0.0)
+        .filter(|(_, alignment, _)| alignment.normalised_score() >= minimal_match_score)
         .take(25)
         .map(|(index, alignment, peptide)| {
             let start = alignment.start_a();
@@ -123,9 +129,10 @@ async fn search_peptide<'a>(text: &'a str, state: ModifiableState<'a>) -> Result
                     peptide.peptide.sub_peptide(start..end).to_string(),
                     peptide.peptide.sub_peptide(end..).to_string(),
                 ),
+                format!("{:.3}", alignment.normalised_score()),
                 peptide
                     .score
-                    .map(|score| score.to_string())
+                    .map(|score| format!("{:.3}", score))
                     .unwrap_or_default(),
             ]
         })
@@ -134,6 +141,7 @@ async fn search_peptide<'a>(text: &'a str, state: ModifiableState<'a>) -> Result
         Some(&[
             "Index".to_string(),
             "Sequence".to_string(),
+            "Match Score".to_string(),
             "Peptide Score".to_string(),
         ]),
         &data,
