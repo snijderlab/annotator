@@ -4,6 +4,7 @@
 )]
 
 use itertools::Itertools;
+use render::display_mass;
 use rustyms::{
     align::{align, matrix::BLOSUM62, Alignment},
     error::*,
@@ -182,9 +183,9 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
                     data.push([
                         modification.to_string(),
                         format!("{}:{}", ontology.name(), id),
-                        format!("{:.5} Da", modification.formula().monoisotopic_mass().value),
+                        display_mass(modification.formula().monoisotopic_mass()).to_string(),
                         format!(
-                            "<span class='formula'>{}</pan>",
+                            "<span class='formula'>{}</span>",
                             modification.formula().hill_notation_html()
                         ),
                     ])
@@ -209,20 +210,20 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
             }
         }
         Ok(format!(
-            "<p>Formula <span class='formula'>{}</span> monoisotopic mass {:.5} Da average mass {:.5} Da</p>{}",
+            "<p>Formula <span class='formula'>{}</span> monoisotopic mass {} average mass {}</p>{}",
             formula.hill_notation_html(),
-            formula.monoisotopic_mass().value,
-            formula.average_weight().value,
+            display_mass(formula.monoisotopic_mass()),
+            display_mass(formula.average_weight()),
             html_builder::HtmlElement::table(Some(&["Name", "Id"]), &data,)
         ))
     } else {
         let mut output = HtmlElement::new(HtmlTag::div);
 
         output = output.content(HtmlElement::new(HtmlTag::p).content(format!(
-            "Formula <span class='formula'>{}</pan> monoisotopic mass {:.5} Da average mass {:.5} Da",
+            "Formula <span class='formula'>{}</span> monoisotopic mass {} average mass {}",
             modification.formula().hill_notation_html(),
-            modification.formula().monoisotopic_mass().value,
-            modification.formula().average_weight().value,
+            display_mass(modification.formula().monoisotopic_mass()),
+            display_mass(modification.formula().average_weight()),
         )));
 
         if let Modification::Predefined(_, rules, ontology, name, index) = modification {

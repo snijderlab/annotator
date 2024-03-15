@@ -6,7 +6,10 @@ use rustyms::{
     MultiChemical,
 };
 
-use crate::html_builder::{HtmlContent, HtmlElement, HtmlTag};
+use crate::{
+    html_builder::{HtmlContent, HtmlElement, HtmlTag},
+    render::display_mass,
+};
 
 pub trait RenderToHtml {
     fn to_html(&self) -> HtmlElement;
@@ -58,19 +61,19 @@ impl RenderToHtml for IdentifiedPeptide {
             );
         }
 
-        let mass = self.peptide.formulas()[0].monoisotopic_mass().value;
+        let mass = self.peptide.formulas()[0].monoisotopic_mass();
         HtmlElement::new(HtmlTag::div).children([
             HtmlElement::new(HtmlTag::p).content(format!(
-                "Score: {}, Length: {} AA, Mass: {:.3} Da, Charge: {}, Mz: {} Th, Mode: {}",
+                "Score: {}, Length: {} AA, Mass: {}, Charge: {}, Mz: {} Th, Mode: {}",
                 self.score.map_or(String::from("-"), |s| format!("{s:.3}")),
                 self.peptide.sequence.len(),
-                mass,
+                display_mass(mass),
                 self.metadata
                     .charge()
                     .map_or("-".to_string(), |c| c.value.to_string()),
                 self.metadata
                     .charge()
-                    .map_or("-".to_string(), |c| format!("{:.3}", mass / c.value)),
+                    .map_or("-".to_string(), |c| format!("{:.3}", mass.value / c.value)),
                 self.metadata
                     .mode()
                     .map_or("-".to_string(), |c| c.to_string())
@@ -381,8 +384,10 @@ impl RenderToHtml for MaxQuantData {
                         self.mass.map(|v| v.value).to_optional_string(),
                     ],
                     &[
-                        "Mass error [da]".to_string(),
-                        self.mass_error_da.map(|v| v.value).to_optional_string(),
+                        "Mass error [absolute]".to_string(),
+                        self.mass_error_da
+                            .map(|v| display_mass(v))
+                            .to_optional_string(),
                     ],
                     &[
                         "Mass error [ppm]".to_string(),

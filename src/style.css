@@ -149,14 +149,20 @@ pre {
   margin-left: .5rem;
 }
 
-#spectrum-error {
+output.error {
   margin: .5rem;
   padding-left: .5rem;
   border: 2px solid red;
-}
+  white-space: pre;
+  font-family: monospace;
 
-#spectrum-error .title {
-  color: red;
+  &:not(.hidden) {
+    display: block;
+  }
+
+  & .title {
+    color: red;
+  }
 }
 
 .hidden {

@@ -173,7 +173,7 @@ fn main() {
           <div class="peptide-input wide" id="peptide" contentEditable="plaintext-only"></div>
           <button id="annotate-button" type="button" class="col-2">Annotate</button>
         </div>
-      <div id="spectrum-error" class="hidden"></div>
+      <output id="spectrum-error" class="hidden error"></output>
       <div id='spectrum-wrapper' class="spectrum show-unassigned hidden legend-ion" onload='SpectrumSetUp()'>
         <div class='all-settings'>
           <fieldset class='settings graphics-settings'>
@@ -311,12 +311,12 @@ fn main() {
               </div>
           </div>
         </div>
-        <div class='wrapper show-unassigned' id="spectrum-results-wrapper"></div>
+        <output class='wrapper show-unassigned' id="spectrum-results-wrapper"></output>
     
         <input type="checkbox" id="collapsible-fragment-table">
         <fieldset class="collapsible" data-linked-item="collapsible-fragment-table">
           <legend>Fragment Table</legend>
-          <div class="collapsible-content" id="spectrum-fragment-table"></div>
+          <output class="collapsible-content" id="spectrum-fragment-table"></output>
         </fieldset>
     
       </div>
@@ -331,15 +331,14 @@ fn main() {
           <input id="search-modification-tolerance" type="number" value="0.1" min="0"></input>
           <button id="search-modification-button">Search</button>
         </div>
-        <div class="collapsible-content" id="search-modification-result"></div>
-        <pre class="collapsible-content hidden" id="search-modification-error"></pre>
+        <output class="collapsible-content" id="search-modification-result"></output>
+        <output class="error collapsible-content hidden" id="search-modification-error"></output>
       </fieldset>
       <input type="checkbox" id="collapsible-logs">
       <fieldset class="collapsible" data-linked-item="collapsible-logs">
       <legend>Logs</legend>
-      <div class="collapsible-content" id="spectrum-fragments"></div>
-      <pre class="collapsible-content" id="spectrum-log"></pre>
-      <pre class="collapsible-content" id="identified-peptides-log"></pre>
+      <output class="collapsible-content" id="spectrum-log"></output>
+      <output class="collapsible-content" id="identified-peptides-log"></output>
       </fieldset>
       <div class="grow"></div>
       <footer>

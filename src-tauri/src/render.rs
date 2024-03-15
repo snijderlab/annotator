@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fmt::Write};
+use std::{cmp::Ordering, collections::HashSet, fmt::Write};
 
 use itertools::Itertools;
 use rustyms::{
@@ -1031,9 +1031,9 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
             .iter()
             .map(|f| {
                 format!(
-                    "{:.3} Da | avg: {:.3} Da",
-                    f.monoisotopic_mass().value,
-                    f.average_weight().value
+                    "{} | avg: {}",
+                    display_mass(f.monoisotopic_mass()),
+                    display_mass(f.average_weight())
                 )
             })
             .join(", ");
@@ -1224,10 +1224,60 @@ fn density_graph<const STEPS: usize>(output: &mut String, data: &[f64], class: &
         .unwrap();
     }
     write!(output, "<svg viewBox='-1 0 100 {}' preserveAspectRatio='none'><g class='density {class}'><path class='line' d='M {}'></path><path class='volume' d='M 100 0 L {} L {} 0 Z'></path></g></svg>",
-STEPS-1,
-path,
-path, STEPS -1
-).unwrap();
+        STEPS-1,
+        path,
+        path, STEPS -1
+        ).unwrap();
+}
+
+pub fn display_mass(value: Mass) -> HtmlElement {
+    let (num, suf, full) = engineering_notation(value.value, 3);
+    let suf = suf.map_or(String::new(), |suf| suf.to_string());
+    HtmlElement::new(HtmlTag::span)
+        .class("mass")
+        .header(
+            "title",
+            if suf.is_empty() {
+                format!("{} Da", value.value)
+            } else {
+                format!("{} {}Da\n{} Da", full, suf, value.value)
+            },
+        )
+        .content(format!("{} {}Da", num, suf))
+}
+
+/// Display the given value in engineering notation eg `1000` -> `10 k`, with the given number of decimal points and returns the suffix separately.
+/// A value of `0.0` will result in the lowest possible suffix `0.0 q`.
+fn engineering_notation(value: f64, precision: usize) -> (String, Option<char>, f64) {
+    const BIG_SUFFIXES: &[char] = &[' ', 'k', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y', 'R', 'Q'];
+    const SMALL_SUFFIXES: &[char] = &[' ', 'm', 'μ', 'n', 'p', 'f', 'a', 'z', 'y', 'r', 'q'];
+    let base = if value == 0.0 {
+        0
+    } else {
+        ((value.abs().log10() / 3.0).floor() as isize).clamp(
+            -(SMALL_SUFFIXES.len() as isize - 1),
+            BIG_SUFFIXES.len() as isize - 1,
+        )
+    };
+    match base.cmp(&0) {
+        Ordering::Less => (
+            format!(
+                "{:.precision$}",
+                value * 10_usize.pow(base.unsigned_abs() as u32 * 3) as f64,
+            ),
+            Some(SMALL_SUFFIXES[base.unsigned_abs()]),
+            value * 10_usize.pow(base.unsigned_abs() as u32 * 3) as f64,
+        ),
+        Ordering::Equal => (format!("{value:.precision$}"), None, value),
+        Ordering::Greater => (
+            format!(
+                "{:.precision$}",
+                value / 10_usize.pow(base as u32 * 3) as f64,
+            ),
+            Some(BIG_SUFFIXES[base as usize]),
+            value / 10_usize.pow(base as u32 * 3) as f64,
+        ),
+    }
 }
 
 #[cfg(test)]
