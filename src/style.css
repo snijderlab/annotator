@@ -511,3 +511,37 @@ footer {
     margin: 0;
   }
 }
+
+/* General stats */
+.general-stats td {
+  padding: 0 .25rem;
+  vertical-align: top;
+
+  &:has(table) {
+    padding: 0;
+  }
+
+  & table {
+    width: -webkit-fill-available;
+
+    & td:first-child {
+      border-left: none;
+    }
+
+    & td:last-child {
+      border-right: none;
+    }
+
+    & tr:first-child td {
+      border-top: none;
+    }
+
+    & tr:last-child td {
+      border-bottom: none;
+    }
+  }
+}
+
+label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-detail {
+  display: none;
+}

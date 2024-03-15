@@ -10,7 +10,7 @@ use rustyms::{
     error::*,
     identification::*,
     model::*,
-    modification::{GnoComposition, Ontology, ReturnModification},
+    modification::{GnoComposition, ModificationSearchResult, Ontology, ReturnModification},
     placement_rule::PlacementRule,
     spectrum::*,
     system::*,
@@ -171,122 +171,146 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
             .map_err(|err| err.to_string())
     }??;
     let tolerance = Tolerance::new_absolute(Mass::new::<dalton>(tolerance));
+    let result = Modification::search(&modification, tolerance);
 
-    if let Modification::Mass(mass) = modification {
-        let mut data = vec![];
-        for ontology in &[Ontology::Unimod, Ontology::Psimod, Ontology::Gnome] {
-            for (id, _, modification) in ontology.lookup() {
-                if tolerance.within(
-                    &mass.into_inner(),
-                    &modification.formula().monoisotopic_mass(),
-                ) {
-                    data.push([
-                        modification.to_string(),
-                        format!("{}:{}", ontology.name(), id),
-                        display_mass(modification.formula().monoisotopic_mass()).to_string(),
-                        format!(
-                            "<span class='formula'>{}</span>",
-                            modification.formula().hill_notation_html()
+    match result {
+        ModificationSearchResult::Single(modification) => {
+            let mut output = HtmlElement::new(HtmlTag::div);
+
+            output = output.content(HtmlElement::new(HtmlTag::p).content(format!(
+                "Formula <span class='formula'>{}</span> monoisotopic mass {} average mass {}",
+                modification.formula().hill_notation_html(),
+                display_mass(modification.formula().monoisotopic_mass()),
+                display_mass(modification.formula().average_weight()),
+            )));
+
+            if let Modification::Predefined(_, rules, ontology, name, index) = &modification {
+                output = output.content(
+                    HtmlElement::new(HtmlTag::p)
+                        .content(format!(
+                            "Ontology: {ontology}, name: {name}, index: {index}, "
+                        ))
+                        .content(
+                            HtmlElement::new(HtmlTag::a)
+                                .content("ontology link")
+                                .header("href", modification.ontology_url().unwrap_or_default())
+                                .header("target", "_blank"),
                         ),
-                    ])
+                );
+                output = output.content(HtmlElement::new(HtmlTag::p).content("Placement rules"));
+                let mut ul = HtmlElement::new(HtmlTag::ul);
+
+                for rule in rules {
+                    match rule {
+                        PlacementRule::AminoAcid(aa, pos) => {
+                            ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!(
+                                "{}@{}",
+                                aa.iter().map(|a| a.char()).collect::<String>(),
+                                pos
+                            )));
+                        }
+                        PlacementRule::PsiModification(index, pos) => {
+                            ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!(
+                                "{}@{}",
+                                Ontology::Psimod.find_id(*index).unwrap(),
+                                pos
+                            )));
+                        }
+                        PlacementRule::Terminal(pos) => {
+                            ul = ul
+                                .content(HtmlElement::new(HtmlTag::li).content(format!("{}", pos)));
+                        }
+                    }
+                }
+                output = output.content(ul);
+            } else if let Modification::Gno(composition, name) = &modification {
+                output = output.content(
+                    HtmlElement::new(HtmlTag::p)
+                        .content(format!("Ontology: Gnome, name: {name}, "))
+                        .content(
+                            HtmlElement::new(HtmlTag::a)
+                                .content("ontology link")
+                                .header("href", modification.ontology_url().unwrap_or_default())
+                                .header("target", "_blank"),
+                        ),
+                );
+                match composition {
+                    GnoComposition::Mass(_) => {
+                        output =
+                            output.content(HtmlElement::new(HtmlTag::p).content("Only mass known"));
+                    }
+                    GnoComposition::Structure(structure) => {
+                        output.extend([
+                            HtmlElement::new(HtmlTag::p).content(format!(
+                                "Composition: {}",
+                                structure
+                                    .composition()
+                                    .iter()
+                                    .fold(String::new(), |acc, m| acc + &format!("{}{}", m.0, m.1))
+                            )),
+                            HtmlElement::new(HtmlTag::p).content(format!("Structure: {structure}")),
+                        ]);
+                    }
                 }
             }
+
+            Ok(output.to_string())
         }
-        Ok(html_builder::HtmlElement::table(
-            Some(&["Name", "Id", "Monoisotopic mass", "Formula"]),
-            &data,
-        )
-        .to_string())
-    } else if let Modification::Formula(formula) = modification {
-        let mut data = vec![];
-        for ontology in &[Ontology::Unimod, Ontology::Psimod, Ontology::Gnome] {
-            for (id, _, modification) in ontology.lookup() {
-                if modification.formula() == formula {
-                    data.push([
+        ModificationSearchResult::Mass(_, _, modifications) => {
+            Ok(html_builder::HtmlElement::table(
+                Some(&["Name", "Id", "Monoisotopic mass", "Formula"]),
+                &modifications
+                    .iter()
+                    .map(|(ontology, id, _, modification)| {
+                        [
+                            modification.to_string(),
+                            format!("{}:{}", ontology.name(), id),
+                            display_mass(modification.formula().monoisotopic_mass()).to_string(),
+                            format!(
+                                "<span class='formula'>{}</span>",
+                                modification.formula().hill_notation_html()
+                            ),
+                        ]
+                    })
+                    .collect_vec(),
+            )
+            .to_string())
+        }
+        ModificationSearchResult::Formula(_, modifications) => {
+            Ok(html_builder::HtmlElement::table(
+                Some(&["Name", "Id"]),
+                &modifications
+                    .iter()
+                    .map(|(ontology, id, _, modification)| {
+                        [
+                            modification.to_string(),
+                            format!("{}:{}", ontology.name(), id),
+                        ]
+                    })
+                    .collect_vec(),
+            )
+            .to_string())
+        }
+        ModificationSearchResult::Glycan(_, modifications) => Ok(html_builder::HtmlElement::table(
+            Some(&["Name", "Id", "Structure"]),
+            &modifications
+                .iter()
+                .map(|(ontology, id, _, modification)| {
+                    [
                         modification.to_string(),
                         format!("{}:{}", ontology.name(), id),
-                    ])
-                }
-            }
-        }
-        Ok(format!(
-            "<p>Formula <span class='formula'>{}</span> monoisotopic mass {} average mass {}</p>{}",
-            formula.hill_notation_html(),
-            display_mass(formula.monoisotopic_mass()),
-            display_mass(formula.average_weight()),
-            html_builder::HtmlElement::table(Some(&["Name", "Id"]), &data,)
-        ))
-    } else {
-        let mut output = HtmlElement::new(HtmlTag::div);
-
-        output = output.content(HtmlElement::new(HtmlTag::p).content(format!(
-            "Formula <span class='formula'>{}</span> monoisotopic mass {} average mass {}",
-            modification.formula().hill_notation_html(),
-            display_mass(modification.formula().monoisotopic_mass()),
-            display_mass(modification.formula().average_weight()),
-        )));
-
-        if let Modification::Predefined(_, rules, ontology, name, index) = modification {
-            output = output.content(
-                HtmlElement::new(HtmlTag::a)
-                    .content(format!(
-                        "Ontology: {ontology}, name: {name}, index: {index}"
-                    ))
-                    .header(
-                        "href",
-                        if ontology == Ontology::Unimod {
-                            format!("https://www.unimod.org/modifications_view.php?editid1={index}")
-                        } else if ontology == Ontology::Psimod {
-                            "https://github.com/HUPO-PSI/psi-mod-CV".to_string()
+                        if let Modification::Gno(GnoComposition::Structure(structure), _) =
+                            modification
+                        {
+                            structure.to_string()
                         } else {
-                            "none".to_string()
+                            "-".to_string()
                         },
-                    )
-                    .header("target", "_blank"),
-            );
-            output = output.content(HtmlElement::new(HtmlTag::p).content("Placement rules"));
-            let mut ul = HtmlElement::new(HtmlTag::ul);
-
-            for rule in rules {
-                match rule {
-                    PlacementRule::AminoAcid(aa, pos) => {
-                        ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!(
-                            "{}@{}",
-                            aa.iter().map(|a| a.char()).collect::<String>(),
-                            pos
-                        )));
-                    }
-                    PlacementRule::PsiModification(index, pos) => {
-                        ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!(
-                            "{}@{}",
-                            Ontology::Psimod.find_id(index).unwrap(),
-                            pos
-                        )));
-                    }
-                    PlacementRule::Terminal(pos) => {
-                        ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!("{}", pos)));
-                    }
-                }
-            }
-            output = output.content(ul);
-        } else if let Modification::Gno(composition, name) = modification {
-            output = output.content(
-                HtmlElement::new(HtmlTag::p).content(format!("Ontology: Gnome, name: {name}")),
-            );
-            match composition {
-                GnoComposition::Mass(_) => {
-                    output =
-                        output.content(HtmlElement::new(HtmlTag::p).content("Only mass known"));
-                }
-                GnoComposition::Structure(structure) => {
-                    output = output.content(
-                        HtmlElement::new(HtmlTag::p).content(format!("Structure: {structure}")),
-                    );
-                }
-            }
-        }
-
-        Ok(output.to_string())
+                    ]
+                })
+                .collect_vec(),
+        )
+        .to_string()),
     }
 }
 

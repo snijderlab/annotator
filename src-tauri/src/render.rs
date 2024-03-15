@@ -2,9 +2,12 @@ use std::{cmp::Ordering, collections::HashSet, fmt::Write};
 
 use itertools::Itertools;
 use rustyms::{
-    fragment::*, model::Location, spectrum::PeakSpectrum, system::*, AnnotatedSpectrum,
-    ComplexPeptide, Element, LinearPeptide, MassMode, Model, Modification, MolecularFormula,
-    MultiChemical,
+    fragment::*,
+    model::Location,
+    spectrum::{AnnotatedPeak, PeakSpectrum},
+    system::*,
+    AnnotatedSpectrum, ComplexPeptide, Element, LinearPeptide, MassMode, Model, Modification,
+    MolecularFormula, MultiChemical,
 };
 
 use crate::html_builder::{HtmlElement, HtmlTag};
@@ -1017,9 +1020,82 @@ pub fn spectrum_table(
     output
 }
 
+#[derive(Debug, Default)]
+struct IonStats {
+    a: usize,
+    b: usize,
+    c: usize,
+    d: usize,
+    v: usize,
+    w: usize,
+    x: usize,
+    y: usize,
+    z: usize,
+    precursor: usize,
+    oxonium: usize,
+    Y: usize,
+    peaks: usize,
+}
+
+impl IonStats {
+    fn total(&self) -> usize {
+        self.a
+            + self.b
+            + self.c
+            + self.d
+            + self.v
+            + self.w
+            + self.x
+            + self.y
+            + self.z
+            + self.precursor
+            + self.oxonium
+            + self.Y
+    }
+
+    fn add(mut self, annotation: &[Fragment], peptide_index: Option<usize>) -> Self {
+        for fragment in annotation {
+            if peptide_index.map_or(false, |index| index != fragment.peptide_index) {
+                continue; // Skip any annotation not for this peptide
+            }
+            match fragment.ion {
+                FragmentType::a(..) => self.a += 1,
+                FragmentType::b(..) => self.b += 1,
+                FragmentType::c(..) => self.c += 1,
+                FragmentType::d(..) => self.d += 1,
+                FragmentType::v(..) => self.v += 1,
+                FragmentType::w(..) => self.w += 1,
+                FragmentType::x(..) => self.x += 1,
+                FragmentType::y(..) => self.y += 1,
+                FragmentType::z(..) => self.z += 1,
+                FragmentType::z·(..) => self.z += 1,
+                FragmentType::A(..)
+                | FragmentType::C(..)
+                | FragmentType::X(..)
+                | FragmentType::Z(..) => (),
+                FragmentType::B(..) | FragmentType::InternalGlycan(..) => self.oxonium += 1,
+                FragmentType::Y(..) => self.Y += 1,
+                FragmentType::precursor => self.precursor += 1,
+            }
+        }
+        self.peaks += 1;
+        self
+    }
+}
+
 fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &[Fragment]) {
+    fn format(found: usize, total: usize) -> String {
+        format!(
+            "{:.2}% ({}/{})",
+            found as f64 / total as f64 * 100.0,
+            found,
+            total
+        )
+    }
+
     let mut mass_row = String::new();
     let mut fragments_row = String::new();
+    let mut fragments_details_row = String::new();
     let mut peaks_row = String::new();
     let mut intensity_row = String::new();
     let mut positions_row = String::new();
@@ -1044,16 +1120,19 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
                     .iter()
                     .any(|a| a.peptide_index == peptide_index)
             })
-            .fold((0, 0.0), |(n, intensity), p| {
-                (n + 1, intensity + p.intensity.0)
+            .fold((IonStats::default(), 0.0), |(n, intensity), p| {
+                (
+                    n.add(&p.annotation, Some(peptide_index)),
+                    intensity + p.intensity.0,
+                )
             });
         let total_fragments = fragments
             .iter()
             .filter(|f| f.peptide_index == peptide_index)
-            .count();
-        let percentage_fragments_found = num_annotated as f64 / total_fragments as f64 * 100.0;
-        let percentage_peaks_annotated =
-            num_annotated as f64 / spectrum.spectrum().len() as f64 * 100.0;
+            .fold(IonStats::default(), |n, p| {
+                n.add(&[p.clone()], Some(peptide_index))
+            });
+
         let percentage_intensity_annotated = intensity_annotated / total_intensity * 100.0;
         let percentage_positions_covered = spectrum
             .spectrum()
@@ -1068,32 +1147,129 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
             .count() as f64
             / peptide.len() as f64
             * 100.0;
+
         write!(mass_row, "<td>{precursor}</td>").unwrap();
         write!(
             fragments_row,
-            "<td>{percentage_fragments_found:.2} % ({num_annotated}/{})</td>",
-            total_fragments
+            "<td>{}</td>",
+            format(num_annotated.peaks, total_fragments.peaks)
         )
         .unwrap();
+        write!(fragments_details_row, "<td><table>",).unwrap();
+
+        if total_fragments.a > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>a</td><td>{}</td></tr>",
+                format(num_annotated.a, total_fragments.a)
+            )
+            .unwrap();
+        }
+        if total_fragments.b > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>b</td><td>{}</td></tr>",
+                format(num_annotated.b, total_fragments.b)
+            )
+            .unwrap();
+        }
+        if total_fragments.c > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>c</td><td>{}</td></tr>",
+                format(num_annotated.c, total_fragments.c)
+            )
+            .unwrap();
+        }
+        if total_fragments.d > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>d</td><td>{}</td></tr>",
+                format(num_annotated.d, total_fragments.d)
+            )
+            .unwrap();
+        }
+        if total_fragments.v > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>v</td><td>{}</td></tr>",
+                format(num_annotated.v, total_fragments.v)
+            )
+            .unwrap();
+        }
+        if total_fragments.w > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>w</td><td>{}</td></tr>",
+                format(num_annotated.w, total_fragments.w)
+            )
+            .unwrap();
+        }
+        if total_fragments.x > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>x</td><td>{}</td></tr>",
+                format(num_annotated.x, total_fragments.x)
+            )
+            .unwrap();
+        }
+        if total_fragments.y > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>y</td><td>{}</td></tr>",
+                format(num_annotated.y, total_fragments.y)
+            )
+            .unwrap();
+        }
+        if total_fragments.z > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>z</td><td>{}</td></tr>",
+                format(num_annotated.z, total_fragments.z)
+            )
+            .unwrap();
+        }
+        if total_fragments.precursor > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>precursor</td><td>{}</td></tr>",
+                format(num_annotated.precursor, total_fragments.precursor)
+            )
+            .unwrap();
+        }
+        if total_fragments.oxonium > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>oxonium</td><td>{}</td></tr>",
+                format(num_annotated.oxonium, total_fragments.oxonium)
+            )
+            .unwrap();
+        }
+        if total_fragments.Y > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>Y</td><td>{}</td></tr>",
+                format(num_annotated.Y, total_fragments.Y)
+            )
+            .unwrap();
+        }
+        write!(fragments_details_row, "</table></td>",).unwrap();
+
         write!(
             peaks_row,
-            "<td>{percentage_peaks_annotated:.2} % ({num_annotated}/{})</td>",
-            spectrum.spectrum().count()
+            "<td>{}</td>",
+            format(num_annotated.peaks, spectrum.spectrum().len())
         )
         .unwrap();
         write!(
             intensity_row,
-            "<td>{percentage_intensity_annotated:.2} %</td>"
+            "<td>{percentage_intensity_annotated:.2}%</td>"
         )
         .unwrap();
-        write!(
-            positions_row,
-            "<td>{percentage_positions_covered:.2} %</td>"
-        )
-        .unwrap();
+        write!(positions_row, "<td>{percentage_positions_covered:.2}%</td>").unwrap();
     }
 
-    write!(output, "<table class='general-stats'>").unwrap();
+    write!(output, "<label><input type='checkbox' switch id='general-stats-show-details'>Show detailed fragment breakdown</label><table class='general-stats'>").unwrap();
     if spectrum.peptide.peptides().len() > 1 {
         write!(output, "<tr><td>General Statistics</td>").unwrap();
         for i in 0..spectrum.peptide.peptides().len() {
@@ -1104,30 +1280,130 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
         let (num_annotated, intensity_annotated) = spectrum
             .spectrum()
             .filter(|p| !p.annotation.is_empty())
-            .fold((0, 0.0), |(n, intensity), p| {
-                (n + 1, intensity + p.intensity.0)
+            .fold((IonStats::default(), 0.0), |(n, intensity), p| {
+                (n.add(&p.annotation, None), intensity + p.intensity.0)
             });
-        let total_annotations: usize = spectrum.spectrum().map(|a| a.annotation.len()).sum();
-        let percentage_fragments_found = total_annotations as f64 / fragments.len() as f64 * 100.0;
-        let percentage_peaks_annotated =
-            num_annotated as f64 / spectrum.spectrum().len() as f64 * 100.0;
+        let total_fragments = fragments
+            .iter()
+            .fold(IonStats::default(), |n, f| n.add(&[f.clone()], None));
+
         let percentage_intensity_annotated = intensity_annotated / total_intensity * 100.0;
+
         write!(mass_row, "<td>-</td>").unwrap();
         write!(
             fragments_row,
-            "<td>{percentage_fragments_found:.2} % ({total_annotations}/{})</td>",
-            fragments.len()
+            "<td>{}</td>",
+            format(num_annotated.peaks, total_fragments.peaks)
         )
         .unwrap();
+        write!(fragments_details_row, "<td><table>",).unwrap();
+
+        if total_fragments.a > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>a</td><td>{}</td></tr>",
+                format(num_annotated.a, total_fragments.a)
+            )
+            .unwrap();
+        }
+        if total_fragments.b > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>b</td><td>{}</td></tr>",
+                format(num_annotated.b, total_fragments.b)
+            )
+            .unwrap();
+        }
+        if total_fragments.c > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>c</td><td>{}</td></tr>",
+                format(num_annotated.c, total_fragments.c)
+            )
+            .unwrap();
+        }
+        if total_fragments.d > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>d</td><td>{}</td></tr>",
+                format(num_annotated.d, total_fragments.d)
+            )
+            .unwrap();
+        }
+        if total_fragments.v > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>v</td><td>{}</td></tr>",
+                format(num_annotated.v, total_fragments.v)
+            )
+            .unwrap();
+        }
+        if total_fragments.w > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>w</td><td>{}</td></tr>",
+                format(num_annotated.w, total_fragments.w)
+            )
+            .unwrap();
+        }
+        if total_fragments.x > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>x</td><td>{}</td></tr>",
+                format(num_annotated.x, total_fragments.x)
+            )
+            .unwrap();
+        }
+        if total_fragments.y > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>y</td><td>{}</td></tr>",
+                format(num_annotated.y, total_fragments.y)
+            )
+            .unwrap();
+        }
+        if total_fragments.z > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>z</td><td>{}</td></tr>",
+                format(num_annotated.z, total_fragments.z)
+            )
+            .unwrap();
+        }
+        if total_fragments.precursor > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>precursor</td><td>{}</td></tr>",
+                format(num_annotated.precursor, total_fragments.precursor)
+            )
+            .unwrap();
+        }
+        if total_fragments.oxonium > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>oxonium</td><td>{}</td></tr>",
+                format(num_annotated.oxonium, total_fragments.oxonium)
+            )
+            .unwrap();
+        }
+        if total_fragments.Y > 0 {
+            write!(
+                fragments_details_row,
+                "<tr><td>Y</td><td>{}</td></tr>",
+                format(num_annotated.Y, total_fragments.Y)
+            )
+            .unwrap();
+        }
+        write!(fragments_details_row, "</table></td>",).unwrap();
         write!(
             peaks_row,
-            "<td>{percentage_peaks_annotated:.2} % ({num_annotated}/{})</td>",
-            spectrum.spectrum().len()
+            "<td>{}</td>",
+            format(num_annotated.peaks, spectrum.spectrum().len())
         )
         .unwrap();
         write!(
             intensity_row,
-            "<td>{percentage_intensity_annotated:.2} %</td>"
+            "<td>{percentage_intensity_annotated:.2}%</td>"
         )
         .unwrap();
         write!(positions_row, "<td>-</td>").unwrap();
@@ -1135,10 +1411,11 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
     write!(
         output,
         "<tr><td>Precursor Mass (M)</td>{mass_row}</tr>
-    <tr><td>Fragments found</td>{fragments_row}</tr>
-    <tr><td>Peaks annotated</td>{peaks_row}</tr>
-    <tr><td>Intensity annotated</td>{intensity_row}</tr>
-    <tr><td>Sequence positions covered</td>{positions_row}</tr>
+        <tr><td>Fragments found</td>{fragments_row}</tr>
+        <tr class='fragments-detail'><td>Fragments detailed</td>{fragments_details_row}</tr>
+        <tr><td>Peaks annotated</td>{peaks_row}</tr>
+        <tr><td>Intensity annotated</td>{intensity_row}</tr>
+        <tr><td>Sequence positions covered</td>{positions_row}</tr>
     </table>"
     )
     .unwrap();
