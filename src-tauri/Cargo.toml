@@ -18,7 +18,7 @@ tauri = { version = "1.6", features = ["dialog-open", "updater"] }
 itertools = "0.12"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.6", features = ["shell-open", "dialog-open", "updater"] }
+tauri = { version = "1.6", features = ["shell-open", "dialog-open"] }
 rustyms = { version = "0.8.3", default-features = false, features = [
     "identification",
     "align",
