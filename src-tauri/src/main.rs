@@ -574,9 +574,9 @@ async fn annotate_spectrum<'a>(
     let mut model = match model {
         "all" => Model::all(),
         "ethcd" => Model::ethcd(),
-        "etcid" => Model::etcid(),
         "cidhcd" => Model::cid_hcd(),
         "etd" => Model::etd(),
+        "none" => Model::none(),
         "custom" => Model::new(
             get_model_param(&cmodel.a)?,
             get_model_param(&cmodel.b)?,

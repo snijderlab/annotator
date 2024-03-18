@@ -123,10 +123,11 @@ fn main() {
     
         <label for="spectrum-model">Model </label>
         <select id="spectrum-model">
-          <option value="all" title="All possible ions with single water loss from all">All</option>
-          <option value="ethcd" title="b+c+w+y+z+glycan with single water loss from all">EThcD/ETcaD</option>
-          <option value="cidhcd" title="a+b+y+precursor with single water loss and d with no losses">CID/HCD</option>
-          <option value="etd" title="c with no losses, y+z with single water loss and precursor with single water and ammonia loss">ETD</option>
+          <option value="all" title="All possible ions with single water loss from all and additionally double water loss from glycans">All</option>
+          <option value="ethcd" title="b+c+w+y+z+glycan with single water loss from all and additionally double water loss from glycans">EThcD/ETcaD</option>
+          <option value="cidhcd" title="a+b+d+y+precursor with single water loss">CID/HCD</option>
+          <option value="etd" title="c+y+z with single water loss and precursor with single water and ammonia loss">ETD</option>
+          <option value="none" title="Only the base precursor peak, no losses">None</option>
           <option value="custom">Custom</option>
         </select>
         <fieldset class="custom-model">
