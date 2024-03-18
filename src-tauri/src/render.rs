@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::HashSet, fmt::Write};
 
-use itertools::Itertools;
+use itertools::{all, Itertools};
 use rustyms::{
     fragment::*,
     model::Location,
@@ -1020,66 +1020,193 @@ pub fn spectrum_table(
     output
 }
 
-#[derive(Debug, Default)]
-struct IonStats {
-    a: usize,
-    b: usize,
-    c: usize,
-    d: usize,
-    v: usize,
-    w: usize,
-    x: usize,
-    y: usize,
-    z: usize,
-    precursor: usize,
-    oxonium: usize,
-    Y: usize,
-    peaks: usize,
+#[allow(non_snake_case)]
+#[derive(Debug, Default, Clone)]
+struct IonStats<T> {
+    a: T,
+    b: T,
+    c: T,
+    d: T,
+    v: T,
+    w: T,
+    x: T,
+    y: T,
+    z: T,
+    precursor: T,
+    oxonium: T,
+    Y: T,
+    peaks: T,
 }
 
-impl IonStats {
-    fn total(&self) -> usize {
-        self.a
-            + self.b
-            + self.c
-            + self.d
-            + self.v
-            + self.w
-            + self.x
-            + self.y
-            + self.z
-            + self.precursor
-            + self.oxonium
-            + self.Y
-    }
-
-    fn add(mut self, annotation: &[Fragment], peptide_index: Option<usize>) -> Self {
+impl<T> IonStats<T>
+where
+    T: std::ops::Add<T, Output = T> + std::ops::AddAssign<T> + Copy + Default + PartialOrd<T>,
+{
+    fn add(
+        mut self,
+        annotation: &[Fragment],
+        peptide_index: Option<usize>,
+        value: T,
+        allow_double_counting: bool,
+    ) -> Self {
+        let mut seen_a = false;
+        let mut seen_b = false;
+        let mut seen_c = false;
+        let mut seen_d = false;
+        let mut seen_v = false;
+        let mut seen_w = false;
+        let mut seen_x = false;
+        let mut seen_y = false;
+        let mut seen_z = false;
+        let mut seen_precursor = false;
+        let mut seen_oxonium = false;
+        #[allow(non_snake_case)]
+        let mut seen_Y = false;
         for fragment in annotation {
             if peptide_index.map_or(false, |index| index != fragment.peptide_index) {
                 continue; // Skip any annotation not for this peptide
             }
             match fragment.ion {
-                FragmentType::a(..) => self.a += 1,
-                FragmentType::b(..) => self.b += 1,
-                FragmentType::c(..) => self.c += 1,
-                FragmentType::d(..) => self.d += 1,
-                FragmentType::v(..) => self.v += 1,
-                FragmentType::w(..) => self.w += 1,
-                FragmentType::x(..) => self.x += 1,
-                FragmentType::y(..) => self.y += 1,
-                FragmentType::z(..) => self.z += 1,
-                FragmentType::z·(..) => self.z += 1,
-                FragmentType::A(..)
-                | FragmentType::C(..)
-                | FragmentType::X(..)
-                | FragmentType::Z(..) => (),
-                FragmentType::B(..) | FragmentType::InternalGlycan(..) => self.oxonium += 1,
-                FragmentType::Y(..) => self.Y += 1,
-                FragmentType::precursor => self.precursor += 1,
+                FragmentType::a(..) if !seen_a || allow_double_counting => {
+                    self.a += value;
+                    seen_a = true;
+                }
+                FragmentType::b(..) if !seen_b || allow_double_counting => {
+                    self.b += value;
+                    seen_b = true;
+                }
+                FragmentType::c(..) if !seen_c || allow_double_counting => {
+                    self.c += value;
+                    seen_c = true;
+                }
+                FragmentType::d(..) if !seen_d || allow_double_counting => {
+                    self.d += value;
+                    seen_d = true;
+                }
+                FragmentType::v(..) if !seen_v || allow_double_counting => {
+                    self.v += value;
+                    seen_v = true;
+                }
+                FragmentType::w(..) if !seen_w || allow_double_counting => {
+                    self.w += value;
+                    seen_w = true;
+                }
+                FragmentType::x(..) if !seen_x || allow_double_counting => {
+                    self.x += value;
+                    seen_x = true;
+                }
+                FragmentType::y(..) if !seen_y || allow_double_counting => {
+                    self.y += value;
+                    seen_y = true;
+                }
+                FragmentType::z(..) | FragmentType::z·(..) if !seen_z || allow_double_counting => {
+                    self.z += value;
+                    seen_z = true;
+                }
+                FragmentType::B(..) | FragmentType::InternalGlycan(..)
+                    if !seen_oxonium || allow_double_counting =>
+                {
+                    self.oxonium += value;
+                    seen_oxonium = true;
+                }
+                FragmentType::Y(..) if !seen_Y || allow_double_counting => {
+                    self.Y += value;
+                    seen_Y = true;
+                }
+                FragmentType::precursor if !seen_precursor || allow_double_counting => {
+                    self.precursor += value;
+                    seen_precursor = true;
+                }
+                _ => (),
             }
         }
-        self.peaks += 1;
+        self.peaks += value;
         self
+    }
+
+    /// Call the callback on all nonzero lines (not the total line) in the `IonStats`.
+    /// Get the name, value and the singular value provided.
+    fn map<U: Copy, R>(&self, callback: impl Fn(&str, T, U) -> R, single: U) -> Vec<R> {
+        let mut result = Vec::new();
+        if self.a > T::default() {
+            result.push(callback("a", self.a, single));
+        }
+        if self.b > T::default() {
+            result.push(callback("b", self.b, single));
+        }
+        if self.c > T::default() {
+            result.push(callback("c", self.c, single));
+        }
+        if self.d > T::default() {
+            result.push(callback("d", self.d, single));
+        }
+        if self.v > T::default() {
+            result.push(callback("v", self.v, single));
+        }
+        if self.w > T::default() {
+            result.push(callback("w", self.w, single));
+        }
+        if self.x > T::default() {
+            result.push(callback("x", self.x, single));
+        }
+        if self.y > T::default() {
+            result.push(callback("y", self.y, single));
+        }
+        if self.z > T::default() {
+            result.push(callback("z", self.z, single));
+        }
+        if self.precursor > T::default() {
+            result.push(callback("precursor", self.precursor, single));
+        }
+        if self.oxonium > T::default() {
+            result.push(callback("oxonium", self.oxonium, single));
+        }
+        if self.Y > T::default() {
+            result.push(callback("Y", self.Y, single));
+        }
+        result
+    }
+    /// Call the callback on all nonzero lines (not the total line) in the `IonStats`.
+    /// Get the name, value and the singular value provided.
+    fn zip<U, R>(&self, callback: impl Fn(&str, T, U) -> R, other: IonStats<U>) -> Vec<R> {
+        let mut result = Vec::new();
+        if self.a > T::default() {
+            result.push(callback("a", self.a, other.a));
+        }
+        if self.b > T::default() {
+            result.push(callback("b", self.b, other.b));
+        }
+        if self.c > T::default() {
+            result.push(callback("c", self.c, other.c));
+        }
+        if self.d > T::default() {
+            result.push(callback("d", self.d, other.d));
+        }
+        if self.v > T::default() {
+            result.push(callback("v", self.v, other.v));
+        }
+        if self.w > T::default() {
+            result.push(callback("w", self.w, other.w));
+        }
+        if self.x > T::default() {
+            result.push(callback("x", self.x, other.x));
+        }
+        if self.y > T::default() {
+            result.push(callback("y", self.y, other.y));
+        }
+        if self.z > T::default() {
+            result.push(callback("z", self.z, other.z));
+        }
+        if self.precursor > T::default() {
+            result.push(callback("precursor", self.precursor, other.precursor));
+        }
+        if self.oxonium > T::default() {
+            result.push(callback("oxonium", self.oxonium, other.oxonium));
+        }
+        if self.Y > T::default() {
+            result.push(callback("Y", self.Y, other.Y));
+        }
+        result
     }
 }
 
@@ -1092,12 +1219,21 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
             total
         )
     }
+    fn format_f64(found: f64, total: f64) -> String {
+        format!(
+            "{:.2}% ({:.2e}/{:.2e})",
+            found / total * 100.0,
+            found,
+            total
+        )
+    }
 
     let mut mass_row = String::new();
     let mut fragments_row = String::new();
     let mut fragments_details_row = String::new();
     let mut peaks_row = String::new();
     let mut intensity_row = String::new();
+    let mut intensity_details_row = String::new();
     let mut positions_row = String::new();
 
     let total_intensity: f64 = spectrum.spectrum().map(|p| p.intensity.0).sum();
@@ -1120,20 +1256,22 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
                     .iter()
                     .any(|a| a.peptide_index == peptide_index)
             })
-            .fold((IonStats::default(), 0.0), |(n, intensity), p| {
-                (
-                    n.add(&p.annotation, Some(peptide_index)),
-                    intensity + p.intensity.0,
-                )
-            });
+            .fold(
+                (IonStats::default(), IonStats::default()),
+                |(n, intensity), p| {
+                    (
+                        n.add(&p.annotation, Some(peptide_index), 1, true),
+                        intensity.add(&p.annotation, Some(peptide_index), p.intensity.0, false),
+                    )
+                },
+            );
         let total_fragments = fragments
             .iter()
             .filter(|f| f.peptide_index == peptide_index)
             .fold(IonStats::default(), |n, p| {
-                n.add(&[p.clone()], Some(peptide_index))
+                n.add(&[p.clone()], Some(peptide_index), 1, true)
             });
 
-        let percentage_intensity_annotated = intensity_annotated / total_intensity * 100.0;
         let percentage_positions_covered = spectrum
             .spectrum()
             .flat_map(|p| {
@@ -1155,105 +1293,24 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
             format(num_annotated.peaks, total_fragments.peaks)
         )
         .unwrap();
-        write!(fragments_details_row, "<td><table>",).unwrap();
 
-        if total_fragments.a > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>a</td><td>{}</td></tr>",
-                format(num_annotated.a, total_fragments.a)
-            )
-            .unwrap();
-        }
-        if total_fragments.b > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>b</td><td>{}</td></tr>",
-                format(num_annotated.b, total_fragments.b)
-            )
-            .unwrap();
-        }
-        if total_fragments.c > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>c</td><td>{}</td></tr>",
-                format(num_annotated.c, total_fragments.c)
-            )
-            .unwrap();
-        }
-        if total_fragments.d > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>d</td><td>{}</td></tr>",
-                format(num_annotated.d, total_fragments.d)
-            )
-            .unwrap();
-        }
-        if total_fragments.v > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>v</td><td>{}</td></tr>",
-                format(num_annotated.v, total_fragments.v)
-            )
-            .unwrap();
-        }
-        if total_fragments.w > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>w</td><td>{}</td></tr>",
-                format(num_annotated.w, total_fragments.w)
-            )
-            .unwrap();
-        }
-        if total_fragments.x > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>x</td><td>{}</td></tr>",
-                format(num_annotated.x, total_fragments.x)
-            )
-            .unwrap();
-        }
-        if total_fragments.y > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>y</td><td>{}</td></tr>",
-                format(num_annotated.y, total_fragments.y)
-            )
-            .unwrap();
-        }
-        if total_fragments.z > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>z</td><td>{}</td></tr>",
-                format(num_annotated.z, total_fragments.z)
-            )
-            .unwrap();
-        }
-        if total_fragments.precursor > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>precursor</td><td>{}</td></tr>",
-                format(num_annotated.precursor, total_fragments.precursor)
-            )
-            .unwrap();
-        }
-        if total_fragments.oxonium > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>oxonium</td><td>{}</td></tr>",
-                format(num_annotated.oxonium, total_fragments.oxonium)
-            )
-            .unwrap();
-        }
-        if total_fragments.Y > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>Y</td><td>{}</td></tr>",
-                format(num_annotated.Y, total_fragments.Y)
-            )
-            .unwrap();
-        }
-        write!(fragments_details_row, "</table></td>",).unwrap();
+        write!(
+            fragments_details_row,
+            "<td><table>{}</table></td>",
+            total_fragments
+                .zip(
+                    |name, total, annotated| {
+                        format!(
+                            "<tr><td>{}</td><td>{}</td></tr>",
+                            name,
+                            format(annotated, total)
+                        )
+                    },
+                    num_annotated.clone(),
+                )
+                .join("")
+        )
+        .unwrap();
 
         write!(
             peaks_row,
@@ -1263,7 +1320,25 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
         .unwrap();
         write!(
             intensity_row,
-            "<td>{percentage_intensity_annotated:.2}%</td>"
+            "<td>{}</td>",
+            format_f64(intensity_annotated.peaks, total_intensity),
+        )
+        .unwrap();
+        write!(
+            intensity_details_row,
+            "<td><table>{}</table></td>",
+            intensity_annotated
+                .map(
+                    |name, annotated, total| {
+                        format!(
+                            "<tr><td>{}</td><td>{}</td></tr>",
+                            name,
+                            format_f64(annotated, total)
+                        )
+                    },
+                    total_intensity,
+                )
+                .join("")
         )
         .unwrap();
         write!(positions_row, "<td>{percentage_positions_covered:.2}%</td>").unwrap();
@@ -1280,14 +1355,18 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
         let (num_annotated, intensity_annotated) = spectrum
             .spectrum()
             .filter(|p| !p.annotation.is_empty())
-            .fold((IonStats::default(), 0.0), |(n, intensity), p| {
-                (n.add(&p.annotation, None), intensity + p.intensity.0)
-            });
-        let total_fragments = fragments
-            .iter()
-            .fold(IonStats::default(), |n, f| n.add(&[f.clone()], None));
-
-        let percentage_intensity_annotated = intensity_annotated / total_intensity * 100.0;
+            .fold(
+                (IonStats::default(), IonStats::default()),
+                |(n, intensity), p| {
+                    (
+                        n.add(&p.annotation, None, 1, true),
+                        intensity.add(&p.annotation, None, p.intensity.0, false),
+                    )
+                },
+            );
+        let total_fragments = fragments.iter().fold(IonStats::default(), |n, f| {
+            n.add(&[f.clone()], None, 1, true)
+        });
 
         write!(mass_row, "<td>-</td>").unwrap();
         write!(
@@ -1296,105 +1375,23 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
             format(num_annotated.peaks, total_fragments.peaks)
         )
         .unwrap();
-        write!(fragments_details_row, "<td><table>",).unwrap();
-
-        if total_fragments.a > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>a</td><td>{}</td></tr>",
-                format(num_annotated.a, total_fragments.a)
-            )
-            .unwrap();
-        }
-        if total_fragments.b > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>b</td><td>{}</td></tr>",
-                format(num_annotated.b, total_fragments.b)
-            )
-            .unwrap();
-        }
-        if total_fragments.c > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>c</td><td>{}</td></tr>",
-                format(num_annotated.c, total_fragments.c)
-            )
-            .unwrap();
-        }
-        if total_fragments.d > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>d</td><td>{}</td></tr>",
-                format(num_annotated.d, total_fragments.d)
-            )
-            .unwrap();
-        }
-        if total_fragments.v > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>v</td><td>{}</td></tr>",
-                format(num_annotated.v, total_fragments.v)
-            )
-            .unwrap();
-        }
-        if total_fragments.w > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>w</td><td>{}</td></tr>",
-                format(num_annotated.w, total_fragments.w)
-            )
-            .unwrap();
-        }
-        if total_fragments.x > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>x</td><td>{}</td></tr>",
-                format(num_annotated.x, total_fragments.x)
-            )
-            .unwrap();
-        }
-        if total_fragments.y > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>y</td><td>{}</td></tr>",
-                format(num_annotated.y, total_fragments.y)
-            )
-            .unwrap();
-        }
-        if total_fragments.z > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>z</td><td>{}</td></tr>",
-                format(num_annotated.z, total_fragments.z)
-            )
-            .unwrap();
-        }
-        if total_fragments.precursor > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>precursor</td><td>{}</td></tr>",
-                format(num_annotated.precursor, total_fragments.precursor)
-            )
-            .unwrap();
-        }
-        if total_fragments.oxonium > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>oxonium</td><td>{}</td></tr>",
-                format(num_annotated.oxonium, total_fragments.oxonium)
-            )
-            .unwrap();
-        }
-        if total_fragments.Y > 0 {
-            write!(
-                fragments_details_row,
-                "<tr><td>Y</td><td>{}</td></tr>",
-                format(num_annotated.Y, total_fragments.Y)
-            )
-            .unwrap();
-        }
-        write!(fragments_details_row, "</table></td>",).unwrap();
+        write!(
+            fragments_details_row,
+            "<td><table>{}</table></td>",
+            total_fragments
+                .zip(
+                    |name, total, annotated| {
+                        format!(
+                            "<tr><td>{}</td><td>{}</td></tr>",
+                            name,
+                            format(annotated, total)
+                        )
+                    },
+                    num_annotated.clone(),
+                )
+                .join("")
+        )
+        .unwrap();
         write!(
             peaks_row,
             "<td>{}</td>",
@@ -1403,7 +1400,25 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
         .unwrap();
         write!(
             intensity_row,
-            "<td>{percentage_intensity_annotated:.2}%</td>"
+            "<td>{}</td>",
+            format_f64(intensity_annotated.peaks, total_intensity)
+        )
+        .unwrap();
+        write!(
+            intensity_details_row,
+            "<td><table>{}</table></td>",
+            intensity_annotated
+                .map(
+                    |name, annotated, total| {
+                        format!(
+                            "<tr><td>{}</td><td>{}</td></tr>",
+                            name,
+                            format_f64(annotated, total)
+                        )
+                    },
+                    total_intensity,
+                )
+                .join("")
         )
         .unwrap();
         write!(positions_row, "<td>-</td>").unwrap();
@@ -1415,6 +1430,7 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
         <tr class='fragments-detail'><td>Fragments detailed</td>{fragments_details_row}</tr>
         <tr><td>Peaks annotated</td>{peaks_row}</tr>
         <tr><td>Intensity annotated</td>{intensity_row}</tr>
+        <tr class='fragments-detail'><td>Intensity detailed</td>{intensity_details_row}</tr>
         <tr><td>Sequence positions covered</td>{positions_row}</tr>
     </table>"
     )
