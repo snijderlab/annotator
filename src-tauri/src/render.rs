@@ -670,65 +670,11 @@ fn render_linear_peptide(
         write!(output, "<span class='modification term'></span>").unwrap();
     }
     if let Some(charge_carriers) = &peptide.charge_carriers {
-        // TODO: When rustyms is updated use the display impl here
-        write!(output, "<span class='charge-carriers'>/",).unwrap();
         write!(
             output,
-            "{}",
-            charge_carriers
-                .charge_carriers
-                .iter()
-                .map(|c| c.0)
-                .sum::<isize>()
+            "<span class='charge-carriers'>/{charge_carriers}</span>",
         )
         .unwrap();
-        if !charge_carriers.charge_carriers.iter().all(|c| {
-            c.1 == MolecularFormula::new(&[(Element::H, None, 1), (Element::Electron, None, -1)])
-                .unwrap()
-        }) {
-            write!(output, "[").unwrap();
-            let mut first = true;
-            for (amount, formula) in &charge_carriers.charge_carriers {
-                if first {
-                    first = false;
-                } else {
-                    write!(output, ",").unwrap();
-                }
-                let electron_index = formula
-                    .elements()
-                    .iter()
-                    .position(|el| el.0 == Element::Electron);
-                let charge = electron_index.map(|ei| match -formula.elements()[ei].2 {
-                    1 => "+".to_string(),
-                    -1 => "-".to_string(),
-                    n => n.to_string(),
-                });
-                if let (Some(electron_index), Some(charge), 2) =
-                    (electron_index, &charge, formula.elements().len())
-                {
-                    let element_index = 1 - electron_index;
-                    write!(
-                        output,
-                        "{}{}{}",
-                        amount,
-                        formula.elements()[element_index].0,
-                        charge
-                    )
-                    .unwrap();
-                } else {
-                    write!(
-                        output,
-                        "{}({}){}",
-                        amount,
-                        formula,
-                        charge.unwrap_or_default()
-                    )
-                    .unwrap();
-                }
-            }
-            write!(output, "]").unwrap();
-        }
-        write!(output, "</span>").unwrap();
     }
     write!(output, "</div>").unwrap();
 }

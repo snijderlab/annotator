@@ -6,7 +6,7 @@ authors = ["Douwe Schulte <d.schulte@uu.nl>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/snijderlab/annotator"
 edition = "2021"
-rust-version = "1.57"
+rust-version = "1.70.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -19,7 +19,7 @@ itertools = "0.12"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.6", features = ["shell-open", "dialog-open", "updater"] }
-rustyms = { path = "../../rustyms/rustyms", default-features = false, features = [
+rustyms = { version = "0.8.3", default-features = false, features = [
     "identification",
     "align",
 ] }

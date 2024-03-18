@@ -1,6 +1,5 @@
 use std::io::Write;
 use std::{fs::File, io::BufWriter};
-use tauri;
 
 fn create_loss_modal(id: &str) -> String {
     format!(

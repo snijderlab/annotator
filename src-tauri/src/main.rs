@@ -264,7 +264,7 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
                     .map(|(ontology, id, _, modification)| {
                         [
                             modification.to_string(),
-                            format!("{}:{}", ontology.name(), id),
+                            format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'>{0}:{1}</a>", ontology.name(), id),
                             display_mass(modification.formula().monoisotopic_mass()).to_string(),
                             format!(
                                 "<span class='formula'>{}</span>",
@@ -284,7 +284,7 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
                     .map(|(ontology, id, _, modification)| {
                         [
                             modification.to_string(),
-                            format!("{}:{}", ontology.name(), id),
+                            format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'>{0}:{1}</a>", ontology.name(), id),
                         ]
                     })
                     .collect_vec(),
@@ -292,13 +292,12 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
             .to_string())
         }
         ModificationSearchResult::Glycan(_, modifications) => Ok(html_builder::HtmlElement::table(
-            Some(&["Name", "Id", "Structure"]),
+            Some(&["Name", "Structure"]),
             &modifications
                 .iter()
-                .map(|(ontology, id, _, modification)| {
+                .map(|(_, _, _, modification)| {
                     [
-                        modification.to_string(),
-                        format!("{}:{}", ontology.name(), id),
+                        format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}\";document.getElementById(\"search-modification-button\").click()'>{0}</a>", modification),
                         if let Modification::Gno(GnoComposition::Structure(structure), _) =
                             modification
                         {
@@ -408,7 +407,6 @@ fn spectrum_details(index: usize, state: ModifiableState) -> String {
 
 #[tauri::command]
 fn identified_peptide_details(index: usize, state: ModifiableState) -> String {
-    // TODO: show local confidence on the sequence (maybe as done in stitch before?)
     state.lock().unwrap().peptides.get(index).map_or(
         "Identified peptide index not valid".to_string(),
         |peptide| peptide.to_html().to_string(),
