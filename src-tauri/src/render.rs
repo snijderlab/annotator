@@ -601,7 +601,10 @@ fn render_linear_peptide(
         )
         .unwrap();
         for ion in ions {
-            if !matches!(ion, FragmentType::immonium(_, _)) {
+            if !matches!(
+                ion,
+                FragmentType::immonium(_, _) | FragmentType::m(_, _) | FragmentType::diagnostic(_)
+            ) {
                 write!(
                     output,
                     "<span class='corner {}'></span>",
@@ -941,6 +944,7 @@ struct IonStats<T> {
     z: T,
     immonium: T,
     m: T,
+    diagnostic: T,
     precursor: T,
     oxonium: T,
     Y: T,
@@ -969,6 +973,7 @@ where
         let mut seen_z = false;
         let mut seen_immonium = false;
         let mut seen_m = false;
+        let mut seen_diagnostic = false;
         let mut seen_precursor = false;
         let mut seen_oxonium = false;
         #[allow(non_snake_case)]
@@ -1021,6 +1026,10 @@ where
                 FragmentType::m(..) if !seen_m || allow_double_counting => {
                     self.m += value;
                     seen_m = true;
+                }
+                FragmentType::diagnostic(..) if !seen_diagnostic || allow_double_counting => {
+                    self.diagnostic += value;
+                    seen_diagnostic = true;
                 }
                 FragmentType::B(..) | FragmentType::Oxonium(..)
                     if !seen_oxonium || allow_double_counting =>
@@ -1075,10 +1084,13 @@ where
             result.push(callback("z", self.z, single));
         }
         if self.immonium > T::default() {
-            result.push(callback("immonium", self.z, single));
+            result.push(callback("immonium", self.immonium, single));
         }
         if self.m > T::default() {
-            result.push(callback("m", self.z, single));
+            result.push(callback("m", self.m, single));
+        }
+        if self.diagnostic > T::default() {
+            result.push(callback("diagnostic", self.diagnostic, single));
         }
         if self.precursor > T::default() {
             result.push(callback("precursor", self.precursor, single));
@@ -1127,6 +1139,9 @@ where
         }
         if self.m > T::default() {
             result.push(callback("m", self.m, other.m));
+        }
+        if self.diagnostic > T::default() {
+            result.push(callback("diagnostic", self.diagnostic, other.diagnostic));
         }
         if self.precursor > T::default() {
             result.push(callback("precursor", self.precursor, other.precursor));

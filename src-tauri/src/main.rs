@@ -599,6 +599,9 @@ async fn annotate_spectrum<'a>(
                 .map(|n| n.parse::<NeutralLoss>())
                 .collect::<Result<Vec<NeutralLoss>, _>>()?,
             cmodel.immonium,
+            false,
+            false,
+            false,
             cmodel
                 .glycan
                 .0
