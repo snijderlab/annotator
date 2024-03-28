@@ -203,7 +203,7 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
 
                 for rule in rules {
                     ul = ul.content(HtmlElement::new(HtmlTag::li).content(
-                        format!("Positions: {}, Neutral losses: {}, Diagnostic ions: {}",&rule.0.iter().map(|rule| match rule {
+                        format!("Positions: {}{}{}{}{}",&rule.0.iter().map(|rule| match rule {
                                 PlacementRule::AminoAcid(aa, pos) => {
                                     format!(
                                         "{}@{}",
@@ -221,8 +221,10 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
                                 PlacementRule::Terminal(pos) => {
                                     format!("{}", pos)
                                 }
-                            }).join(",") ,
+                            }).join(","),
+                            if rule.1.is_empty() { ""} else {", Neutral losses: "},
                             rule.1.iter().join(","),
+                            if rule.2.is_empty() { ""} else {", Diagnostic ions: "},
                             rule.2.iter().map(|ion| ion.0.to_string()).join(","))
                         ));                    
                 }
