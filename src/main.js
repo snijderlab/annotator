@@ -289,8 +289,10 @@ async function annotate_spectrum() {
     y: [get_location("#model-y-location"), get_losses("y")],
     z: [get_location("#model-z-location"), get_losses("z")],
     precursor: get_losses("precursor"),
-    glycan: [document.querySelector("#model-glycan-enabled").value == "on", get_losses("glycan")],
+    immonium: document.querySelector("#model-immonium-enabled").checked,
+    glycan: [document.querySelector("#model-glycan-enabled").checked, get_losses("glycan")],
   };
+  console.log(model);
   invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), ppm: Number(document.querySelector("#spectrum-ppm").value), charge: charge, filter: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").innerText, cmodel: model }).then((result) => {
     document.querySelector("#spectrum-results-wrapper").innerHTML = result.spectrum;
     document.querySelector("#spectrum-fragment-table").innerHTML = result.fragment_table;

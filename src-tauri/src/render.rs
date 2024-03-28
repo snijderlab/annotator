@@ -1,69 +1,12 @@
 use std::{cmp::Ordering, collections::HashSet, fmt::Write};
 
-use itertools::{all, Itertools};
+use itertools::Itertools;
 use rustyms::{
-    fragment::*,
-    model::Location,
-    spectrum::{AnnotatedPeak, PeakSpectrum},
-    system::*,
-    AnnotatedSpectrum, ComplexPeptide, Element, LinearPeptide, MassMode, Model, Modification,
-    MolecularFormula, MultiChemical,
+    fragment::*, model::Location, spectrum::PeakSpectrum, system::*, AnnotatedSpectrum,
+    ComplexPeptide, LinearPeptide, MassMode, Model, Modification, MolecularFormula, MultiChemical,
 };
 
 use crate::html_builder::{HtmlElement, HtmlTag};
-
-pub fn fragment_table(fragments: &[Fragment], multiple_peptides: bool) -> String {
-    let mut output = format!("<table><thead><tr><th>Sequence Index</th><th>Series Number</th><th>Ion</th><th>mz</th><th>Charge</th><th>Neutral loss</th>{}</tr></thead><tbody>", if multiple_peptides {
-        "<td>Peptide</td>"
-    } else {
-        ""
-    });
-    for fragment in fragments {
-        let (sequence_index, series_number) = if let Some(pos) = fragment.ion.position() {
-            (
-                pos.sequence_index.to_string(),
-                pos.series_number.to_string(),
-            )
-        } else if let Some(pos) = fragment.ion.glycan_position() {
-            (pos.attachment(), pos.series_number.to_string())
-        } else if let FragmentType::InternalGlycan(breakages) = &fragment.ion {
-            (
-                breakages
-                    .get(0)
-                    .map(|b| b.position().attachment())
-                    .unwrap_or("-".to_string()),
-                breakages
-                    .iter()
-                    .map(std::string::ToString::to_string)
-                    .join(""),
-            )
-        } else {
-            // precursor
-            ("-".to_string(), "-".to_string())
-        };
-        write!(
-            &mut output,
-            "<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td>{}</tr>",
-            sequence_index,
-            series_number,
-            fragment.ion.label(),
-            fragment.mz(MassMode::Monoisotopic).value,
-            fragment.charge.value,
-            fragment
-                .neutral_loss
-                .as_ref()
-                .map_or("-".to_string(), |n| n.to_string()),
-            if multiple_peptides {
-                format!("<td>{}</td>", fragment.peptide_index + 1)
-            } else {
-                String::new()
-            }
-        )
-        .unwrap();
-    }
-    write!(&mut output, "</tbody></table>").unwrap();
-    output
-}
 
 pub fn annotated_spectrum(
     spectrum: &AnnotatedSpectrum,
@@ -330,7 +273,7 @@ fn spectrum_graph(
 ///   * The position(s) (eg 'p0-2', 'p2-123')
 fn get_classes(annotations: &[Fragment]) -> String {
     let mut output = Vec::new();
-    let mut shared_ion = annotations.get(0).map(|a| a.ion.to_string());
+    let mut shared_ion = annotations.first().map(|a| a.ion.to_string());
     let mut first_peptide_index = None;
     for annotation in annotations {
         output.push(annotation.ion.label().to_string());
@@ -351,7 +294,7 @@ fn get_classes(annotations: &[Fragment]) -> String {
         if annotation.ion.glycan_position().is_some() {
             output.push("glycan".to_string());
         }
-        if matches!(annotation.ion, FragmentType::InternalGlycan(_)) {
+        if matches!(annotation.ion, FragmentType::Oxonium(_)) {
             output.push("glycan".to_string());
             output.push("internal_glycan".to_string());
         }
@@ -388,8 +331,8 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                     shared_charge = None;
                 }
             }
-            if let Some(ion) = shared_ion {
-                if ion != a.ion.label() {
+            if let Some(ion) = &shared_ion {
+                if *ion != a.ion.label() {
                     shared_ion = None;
                 }
             }
@@ -427,7 +370,9 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
             let charge_str = shared_charge
                 .map(|charge| format!("{:+}", charge.value))
                 .unwrap_or("*".to_string());
-            let ion_str = shared_ion.unwrap_or("*");
+            let ion_str = shared_ion
+                .map(|c| c.into_owned())
+                .unwrap_or("*".to_string());
             let pos_str = shared_pos
                 .map(|pos| pos.unwrap_or_default())
                 .unwrap_or("*".to_string());
@@ -445,7 +390,7 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
             let multi = if annotations.len() > 1 {
                 let mut multi = String::new();
                 for annotation in annotations {
-                    if let FragmentType::InternalGlycan(breakages) = &annotation.ion {
+                    if let FragmentType::Oxonium(breakages) = &annotation.ion {
                         let ch = format!("{:+}", annotation.charge.value);
                         write!(
                             multi,
@@ -503,11 +448,10 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                 String::new()
             };
             let single_internal_glycan =
-                matches!(annotations[0].ion, FragmentType::InternalGlycan(_))
-                    && annotations.len() == 1;
+                matches!(annotations[0].ion, FragmentType::Oxonium(_)) && annotations.len() == 1;
 
             if single_internal_glycan {
-                if let FragmentType::InternalGlycan(breakages) = &annotations[0].ion {
+                if let FragmentType::Oxonium(breakages) = &annotations[0].ion {
                     format!(
                         "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch;min-width:{2}ch;display:inline-block;'>{}{}</sub>{}</span>",
                         breakages
@@ -611,7 +555,7 @@ fn render_peptide(
         ComplexPeptide::Singular(peptide) => {
             render_linear_peptide(output, peptide, &overview[0], 0, multiple_peptides)
         }
-        ComplexPeptide::Multimeric(peptides) => {
+        ComplexPeptide::Chimeric(peptides) => {
             for (index, peptide) in peptides.iter().enumerate() {
                 render_linear_peptide(output, peptide, &overview[index], index, multiple_peptides);
             }
@@ -657,12 +601,14 @@ fn render_linear_peptide(
         )
         .unwrap();
         for ion in ions {
-            write!(
-                output,
-                "<span class='corner {}'></span>",
-                ion.label().trim_end_matches('·')
-            )
-            .unwrap();
+            if !matches!(ion, FragmentType::immonium(_, _)) {
+                write!(
+                    output,
+                    "<span class='corner {}'></span>",
+                    ion.label().trim_end_matches('·')
+                )
+                .unwrap();
+            }
         }
         write!(output, "</span>").unwrap();
     }
@@ -811,18 +757,33 @@ pub fn spectrum_table(
                 format!("{}{}", pos.series_number, pos.branch_names()),
                 annotation.ion.label().to_string(),
             )
-        } else if let FragmentType::InternalGlycan(breakages) = &annotation.ion {
+        } else if let FragmentType::Oxonium(breakages) = &annotation.ion {
             (
                 breakages
                     .first()
                     .map(|b| b.position().attachment())
                     .unwrap_or("-".to_string()),
-                "-".to_string(),
                 breakages
                     .iter()
                     .filter(|b| !matches!(b, GlycanBreakPos::End(_)))
                     .map(|b| format!("{}<sub>{}</sub>", b.label(), b.position().label()))
                     .join(""),
+                "oxonium".to_string(),
+            )
+        } else if let FragmentType::Y(bonds) = &annotation.ion {
+            (
+                bonds
+                    .first()
+                    .map(|b| b.attachment())
+                    .unwrap_or("-".to_string()),
+                bonds.iter().map(|b| b.label()).join(""),
+                "Y".to_string(),
+            )
+        } else if let FragmentType::immonium(aa, pos) = &annotation.ion {
+            (
+                (pos.sequence_index + 1).to_string(),
+                pos.series_number.to_string(),
+                format!("immonium {}", aa.char()),
             )
         } else {
             // precursor
@@ -978,6 +939,8 @@ struct IonStats<T> {
     x: T,
     y: T,
     z: T,
+    immonium: T,
+    m: T,
     precursor: T,
     oxonium: T,
     Y: T,
@@ -1004,6 +967,8 @@ where
         let mut seen_x = false;
         let mut seen_y = false;
         let mut seen_z = false;
+        let mut seen_immonium = false;
+        let mut seen_m = false;
         let mut seen_precursor = false;
         let mut seen_oxonium = false;
         #[allow(non_snake_case)]
@@ -1049,7 +1014,15 @@ where
                     self.z += value;
                     seen_z = true;
                 }
-                FragmentType::B(..) | FragmentType::InternalGlycan(..)
+                FragmentType::immonium(..) if !seen_immonium || allow_double_counting => {
+                    self.immonium += value;
+                    seen_immonium = true;
+                }
+                FragmentType::m(..) if !seen_m || allow_double_counting => {
+                    self.m += value;
+                    seen_m = true;
+                }
+                FragmentType::B(..) | FragmentType::Oxonium(..)
                     if !seen_oxonium || allow_double_counting =>
                 {
                     self.oxonium += value;
@@ -1101,6 +1074,12 @@ where
         if self.z > T::default() {
             result.push(callback("z", self.z, single));
         }
+        if self.immonium > T::default() {
+            result.push(callback("immonium", self.z, single));
+        }
+        if self.m > T::default() {
+            result.push(callback("m", self.z, single));
+        }
         if self.precursor > T::default() {
             result.push(callback("precursor", self.precursor, single));
         }
@@ -1142,6 +1121,12 @@ where
         }
         if self.z > T::default() {
             result.push(callback("z", self.z, other.z));
+        }
+        if self.immonium > T::default() {
+            result.push(callback("immonium", self.immonium, other.immonium));
+        }
+        if self.m > T::default() {
+            result.push(callback("m", self.m, other.m));
         }
         if self.precursor > T::default() {
             result.push(callback("precursor", self.precursor, other.precursor));

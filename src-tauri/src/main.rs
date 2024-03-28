@@ -8,6 +8,7 @@ use render::display_mass;
 use rustyms::{
     align::{align, matrix::BLOSUM62, Alignment},
     error::*,
+    fragment::FragmentType,
     identification::*,
     model::*,
     modification::{GnoComposition, ModificationSearchResult, Ontology, ReturnModification},
@@ -201,26 +202,29 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
                 let mut ul = HtmlElement::new(HtmlTag::ul);
 
                 for rule in rules {
-                    match rule {
-                        PlacementRule::AminoAcid(aa, pos) => {
-                            ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!(
-                                "{}@{}",
-                                aa.iter().map(|a| a.char()).collect::<String>(),
-                                pos
-                            )));
-                        }
-                        PlacementRule::PsiModification(index, pos) => {
-                            ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!(
-                                "{}@{}",
-                                Ontology::Psimod.find_id(*index).unwrap(),
-                                pos
-                            )));
-                        }
-                        PlacementRule::Terminal(pos) => {
-                            ul = ul
-                                .content(HtmlElement::new(HtmlTag::li).content(format!("{}", pos)));
-                        }
-                    }
+                    ul = ul.content(HtmlElement::new(HtmlTag::li).content(
+                        format!("Positions: {}, Neutral losses: {}, Diagnostic ions: {}",&rule.0.iter().map(|rule| match rule {
+                                PlacementRule::AminoAcid(aa, pos) => {
+                                    format!(
+                                        "{}@{}",
+                                        aa.iter().map(|a| a.char()).collect::<String>(),
+                                        pos
+                                    )
+                                }
+                                PlacementRule::PsiModification(index, pos) => {
+                                    format!(
+                                        "{}@{}",
+                                        Ontology::Psimod.find_id(*index).unwrap(),
+                                        pos
+                                    )
+                                }
+                                PlacementRule::Terminal(pos) => {
+                                    format!("{}", pos)
+                                }
+                            }).join(",") ,
+                            rule.1.iter().join(","),
+                            rule.2.iter().map(|ion| ion.0.to_string()).join(","))
+                        ));                    
                 }
                 output = output.content(ul);
             } else if let Modification::Gno(composition, name) = &modification {
@@ -528,6 +532,7 @@ pub struct ModelParameters {
     pub y: (Location, String),
     pub z: (Location, String),
     pub precursor: String,
+    pub immonium: bool,
     pub glycan: (bool, String),
 }
 
@@ -587,12 +592,11 @@ async fn annotate_spectrum<'a>(
             get_model_param(&cmodel.z)?,
             cmodel
                 .precursor
-                .to_owned()
                 .split(',')
                 .filter(|n| !n.is_empty())
                 .map(|n| n.parse::<NeutralLoss>())
                 .collect::<Result<Vec<NeutralLoss>, _>>()?,
-            MassOverCharge::new::<mz>(ppm),
+            cmodel.immonium,
             cmodel
                 .glycan
                 .0
@@ -600,13 +604,13 @@ async fn annotate_spectrum<'a>(
                     cmodel
                         .glycan
                         .1
-                        .to_owned()
                         .split(',')
                         .filter(|n| !n.is_empty())
                         .map(|n| n.parse::<NeutralLoss>())
                         .collect::<Result<Vec<NeutralLoss>, _>>()
                 })
                 .invert()?,
+            MassOverCharge::new::<mz>(ppm),
         ),
         _ => Model::all(),
     };

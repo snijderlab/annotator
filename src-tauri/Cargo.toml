@@ -24,6 +24,9 @@ rustyms = { version = "0.8.3", default-features = false, features = [
     "align",
 ] }
 
+[patch.crates-io]
+rustyms = { path = "../../rustyms/rustyms" }
+
 [features]
 # by default Tauri runs in production mode
 # when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL

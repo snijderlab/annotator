@@ -164,6 +164,8 @@ fn main() {
             <div class="empty"></div>
             {}
             <input type="text" id="model-precursor-loss" value="" title="Supply all losses as +/- followed by the chemical formula, supply multiple by separating them by commas. Example: '+H2O,-H2O'."/>
+            <label>immonium</label>
+            <label><input id='model-immonium-enabled' type='checkbox' switch/>Enable</label>
             <label>glycan</label>
             <label><input id='model-glycan-enabled' type='checkbox' switch/>Enable</label>
             {}
