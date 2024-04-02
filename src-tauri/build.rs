@@ -164,8 +164,22 @@ fn main() {
             <div class="empty"></div>
             {}
             <input type="text" id="model-precursor-loss" value="" title="Supply all losses as +/- followed by the chemical formula, supply multiple by separating them by commas. Example: '+H2O,-H2O'."/>
-            <label>immonium</label>
-            <label><input id='model-immonium-enabled' type='checkbox' switch/>Enable</label>
+            <div class="grid-row">
+              <label>immonium</label>
+              <label><input id='model-immonium-enabled' type='checkbox' switch/>Enable</label>
+            </div>
+            <div class="grid-row">
+              <label title="side chain loss from precursor">m</label>
+              <label><input id='model-m-enabled' type='checkbox' switch/>Enable</label>
+            </div>
+            <div class="grid-row">
+              <label title="Allow modification specific neutral losses, as defined by the database">modification neutral losses</label>
+              <label><input id='model-modification-neutral-enabled' type='checkbox' switch/>Enable</label>
+            </div>
+            <div class="grid-row">
+              <label title="Allow modification specific diagnostic ions, as defined by the database">modification diagnostic ions</label>
+              <label><input id='model-modification-diagnostic-enabled' type='checkbox' switch/>Enable</label>
+            </div>
             <label>glycan</label>
             <label><input id='model-glycan-enabled' type='checkbox' switch/>Enable</label>
             {}

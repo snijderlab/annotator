@@ -290,6 +290,9 @@ async function annotate_spectrum() {
     z: [get_location("#model-z-location"), get_losses("z")],
     precursor: get_losses("precursor"),
     immonium: document.querySelector("#model-immonium-enabled").checked,
+    m: document.querySelector("#model-m-enabled").checked,
+    modification_neutral: document.querySelector("#model-modification-neutral-enabled").checked,
+    modification_diagnostic: document.querySelector("#model-modification-diagnostic-enabled").checked,
     glycan: [document.querySelector("#model-glycan-enabled").checked, get_losses("glycan")],
   };
   console.log(model);

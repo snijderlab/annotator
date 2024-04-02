@@ -223,9 +223,15 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
                                 }
                             }).join(","),
                             if rule.1.is_empty() { ""} else {", Neutral losses: "},
-                            rule.1.iter().join(","),
+                            rule.1.iter().map(|formula| format!(
+                                "<span class='formula'>{}</span>",
+                                formula.hill_notation_html()
+                            )).join(","),
                             if rule.2.is_empty() { ""} else {", Diagnostic ions: "},
-                            rule.2.iter().map(|ion| ion.0.to_string()).join(","))
+                            rule.2.iter().map(|formula| format!(
+                                "<span class='formula'>{}</span>",
+                                formula.0.hill_notation_html()
+                            )).join(","))
                         ));                    
                 }
                 output = output.content(ul);
@@ -535,6 +541,9 @@ pub struct ModelParameters {
     pub z: (Location, String),
     pub precursor: String,
     pub immonium: bool,
+    pub m: bool,
+    pub modification_diagnostic: bool,
+    pub modification_neutral: bool,
     pub glycan: (bool, String),
 }
 
@@ -599,9 +608,9 @@ async fn annotate_spectrum<'a>(
                 .map(|n| n.parse::<NeutralLoss>())
                 .collect::<Result<Vec<NeutralLoss>, _>>()?,
             cmodel.immonium,
-            false,
-            false,
-            false,
+            cmodel.m,
+            cmodel.modification_diagnostic,
+            cmodel.modification_neutral,
             cmodel
                 .glycan
                 .0

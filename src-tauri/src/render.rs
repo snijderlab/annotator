@@ -859,10 +859,9 @@ pub fn spectrum_table(
                         },
                         sequence_index.to_string(),
                         label.to_string(),
-                        annotation
-                            .neutral_loss
-                            .as_ref()
-                            .map_or(String::new(), |v| v.to_string()),
+                        annotation.neutral_loss.as_ref().map_or(String::new(), |v| {
+                            format!("<span class='formula'>{}</span>", v.hill_notation_html())
+                        }),
                         format!("{:.2}", peak.intensity),
                         format!("{:.2}", peak.experimental_mz.value),
                         format!(
@@ -903,10 +902,9 @@ pub fn spectrum_table(
                     },
                     sequence_index.to_string(),
                     label.to_string(),
-                    fragment
-                        .neutral_loss
-                        .as_ref()
-                        .map_or(String::new(), |v| v.to_string()),
+                    fragment.neutral_loss.as_ref().map_or(String::new(), |v| {
+                        format!("<span class='formula'>{}</span>", v.hill_notation_html())
+                    }),
                     "-".to_string(),
                     format!("{:.2}", fragment.mz(MassMode::Monoisotopic).value),
                     "-".to_string(),
