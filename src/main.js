@@ -55,7 +55,7 @@ async function select_identified_peptides_file(e) {
     //defaultPath: 'C:\\',
     directory: false,
     filters: [{
-      extensions: ["csv", "csv.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz"], name: "*"
+      extensions: ["csv", "csv.gz", "tsv", "tsv.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz"], name: "*"
     }]
   };
   window.__TAURI__.dialog.open(properties).then((result) => {

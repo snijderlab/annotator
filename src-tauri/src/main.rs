@@ -79,6 +79,11 @@ async fn load_identified_peptides<'a>(
                 })
             })
             .map_err(|_| "Could not be recognised as either a Peaks or Novor file".to_string()),
+        Some("tsv") => SageData::parse_file(path)
+            .map(|peptides| {
+                state.lock().unwrap().peptides =
+                    peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()
+            }),
         Some("psmtsv") => OpairData::parse_file(path).map(|peptides| {
             state.lock().unwrap().peptides =
                 peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()

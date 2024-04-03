@@ -2,6 +2,7 @@ use itertools::Itertools;
 use rustyms::{
     identification::{
         FastaData, IdentifiedPeptide, MaxQuantData, MetaData, NovorData, OpairData, PeaksData,
+        SageData,
     },
     MultiChemical,
 };
@@ -71,9 +72,10 @@ impl RenderToHtml for IdentifiedPeptide {
                 self.metadata
                     .charge()
                     .map_or("-".to_string(), |c| c.value.to_string()),
-                self.metadata
-                    .charge()
-                    .map_or("-".to_string(), |c| format!("{:.3}", mass.value / c.value)),
+                self.metadata.charge().map_or("-".to_string(), |c| format!(
+                    "{:.3}",
+                    mass.value / c.value as f64
+                )),
                 self.metadata
                     .mode()
                     .map_or("-".to_string(), |c| c.to_string())
@@ -92,6 +94,7 @@ impl RenderToHtml for MetaData {
             MetaData::Opair(o) => o.to_html(),
             MetaData::Fasta(f) => f.to_html(),
             MetaData::MaxQuant(m) => m.to_html(),
+            MetaData::Sage(s) => s.to_html(),
             MetaData::None => HtmlElement::new(HtmlTag::i).content("No metadata"),
         }
     }
@@ -154,7 +157,7 @@ impl RenderToHtml for NovorData {
                 None,
                 &[
                     &["Scan".to_string(), self.scan.to_string()],
-                    &["ppm".to_string(), self.ppm.to_string()],
+                    &["ppm".to_string(), self.ppm.value.to_string()],
                     &["Score".to_string(), self.score.to_string()],
                     &["ID".to_string(), self.id.to_optional_string()],
                     &[
@@ -385,13 +388,11 @@ impl RenderToHtml for MaxQuantData {
                     ],
                     &[
                         "Mass error [absolute]".to_string(),
-                        self.mass_error_da
-                            .map(|v| display_mass(v))
-                            .to_optional_string(),
+                        self.mass_error_da.map(display_mass).to_optional_string(),
                     ],
                     &[
                         "Mass error [ppm]".to_string(),
-                        self.mass_error_ppm.to_optional_string(),
+                        self.mass_error_ppm.map(|v| v.value).to_optional_string(),
                     ],
                     &[
                         "Simple mass error [ppm]".to_string(),
@@ -485,6 +486,112 @@ impl RenderToHtml for MaxQuantData {
                         self.dn_missing_mass.map(|v| v.value).to_optional_string(),
                     ],
                     &["Version".to_string(), self.version.to_string()],
+                ],
+            ),
+        ])
+    }
+}
+
+impl RenderToHtml for SageData {
+    fn to_html(&self) -> HtmlElement {
+        HtmlElement::new(HtmlTag::div).children([
+            HtmlElement::new(HtmlTag::p)
+                .content(format!("Additional MetaData Sage {}", self.psm_id)),
+            HtmlElement::table::<HtmlContent, _>(
+                None,
+                &[
+                    &["Raw file".to_string(), self.filename.to_string()],
+                    &[
+                        "Scan number".to_string(),
+                        format!("{},{},{}", self.scan_nr.0, self.scan_nr.1, self.scan_nr.2),
+                    ],
+                    &["Proteins".to_string(), self.proteins.join(";")],
+                    &["Rank".to_string(), self.rank.to_string()],
+                    &["Decoy".to_string(), self.decoy.to_string()],
+                    &[
+                        "Experimental mass".to_string(),
+                        display_mass(self.experimental_mass).to_string(),
+                    ],
+                    &[
+                        "Theoretical mass".to_string(),
+                        display_mass(self.theoretical_mass).to_string(),
+                    ],
+                    &["Charge".to_string(), self.z.value.to_string()],
+                    &[
+                        "Missed cleavages".to_string(),
+                        self.missed_cleavages.to_string(),
+                    ],
+                    &[
+                        "Semi enzymatic".to_string(),
+                        self.semi_enzymatic.to_string(),
+                    ],
+                    &["Isotope error".to_string(), self.isotope_error.to_string()],
+                    &[
+                        "Precursor error (ppm)".to_string(),
+                        self.precursor_ppm.value.to_string(),
+                    ],
+                    &[
+                        "Fragment error (average ppm)".to_string(),
+                        self.precursor_ppm.value.to_string(),
+                    ],
+                    &["Hyperscore".to_string(), self.hyperscore.to_string()],
+                    &[
+                        "Hyperscore delta next".to_string(),
+                        self.delta_next.to_string(),
+                    ],
+                    &[
+                        "Hyperscore delta best".to_string(),
+                        self.delta_best.to_string(),
+                    ],
+                    &[
+                        "Retention time (min)".to_string(),
+                        self.rt.value.to_string(),
+                    ],
+                    &[
+                        "Retention time aligned".to_string(),
+                        self.aligned_rt.value.to_string(),
+                    ],
+                    &[
+                        "Retention time predicted".to_string(),
+                        self.predicted_rt.value.to_string(),
+                    ],
+                    &[
+                        "Retention time delta".to_string(),
+                        self.delta_rt_model.to_string(),
+                    ],
+                    &["Ion mobility".to_string(), self.ion_mobility.to_string()],
+                    &[
+                        "Ion mobility predicted".to_string(),
+                        self.predicted_mobility.to_string(),
+                    ],
+                    &[
+                        "Ion mobility delta".to_string(),
+                        self.delta_mobility.to_string(),
+                    ],
+                    &["Matched peaks".to_string(), self.matched_peaks.to_string()],
+                    &["Longest b".to_string(), self.longest_b.to_string()],
+                    &["Longest y".to_string(), self.longest_y.to_string()],
+                    &[
+                        "Matched intensity".to_string(),
+                        self.matched_intensity_pct.value.to_string(),
+                    ],
+                    &[
+                        "Scored candidates".to_string(),
+                        self.scored_candidates.to_string(),
+                    ],
+                    &["Poisson".to_string(), self.poisson.to_string()],
+                    &[
+                        "Sage discriminant score".to_string(),
+                        self.sage_discriminant_score.to_string(),
+                    ],
+                    &[
+                        "Posterior error".to_string(),
+                        self.posterior_error.to_string(),
+                    ],
+                    &["Spectrum q".to_string(), self.spectrum_q.to_string()],
+                    &["Peptide q".to_string(), self.peptide_q.to_string()],
+                    &["Protein q".to_string(), self.protein_q.to_string()],
+                    &["MS2 intensity".to_string(), self.ms2_intensity.to_string()],
                 ],
             ),
         ])
