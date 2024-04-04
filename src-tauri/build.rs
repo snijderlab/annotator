@@ -200,6 +200,7 @@ fn main() {
             <label class='row align' for='spectrum-peptide-stroke'><span>Peptide stroke width</span><input id='spectrum-peptide-stroke' class='stroke-peptide' type='text' value='2px'/></label>
             <label class='row align' for='spectrum-fs-spectrum'><span>Spectrum font size</span><input id='spectrum-fs-spectrum' class='fs-spectrum' type='text' value='1rem'/></label>
             <label class='row align' for='spectrum-spectrum-stroke'><span>Spectrum stroke width</span><input id='spectrum-spectrum-stroke' class='stroke-spectrum' type='text' value='2px'/></label>
+            <label class='row align' for='spectrum-spectrum-stroke-unassigned'><span>Spectrum unassigned stroke width</span><input id='spectrum-spectrum-stroke-unassigned' class='stroke-spectrum-unassigned' type='text' value='1px'/></label>
           </fieldset>
     
           <fieldset class='settings spectrum-graph-settings'>
@@ -322,7 +323,8 @@ fn main() {
               <div class='side'>
                   <span class='ion precursor' tabindex='0'>Precursor</span>
                   <span class='ion multi mp' tabindex='0'>Multi</span>
-                  <span class='ion glycan' tabindex='0'>Glycan</span>
+                  <span class='ion oxonium' tabindex='0'>Oxonium</span>
+                  <span class='ion Y' tabindex='0'>Y</span>
                   <span class='other'>Other</span>
               </div>
           </div>

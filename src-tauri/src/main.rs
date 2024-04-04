@@ -581,59 +581,42 @@ async fn annotate_spectrum<'a>(
             Context::none(),
         ));
     }
-    let get_model_param = |(location, neutral_losses): &(Location, String)| match neutral_losses
+    let get_model_param = |neutral_losses: &String| neutral_losses
         .split(',')
         .filter(|n| !n.is_empty())
-        .map(|n| n.parse())
-        .collect()
-    {
-        Ok(n) => Ok((location.clone(), n)),
-        Err(err) => Err(err),
-    };
+        .map(|n| n.parse::<NeutralLoss>())
+        .collect::<Result<Vec<_>,_>>();
     let mut model = match model {
         "all" => Model::all(),
         "ethcd" => Model::ethcd(),
         "cidhcd" => Model::cid_hcd(),
         "etd" => Model::etd(),
         "none" => Model::none(),
-        "custom" => Model::new(
-            get_model_param(&cmodel.a)?,
-            get_model_param(&cmodel.b)?,
-            get_model_param(&cmodel.c)?,
-            get_model_param(&cmodel.d)?,
-            get_model_param(&cmodel.v)?,
-            get_model_param(&cmodel.w)?,
-            get_model_param(&cmodel.x)?,
-            get_model_param(&cmodel.y)?,
-            get_model_param(&cmodel.z)?,
-            cmodel
-                .precursor
-                .split(',')
-                .filter(|n| !n.is_empty())
-                .map(|n| n.parse::<NeutralLoss>())
-                .collect::<Result<Vec<NeutralLoss>, _>>()?,
-            cmodel.immonium,
-            cmodel.m,
-            cmodel.modification_diagnostic,
-            cmodel.modification_neutral,
-            cmodel
-                .glycan
-                .0
-                .then(|| {
-                    cmodel
-                        .glycan
-                        .1
-                        .split(',')
-                        .filter(|n| !n.is_empty())
-                        .map(|n| n.parse::<NeutralLoss>())
-                        .collect::<Result<Vec<NeutralLoss>, _>>()
-                })
-                .invert()?,
-            MassOverCharge::new::<mz>(ppm),
-        ),
+        "custom" => Model::none()
+        .a(cmodel.a.0, get_model_param(&cmodel.a.1)?)
+        .b(cmodel.b.0, get_model_param(&cmodel.b.1)?)
+        .c(cmodel.c.0, get_model_param(&cmodel.c.1)?)
+        .d(cmodel.d.0, get_model_param(&cmodel.d.1)?)
+        .v(cmodel.v.0, get_model_param(&cmodel.v.1)?)
+        .w(cmodel.w.0, get_model_param(&cmodel.w.1)?)
+        .x(cmodel.x.0, get_model_param(&cmodel.x.1)?)
+        .y(cmodel.y.0, get_model_param(&cmodel.y.1)?)
+        .z(cmodel.z.0, get_model_param(&cmodel.z.1)?)
+        .precursor(get_model_param(&cmodel.precursor)?)
+        .immonium(cmodel.immonium)
+        .m(cmodel.m)
+        .modification_specific_diagnostic_ions(cmodel.modification_diagnostic)
+        .modification_specific_neutral_losses(cmodel.modification_neutral)
+        .glycan(cmodel
+            .glycan
+            .0
+            .then(|| {
+                get_model_param(&cmodel.glycan.1)
+            })
+            .invert()?),
         _ => Model::all(),
     };
-    model.ppm = MassOverCharge::new::<mz>(ppm);
+    model.tolerance = Tolerance::new_ppm(ppm);
     let peptide = rustyms::ComplexPeptide::pro_forma(peptide)?;
     let multiple_peptides = peptide.peptides().len() != 1;
     let mut spectrum = state.spectra[index].clone();

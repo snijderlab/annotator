@@ -273,7 +273,7 @@ fn spectrum_graph(
 ///   * The position(s) (eg 'p0-2', 'p2-123')
 fn get_classes(annotations: &[Fragment]) -> String {
     let mut output = Vec::new();
-    let mut shared_ion = annotations.first().map(|a| a.ion.to_string());
+    let mut shared_ion = annotations.first().map(|a| a.ion.kind());
     let mut first_peptide_index = None;
     for annotation in annotations {
         output.push(annotation.ion.label().to_string());
@@ -291,15 +291,11 @@ fn get_classes(annotations: &[Fragment]) -> String {
                 annotation.peptide_index, pos.sequence_index
             ));
         }
-        if annotation.ion.glycan_position().is_some() {
-            output.push("glycan".to_string());
-        }
-        if matches!(annotation.ion, FragmentType::Oxonium(_)) {
-            output.push("glycan".to_string());
-            output.push("internal_glycan".to_string());
+        if annotation.ion.kind() == FragmentKind::Oxonium {
+            output.push("oxonium".to_string());
         }
         if let Some(ion) = &shared_ion {
-            if *ion != annotation.ion.to_string() {
+            if *ion != annotation.ion.kind() {
                 shared_ion = None;
             }
         }
@@ -782,7 +778,7 @@ pub fn spectrum_table(
                 bonds.iter().map(|b| b.label()).join(""),
                 "Y".to_string(),
             )
-        } else if let FragmentType::immonium(aa, pos) = &annotation.ion {
+        } else if let FragmentType::immonium(pos, aa) = &annotation.ion {
             (
                 (pos.sequence_index + 1).to_string(),
                 pos.series_number.to_string(),
