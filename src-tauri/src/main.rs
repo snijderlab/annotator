@@ -565,13 +565,14 @@ pub struct AnnotationResult {
 #[tauri::command]
 async fn annotate_spectrum<'a>(
     index: usize,
-    ppm: f64,
+    tolerance: (f64, &'a str),
     charge: Option<f64>,
     filter: NoiseFilter,
     model: &'a str,
     peptide: &'a str,
     cmodel: ModelParameters,
     state: ModifiableState<'a>,
+    mass_mode: &'a str,
 ) -> Result<AnnotationResult, CustomError> {
     let state = state.lock().unwrap();
     if index >= state.spectra.len() {
@@ -616,7 +617,19 @@ async fn annotate_spectrum<'a>(
             .invert()?),
         _ => Model::all(),
     };
-    model.tolerance = Tolerance::new_ppm(ppm);
+    if tolerance.1 == "ppm" {
+        model.tolerance = Tolerance::new_ppm(tolerance.0);
+    } else if tolerance.1 == "th" {
+        model.tolerance = Tolerance::new_absolute(MassOverCharge::new::<rustyms::system::mz>(tolerance.0));
+    } else {
+        return Err(CustomError::error("Invalid tolerance unit", "", Context::None));
+    }
+    let mass_mode = match mass_mode {
+        "monoisotopic" => MassMode::Monoisotopic,
+        "average_weight" => MassMode::Average,
+        "most_abundant" => MassMode::MostAbundant,
+        _ => return Err(CustomError::error("Invalid mass mode", "", Context::None))
+    };
     let peptide = rustyms::ComplexPeptide::pro_forma(peptide)?;
     let multiple_peptides = peptide.peptides().len() != 1;
     let mut spectrum = state.spectra[index].clone();
@@ -628,8 +641,8 @@ async fn annotate_spectrum<'a>(
     }
     let use_charge = charge.map_or(spectrum.charge, Charge::new::<e>);
     let fragments = peptide.generate_theoretical_fragments(use_charge, &model);
-    let annotated = spectrum.annotate(peptide, &fragments, &model, MassMode::Monoisotopic);
-    let (spectrum, limits) = render::annotated_spectrum(&annotated, "spectrum", &fragments, &model);
+    let annotated = spectrum.annotate(peptide, &fragments, &model, mass_mode);
+    let (spectrum, limits) = render::annotated_spectrum(&annotated, "spectrum", &fragments, &model, mass_mode);
     Ok(AnnotationResult {
         spectrum,
         fragment_table: render::spectrum_table(&annotated, &fragments, multiple_peptides),

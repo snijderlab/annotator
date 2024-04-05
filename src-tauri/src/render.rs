@@ -17,6 +17,7 @@ pub fn annotated_spectrum(
     id: &str,
     fragments: &[Fragment],
     model: &Model,
+    mass_mode: MassMode,
 ) -> (String, Limits) {
     let mut output = String::new();
     let (limits, overview) = get_overview(spectrum);
@@ -45,6 +46,7 @@ pub fn annotated_spectrum(
         "first",
         multiple_peptides,
         multiple_glycans,
+        mass_mode,
     );
     // Spectrum graph
     spectrum_graph(
@@ -637,6 +639,7 @@ fn render_spectrum(
     selection: &str,
     multiple_peptides: bool,
     multiple_glycans: bool,
+    mass_mode: MassMode,
 ) {
     write!(
         output,
@@ -703,8 +706,8 @@ fn render_spectrum(
             output,
             "<span class='theoretical peak {}' style='--mz:{};' data-label='{}'>{}</span>",
             get_classes(&[peak.clone()]),
-            peak.mz(MassMode::Monoisotopic).value,
-            (peak.mz(MassMode::Monoisotopic).value * 10.0).round() / 10.0,
+            peak.mz(mass_mode).value,
+            (peak.mz(mass_mode).value * 10.0).round() / 10.0,
             get_label(&[peak.clone()], multiple_peptides, multiple_glycans),
         )
         .unwrap();

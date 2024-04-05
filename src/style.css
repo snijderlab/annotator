@@ -190,11 +190,13 @@ output.error {
   grid-column: 1 / -1;
 }
 
-.select-input {
+.select-input,
+.grouped-input {
   display: flex;
 }
 
-.select-input * {
+.select-input *,
+.grouped-input * {
   flex-grow: 1;
   width: 1px;
 }

@@ -102,8 +102,22 @@ fn main() {
       <pre id="loaded-path"></pre>
       <div class="input-settings">
         <h2>Annotate</h2>
-        <label for="spectrum-ppm">PPM </label>
-        <input type="number" id="spectrum-ppm" value="20" />
+        <label for="spectrum-tolerance">Tolerance</label>
+        <div class="grouped-input">
+          <input type="number" id="spectrum-tolerance" value="20" />
+          <select id="spectrum-tolerance-unit">
+            <option value="ppm">ppm</option>
+            <option value="th">Thompson (mz)</option>
+          </select>
+        </div>
+        
+        <label for="spectrum-mass-mode">Match mode</label>
+        <select id="spectrum-mass-mode">
+          <option value="monoisotopic" title="Match peaks based on the monoisotopic mass, meaning using only the most abundant isotope for each element (eg H1, C12 etc).">Monoisotopic</option>
+          <option value="average_weight" title="Match the peaks based on average weight, meaning to use the average weight of each element based on its natural distribution.">Average weight</option>
+          <option value="most_abundant" title="Match the peaks based on the most abundant isotope, meaning that for each fragment the isotopic distribution is generated and the most abundant species is selected. This mode should be good for very high mass matching, but it will take more time to be calculated.">Most abundant</option>
+        </select>
+
         <label for="spectrum-charge">Max charge </label>
         <input type="number" id="spectrum-charge" value="" placeholder="Empty takes peptide charge from raw data" />
         
