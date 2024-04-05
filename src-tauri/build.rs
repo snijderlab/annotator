@@ -365,6 +365,12 @@ fn main() {
         </div>
         <output class="collapsible-content" id="search-modification-result"></output>
         <output class="error collapsible-content hidden" id="search-modification-error"></output>
+        <div class="flex-input collapsible-content">
+          <label for="details-formula">Formula</label>
+          <input id="details-formula" type="text"></input>
+        </div>
+        <output class="collapsible-content" id="details-formula-result"></output>
+        <output class="error collapsible-content hidden" id="details-formula-error"></output>
       </fieldset>
       <input type="checkbox" id="collapsible-logs">
       <fieldset class="collapsible" data-linked-item="collapsible-logs">

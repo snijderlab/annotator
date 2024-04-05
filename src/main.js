@@ -200,6 +200,18 @@ async function search_modification() {
   }
 }
 
+async function details_formula(event) {
+  invoke("details_formula", { text: event.target.value }).then((result) => {
+    document.querySelector("#details-formula-result").innerHTML = result;
+    document.querySelector("#details-formula-error").classList.add("hidden");
+  }).catch((error) => {
+    console.error(error);
+    document.querySelector("#details-formula-result").innerText = "ERROR";
+    document.querySelector("#details-formula-error").classList.remove("hidden");
+    document.querySelector("#details-formula-error").innerText = error;
+  })
+}
+
 async function load_identified_peptide() {
   let index = Number(document.querySelector("#details-identified-peptide-index").value);
   invoke("load_identified_peptide", { index: index }).then((result) => {
@@ -371,6 +383,9 @@ window.addEventListener("DOMContentLoaded", () => {
   document
     .querySelector("#search-modification-button")
     .addEventListener("click", () => search_modification());
+  document
+    .querySelector("#details-formula")
+    .addEventListener("input", details_formula);
   enter_event("#search-peptide-input", search_peptide)
   enter_event("#search-modification", search_modification)
   enter_event("#scan-number", find_scan_number)

@@ -61,6 +61,7 @@ name = "annotator"
 version = "0.2.2"
 dependencies = [
  "itertools",
+ "ordered-float",
  "rustyms",
  "serde",
  "serde_json",

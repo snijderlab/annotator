@@ -17,6 +17,7 @@ use rustyms::{
     system::*,
     *,
 };
+use ordered_float::OrderedFloat;
 use state::State;
 use std::sync::Mutex;
 
@@ -159,6 +160,32 @@ async fn search_peptide<'a>(
         &data,
     )
     .to_string())
+}
+
+#[tauri::command]
+async fn details_formula(text: &str) -> Result<String, String> {
+    let mut formula = if text.is_empty() {
+        Err("Empty".to_string())
+    } else {
+        MolecularFormula::from_pro_forma(text).map_err(|err| err.to_string())
+    };
+    if formula.is_err() {
+        let psi_mod = MolecularFormula::from_psi_mod(text).map_err(|err| err.to_string());
+        if psi_mod.is_ok() {
+            formula = psi_mod;
+        }
+    }
+    let formula = formula?;
+    let isotopes = formula.isotopic_distribution(0.01);
+    let max = isotopes.iter().enumerate().max_by_key(|f| OrderedFloat(*f.1)).unwrap().0;
+
+
+    Ok(format!(
+        "<p>Details on <span class='formula'>{}</span></p><p>Monoisotopic mass {}, average weight {}, most abundant isotope offset +{max} da</p><p>{}</p>", 
+        formula.hill_notation_html(), 
+        display_mass(formula.monoisotopic_mass()), 
+        display_mass(formula.average_weight()), 
+        isotopes.iter().join(",")))
 }
 
 #[tauri::command]
@@ -659,17 +686,18 @@ fn main() {
             peptides: Vec::new(),
         }))
         .invoke_handler(tauri::generate_handler![
-            refresh,
-            load_mgf,
-            load_identified_peptides,
-            load_clipboard,
-            find_scan_number,
-            spectrum_details,
-            search_peptide,
-            search_modification,
-            identified_peptide_details,
-            load_identified_peptide,
             annotate_spectrum,
+            details_formula,
+            find_scan_number,
+            identified_peptide_details,
+            load_clipboard,
+            load_identified_peptide,
+            load_identified_peptides,
+            load_mgf,
+            refresh,
+            search_modification,
+            search_peptide,
+            spectrum_details,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
