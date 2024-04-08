@@ -177,15 +177,27 @@ async fn details_formula(text: &str) -> Result<String, String> {
     }
     let formula = formula?;
     let isotopes = formula.isotopic_distribution(0.01);
-    let max = isotopes.iter().enumerate().max_by_key(|f| OrderedFloat(*f.1)).unwrap().0;
+    let (max, max_occurrence) = isotopes.iter().enumerate().max_by_key(|f| OrderedFloat(*f.1)).unwrap();
 
 
     Ok(format!(
-        "<p>Details on <span class='formula'>{}</span></p><p>Monoisotopic mass {}, average weight {}, most abundant isotope offset +{max} da</p><p>{}</p>", 
+        "<p>Details on <span class='formula'>{}</span></p><p>Monoisotopic mass {}, average weight {}, most abundant isotope offset +{max} da</p><div class='isotopes-distribution'>{}</div>", 
         formula.hill_notation_html(), 
         display_mass(formula.monoisotopic_mass()), 
         display_mass(formula.average_weight()), 
-        isotopes.iter().join(",")))
+        isotopes.iter()
+            .copied()
+            .enumerate()
+            .skip_while(|(_,i)|i / *max_occurrence < 0.01)
+            .take_while(|(_,i)| i / *max_occurrence >= 0.01)
+            .map(|(offset,i)| format!("<span class='{} {}' style='--intensity:{}' title='+{} Da {:.4}% of total intensity {:.4}% of highest intensity'></span>", 
+                if offset == 0 {"mono"} else {""}, 
+                if offset == max {"most-abundant"} else {""}, 
+                i / *max_occurrence, 
+                offset, 
+                i * 100.0, 
+                i / * max_occurrence * 100.0))
+            .join("")))
 }
 
 #[tauri::command]
