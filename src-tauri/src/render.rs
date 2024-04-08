@@ -814,6 +814,7 @@ pub fn spectrum_table(
                 <th>Loss</th>
                 <th>Intensity</th>
                 <th>mz Theoretical</th>
+                <th>Formula</th>
                 <th>mz Error (Th)</th>
                 <th>mz Error (ppm)</th>
                 <th>Charge</th>
@@ -846,6 +847,7 @@ pub fn spectrum_table(
                     "-".to_string(),
                     "-".to_string(),
                     "-".to_string(),
+                    "-".to_string(),
                 ],
             ));
         } else {
@@ -867,6 +869,10 @@ pub fn spectrum_table(
                         }),
                         format!("{:.2}", peak.intensity),
                         format!("{:.2}", peak.experimental_mz.value),
+                        format!(
+                            "<span class='formula'>{}</span>",
+                            annotation.formula.hill_notation_html()
+                        ),
                         format!(
                             "{:.5}",
                             (annotation.mz(MassMode::Monoisotopic) - peak.experimental_mz)
@@ -910,6 +916,10 @@ pub fn spectrum_table(
                     }),
                     "-".to_string(),
                     format!("{:.2}", fragment.mz(MassMode::Monoisotopic).value),
+                    format!(
+                        "<span class='formula'>{}</span>",
+                        fragment.formula.hill_notation_html()
+                    ),
                     "-".to_string(),
                     "-".to_string(),
                     format!("{:+}", fragment.charge.value),
