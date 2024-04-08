@@ -176,7 +176,7 @@ async fn details_formula(text: &str) -> Result<String, String> {
         }
     }
     let formula = formula?;
-    let isotopes = formula.isotopic_distribution(0.01);
+    let isotopes = formula.isotopic_distribution(0.001);
     let (max, max_occurrence) = isotopes.iter().enumerate().max_by_key(|f| OrderedFloat(*f.1)).unwrap();
 
     let isotopes_display = if formula.elements().len() == 1 && formula.elements()[0].1.is_none() && formula.elements()[0].2 == 1 {
@@ -185,10 +185,16 @@ async fn details_formula(text: &str) -> Result<String, String> {
             formula.elements()[0].0.isotopes().iter().map(|(n,mass,occurrence)| [n.to_string(), display_mass(*mass).to_string(), if *occurrence == 0.0 {"-".to_string()} else {format!("{:.4}%", occurrence * 100.0)}])
         ).to_string()
     } else {
+        let start = isotopes.iter().take_while(|i| **i / *max_occurrence < 0.001).count();
+        let end = isotopes.iter().rev().take_while(|i| **i / *max_occurrence < 0.001).count();
+        let middle = isotopes.len() - start - end;
+        
         format!("<div class='isotopes-distribution'>{}</div>",
             isotopes.iter()
                 .copied()
                 .enumerate()
+                .skip(start)
+                .take(middle)
                 .map(|(offset, i)| format!("<span class='{} {}' style='--intensity:{}' title='mono + {} Da {:.4}% of total intensity {:.4}% of highest intensity'></span>", 
                     if offset == 0 {"mono"} else {""}, 
                     if offset == max {"most-abundant"} else {""}, 
