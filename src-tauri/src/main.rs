@@ -157,7 +157,7 @@ async fn search_peptide<'a>(
             "Match Score".to_string(),
             "Peptide Score".to_string(),
         ]),
-        &data,
+        data,
     )
     .to_string())
 }
@@ -179,25 +179,33 @@ async fn details_formula(text: &str) -> Result<String, String> {
     let isotopes = formula.isotopic_distribution(0.01);
     let (max, max_occurrence) = isotopes.iter().enumerate().max_by_key(|f| OrderedFloat(*f.1)).unwrap();
 
+    let isotopes_display = if formula.elements().len() == 1 && formula.elements()[0].1.is_none() && formula.elements()[0].2 == 1 {
+        html_builder::HtmlElement::table(
+            Some(&["N","Mass","Occurrence"]), 
+            formula.elements()[0].0.isotopes().iter().map(|(n,mass,occurrence)| [n.to_string(), display_mass(*mass).to_string(), if *occurrence == 0.0 {"-".to_string()} else {format!("{:.4}%", occurrence * 100.0)}])
+        ).to_string()
+    } else {
+        format!("<div class='isotopes-distribution'>{}</div>",
+            isotopes.iter()
+                .copied()
+                .enumerate()
+                .map(|(offset, i)| format!("<span class='{} {}' style='--intensity:{}' title='mono + {} Da {:.4}% of total intensity {:.4}% of highest intensity'></span>", 
+                    if offset == 0 {"mono"} else {""}, 
+                    if offset == max {"most-abundant"} else {""}, 
+                    i / *max_occurrence, 
+                    offset, 
+                    i * 100.0, 
+                    i / * max_occurrence * 100.0))
+                .join(""))
+    };
 
     Ok(format!(
-        "<p>Details on <span class='formula'>{}</span></p><p>Monoisotopic mass {}, average weight {}, most abundant isotope offset +{max} da</p><div class='isotopes-distribution'>{}</div>", 
-        formula.hill_notation_html(), 
-        display_mass(formula.monoisotopic_mass()), 
-        display_mass(formula.average_weight()), 
-        isotopes.iter()
-            .copied()
-            .enumerate()
-            .skip_while(|(_,i)|i / *max_occurrence < 0.01)
-            .take_while(|(_,i)| i / *max_occurrence >= 0.01)
-            .map(|(offset,i)| format!("<span class='{} {}' style='--intensity:{}' title='+{} Da {:.4}% of total intensity {:.4}% of highest intensity'></span>", 
-                if offset == 0 {"mono"} else {""}, 
-                if offset == max {"most-abundant"} else {""}, 
-                i / *max_occurrence, 
-                offset, 
-                i * 100.0, 
-                i / * max_occurrence * 100.0))
-            .join("")))
+        "<p>Details on <span class='formula'>{}</span></p><p><span style='color:var(--color-red)'>Monoisotopic mass</span> {}, average weight {}, <span style='color:var(--color-green)'>most abundant isotope</span> offset {max} Da</p>{}", 
+            formula.hill_notation_html(), 
+            display_mass(formula.monoisotopic_mass()), 
+            display_mass(formula.average_weight()), 
+            isotopes_display,
+        ))
 }
 
 #[tauri::command]
@@ -315,7 +323,7 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
         ModificationSearchResult::Mass(_, _, modifications) => {
             Ok(html_builder::HtmlElement::table(
                 Some(&["Name", "Id", "Monoisotopic mass", "Formula"]),
-                &modifications
+                modifications
                     .iter()
                     .map(|(ontology, id, _, modification)| {
                         [
@@ -327,29 +335,27 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
                                 modification.formula().hill_notation_html()
                             ),
                         ]
-                    })
-                    .collect_vec(),
+                    }),
             )
             .to_string())
         }
         ModificationSearchResult::Formula(_, modifications) => {
             Ok(html_builder::HtmlElement::table(
                 Some(&["Name", "Id"]),
-                &modifications
+                modifications
                     .iter()
                     .map(|(ontology, id, _, modification)| {
                         [
                             modification.to_string(),
                             format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'>{0}:{1}</a>", ontology.name(), id),
                         ]
-                    })
-                    .collect_vec(),
+                    }),
             )
             .to_string())
         }
         ModificationSearchResult::Glycan(_, modifications) => Ok(html_builder::HtmlElement::table(
             Some(&["Name", "Structure"]),
-            &modifications
+            modifications
                 .iter()
                 .map(|(_, _, _, modification)| {
                     [
@@ -362,8 +368,7 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
                             "-".to_string()
                         },
                     ]
-                })
-                .collect_vec(),
+                }),
         )
         .to_string()),
     }
@@ -381,7 +386,7 @@ impl Settings {
     fn from_peptide(peptide: &IdentifiedPeptide, scan: Option<usize>) -> Self {
         Self {
             peptide: peptide.peptide.to_string(),
-            charge: peptide.metadata.charge().map(|v| v.value as usize),
+            charge: peptide.metadata.charge().map(|v| v.value),
             mode: peptide
                 .metadata
                 .mode()
