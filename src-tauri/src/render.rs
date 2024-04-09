@@ -5,7 +5,7 @@ use rustyms::{
     fragment::*,
     model::Location,
     spectrum::{PeakSpectrum, Recovered, Score},
-    system::*,
+    system::{da, e, mz, usize::Charge, Mass, MassOverCharge},
     AnnotatedSpectrum, ComplexPeptide, LinearPeptide, MassMode, Model, Modification,
     MolecularFormula, MultiChemical,
 };
@@ -122,7 +122,7 @@ fn spectrum_graph_boundaries(
                             f64::MAX,
                             Fragment::new(
                                 MolecularFormula::default(),
-                                Charge::new::<e>(0.0),
+                                Charge::new::<e>(0),
                                 0,
                                 FragmentType::precursor,
                                 String::new(),
@@ -132,7 +132,7 @@ fn spectrum_graph_boundaries(
                             f64::MAX,
                             Fragment::new(
                                 MolecularFormula::default(),
-                                Charge::new::<e>(0.0),
+                                Charge::new::<e>(0),
                                 0,
                                 FragmentType::precursor,
                                 String::new(),
@@ -161,11 +161,11 @@ fn spectrum_graph_boundaries(
                 );
             (
                 point.annotation.clone(),
-                distance.0,                           // rel (ppm)
-                distance.1,                           // abs (Da)
-                point.experimental_mz,                // mz
-                point.experimental_mz * point.charge, // mass
-                point.intensity.0,                    // intensity
+                distance.0,                                                  // rel (ppm)
+                distance.1,                                                  // abs (Da)
+                point.experimental_mz,                                       // mz
+                da(point.experimental_mz.value * point.charge.value as f64), // mass
+                point.intensity.0,                                           // intensity
             )
         })
         .collect();

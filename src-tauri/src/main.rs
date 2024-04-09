@@ -8,13 +8,12 @@ use render::display_mass;
 use rustyms::{
     align::{align, matrix::BLOSUM62, Alignment},
     error::*,
-    fragment::FragmentType,
     identification::*,
     model::*,
     modification::{GnoComposition, ModificationSearchResult, Ontology, ReturnModification},
     placement_rule::PlacementRule,
     spectrum::*,
-    system::*,
+    system::{Mass,MassOverCharge,usize::Charge,da,dalton,mz,e},
     *,
 };
 use ordered_float::OrderedFloat;
@@ -188,7 +187,7 @@ async fn details_formula(text: &str) -> Result<String, String> {
         let start = isotopes.iter().take_while(|i| **i / *max_occurrence < 0.001).count();
         let end = isotopes.iter().rev().take_while(|i| **i / *max_occurrence < 0.001).count();
         let middle = isotopes.len() - start - end;
-        
+
         format!("<div class='isotopes-distribution'>{}</div>",
             isotopes.iter()
                 .copied()
@@ -496,7 +495,7 @@ fn load_clipboard(data: &str, state: ModifiableState) -> Result<usize, String> {
     let mut new_spectrum = RawSpectrum::default();
     new_spectrum.extend(spectrum);
     new_spectrum.title = "Clipboard".to_string();
-    new_spectrum.charge = Charge::new::<e>(1.0);
+    new_spectrum.charge = Charge::new::<e>(1);
 
     state.lock().unwrap().spectra = vec![new_spectrum];
     Ok(1)
@@ -514,7 +513,7 @@ fn load_bruker_clipboard(lines: &[&str]) -> Result<Vec<RawPeak>, String> {
             spectrum.push(RawPeak {
                 mz: MassOverCharge::new::<mz>(mass_over_charge),
                 intensity,
-                charge: Charge::new::<e>(0.0),
+                charge: Charge::new::<e>(0),
             })
         } else {
             return Err(format!(
@@ -538,7 +537,7 @@ fn load_stitch_clipboard(lines: &[&str]) -> Result<Vec<RawPeak>, String> {
             spectrum.push(RawPeak {
                 mz: MassOverCharge::new::<mz>(mass_over_charge),
                 intensity,
-                charge: Charge::new::<e>(0.0),
+                charge: Charge::new::<e>(0),
             })
         } else {
             return Err(format!(
@@ -562,7 +561,7 @@ fn load_sciex_clipboard(lines: &[&str]) -> Result<Vec<RawPeak>, String> {
             spectrum.push(RawPeak {
                 mz: MassOverCharge::new::<mz>(mass_over_charge),
                 intensity,
-                charge: Charge::new::<e>(0.0),
+                charge: Charge::new::<e>(0),
             })
         } else {
             return Err(format!(
@@ -616,7 +615,7 @@ pub struct AnnotationResult {
 async fn annotate_spectrum<'a>(
     index: usize,
     tolerance: (f64, &'a str),
-    charge: Option<f64>,
+    charge: Option<usize>,
     filter: NoiseFilter,
     model: &'a str,
     peptide: &'a str,
