@@ -26,7 +26,7 @@ rustyms = { version = "0.8.3", default-features = false, features = [
 ordered-float = { version = "4.2", features = ["serde"] }
 
 [patch.crates-io]
-rustyms = { path = "../../rustyms/rustyms" }
+rustyms = { git = "https://github.com/snijderlab/rustyms", rev = "43700ca4396a7ca5608bf60b21cb1fc2f6c78d7a" }
 
 [features]
 # by default Tauri runs in production mode
