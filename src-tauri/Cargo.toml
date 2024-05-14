@@ -8,8 +8,6 @@ repository = "https://github.com/snijderlab/annotator"
 edition = "2021"
 rust-version = "1.70.0"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [build-dependencies]
 tauri-build = { version = "1.5", features = [] }
 tauri = { version = "1.6", features = ["dialog-open", "updater"] }
@@ -22,11 +20,13 @@ tauri = { version = "1.6", features = ["shell-open", "dialog-open"] }
 rustyms = { version = "0.8.3", default-features = false, features = [
     "identification",
     "align",
+    "isotopes",
 ] }
 ordered-float = { version = "4.2", features = ["serde"] }
 
 [patch.crates-io]
-rustyms = { git = "https://github.com/snijderlab/rustyms", rev = "43700ca4396a7ca5608bf60b21cb1fc2f6c78d7a" }
+# rustyms = { git = "https://github.com/snijderlab/rustyms", branch = "main" }
+rustyms = { path = "../../rustyms/rustyms" }
 
 [features]
 # by default Tauri runs in production mode

@@ -4,10 +4,10 @@ use itertools::Itertools;
 use rustyms::{
     fragment::*,
     model::Location,
+    modification::SimpleModification,
     spectrum::{PeakSpectrum, Recovered, Score},
     system::{da, e, mz, usize::Charge, Mass, MassOverCharge},
-    AnnotatedSpectrum, ComplexPeptide, LinearPeptide, MassMode, Model, Modification,
-    MolecularFormula, MultiChemical,
+    AnnotatedSpectrum, LinearPeptide, Linked, MassMode, Model, Modification, MolecularFormula,
 };
 
 use crate::html_builder::{HtmlElement, HtmlTag};
@@ -23,20 +23,39 @@ pub fn annotated_spectrum(
     let (limits, overview) = get_overview(spectrum);
     let (graph_data, graph_boundaries, ions) =
         spectrum_graph_boundaries(spectrum, fragments, model);
-    let multiple_peptides = !matches!(spectrum.peptide, ComplexPeptide::Singular(_));
-    let multiple_glycans = spectrum.peptide.peptides().iter().any(|p| {
-        p.sequence
-            .iter()
-            .filter(|seq| {
-                seq.modifications
-                    .iter()
-                    .any(|m| matches!(m, Modification::GlycanStructure(_)))
-            })
-            .count()
-            > 1
-    });
+    let multiple_peptidoforms = spectrum.peptide.peptidoforms().len() > 1;
+    let multiple_peptides = spectrum
+        .peptide
+        .peptidoforms()
+        .iter()
+        .any(|p| p.peptides().len() > 1);
+    let multiple_glycans = spectrum
+        .peptide
+        .peptidoforms()
+        .iter()
+        .flat_map(|p| p.peptides())
+        .any(|p| {
+            p.sequence
+                .iter()
+                .filter(|seq| {
+                    seq.modifications.iter().any(|m| {
+                        matches!(
+                            m,
+                            Modification::Simple(SimpleModification::GlycanStructure(_))
+                        )
+                    })
+                })
+                .count()
+                > 1
+        });
 
-    render_peptide(&mut output, spectrum, overview, multiple_peptides);
+    render_peptide(
+        &mut output,
+        spectrum,
+        overview,
+        multiple_peptidoforms,
+        multiple_peptides,
+    );
     render_spectrum(
         &mut output,
         spectrum,
@@ -44,6 +63,7 @@ pub fn annotated_spectrum(
         &graph_boundaries,
         &limits,
         "first",
+        multiple_peptidoforms,
         multiple_peptides,
         multiple_glycans,
         mass_mode,
@@ -58,7 +78,13 @@ pub fn annotated_spectrum(
     );
     write!(output, "</div></div>").unwrap();
     // General stats
-    general_stats(&mut output, spectrum, fragments);
+    general_stats(
+        &mut output,
+        spectrum,
+        fragments,
+        multiple_peptidoforms,
+        multiple_peptides,
+    );
 
     //write!(output, "</div>").unwrap();
     (output, limits)
@@ -66,7 +92,7 @@ pub fn annotated_spectrum(
 
 type Boundaries = (f64, f64, f64, f64, f64, f64, f64, f64, f64, f64);
 type SpectrumGraphData = Vec<(
-    Vec<Fragment>,
+    Vec<(Fragment, Vec<MatchedIsotopeDistribution>)>,
     (f64, Fragment),
     (f64, Fragment),
     MassOverCharge,
@@ -124,6 +150,7 @@ fn spectrum_graph_boundaries(
                                 MolecularFormula::default(),
                                 Charge::new::<e>(0),
                                 0,
+                                0,
                                 FragmentType::precursor,
                                 String::new(),
                             ),
@@ -133,6 +160,7 @@ fn spectrum_graph_boundaries(
                             Fragment::new(
                                 MolecularFormula::default(),
                                 Charge::new::<e>(0),
+                                0,
                                 0,
                                 FragmentType::precursor,
                                 String::new(),
@@ -277,11 +305,11 @@ fn spectrum_graph(
 ///   * The ion type(s) (eg 'precursor', 'y')
 ///   * The peptide(s) (eg 'p0', 'p1')
 ///   * The position(s) (eg 'p0-2', 'p2-123')
-fn get_classes(annotations: &[Fragment]) -> String {
+fn get_classes(annotations: &[(Fragment, Vec<MatchedIsotopeDistribution>)]) -> String {
     let mut output = Vec::new();
-    let mut shared_ion = annotations.first().map(|a| a.ion.kind());
+    let mut shared_ion = annotations.first().map(|a| a.0.ion.kind());
     let mut first_peptide_index = None;
-    for annotation in annotations {
+    for (annotation, _) in annotations {
         output.push(annotation.ion.label().to_string());
         output.push(format!("p{}", annotation.peptide_index));
         if let Some(num) = first_peptide_index {
@@ -317,17 +345,29 @@ fn get_classes(annotations: &[Fragment]) -> String {
     }
 }
 
-fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans: bool) -> String {
+fn get_label(
+    annotations: &[(Fragment, Vec<MatchedIsotopeDistribution>)],
+    multiple_peptidoforms: bool,
+    multiple_peptides: bool,
+    multiple_glycans: bool,
+) -> String {
     if annotations.is_empty() {
         String::new()
     } else {
-        let mut shared_charge = Some(annotations[0].charge);
-        let mut shared_ion = Some(annotations[0].ion.label());
-        let mut shared_pos = Some(annotations[0].ion.position_label());
-        let mut shared_peptide = Some(annotations[0].peptide_index);
-        let mut shared_glycan = Some(annotations[0].ion.glycan_position().map(|g| g.attachment()));
-        let mut shared_loss = Some(annotations[0].neutral_loss.clone());
-        for a in annotations {
+        let mut shared_charge = Some(annotations[0].0.charge);
+        let mut shared_ion = Some(annotations[0].0.ion.label());
+        let mut shared_pos = Some(annotations[0].0.ion.position_label());
+        let mut shared_peptidoform = Some(annotations[0].0.peptidoform_index);
+        let mut shared_peptide = Some(annotations[0].0.peptide_index);
+        let mut shared_glycan = Some(
+            annotations[0]
+                .0
+                .ion
+                .glycan_position()
+                .map(|g| g.attachment()),
+        );
+        let mut shared_loss = Some(annotations[0].0.neutral_loss.clone());
+        for (a, _) in annotations {
             if let Some(charge) = shared_charge {
                 if charge != a.charge {
                     shared_charge = None;
@@ -341,6 +381,11 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
             if let Some(pos) = &shared_pos {
                 if *pos != a.ion.position_label() {
                     shared_pos = None;
+                }
+            }
+            if let Some(peptidoform) = shared_peptidoform {
+                if peptidoform != a.peptidoform_index {
+                    shared_peptidoform = None;
                 }
             }
             if let Some(peptide) = shared_peptide {
@@ -363,6 +408,7 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
         if shared_charge.is_none()
             && shared_ion.is_none()
             && shared_pos.is_none()
+            && shared_peptidoform.is_none()
             && shared_peptide.is_none()
             && shared_glycan.is_none()
             && shared_loss.is_none()
@@ -378,6 +424,9 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
             let pos_str = shared_pos
                 .map(|pos| pos.unwrap_or_default())
                 .unwrap_or("*".to_string());
+            let peptidoform_str = shared_peptidoform
+                .map(|pep| (pep + 1).to_string())
+                .unwrap_or("*".to_string());
             let peptide_str = shared_peptide
                 .map(|pep| (pep + 1).to_string())
                 .unwrap_or("*".to_string());
@@ -391,7 +440,7 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
 
             let multi = if annotations.len() > 1 {
                 let mut multi = String::new();
-                for annotation in annotations {
+                for (annotation, _) in annotations {
                     if let FragmentType::Oxonium(breakages) = &annotation.ion {
                         let ch = format!("{:+}", annotation.charge.value);
                         write!(
@@ -413,7 +462,11 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                             } else {
                                 String::new()
                             },
-                            if multiple_peptides {
+                            if multiple_peptidoforms && multiple_peptides {
+                                format!("p{}.{}", annotation.peptidoform_index+1, annotation.peptide_index + 1)
+                            }else if multiple_peptidoforms {
+                                format!("p{}", annotation.peptidoform_index+1)
+                            } else if multiple_peptides {
                                 format!("p{}", annotation.peptide_index + 1)
                             } else {
                                 String::new()
@@ -435,7 +488,11 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                             } else {
                                 String::new()
                             },
-                            if multiple_peptides {
+                            if multiple_peptidoforms && multiple_peptides {
+                                format!("p{}.{}", annotation.peptidoform_index+1, annotation.peptide_index + 1)
+                            }else if multiple_peptidoforms {
+                                format!("p{}", annotation.peptidoform_index+1)
+                            } else if multiple_peptides {
                                 format!("p{}", annotation.peptide_index + 1)
                             } else {
                                 String::new()
@@ -450,10 +507,10 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                 String::new()
             };
             let single_internal_glycan =
-                matches!(annotations[0].ion, FragmentType::Oxonium(_)) && annotations.len() == 1;
+                matches!(annotations[0].0.ion, FragmentType::Oxonium(_)) && annotations.len() == 1;
 
             if single_internal_glycan {
-                if let FragmentType::Oxonium(breakages) = &annotations[0].ion {
+                if let FragmentType::Oxonium(breakages) = &annotations[0].0.ion {
                     format!(
                         "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch;min-width:{2}ch;display:inline-block;'>{}{}</sub>{}</span>",
                         breakages
@@ -468,12 +525,16 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                         } else {
                             String::new()
                         },
-                        if multiple_peptides {
+                        if multiple_peptidoforms && multiple_peptides {
+                            format!("p{}.{}", peptidoform_str, peptide_str)
+                        }else if multiple_peptidoforms {
+                            format!("p{}", peptidoform_str)
+                        } else if multiple_peptides {
                             format!("p{}", peptide_str)
                         } else {
                             String::new()
                         },
-                        annotations[0]
+                        annotations[0].0
                             .neutral_loss.as_ref()
                             .map(|n| n.hill_notation_html())
                             .unwrap_or_default(),
@@ -493,7 +554,11 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
                     } else {
                         String::new()
                     },
-                    if multiple_peptides {
+                    if multiple_peptidoforms && multiple_peptides {
+                        format!("p{}.{}", peptidoform_str, peptide_str)
+                    }else if multiple_peptidoforms {
+                        format!("p{}", peptidoform_str)
+                    } else if multiple_peptides {
                         format!("p{}", peptide_str)
                     } else {
                         String::new()
@@ -506,7 +571,7 @@ fn get_label(annotations: &[Fragment], multiple_peptides: bool, multiple_glycans
     }
 }
 
-type PositionCoverage = Vec<Vec<HashSet<FragmentType>>>;
+type PositionCoverage = Vec<Vec<Vec<HashSet<FragmentType>>>>;
 
 pub struct Limits {
     pub mz: MassOverCharge,
@@ -517,9 +582,14 @@ pub struct Limits {
 fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
     let mut output: PositionCoverage = spectrum
         .peptide
-        .peptides()
+        .peptidoforms()
         .iter()
-        .map(|p| vec![HashSet::new(); p.sequence.len()])
+        .map(|p| {
+            p.peptides()
+                .iter()
+                .map(|p| vec![HashSet::new(); p.sequence.len()])
+                .collect()
+        })
         .collect();
     let mut max_mz: MassOverCharge = MassOverCharge::new::<mz>(0.0);
     let mut max_intensity: f64 = 0.0;
@@ -529,10 +599,11 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
         max_intensity_unassigned = max_intensity_unassigned.max(peak.intensity.0);
         if !peak.annotation.is_empty() {
             max_intensity = max_intensity.max(peak.intensity.0);
-            peak.annotation.iter().for_each(|frag| {
-                frag.ion
-                    .position()
-                    .map(|i| output[frag.peptide_index][i.sequence_index].insert(frag.ion.clone()));
+            peak.annotation.iter().for_each(|(frag, _)| {
+                frag.ion.position().map(|i| {
+                    output[frag.peptidoform_index][frag.peptide_index][i.sequence_index]
+                        .insert(frag.ion.clone())
+                });
             });
         }
     }
@@ -550,32 +621,52 @@ fn render_peptide(
     output: &mut String,
     spectrum: &AnnotatedSpectrum,
     overview: PositionCoverage,
+    multiple_peptidoforms: bool,
     multiple_peptides: bool,
 ) {
     write!(output, "<div class='complex-peptide'>").unwrap();
-    match &spectrum.peptide {
-        ComplexPeptide::Singular(peptide) => {
-            render_linear_peptide(output, peptide, &overview[0], 0, multiple_peptides)
+    for (peptidoform_index, peptidoform) in spectrum.peptide.peptidoforms().iter().enumerate() {
+        for (peptide_index, peptide) in peptidoform.peptides().iter().enumerate() {
+            render_linear_peptide(
+                output,
+                peptide,
+                &overview[peptidoform_index][peptide_index],
+                peptidoform_index,
+                peptide_index,
+                multiple_peptidoforms,
+                multiple_peptides,
+            );
         }
-        ComplexPeptide::Chimeric(peptides) => {
-            for (index, peptide) in peptides.iter().enumerate() {
-                render_linear_peptide(output, peptide, &overview[index], index, multiple_peptides);
-            }
-        }
-        _ => panic!("Unhandled complex peptide type"),
     }
     write!(output, "</div>").unwrap();
 }
 
 fn render_linear_peptide(
     output: &mut String,
-    peptide: &LinearPeptide,
+    peptide: &LinearPeptide<Linked>,
     overview: &[HashSet<FragmentType>],
+    peptidoform_index: usize,
     peptide_index: usize,
+    multiple_peptidoforms: bool,
     multiple_peptides: bool,
 ) {
     write!(output, "<div class='peptide'>").unwrap();
-    if multiple_peptides {
+    if multiple_peptidoforms && multiple_peptides {
+        write!(
+            output,
+            "<span class='name'>{}.{}</span>",
+            peptidoform_index + 1,
+            peptide_index + 1
+        )
+        .unwrap();
+    } else if multiple_peptidoforms {
+        write!(
+            output,
+            "<span class='name'>{}</span>",
+            peptidoform_index + 1
+        )
+        .unwrap();
+    } else if multiple_peptides {
         write!(output, "<span class='name'>{}</span>", peptide_index + 1).unwrap();
     }
     if peptide.n_term.is_some() {
@@ -594,7 +685,8 @@ fn render_linear_peptide(
         }
         write!(
             output,
-            "<span data-pos='{}-{}'{classes} tabindex='0' title='N terminal position: {}, C terminal position: {}'>{}",
+            "<span data-pos='{}-{}-{}'{classes} tabindex='0' title='N terminal position: {}, C terminal position: {}'>{}",
+            peptidoform_index,
             peptide_index,
             index,
             index + 1,
@@ -637,6 +729,7 @@ fn render_spectrum(
     boundaries: &Boundaries,
     limits: &Limits,
     selection: &str,
+    multiple_peptidoforms: bool,
     multiple_peptides: bool,
     multiple_glycans: bool,
     mass_mode: MassMode,
@@ -697,7 +790,12 @@ fn render_spectrum(
             } else {
                 ""
             },
-            get_label(&peak.annotation, multiple_peptides, multiple_glycans),
+            get_label(
+                &peak.annotation,
+                multiple_peptidoforms,
+                multiple_peptides,
+                multiple_glycans
+            ),
         )
         .unwrap();
     }
@@ -705,10 +803,15 @@ fn render_spectrum(
         write!(
             output,
             "<span class='theoretical peak {}' style='--mz:{};' data-label='{}'>{}</span>",
-            get_classes(&[peak.clone()]),
+            get_classes(&[(peak.clone(), Vec::new())]),
             peak.mz(mass_mode).value,
             (peak.mz(mass_mode).value * 10.0).round() / 10.0,
-            get_label(&[peak.clone()], multiple_peptides, multiple_glycans),
+            get_label(
+                &[(peak.clone(), Vec::new())],
+                multiple_peptidoforms,
+                multiple_peptides,
+                multiple_glycans
+            ),
         )
         .unwrap();
     }
@@ -750,20 +853,22 @@ pub fn spectrum_table(
     fragments: &[Fragment],
     multiple_peptides: bool,
 ) -> String {
-    fn generate_text(annotation: &Fragment) -> (String, String, String) {
-        if let Some(pos) = annotation.ion.position() {
+    fn generate_text(
+        annotation: &(Fragment, Vec<MatchedIsotopeDistribution>),
+    ) -> (String, String, String) {
+        if let Some(pos) = annotation.0.ion.position() {
             (
                 (pos.sequence_index + 1).to_string(),
                 pos.series_number.to_string(),
-                annotation.ion.label().to_string(),
+                annotation.0.ion.label().to_string(),
             )
-        } else if let Some(pos) = annotation.ion.glycan_position() {
+        } else if let Some(pos) = annotation.0.ion.glycan_position() {
             (
                 pos.attachment(),
                 format!("{}{}", pos.series_number, pos.branch_names()),
-                annotation.ion.label().to_string(),
+                annotation.0.ion.label().to_string(),
             )
-        } else if let FragmentType::Oxonium(breakages) = &annotation.ion {
+        } else if let FragmentType::Oxonium(breakages) = &annotation.0.ion {
             (
                 breakages
                     .first()
@@ -776,7 +881,7 @@ pub fn spectrum_table(
                     .join(""),
                 "oxonium".to_string(),
             )
-        } else if let FragmentType::Y(bonds) = &annotation.ion {
+        } else if let FragmentType::Y(bonds) = &annotation.0.ion {
             (
                 bonds
                     .first()
@@ -785,7 +890,7 @@ pub fn spectrum_table(
                 bonds.iter().map(|b| b.label()).join(""),
                 "Y".to_string(),
             )
-        } else if let FragmentType::immonium(pos, aa) = &annotation.ion {
+        } else if let FragmentType::immonium(pos, aa) = &annotation.0.ion {
             (
                 (pos.sequence_index + 1).to_string(),
                 pos.series_number.to_string(),
@@ -796,7 +901,7 @@ pub fn spectrum_table(
             (
                 "-".to_string(),
                 "-".to_string(),
-                annotation.ion.label().to_string(),
+                annotation.0.ion.label().to_string(),
             )
         }
     }
@@ -851,8 +956,8 @@ pub fn spectrum_table(
                 ],
             ));
         } else {
-            for annotation in &peak.annotation {
-                let (sequence_index, series_number, label) = generate_text(annotation);
+            for full @ (annotation, _) in &peak.annotation {
+                let (sequence_index, series_number, label) = generate_text(full);
                 data.push((
                     peak.experimental_mz.value,
                     [
@@ -897,9 +1002,10 @@ pub fn spectrum_table(
     for fragment in fragments {
         if !spectrum
             .spectrum()
-            .any(|p| p.annotation.iter().any(|a| a == fragment))
+            .any(|p| p.annotation.iter().any(|a| a.0 == *fragment))
         {
-            let (sequence_index, series_number, label) = generate_text(fragment);
+            let (sequence_index, series_number, label) =
+                generate_text(&(fragment.clone(), Vec::new()));
             data.push((
                 fragment.mz(MassMode::Monoisotopic).value,
                 [
@@ -941,7 +1047,13 @@ pub fn spectrum_table(
     output
 }
 
-fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &[Fragment]) {
+fn general_stats(
+    output: &mut String,
+    spectrum: &AnnotatedSpectrum,
+    fragments: &[Fragment],
+    multiple_peptidoforms: bool,
+    multiple_peptides: bool,
+) {
     fn format(recovered: Recovered<u32>) -> String {
         format!(
             "{:.2}% ({}/{})",
@@ -971,84 +1083,36 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
 
     let (combined_scores, peptide_scores) = spectrum.scores(fragments);
 
-    for (index, score) in peptide_scores.iter().enumerate() {
-        let precursor = spectrum.peptide.peptides()[index]
-            .formulas()
-            .iter()
-            .map(|f| {
-                format!(
-                    "{} | avg: {}",
-                    display_mass(f.monoisotopic_mass()),
-                    display_mass(f.average_weight())
-                )
-            })
-            .join(", ");
-        write!(mass_row, "<td>{precursor}</td>").unwrap();
-        match score.score {
-            Score::Position {
-                fragments,
-                peaks,
-                intensity,
-                positions,
-            } => {
-                write!(fragments_row, "<td>{}</td>", format(fragments)).unwrap();
-                write!(peaks_row, "<td>{}</td>", format(peaks)).unwrap();
-                write!(intensity_row, "<td>{}</td>", format_f64(intensity)).unwrap();
-                write!(positions_row, "<td>{} (positions)</td>", format(positions)).unwrap();
-            }
-            Score::UniqueFormulas {
-                fragments,
-                peaks,
-                intensity,
-                unique_formulas,
-            } => {
-                write!(fragments_row, "<td>{}</td>", format(fragments)).unwrap();
-                write!(peaks_row, "<td>{}</td>", format(peaks)).unwrap();
-                write!(intensity_row, "<td>{}</td>", format_f64(intensity)).unwrap();
-                write!(
-                    positions_row,
-                    "<td>{} (unique compositions)</td>",
-                    format(unique_formulas)
-                )
-                .unwrap();
-            }
-        }
-        write!(fragments_details_row, "<td><table>").unwrap();
-        write!(peaks_details_row, "<td><table>").unwrap();
-        write!(intensity_details_row, "<td><table>").unwrap();
-        write!(positions_details_row, "<td><table>").unwrap();
-        for (ion, score) in &score.ions {
-            match score {
+    for (peptidoform_index, score) in peptide_scores.iter().enumerate() {
+        for (peptide_index, score) in score.iter().enumerate() {
+            let precursor = spectrum.peptide.peptidoforms()[peptidoform_index].peptides()
+                [peptide_index]
+                .clone()
+                .linear()
+                .map_or("Part of peptidoform".to_string(), |p| {
+                    p.formulas()
+                        .iter()
+                        .map(|f| {
+                            format!(
+                                "{} | avg: {}",
+                                display_mass(f.monoisotopic_mass()),
+                                display_mass(f.average_weight())
+                            )
+                        })
+                        .join(", ")
+                });
+            write!(mass_row, "<td>{precursor}</td>").unwrap();
+            match score.score {
                 Score::Position {
                     fragments,
                     peaks,
                     intensity,
                     positions,
                 } => {
-                    write!(
-                        fragments_details_row,
-                        "<tr><td>{ion}</td><td>{}</td></tr>",
-                        format(*fragments)
-                    )
-                    .unwrap();
-                    write!(
-                        peaks_details_row,
-                        "<tr><td>{ion}</td><td>{}</td></tr>",
-                        format(*peaks)
-                    )
-                    .unwrap();
-                    write!(
-                        intensity_details_row,
-                        "<tr><td>{ion}</td><td>{}</td></tr>",
-                        format_f64(*intensity)
-                    )
-                    .unwrap();
-                    write!(
-                        positions_details_row,
-                        "<tr><td>{ion}</td><td>{} (positions)</td></tr>",
-                        format(*positions)
-                    )
-                    .unwrap();
+                    write!(fragments_row, "<td>{}</td>", format(fragments)).unwrap();
+                    write!(peaks_row, "<td>{}</td>", format(peaks)).unwrap();
+                    write!(intensity_row, "<td>{}</td>", format_f64(intensity)).unwrap();
+                    write!(positions_row, "<td>{} (positions)</td>", format(positions)).unwrap();
                 }
                 Score::UniqueFormulas {
                     fragments,
@@ -1056,44 +1120,113 @@ fn general_stats(output: &mut String, spectrum: &AnnotatedSpectrum, fragments: &
                     intensity,
                     unique_formulas,
                 } => {
+                    write!(fragments_row, "<td>{}</td>", format(fragments)).unwrap();
+                    write!(peaks_row, "<td>{}</td>", format(peaks)).unwrap();
+                    write!(intensity_row, "<td>{}</td>", format_f64(intensity)).unwrap();
                     write!(
-                        fragments_details_row,
-                        "<tr><td>{ion}</td><td>{}</td></tr>",
-                        format(*fragments)
-                    )
-                    .unwrap();
-                    write!(
-                        peaks_details_row,
-                        "<tr><td>{ion}</td><td>{}</td></tr>",
-                        format(*peaks)
-                    )
-                    .unwrap();
-                    write!(
-                        intensity_details_row,
-                        "<tr><td>{ion}</td><td>{}</td></tr>",
-                        format_f64(*intensity)
-                    )
-                    .unwrap();
-                    write!(
-                        positions_details_row,
-                        "<tr><td>{ion}</td><td>{} (unique compositions)</td></tr>",
-                        format(*unique_formulas)
+                        positions_row,
+                        "<td>{} (unique compositions)</td>",
+                        format(unique_formulas)
                     )
                     .unwrap();
                 }
             }
+            write!(fragments_details_row, "<td><table>").unwrap();
+            write!(peaks_details_row, "<td><table>").unwrap();
+            write!(intensity_details_row, "<td><table>").unwrap();
+            write!(positions_details_row, "<td><table>").unwrap();
+            for (ion, score) in &score.ions {
+                match score {
+                    Score::Position {
+                        fragments,
+                        peaks,
+                        intensity,
+                        positions,
+                    } => {
+                        write!(
+                            fragments_details_row,
+                            "<tr><td>{ion}</td><td>{}</td></tr>",
+                            format(*fragments)
+                        )
+                        .unwrap();
+                        write!(
+                            peaks_details_row,
+                            "<tr><td>{ion}</td><td>{}</td></tr>",
+                            format(*peaks)
+                        )
+                        .unwrap();
+                        write!(
+                            intensity_details_row,
+                            "<tr><td>{ion}</td><td>{}</td></tr>",
+                            format_f64(*intensity)
+                        )
+                        .unwrap();
+                        write!(
+                            positions_details_row,
+                            "<tr><td>{ion}</td><td>{} (positions)</td></tr>",
+                            format(*positions)
+                        )
+                        .unwrap();
+                    }
+                    Score::UniqueFormulas {
+                        fragments,
+                        peaks,
+                        intensity,
+                        unique_formulas,
+                    } => {
+                        write!(
+                            fragments_details_row,
+                            "<tr><td>{ion}</td><td>{}</td></tr>",
+                            format(*fragments)
+                        )
+                        .unwrap();
+                        write!(
+                            peaks_details_row,
+                            "<tr><td>{ion}</td><td>{}</td></tr>",
+                            format(*peaks)
+                        )
+                        .unwrap();
+                        write!(
+                            intensity_details_row,
+                            "<tr><td>{ion}</td><td>{}</td></tr>",
+                            format_f64(*intensity)
+                        )
+                        .unwrap();
+                        write!(
+                            positions_details_row,
+                            "<tr><td>{ion}</td><td>{} (unique compositions)</td></tr>",
+                            format(*unique_formulas)
+                        )
+                        .unwrap();
+                    }
+                }
+            }
+            write!(fragments_details_row, "</table></td>").unwrap();
+            write!(peaks_details_row, "</table></td>").unwrap();
+            write!(intensity_details_row, "</table></td>").unwrap();
+            write!(positions_details_row, "</table></td>").unwrap();
         }
-        write!(fragments_details_row, "</table></td>").unwrap();
-        write!(peaks_details_row, "</table></td>").unwrap();
-        write!(intensity_details_row, "</table></td>").unwrap();
-        write!(positions_details_row, "</table></td>").unwrap();
     }
 
     write!(output, "<label><input type='checkbox' switch id='general-stats-show-details'>Show detailed fragment breakdown</label><table class='general-stats'>").unwrap();
-    if spectrum.peptide.peptides().len() > 1 {
+    if multiple_peptidoforms || multiple_peptides {
         write!(output, "<tr><td>General Statistics</td>").unwrap();
-        for i in 0..spectrum.peptide.peptides().len() {
-            write!(output, "<td>Peptide {}</td>", i + 1).unwrap();
+        for (peptidoform_index, peptidoform) in spectrum.peptide.peptidoforms().iter().enumerate() {
+            for peptide_index in 0..peptidoform.peptides().len() {
+                if multiple_peptidoforms && multiple_peptides {
+                    write!(
+                        output,
+                        "<td>Peptidoform {} Peptide {}</td>",
+                        peptidoform_index + 1,
+                        peptide_index + 1
+                    )
+                    .unwrap();
+                } else if multiple_peptidoforms {
+                    write!(output, "<td>Peptidoform {} </td>", peptidoform_index + 1,).unwrap();
+                } else if multiple_peptides {
+                    write!(output, "<td>Peptide {}</td>", peptide_index + 1).unwrap();
+                }
+            }
         }
         write!(output, "<td>Combined</td></tr>").unwrap();
         // Add a combined stats column

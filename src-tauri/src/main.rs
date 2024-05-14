@@ -6,15 +6,7 @@
 use itertools::Itertools;
 use render::display_mass;
 use rustyms::{
-    align::{align, matrix::BLOSUM62, Alignment},
-    error::*,
-    identification::*,
-    model::*,
-    modification::{GnoComposition, ModificationSearchResult, Ontology, ReturnModification},
-    placement_rule::PlacementRule,
-    spectrum::*,
-    system::{Mass,MassOverCharge,usize::Charge,da,dalton,mz,e},
-    *,
+    align::{align, matrix::BLOSUM62, Alignment}, error::*, identification::*, model::*, modification::{GnoComposition, ModificationSearchResult, Ontology, SimpleModification}, placement_rule::PlacementRule, spectrum::*, system::{da, dalton, e, mz, usize::Charge, Mass, MassOverCharge}, ReturnModification, *
 };
 use ordered_float::OrderedFloat;
 use state::State;
@@ -108,7 +100,7 @@ async fn search_peptide<'a>(
     let state = state
         .lock()
         .map_err(|_| "Search exception: State locked".to_string())?;
-    let search = LinearPeptide::pro_forma(text).map_err(|err| err.to_string())?;
+    let search = LinearPeptide::<Linked>::pro_forma(text, None).map_err(|err| err.to_string())?.simple().ok_or_else(|| "Can only search with a simple peptide".to_string())?;
     let data = state
         .peptides
         .iter()
@@ -117,7 +109,7 @@ async fn search_peptide<'a>(
         .map(|(index, peptide)| {
             (
                 index,
-                align::<4>(
+                align::<4, VerySimple, Simple>(
                     &peptide.peptide,
                     &search,
                     BLOSUM62,
@@ -127,7 +119,7 @@ async fn search_peptide<'a>(
                 peptide,
             )
         })
-        .sorted_unstable_by(|a, b| b.1.cmp(&a.1))
+        .sorted_unstable_by(|a, b| b.1.score().normalised.cmp(&a.1.score().normalised))
         .filter(|(_, alignment, _)| alignment.normalised_score() >= minimal_match_score)
         .take(25)
         .map(|(index, alignment, peptide)| {
@@ -218,7 +210,7 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
     let modification = if text.is_empty() {
         Err("Empty".to_string())
     } else {
-        Modification::try_from(text, 0..text.len(), &mut Vec::new())
+        Modification::try_from(text, 0..text.len(), &mut Vec::new(), &mut Vec::new(), None)
             .map(|m| match m {
                 ReturnModification::Defined(d) => Ok(d),
                 _ => Err(
@@ -229,20 +221,21 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
             .map_err(|err| err.to_string())
     }??;
     let tolerance = Tolerance::new_absolute(Mass::new::<dalton>(tolerance));
-    let result = Modification::search(&modification, tolerance);
+    let result = Modification::search(&modification, tolerance, None);
 
     match result {
         ModificationSearchResult::Single(modification) => {
             let mut output = HtmlElement::new(HtmlTag::div);
 
             output = output.content(HtmlElement::new(HtmlTag::p).content(format!(
-                "Formula <span class='formula'>{}</span> monoisotopic mass {} average mass {}",
+                "Formula <span class='formula'>{}</span> monoisotopic mass {} average mass {} most abundant mass {}",
                 modification.formula().hill_notation_html(),
                 display_mass(modification.formula().monoisotopic_mass()),
                 display_mass(modification.formula().average_weight()),
+                display_mass(modification.formula().most_abundant_mass()),
             )));
 
-            if let Modification::Predefined(_, rules, ontology, name, index) = &modification {
+            if let Modification::Simple(modification::SimpleModification::Predefined(_, rules, ontology, name, index)) = &modification {
                 output = output.content(
                     HtmlElement::new(HtmlTag::p)
                         .content(format!(
@@ -271,7 +264,7 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
                                 PlacementRule::PsiModification(index, pos) => {
                                     format!(
                                         "{}@{}",
-                                        Ontology::Psimod.find_id(*index).unwrap(),
+                                        Ontology::Psimod.find_id(*index, None).unwrap(),
                                         pos
                                     )
                                 }
@@ -292,7 +285,7 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
                         ));                    
                 }
                 output = output.content(ul);
-            } else if let Modification::Gno(composition, name) = &modification {
+            } else if let Modification::Simple(SimpleModification::Gno(composition, name)) = &modification {
                 output = output.content(
                     HtmlElement::new(HtmlTag::p)
                         .content(format!("Ontology: Gnome, name: {name}, "))
@@ -365,7 +358,7 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
                 .map(|(_, _, _, modification)| {
                     [
                         format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}\";document.getElementById(\"search-modification-button\").click()'>{0}</a>", modification),
-                        if let Modification::Gno(GnoComposition::Structure(structure), _) =
+                        if let SimpleModification::Gno(GnoComposition::Structure(structure), _) =
                             modification
                         {
                             structure.to_string()
@@ -679,8 +672,14 @@ async fn annotate_spectrum<'a>(
         "most_abundant" => MassMode::MostAbundant,
         _ => return Err(CustomError::error("Invalid mass mode", "", Context::None))
     };
-    let peptide = rustyms::ComplexPeptide::pro_forma(peptide)?;
-    let multiple_peptides = peptide.peptides().len() != 1;
+    let peptide = rustyms::CompoundPeptidoform::pro_forma(peptide, None)?;
+    let multiple_peptidoforms = peptide.peptidoforms().len() == 1;
+    let multiple_peptides = peptide
+        .peptidoforms()
+        .iter()
+        .flat_map(|p| p.peptides())
+        .count()
+        == 1;
     let mut spectrum = state.spectra[index].clone();
     match filter {
         NoiseFilter::None => (),
