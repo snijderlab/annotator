@@ -674,8 +674,35 @@ fn render_linear_peptide(
     }
     for (index, (pos, ions)) in peptide.sequence.iter().zip(overview).enumerate() {
         let mut classes = String::new();
-        if !pos.modifications.is_empty() {
+        let cross_links = pos
+            .modifications
+            .iter()
+            .filter_map(|m| {
+                if let Modification::CrossLink { peptide, name, .. } = m {
+                    Some(format!(
+                        "{}#{}",
+                        if *peptide != index {
+                            format!("p{}", peptide + 1)
+                        } else {
+                            String::new()
+                        },
+                        name.clone()
+                            .map_or("BRANCH".to_string(), |name| format!("XL{name}"))
+                    ))
+                } else {
+                    None
+                }
+            })
+            .join(",");
+        if pos
+            .modifications
+            .iter()
+            .any(|m| matches!(m, Modification::Simple(_)))
+        {
             write!(classes, " modification").unwrap();
+        }
+        if !cross_links.is_empty() {
+            write!(classes, " cross-link").unwrap();
         }
         if !pos.possible_modifications.is_empty() {
             write!(classes, " possible-modification").unwrap();
@@ -685,10 +712,7 @@ fn render_linear_peptide(
         }
         write!(
             output,
-            "<span data-pos='{}-{}-{}'{classes} tabindex='0' title='N terminal position: {}, C terminal position: {}'>{}",
-            peptidoform_index,
-            peptide_index,
-            index,
+            "<span data-pos='{peptidoform_index}-{peptide_index}-{index}' data-cross-links='{cross_links}'{classes} tabindex='0' title='N terminal position: {}, C terminal position: {}'>{}",
             index + 1,
             peptide.sequence.len() - index,
             pos.aminoacid.char()
