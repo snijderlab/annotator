@@ -54,8 +54,8 @@ fn main() {
         <button type="button" id="load-clipboard">Load Clipboard</button>
         <button type="button" id="load-identified-peptides">Load identified peptides file</button>
       </div>
-      <pre id="loaded-path"></pre>
-      <pre id="loaded-identified-peptides-path"></pre>
+      <output id="loaded-path"></output>
+      <output id="loaded-identified-peptides-path"></output>
       <div class="input-settings">
         <h2>Spectrum details</h2>
         <label for="spectrum-index">Spectrum index</label>
@@ -67,7 +67,7 @@ fn main() {
         <label for="scan-number">Scan number</label>
         <input type="number" id="scan-number" value="0" min="0" />
       </div>
-      <pre id="spectrum-details"></pre>
+      <output id="spectrum-details"></output>
       
       <div id="peptides" style="display:none">
         <h2>Peptide details</h2>
@@ -99,7 +99,7 @@ fn main() {
           </div>
         </div>
       </div>
-      <pre id="loaded-path"></pre>
+      <output id="loaded-path"></output>
       <div class="input-settings">
         <h2>Annotate</h2>
         <label for="spectrum-tolerance">Tolerance</label>
@@ -363,14 +363,14 @@ fn main() {
           <input id="search-modification-tolerance" type="number" value="0.1" min="0"></input>
           <button id="search-modification-button">Search</button>
         </div>
-        <output class="collapsible-content" id="search-modification-result"></output>
         <output class="error collapsible-content hidden" id="search-modification-error"></output>
+        <output class="collapsible-content" id="search-modification-result"></output>
         <div class="flex-input collapsible-content">
           <label for="details-formula">Formula</label>
           <input id="details-formula" type="text"></input>
         </div>
-        <output class="collapsible-content" id="details-formula-result"></output>
         <output class="error collapsible-content hidden" id="details-formula-error"></output>
+        <output class="collapsible-content" id="details-formula-result"></output>
       </fieldset>
       <input type="checkbox" id="collapsible-logs">
       <fieldset class="collapsible" data-linked-item="collapsible-logs">

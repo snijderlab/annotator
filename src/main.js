@@ -76,9 +76,8 @@ async function load_mgf(path) {
     spectrum_details();
     document.querySelector("#load-mgf-path").classList.remove("loading")
   }).catch((error) => {
-    console.error(error);
     document.querySelector("#loaded-path").classList.add("error");
-    document.querySelector("#loaded-path").innerText = error;
+    document.querySelector("#loaded-path").innerHTML = showError(error)
     document.querySelector("#load-mgf-path").classList.remove("loading")
   })
 }
@@ -95,9 +94,8 @@ async function load_identified_peptides(path) {
     identified_peptide_details();
     document.querySelector("#load-identified-peptides").classList.remove("loading")
   }).catch((error) => {
-    console.error(error);
     document.querySelector("#loaded-identified-peptides-path").classList.add("error");
-    document.querySelector("#loaded-identified-peptides-path").innerText = error;
+    document.querySelector("#loaded-identified-peptides-path").innerHTML = showError(error)
     document.querySelector("#load-identified-peptides").classList.remove("loading")
   })
 }
@@ -113,13 +111,17 @@ async function load_clipboard() {
         document.querySelector("#loaded-path").innerText = "Clipboard";
         document.querySelector("#number-of-scans").innerText = result;
         spectrum_details();
-      }).catch((error) => {
         document.querySelector("#load-clipboard").classList.remove("loading")
-        console.error(error);
+      }).catch((error) => {
         document.querySelector("#loaded-path").classList.add("error");
-        document.querySelector("#loaded-path").innerText = error;
+        document.querySelector("#loaded-path").innerHTML = showError(error);
         document.querySelector("#load-clipboard").classList.remove("loading")
       })
+    })
+    .catch(() => {
+      document.querySelector("#loaded-path").classList.add("error");
+      document.querySelector("#loaded-path").innerHTML = showError("Could not load clipboard, did you give permission to read the clipboard?");
+      document.querySelector("#load-clipboard").classList.remove("loading")
     });
 }
 
@@ -130,9 +132,8 @@ async function find_scan_number() {
       spectrum_details();
     }
   ).catch((error) => {
-    console.error(error);
     document.querySelector("#spectrum-error").classList.remove("hidden");
-    document.querySelector("#spectrum-error").innerText = error;
+    document.querySelector("#spectrum-error").innerHTML = showError(error);
   })
 }
 
@@ -140,9 +141,8 @@ async function spectrum_details() {
   invoke("spectrum_details", { index: Number(document.querySelector("#details-spectrum-index").value) }).then(
     (result) => document.querySelector("#spectrum-details").innerText = result
   ).catch((error) => {
-    console.error(error);
     document.querySelector("#spectrum-error").classList.remove("hidden");
-    document.querySelector("#spectrum-error").innerText = error;
+    document.querySelector("#spectrum-error").innerHTML = showError(error);
     document.querySelector("#spectrum-details").innerText = "ERROR";
   })
 }
@@ -155,9 +155,8 @@ async function identified_peptide_details() {
       document.querySelector("#identified-peptide-details").innerHTML = result;
       displayed_identified_peptide = index;
     }).catch((error) => {
-      console.error(error);
       document.querySelector("#spectrum-error").classList.remove("hidden");
-      document.querySelector("#spectrum-error").innerText = error;
+      document.querySelector("#spectrum-error").innerHTML = showError(error);
       document.querySelector("#identified-peptide-details").innerText = "ERROR";
     })
   }
@@ -170,11 +169,10 @@ async function search_peptide() {
       document.querySelector("#resulting-peptides").innerHTML = result;
       document.querySelector("#search-peptide").classList.remove("loading");
     }).catch((error) => {
-      console.error(error);
       document.querySelector("#spectrum-error").classList.remove("hidden");
-      document.querySelector("#spectrum-error").innerText = error;
-      document.querySelector("#identified-peptide-details").innerText = "ERROR";
+      document.querySelector("#spectrum-error").innerHTML = showError(error);
       document.querySelector("#search-peptide").classList.remove("loading");
+      document.querySelector("#resulting-peptides").innerText = "ERROR";
     })
   } else {
     document.querySelector("#resulting-peptides").innerText = "";
@@ -189,10 +187,8 @@ async function search_modification() {
       document.querySelector("#search-modification-button").classList.remove("loading");
       document.querySelector("#search-modification-error").classList.add("hidden");
     }).catch((error) => {
-      console.error(error);
-      document.querySelector("#search-modification-result").innerText = "ERROR";
       document.querySelector("#search-modification-error").classList.remove("hidden");
-      document.querySelector("#search-modification-error").innerText = error;
+      document.querySelector("#search-modification-error").innerHTML = showError(error);
       document.querySelector("#search-modification-button").classList.remove("loading");
     })
   } else {
@@ -205,10 +201,8 @@ async function details_formula(event) {
     document.querySelector("#details-formula-result").innerHTML = result;
     document.querySelector("#details-formula-error").classList.add("hidden");
   }).catch((error) => {
-    console.error(error);
-    document.querySelector("#details-formula-result").innerText = "ERROR";
     document.querySelector("#details-formula-error").classList.remove("hidden");
-    document.querySelector("#details-formula-error").innerText = error;
+    document.querySelector("#details-formula-error").innerHTML = showError(error);
   })
 }
 
@@ -219,11 +213,9 @@ async function load_identified_peptide() {
     document.querySelector("#spectrum-charge").value = result.charge;
     document.querySelector("#spectrum-model").value = result.mode.toLowerCase();
     document.querySelector("#details-spectrum-index").value = result.scan_index;
-    console.error(result)
   }).catch((error) => {
-    console.error(error);
     document.querySelector("#spectrum-error").classList.remove("hidden");
-    document.querySelector("#spectrum-error").innerText = error;
+    document.querySelector("#spectrum-error").innerHTML = showError(error);
     document.querySelector("#identified-peptide-details").innerText = "ERROR";
   })
 }
@@ -307,7 +299,6 @@ async function annotate_spectrum() {
     modification_diagnostic: document.querySelector("#model-modification-diagnostic-enabled").checked,
     glycan: [document.querySelector("#model-glycan-enabled").checked, get_losses("glycan")],
   };
-  console.log(model);
   invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), tolerance: [Number(document.querySelector("#spectrum-tolerance").value), document.querySelector("#spectrum-tolerance-unit").value], charge: charge, filter: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").innerText, cmodel: model, massMode: document.querySelector("#spectrum-mass-mode").value }).then((result) => {
     document.querySelector("#spectrum-results-wrapper").innerHTML = result.spectrum;
     document.querySelector("#spectrum-fragment-table").innerHTML = result.fragment_table;
@@ -324,15 +315,31 @@ async function annotate_spectrum() {
     SetUpSpectrumInterface();
     document.querySelector("#annotate-button").classList.remove("loading");
   }).catch((error) => {
-    console.error(error);
     document.querySelector("#spectrum-error").classList.remove("hidden");
-    document.querySelector("#spectrum-error").innerHTML = "<p class='title'>" + error.short_description + "</p><p class='description'>" + error.long_description + "</p>";
+    document.querySelector("#spectrum-error").innerHTML = showError(error);
     if (error.context.hasOwnProperty('Line') && error.context.Line.line == document.querySelector("#peptide").innerText) {
       let Line = error.context.Line;
       document.querySelector("#peptide").innerHTML = Line.line.slice(0, Line.offset) + "<span class='error'>" + Line.line.slice(Line.offset, Line.offset + Line.length) + "</span>" + Line.line.slice(Line.offset + Line.length, Line.line.length);
     }
     document.querySelector("#annotate-button").classList.remove("loading");
   })
+}
+
+function showError(error) {
+  console.log(error);
+  if (typeof error == "string") {
+    return "<div class='raw'>" + error + "</div>";
+  } else {
+    let msg = "<p class='title'>" + error.short_description + "</p><p class='description'>" + error.long_description + "</p>";
+    if (error.suggestions.length > 0) {
+      msg += "<p>Did you mean any of the following?</p><ul>";
+      for (let suggestion in error.suggestions) {
+        msg += "<li>" + error.suggestions[suggestion] + "</li>";
+      }
+      msg += "</ul>";
+    }
+    return msg;
+  }
 }
 
 /** @param e {MouseEvent}  */

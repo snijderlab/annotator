@@ -8,6 +8,7 @@ use rustyms::{
     spectrum::{PeakSpectrum, Recovered, Score},
     system::{da, e, mz, usize::Charge, Mass, MassOverCharge},
     AnnotatedSpectrum, LinearPeptide, Linked, MassMode, Model, Modification, MolecularFormula,
+    NeutralLoss,
 };
 
 use crate::html_builder::{HtmlElement, HtmlTag};
@@ -993,15 +994,13 @@ pub fn spectrum_table(
                         },
                         sequence_index.to_string(),
                         label.to_string(),
-                        annotation.neutral_loss.as_ref().map_or(String::new(), |v| {
-                            format!("<span class='formula'>{}</span>", v.hill_notation_html())
-                        }),
+                        annotation
+                            .neutral_loss
+                            .as_ref()
+                            .map_or(String::new(), display_neutral_loss),
                         format!("{:.2}", peak.intensity),
                         format!("{:.2}", peak.experimental_mz.value),
-                        format!(
-                            "<span class='formula'>{}</span>",
-                            annotation.formula.hill_notation_html()
-                        ),
+                        display_formula(&annotation.formula),
                         format!(
                             "{:.5}",
                             (annotation.mz(MassMode::Monoisotopic) - peak.experimental_mz)
@@ -1041,15 +1040,13 @@ pub fn spectrum_table(
                     },
                     sequence_index.to_string(),
                     label.to_string(),
-                    fragment.neutral_loss.as_ref().map_or(String::new(), |v| {
-                        format!("<span class='formula'>{}</span>", v.hill_notation_html())
-                    }),
+                    fragment
+                        .neutral_loss
+                        .as_ref()
+                        .map_or(String::new(), display_neutral_loss),
                     "-".to_string(),
                     format!("{:.2}", fragment.mz(MassMode::Monoisotopic).value),
-                    format!(
-                        "<span class='formula'>{}</span>",
-                        fragment.formula.hill_notation_html()
-                    ),
+                    display_formula(&fragment.formula),
                     "-".to_string(),
                     "-".to_string(),
                     format!("{:+}", fragment.charge.value),
@@ -1489,6 +1486,28 @@ fn engineering_notation(value: f64, precision: usize) -> (String, Option<char>, 
             Some(BIG_SUFFIXES[base as usize]),
             value / 10_usize.pow(base as u32 * 3) as f64,
         ),
+    }
+}
+
+pub fn display_formula(formula: &MolecularFormula) -> String {
+    if formula.is_empty() {
+        "<span class='formula empty'>(empty)</span>".to_string()
+    } else {
+        format!(
+            "<span class='formula'>{}</span>",
+            formula.hill_notation_html()
+        )
+    }
+}
+
+pub fn display_neutral_loss(formula: &NeutralLoss) -> String {
+    if formula.is_empty() {
+        "<span class='formula empty'>(empty)</span>".to_string()
+    } else {
+        format!(
+            "<span class='formula'>{}</span>",
+            formula.hill_notation_html()
+        )
     }
 }
 

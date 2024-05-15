@@ -76,6 +76,14 @@ impl HtmlElement {
         self
     }
 
+    pub fn maybe_content(self, content: Option<impl Into<HtmlContent>>) -> Self {
+        if let Some(content) = content {
+            self.content(content)
+        } else {
+            self
+        }
+    }
+
     pub fn children(mut self, content: impl IntoIterator<Item = impl Into<HtmlContent>>) -> Self {
         self.extend(content);
         self

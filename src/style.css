@@ -153,11 +153,14 @@ output.error {
   margin: .5rem;
   padding-left: .5rem;
   border: 2px solid red;
-  white-space: pre;
-  font-family: monospace;
 
   &:not(.hidden) {
     display: block;
+  }
+
+  & .raw {
+    white-space: pre;
+    font-family: monospace;
   }
 
   & .title {

@@ -4,17 +4,27 @@
 )]
 
 use itertools::Itertools;
-use render::display_mass;
-use rustyms::{
-    align::{align, matrix::BLOSUM62, Alignment}, error::*, identification::*, model::*, modification::{GnoComposition, ModificationSearchResult, Ontology, SimpleModification}, placement_rule::PlacementRule, spectrum::*, system::{da, dalton, e, mz, usize::Charge, Mass, MassOverCharge}, ReturnModification, *
-};
 use ordered_float::OrderedFloat;
+use render::{display_formula, display_mass};
+use rustyms::{
+    align::{align, matrix::BLOSUM62, Alignment},
+    error::*,
+    identification::*,
+    model::*,
+    modification::{
+        GnoComposition, LinkerSpecificity, ModificationSearchResult, Ontology, SimpleModification,
+    },
+    placement_rule::PlacementRule,
+    spectrum::*,
+    system::{da, dalton, e, mz, usize::Charge, Mass, MassOverCharge},
+    ReturnModification, *,
+};
 use state::State;
 use std::sync::Mutex;
 
 use crate::{
     html_builder::{HtmlElement, HtmlTag},
-    metadata_render::RenderToHtml,
+    metadata_render::RenderToHtml, render::display_neutral_loss,
 };
 use serde::{Deserialize, Serialize};
 
@@ -47,7 +57,7 @@ async fn load_mgf<'a>(path: &'a str, state: ModifiableState<'a>) -> Result<usize
 async fn load_identified_peptides<'a>(
     path: &'a str,
     state: ModifiableState<'a>,
-) -> Result<usize, String> {
+) -> Result<usize, CustomError> {
     let actual_extension = path
         .rsplit('.')
         .next()
@@ -70,12 +80,11 @@ async fn load_identified_peptides<'a>(
                         peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()
                 })
             })
-            .map_err(|_| "Could not be recognised as either a Peaks or Novor file".to_string()),
-        Some("tsv") => SageData::parse_file(path)
-            .map(|peptides| {
-                state.lock().unwrap().peptides =
-                    peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()
-            }),
+            .map_err(|_| CustomError::error("Unknown file", "Could not be recognised as either a Peaks or Novor file", Context::None)),
+        Some("tsv") => SageData::parse_file(path).map(|peptides| {
+            state.lock().unwrap().peptides =
+                peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()
+        }),
         Some("psmtsv") => OpairData::parse_file(path).map(|peptides| {
             state.lock().unwrap().peptides =
                 peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()
@@ -83,9 +92,8 @@ async fn load_identified_peptides<'a>(
         Some("fasta") => FastaData::parse_file(path)
             .map(|peptides| {
                 state.lock().unwrap().peptides = peptides.into_iter().map(|p| p.into()).collect()
-            })
-            .map_err(|err| err.to_string()),
-        _ => Err("Not a recognised extension".to_string()),
+            }),
+        _ => Err(CustomError::error("Unknown extension", "Use CSV, TSV, PSMTSV, or Fasta, or any of these as a gzipped file (eg csv.gz).", Context::None)),
     }?;
     Ok(state.lock().unwrap().peptides.len())
 }
@@ -96,11 +104,13 @@ async fn search_peptide<'a>(
     minimal_match_score: f64,
     minimal_peptide_score: f64,
     state: ModifiableState<'a>,
-) -> Result<String, String> {
+) -> Result<String, CustomError> {
     let state = state
         .lock()
-        .map_err(|_| "Search exception: State locked".to_string())?;
-    let search = LinearPeptide::<Linked>::pro_forma(text, None).map_err(|err| err.to_string())?.simple().ok_or_else(|| "Can only search with a simple peptide".to_string())?;
+        .map_err(|_| CustomError::error("Cannot search", "The state is locked, are you trying to do many things at the same time?", Context::None))?;
+    let search = LinearPeptide::<Linked>::pro_forma(text, None)?
+        .simple()
+        .ok_or_else(|| CustomError::error("Invalid search peptide", "A search peptide should be simple", Context::None))?;
     let data = state
         .peptides
         .iter()
@@ -154,30 +164,53 @@ async fn search_peptide<'a>(
 }
 
 #[tauri::command]
-async fn details_formula(text: &str) -> Result<String, String> {
+async fn details_formula(text: &str) -> Result<String, CustomError> {
     let mut formula = if text.is_empty() {
-        Err("Empty".to_string())
+        Err(CustomError::error("Invalid molecular formula", "The test is empty", Context::None))
     } else {
-        MolecularFormula::from_pro_forma(text).map_err(|err| err.to_string())
+        MolecularFormula::from_pro_forma(text)
     };
-    if formula.is_err() {
-        let psi_mod = MolecularFormula::from_psi_mod(text).map_err(|err| err.to_string());
-        if psi_mod.is_ok() {
-            formula = psi_mod;
-        }
-    }
     let formula = formula?;
     let isotopes = formula.isotopic_distribution(0.001);
-    let (max, max_occurrence) = isotopes.iter().enumerate().max_by_key(|f| OrderedFloat(*f.1)).unwrap();
+    let (max, max_occurrence) = isotopes
+        .iter()
+        .enumerate()
+        .max_by_key(|f| OrderedFloat(*f.1))
+        .unwrap();
 
-    let isotopes_display = if formula.elements().len() == 1 && formula.elements()[0].1.is_none() && formula.elements()[0].2 == 1 {
+    let isotopes_display = if formula.elements().len() == 1
+        && formula.elements()[0].1.is_none()
+        && formula.elements()[0].2 == 1
+    {
         html_builder::HtmlElement::table(
-            Some(&["N","Mass","Occurrence"]), 
-            formula.elements()[0].0.isotopes().iter().map(|(n,mass,occurrence)| [n.to_string(), display_mass(*mass).to_string(), if *occurrence == 0.0 {"-".to_string()} else {format!("{:.4}%", occurrence * 100.0)}])
-        ).to_string()
+            Some(&["N", "Mass", "Occurrence"]),
+            formula.elements()[0]
+                .0
+                .isotopes()
+                .iter()
+                .map(|(n, mass, occurrence)| {
+                    [
+                        n.to_string(),
+                        display_mass(*mass).to_string(),
+                        if *occurrence == 0.0 {
+                            "-".to_string()
+                        } else {
+                            format!("{:.4}%", occurrence * 100.0)
+                        },
+                    ]
+                }),
+        )
+        .to_string()
     } else {
-        let start = isotopes.iter().take_while(|i| **i / *max_occurrence < 0.001).count();
-        let end = isotopes.iter().rev().take_while(|i| **i / *max_occurrence < 0.001).count();
+        let start = isotopes
+            .iter()
+            .take_while(|i| **i / *max_occurrence < 0.001)
+            .count();
+        let end = isotopes
+            .iter()
+            .rev()
+            .take_while(|i| **i / *max_occurrence < 0.001)
+            .count();
         let middle = isotopes.len() - start - end;
 
         format!("<div class='isotopes-distribution'>{}</div>",
@@ -197,8 +230,8 @@ async fn details_formula(text: &str) -> Result<String, String> {
     };
 
     Ok(format!(
-        "<p>Details on <span class='formula'>{}</span></p><p><span style='color:var(--color-red)'>Monoisotopic mass</span> {}, average weight {}, <span style='color:var(--color-green)'>most abundant isotope</span> offset {max} Da</p>{}", 
-            formula.hill_notation_html(), 
+        "<p>Details on {}</p><p><span style='color:var(--color-red)'>Monoisotopic mass</span> {}, average weight {}, <span style='color:var(--color-green)'>most abundant isotope</span> offset {max} Da</p>{}", 
+            display_formula(&formula), 
             display_mass(formula.monoisotopic_mass()), 
             display_mass(formula.average_weight()), 
             isotopes_display,
@@ -206,19 +239,46 @@ async fn details_formula(text: &str) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn search_modification(text: &str, tolerance: f64) -> Result<String, String> {
+async fn search_modification(text: &str, tolerance: f64) -> Result<String, CustomError> {
+    fn render_places(places: &[PlacementRule]) -> String {
+        if places.is_empty() {
+            "Anywhere".to_string()
+        } else {
+        places
+            .iter()
+            .map(|rule| match rule {
+                PlacementRule::AminoAcid(aa, pos) => {
+                    format!(
+                        "{}@{}",
+                        aa.iter().map(|a| a.char()).collect::<String>(),
+                        pos
+                    )
+                }
+                PlacementRule::PsiModification(index, pos) => {
+                    format!(
+                        "{}@{}",
+                        Ontology::Psimod.find_id(*index, None).unwrap(),
+                        pos
+                    )
+                }
+                PlacementRule::Terminal(pos) => {
+                    format!("{}", pos)
+                }
+            })
+            .join(",")
+        }
+    }
+
     let modification = if text.is_empty() {
-        Err("Empty".to_string())
+        Err(CustomError::error("Invalid modification", "The modification is empty", Context::None))
     } else {
         Modification::try_from(text, 0..text.len(), &mut Vec::new(), &mut Vec::new(), None)
             .map(|m| match m {
                 ReturnModification::Defined(d) => Ok(d),
                 _ => Err(
-                    "Can not define ambiguous modifications for the modifications parameter"
-                        .to_string(),
+                    CustomError::error("Invalid modification", "Can not define ambiguous modifications for the modifications parameter", Context::None)
                 ),
             })
-            .map_err(|err| err.to_string())
     }??;
     let tolerance = Tolerance::new_absolute(Mass::new::<dalton>(tolerance));
     let result = Modification::search(&modification, tolerance, None);
@@ -228,8 +288,8 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
             let mut output = HtmlElement::new(HtmlTag::div);
 
             output = output.content(HtmlElement::new(HtmlTag::p).content(format!(
-                "Formula <span class='formula'>{}</span> monoisotopic mass {} average mass {} most abundant mass {}",
-                modification.formula().hill_notation_html(),
+                "Formula {} monoisotopic mass {} average mass {} most abundant mass {}",
+                display_formula(&modification.formula()), 
                 display_mass(modification.formula().monoisotopic_mass()),
                 display_mass(modification.formula().average_weight()),
                 display_mass(modification.formula().most_abundant_mass()),
@@ -241,11 +301,11 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
                         .content(format!(
                             "Ontology: {ontology}, name: {name}, index: {index}, "
                         ))
-                        .content(
-                            HtmlElement::new(HtmlTag::a)
+                        .maybe_content(
+                            modification.ontology_url().map(|url| HtmlElement::new(HtmlTag::a)
                                 .content("ontology link")
-                                .header("href", modification.ontology_url().unwrap_or_default())
-                                .header("target", "_blank"),
+                                .header("href", url)
+                                .header("target", "_blank")),
                         ),
                 );
                 output = output.content(HtmlElement::new(HtmlTag::p).content("Placement rules"));
@@ -253,35 +313,11 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
 
                 for rule in rules {
                     ul = ul.content(HtmlElement::new(HtmlTag::li).content(
-                        format!("Positions: {}{}{}{}{}",&rule.0.iter().map(|rule| match rule {
-                                PlacementRule::AminoAcid(aa, pos) => {
-                                    format!(
-                                        "{}@{}",
-                                        aa.iter().map(|a| a.char()).collect::<String>(),
-                                        pos
-                                    )
-                                }
-                                PlacementRule::PsiModification(index, pos) => {
-                                    format!(
-                                        "{}@{}",
-                                        Ontology::Psimod.find_id(*index, None).unwrap(),
-                                        pos
-                                    )
-                                }
-                                PlacementRule::Terminal(pos) => {
-                                    format!("{}", pos)
-                                }
-                            }).join(","),
+                        format!("Positions: {}{}{}{}{}", render_places(&rule.0),
                             if rule.1.is_empty() { ""} else {", Neutral losses: "},
-                            rule.1.iter().map(|formula| format!(
-                                "<span class='formula'>{}</span>",
-                                formula.hill_notation_html()
-                            )).join(","),
+                            rule.1.iter().map(display_neutral_loss).join(","),
                             if rule.2.is_empty() { ""} else {", Diagnostic ions: "},
-                            rule.2.iter().map(|formula| format!(
-                                "<span class='formula'>{}</span>",
-                                formula.0.hill_notation_html()
-                            )).join(","))
+                            rule.2.iter().map(|d| &d.0).map(display_formula).join(","))
                         ));                    
                 }
                 output = output.content(ul);
@@ -289,11 +325,11 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
                 output = output.content(
                     HtmlElement::new(HtmlTag::p)
                         .content(format!("Ontology: Gnome, name: {name}, "))
-                        .content(
-                            HtmlElement::new(HtmlTag::a)
+                        .maybe_content(
+                            modification.ontology_url().map(|url| HtmlElement::new(HtmlTag::a)
                                 .content("ontology link")
-                                .header("href", modification.ontology_url().unwrap_or_default())
-                                .header("target", "_blank"),
+                                .header("href", url)
+                                .header("target", "_blank")),
                         ),
                 );
                 match composition {
@@ -314,6 +350,38 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
                         ]);
                     }
                 }
+            } else if let Modification::Simple(SimpleModification::Linker { specificities, name, id, length, ontology, diagnostic_ions, .. }) = &modification {
+                output = output.content(
+                    HtmlElement::new(HtmlTag::p)
+                        .content(format!(
+                            "Ontology: {ontology}, name: {name}, index: {id}"
+                        ))
+                        .maybe_content(
+                            modification.ontology_url().map(|url| HtmlElement::new(HtmlTag::a)
+                                .content("ontology link")
+                                .header("href", url)
+                                .header("target", "_blank")),
+                        ),
+                );
+                output = output.content(
+                    HtmlElement::new(HtmlTag::p)
+                        .content(format!(
+                            "Length: {}{}{}", length.map_or("-".to_string(), |l|l.to_string()), if diagnostic_ions.is_empty() {""} else {", diagnostic ions: "}, diagnostic_ions.iter().map(|d| &d.0).map(display_formula).join(",")
+                        ))
+                );
+                output = output.content(HtmlElement::new(HtmlTag::p).content("Placement rules"));
+                let mut ul = HtmlElement::new(HtmlTag::ul);
+
+                match specificities {
+                    LinkerSpecificity::Symmetric(places, stubs) => {
+                        ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!("Positions: {}{}{}", render_places(places), if stubs.is_empty() {""} else {", stubs: "}, stubs.iter().map(display_formula).join(","))));
+                    }
+                    LinkerSpecificity::Asymmetric((left_places, left_stubs),(right_places,right_stubs)) => {
+                        ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!("Positions: {}{}{}", render_places(left_places), if left_stubs.is_empty() {""} else {", stubs: "}, left_stubs.iter().map(display_formula).join(","))));
+                        ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!("Positions: {}{}{}", render_places(right_places), if right_stubs.is_empty() {""} else {", stubs: "}, right_stubs.iter().map(display_formula).join(","))));
+                    }
+                }
+                output = output.content(ul);
             }
 
             Ok(output.to_string())
@@ -328,10 +396,7 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Strin
                             modification.to_string(),
                             format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'>{0}:{1}</a>", ontology.name(), id),
                             display_mass(modification.formula().monoisotopic_mass()).to_string(),
-                            format!(
-                                "<span class='formula'>{}</span>",
-                                modification.formula().hill_notation_html()
-                            ),
+                            display_formula(&modification.formula()),
                         ]
                     }),
             )
@@ -624,11 +689,13 @@ async fn annotate_spectrum<'a>(
             Context::none(),
         ));
     }
-    let get_model_param = |neutral_losses: &String| neutral_losses
-        .split(',')
-        .filter(|n| !n.is_empty())
-        .map(|n| n.parse::<NeutralLoss>())
-        .collect::<Result<Vec<_>,_>>();
+    let get_model_param = |neutral_losses: &String| {
+        neutral_losses
+            .split(',')
+            .filter(|n| !n.is_empty())
+            .map(|n| n.parse::<NeutralLoss>())
+            .collect::<Result<Vec<_>, _>>()
+    };
     let mut model = match model {
         "all" => Model::all(),
         "ethcd" => Model::ethcd(),
@@ -636,41 +703,46 @@ async fn annotate_spectrum<'a>(
         "etd" => Model::etd(),
         "none" => Model::none(),
         "custom" => Model::none()
-        .a(cmodel.a.0, get_model_param(&cmodel.a.1)?)
-        .b(cmodel.b.0, get_model_param(&cmodel.b.1)?)
-        .c(cmodel.c.0, get_model_param(&cmodel.c.1)?)
-        .d(cmodel.d.0, get_model_param(&cmodel.d.1)?)
-        .v(cmodel.v.0, get_model_param(&cmodel.v.1)?)
-        .w(cmodel.w.0, get_model_param(&cmodel.w.1)?)
-        .x(cmodel.x.0, get_model_param(&cmodel.x.1)?)
-        .y(cmodel.y.0, get_model_param(&cmodel.y.1)?)
-        .z(cmodel.z.0, get_model_param(&cmodel.z.1)?)
-        .precursor(get_model_param(&cmodel.precursor)?)
-        .immonium(cmodel.immonium)
-        .m(cmodel.m)
-        .modification_specific_diagnostic_ions(cmodel.modification_diagnostic)
-        .modification_specific_neutral_losses(cmodel.modification_neutral)
-        .glycan(cmodel
-            .glycan
-            .0
-            .then(|| {
-                get_model_param(&cmodel.glycan.1)
-            })
-            .invert()?),
+            .a(cmodel.a.0, get_model_param(&cmodel.a.1)?)
+            .b(cmodel.b.0, get_model_param(&cmodel.b.1)?)
+            .c(cmodel.c.0, get_model_param(&cmodel.c.1)?)
+            .d(cmodel.d.0, get_model_param(&cmodel.d.1)?)
+            .v(cmodel.v.0, get_model_param(&cmodel.v.1)?)
+            .w(cmodel.w.0, get_model_param(&cmodel.w.1)?)
+            .x(cmodel.x.0, get_model_param(&cmodel.x.1)?)
+            .y(cmodel.y.0, get_model_param(&cmodel.y.1)?)
+            .z(cmodel.z.0, get_model_param(&cmodel.z.1)?)
+            .precursor(get_model_param(&cmodel.precursor)?)
+            .immonium(cmodel.immonium)
+            .m(cmodel.m)
+            .modification_specific_diagnostic_ions(cmodel.modification_diagnostic)
+            .modification_specific_neutral_losses(cmodel.modification_neutral)
+            .glycan(
+                cmodel
+                    .glycan
+                    .0
+                    .then(|| get_model_param(&cmodel.glycan.1))
+                    .invert()?,
+            ),
         _ => Model::all(),
     };
     if tolerance.1 == "ppm" {
         model.tolerance = Tolerance::new_ppm(tolerance.0);
     } else if tolerance.1 == "th" {
-        model.tolerance = Tolerance::new_absolute(MassOverCharge::new::<rustyms::system::mz>(tolerance.0));
+        model.tolerance =
+            Tolerance::new_absolute(MassOverCharge::new::<rustyms::system::mz>(tolerance.0));
     } else {
-        return Err(CustomError::error("Invalid tolerance unit", "", Context::None));
+        return Err(CustomError::error(
+            "Invalid tolerance unit",
+            "",
+            Context::None,
+        ));
     }
     let mass_mode = match mass_mode {
         "monoisotopic" => MassMode::Monoisotopic,
         "average_weight" => MassMode::Average,
         "most_abundant" => MassMode::MostAbundant,
-        _ => return Err(CustomError::error("Invalid mass mode", "", Context::None))
+        _ => return Err(CustomError::error("Invalid mass mode", "", Context::None)),
     };
     let peptide = rustyms::CompoundPeptidoform::pro_forma(peptide, None)?;
     let multiple_peptidoforms = peptide.peptidoforms().len() == 1;
@@ -690,7 +762,8 @@ async fn annotate_spectrum<'a>(
     let use_charge = charge.map_or(spectrum.charge, Charge::new::<e>);
     let fragments = peptide.generate_theoretical_fragments(use_charge, &model);
     let annotated = spectrum.annotate(peptide, &fragments, &model, mass_mode);
-    let (spectrum, limits) = render::annotated_spectrum(&annotated, "spectrum", &fragments, &model, mass_mode);
+    let (spectrum, limits) =
+        render::annotated_spectrum(&annotated, "spectrum", &fragments, &model, mass_mode);
     Ok(AnnotationResult {
         spectrum,
         fragment_table: render::spectrum_table(&annotated, &fragments, multiple_peptides),
