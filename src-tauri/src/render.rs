@@ -1,6 +1,7 @@
 use std::{cmp::Ordering, collections::HashSet, fmt::Write};
 
 use itertools::Itertools;
+use ordered_float::OrderedFloat;
 use rustyms::{
     fragment::*,
     model::Location,
@@ -11,7 +12,7 @@ use rustyms::{
     NeutralLoss,
 };
 
-use crate::html_builder::{HtmlElement, HtmlTag};
+use crate::html_builder::{self, HtmlElement, HtmlTag};
 
 pub fn annotated_spectrum(
     spectrum: &AnnotatedSpectrum,
@@ -69,8 +70,8 @@ pub fn annotated_spectrum(
         multiple_glycans,
         mass_mode,
     );
-    // Spectrum graph
-    spectrum_graph(
+    // Error graph
+    render_error_graph(
         &mut output,
         &graph_boundaries,
         &graph_data,
@@ -92,110 +93,262 @@ pub fn annotated_spectrum(
 }
 
 type Boundaries = (f64, f64, f64, f64, f64, f64, f64, f64, f64, f64);
-type SpectrumGraphData = Vec<(
-    Vec<(Fragment, Vec<MatchedIsotopeDistribution>)>,
-    (f64, Fragment),
-    (f64, Fragment),
-    MassOverCharge,
-    Mass,
-    f64,
-)>;
+type SpectrumGraphData = Vec<Point>;
+struct Point {
+    annotation: Vec<(Fragment, Vec<MatchedIsotopeDistribution>)>,
+    assigned: Option<RelAndAbs<f64>>,
+    unassigned: UnassignedData,
+    mz: MassOverCharge,
+    mass: Mass,
+    intensity: f64,
+}
+
+struct UnassignedData {
+    a: Option<RelAndAbs<(f64, Fragment)>>,
+    b: Option<RelAndAbs<(f64, Fragment)>>,
+    c: Option<RelAndAbs<(f64, Fragment)>>,
+    x: Option<RelAndAbs<(f64, Fragment)>>,
+    y: Option<RelAndAbs<(f64, Fragment)>>,
+    z: Option<RelAndAbs<(f64, Fragment)>>,
+}
+
+#[derive(Default)]
+struct RelAndAbs<T> {
+    rel: T,
+    abs: T,
+}
+
+impl<T: Default + Clone> RelAndAbs<T> {
+    fn get(
+        fragments: &[Fragment],
+        filter: impl FnMut(&&Fragment) -> bool,
+        rel: impl Fn(&Fragment) -> T,
+        abs: impl Fn(&Fragment) -> T,
+        cmp: &impl Fn(T, T) -> Ordering,
+    ) -> Self {
+        fragments
+            .iter()
+            .filter(filter)
+            .fold(Self::default(), |acc, fragment| Self {
+                rel: Self::min_by(acc.rel, rel(fragment), cmp),
+                abs: Self::min_by(acc.abs, abs(fragment), cmp),
+            })
+    }
+
+    fn min_by(a: T, b: T, cmp: &impl Fn(T, T) -> Ordering) -> T {
+        match cmp(a.clone(), b.clone()) {
+            Ordering::Equal => a,
+            Ordering::Greater => a,
+            Ordering::Less => b,
+        }
+    }
+}
+
+fn get_data(data: &Option<RelAndAbs<(f64, Fragment)>>, ion: char) -> [(String, String); 4] {
+    [
+        (
+            format!("u-{ion}-rel-value"),
+            data.as_ref()
+                .map_or("undefined".to_string(), |v| v.rel.0.to_string()),
+        ),
+        (
+            format!("u-{ion}-rel-fragment"),
+            data.as_ref()
+                .map_or("undefined".to_string(), |v| v.rel.1.to_string()),
+        ),
+        (
+            format!("u-{ion}-abs-value"),
+            data.as_ref()
+                .map_or("undefined".to_string(), |v| v.abs.0.to_string()),
+        ),
+        (
+            format!("u-{ion}-abs-fragment"),
+            data.as_ref()
+                .map_or("undefined".to_string(), |v| v.abs.1.to_string()),
+        ),
+    ]
+}
 
 fn spectrum_graph_boundaries(
     spectrum: &AnnotatedSpectrum,
     fragments: &[Fragment],
     model: &Model,
 ) -> (SpectrumGraphData, Boundaries, String) {
-    // let n = if model.c.0 != Location::None {
-    //     FragmentType::c(_)
-    // } else if model.b.0 != Location::None {
-    //     FragmentType::b(_)
-    // } else {
-    //     FragmentType::a(_)
-    // };
-    // let c = if model.z.0 != Location::None {
-    //     FragmentType::z(_)
-    // } else if model.y.0 != Location::None {
-    //     FragmentType::y(_)
-    // } else {
-    //     FragmentType::x(_)
-    // };
-    fn filter(model: &Model, ion: &FragmentType) -> bool {
-        let n = if model.c.0 != Location::None {
-            matches!(ion, FragmentType::c(_))
-        } else if model.b.0 != Location::None {
-            matches!(ion, FragmentType::b(_))
-        } else {
-            matches!(ion, FragmentType::a(_))
-        };
-        let c = if model.z.0 != Location::None {
-            matches!(ion, FragmentType::z(_))
-        } else if model.y.0 != Location::None {
-            matches!(ion, FragmentType::y(_))
-        } else {
-            matches!(ion, FragmentType::x(_))
-        };
-        n || c
-    }
     let data: SpectrumGraphData = spectrum
         .spectrum()
-        .map(|point| {
-            let distance = fragments
-                .iter()
-                .filter(|frag| filter(model, &frag.ion))
-                .fold(
-                    (
-                        (
-                            f64::MAX,
-                            Fragment::new(
-                                MolecularFormula::default(),
-                                Charge::new::<e>(0),
-                                0,
-                                0,
-                                FragmentType::precursor,
-                                String::new(),
-                            ),
-                        ),
-                        (
-                            f64::MAX,
-                            Fragment::new(
-                                MolecularFormula::default(),
-                                Charge::new::<e>(0),
-                                0,
-                                0,
-                                FragmentType::precursor,
-                                String::new(),
-                            ),
-                        ),
-                    ),
-                    |acc, frag: &Fragment| {
-                        let mass_over_charge = frag.mz(MassMode::Monoisotopic);
-                        let rel = ((mass_over_charge - point.experimental_mz) / mass_over_charge
-                            * MassOverCharge::new::<rustyms::system::mz>(1e6))
-                        .value;
-                        let abs = (mass_over_charge - point.experimental_mz).value;
-                        (
-                            if acc.0 .0.abs() < rel.abs() {
-                                acc.0
-                            } else {
-                                (rel, frag.clone())
-                            },
-                            if acc.1 .0.abs() < abs.abs() {
-                                acc.1
-                            } else {
-                                (abs, frag.clone())
-                            },
+        .map(|point| Point {
+            annotation: point.annotation.clone(),
+            assigned: (!point.annotation.is_empty()).then(|| RelAndAbs {
+                rel: point
+                    .annotation
+                    .iter()
+                    .map(|(f, _)| {
+                        OrderedFloat(
+                            f.mz(MassMode::Monoisotopic)
+                                .ppm(point.experimental_mz)
+                                .value,
                         )
-                    },
-                );
-            (
-                point.annotation.clone(),
-                distance.0,                                                  // rel (ppm)
-                distance.1,                                                  // abs (Da)
-                point.experimental_mz,                                       // mz
-                da(point.experimental_mz.value * point.charge.value as f64), // mass
-                point.intensity.0,                                           // intensity
-            )
+                    })
+                    .min()
+                    .unwrap()
+                    .0,
+                abs: point
+                    .annotation
+                    .iter()
+                    .map(|(f, _)| {
+                        OrderedFloat(
+                            (f.mz(MassMode::Monoisotopic) - point.experimental_mz)
+                                .abs()
+                                .value,
+                        )
+                    })
+                    .min()
+                    .unwrap()
+                    .0,
+            }),
+            unassigned: UnassignedData {
+                a: (model.a.0 != Location::None).then(|| {
+                    RelAndAbs::get(
+                        fragments,
+                        |f| matches!(f.ion, FragmentType::a(_)),
+                        |f| {
+                            (
+                                f.mz(MassMode::Monoisotopic)
+                                    .ppm(point.experimental_mz)
+                                    .value,
+                                f.clone(),
+                            )
+                        },
+                        |f| {
+                            (
+                                (f.mz(MassMode::Monoisotopic) - point.experimental_mz)
+                                    .abs()
+                                    .value,
+                                f.clone(),
+                            )
+                        },
+                        &|a: (f64, Fragment), b: (f64, Fragment)| a.0.total_cmp(&b.0),
+                    )
+                }),
+                b: (model.b.0 != Location::None).then(|| {
+                    RelAndAbs::get(
+                        fragments,
+                        |f| matches!(f.ion, FragmentType::b(_)),
+                        |f| {
+                            (
+                                f.mz(MassMode::Monoisotopic)
+                                    .ppm(point.experimental_mz)
+                                    .value,
+                                f.clone(),
+                            )
+                        },
+                        |f| {
+                            (
+                                (f.mz(MassMode::Monoisotopic) - point.experimental_mz)
+                                    .abs()
+                                    .value,
+                                f.clone(),
+                            )
+                        },
+                        &|a: (f64, Fragment), b: (f64, Fragment)| a.0.total_cmp(&b.0),
+                    )
+                }),
+                c: (model.c.0 != Location::None).then(|| {
+                    RelAndAbs::get(
+                        fragments,
+                        |f| matches!(f.ion, FragmentType::c(_)),
+                        |f| {
+                            (
+                                f.mz(MassMode::Monoisotopic)
+                                    .ppm(point.experimental_mz)
+                                    .value,
+                                f.clone(),
+                            )
+                        },
+                        |f| {
+                            (
+                                (f.mz(MassMode::Monoisotopic) - point.experimental_mz)
+                                    .abs()
+                                    .value,
+                                f.clone(),
+                            )
+                        },
+                        &|a: (f64, Fragment), b: (f64, Fragment)| a.0.total_cmp(&b.0),
+                    )
+                }),
+                x: (model.x.0 != Location::None).then(|| {
+                    RelAndAbs::get(
+                        fragments,
+                        |f| matches!(f.ion, FragmentType::x(_)),
+                        |f| {
+                            (
+                                f.mz(MassMode::Monoisotopic)
+                                    .ppm(point.experimental_mz)
+                                    .value,
+                                f.clone(),
+                            )
+                        },
+                        |f| {
+                            (
+                                (f.mz(MassMode::Monoisotopic) - point.experimental_mz)
+                                    .abs()
+                                    .value,
+                                f.clone(),
+                            )
+                        },
+                        &|a: (f64, Fragment), b: (f64, Fragment)| a.0.total_cmp(&b.0),
+                    )
+                }),
+                y: (model.y.0 != Location::None).then(|| {
+                    RelAndAbs::get(
+                        fragments,
+                        |f| matches!(f.ion, FragmentType::y(_)),
+                        |f| {
+                            (
+                                f.mz(MassMode::Monoisotopic)
+                                    .ppm(point.experimental_mz)
+                                    .value,
+                                f.clone(),
+                            )
+                        },
+                        |f| {
+                            (
+                                (f.mz(MassMode::Monoisotopic) - point.experimental_mz)
+                                    .abs()
+                                    .value,
+                                f.clone(),
+                            )
+                        },
+                        &|a: (f64, Fragment), b: (f64, Fragment)| a.0.total_cmp(&b.0),
+                    )
+                }),
+                z: (model.z.0 != Location::None).then(|| {
+                    RelAndAbs::get(
+                        fragments,
+                        |f| matches!(f.ion, FragmentType::z(_)),
+                        |f| {
+                            (
+                                f.mz(MassMode::Monoisotopic)
+                                    .ppm(point.experimental_mz)
+                                    .value,
+                                f.clone(),
+                            )
+                        },
+                        |f| {
+                            (
+                                (f.mz(MassMode::Monoisotopic) - point.experimental_mz)
+                                    .abs()
+                                    .value,
+                                f.clone(),
+                            )
+                        },
+                        &|a: (f64, Fragment), b: (f64, Fragment)| a.0.total_cmp(&b.0),
+                    )
+                }),
+            },
+            mz: point.experimental_mz,
+            mass: da(point.experimental_mz.value * point.charge.value as f64),
+            intensity: point.intensity.0,
         })
         .collect();
     let bounds = data.iter().fold(
@@ -213,16 +366,20 @@ fn spectrum_graph_boundaries(
         ),
         |acc, point| {
             (
-                acc.0.max(point.1 .0), // rel
-                acc.1.min(point.1 .0),
-                acc.2.max(point.2 .0), // abs
-                acc.3.min(point.2 .0),
-                acc.4.max(point.3.value), // mz
-                acc.5.min(point.3.value),
-                acc.6.max(point.4.value), // mass
-                acc.7.min(point.4.value),
-                acc.8.max(point.5), // intensity
-                acc.9.min(point.5),
+                acc.0
+                    .max(point.assigned.as_ref().map_or(f64::MIN, |r| r.rel)), // rel
+                acc.1
+                    .min(point.assigned.as_ref().map_or(f64::MIN, |r| r.rel)),
+                acc.2
+                    .max(point.assigned.as_ref().map_or(f64::MIN, |r| r.abs)), // abs
+                acc.3
+                    .min(point.assigned.as_ref().map_or(f64::MIN, |r| r.abs)),
+                acc.4.max(point.mz.value), // mz
+                acc.5.min(point.mz.value),
+                acc.6.max(point.mass.value), // mass
+                acc.7.min(point.mass.value),
+                acc.8.max(point.intensity), // intensity
+                acc.9.min(point.intensity),
             )
         },
     );
@@ -243,14 +400,14 @@ fn spectrum_graph_boundaries(
     (data, bounds, format!("{n}/{c}"))
 }
 
-fn spectrum_graph(
+fn render_error_graph(
     output: &mut String,
     boundaries: &Boundaries,
     data: &SpectrumGraphData,
     ions: &str,
     x_max: f64,
 ) {
-    write!(output, "<div class='spectrum-graph-y-axis'>").unwrap();
+    write!(output, "<div class='error-graph-y-axis'>").unwrap();
     write!(output, "<span class='max'>{:.2}</span>", boundaries.2).unwrap();
     write!(
         output,
@@ -258,18 +415,18 @@ fn spectrum_graph(
     )
     .unwrap();
     write!(output, "<span class='min'>{:.2}</span>", boundaries.3).unwrap();
-    density_graph::<256>(
-        output,
-        &data.iter().map(|p| p.1 .0).collect::<Vec<_>>(),
-        "rel",
-    );
-    density_graph::<256>(
-        output,
-        &data.iter().map(|p| p.2 .0).collect::<Vec<_>>(),
-        "abs",
-    );
+    // density_graph::<256>(
+    //     output,
+    //     &data.iter().map(|p| p.1 .0).collect::<Vec<_>>(),
+    //     "rel",
+    // );
+    // density_graph::<256>(
+    //     output,
+    //     &data.iter().map(|p| p.2 .0).collect::<Vec<_>>(),
+    //     "abs",
+    // );
     write!(output, "</div>").unwrap();
-    write!(output, "<div class='spectrum-graph canvas'>",).unwrap();
+    write!(output, "<div class='error-graph canvas'>",).unwrap();
     write!(output, "<div class='x-axis'>").unwrap();
     write!(output, "<span class='min'>0</span>").unwrap();
     write!(output, "<span class='max'>{:.2}</span>", x_max).unwrap();
@@ -283,18 +440,38 @@ fn spectrum_graph(
     for point in data {
         write!(
             output,
-            "<span class='point {}' style='--rel:{};--abs:{};--mz:{};--intensity:{}' data-ppm='{}' data-abs='{}' data-mz='{}' data-intensity='{}' data-reference-fragment-rel='{}' data-reference-fragment-abs='{}'></span>",
-            get_classes(&point.0),
-            point.1.0,
-            point.2.0,
-            point.3.value,
-            point.5,
-            point.1.0,
-            point.2.0,
-            point.3.value,
-            point.5,
-            point.1.1,
-            point.2.1,
+            "{}",
+            HtmlTag::span
+                .empty()
+                .header("class", format!("point {}", get_classes(&point.annotation)))
+                .data(
+                    [
+                        (
+                            "a-rel",
+                            point
+                                .assigned
+                                .as_ref()
+                                .map_or("undefined".to_string(), |r| r.rel.to_string())
+                        ),
+                        (
+                            "a-abs",
+                            point
+                                .assigned
+                                .as_ref()
+                                .map_or("undefined".to_string(), |r| r.abs.to_string())
+                        ),
+                        ("intensity", point.intensity.to_string()),
+                        ("mz", point.mz.value.to_string()),
+                    ]
+                    .into_iter()
+                    .map(|(a, b)| (a.to_string(), b))
+                    .chain(get_data(&point.unassigned.a, 'a'))
+                    .chain(get_data(&point.unassigned.b, 'b'))
+                    .chain(get_data(&point.unassigned.c, 'c'))
+                    .chain(get_data(&point.unassigned.x, 'x'))
+                    .chain(get_data(&point.unassigned.y, 'y'))
+                    .chain(get_data(&point.unassigned.z, 'z'))
+                )
         )
         .unwrap();
     }

@@ -215,41 +215,41 @@ output.error {
 }
 
 
-/* spectrum-graph */
+/* error-graph */
 .spectrum .canvas-wrapper {
   height: calc(2 * var(--height));
   grid-template-rows: 1fr 2em 1fr;
   grid-template-areas:
     "y-axis canvas"
     ". x-axis"
-    "sg-y-axis spectrum-graph";
+    "sg-y-axis error-graph";
 }
 
-.spectrum .spectrum-graph {
+.spectrum .error-graph {
   --graph-height: 500px;
   --graph-height-inc: calc(var(--graph-height) + 10px);
   --radius: 50%;
   display: flex;
   flex-basis: 100%;
-  grid-area: spectrum-graph;
+  grid-area: error-graph;
   position: relative;
   overflow: hidden;
   border-bottom: none;
 }
 
-.spectrum-graph>label {
+.error-graph>label {
   border: 2px solid var(--color-halfway);
   padding: .25rem;
   user-select: none;
   border-radius: 5px;
 }
 
-.spectrum-graph label:has(+input:checked),
-.spectrum-graph label:has(input:checked) {
+.error-graph label:has(+input:checked),
+.error-graph label:has(input:checked) {
   border-color: var(--color-primary);
 }
 
-.spectrum-graph-y-axis {
+.error-graph-y-axis {
   grid-area: sg-y-axis;
   display: flex;
   flex-direction: column;
@@ -261,7 +261,7 @@ output.error {
   overflow: hidden;
 }
 
-.spectrum-graph-y-axis::after {
+.error-graph-y-axis::after {
   content: "";
   display: block;
   position: absolute;
@@ -273,7 +273,7 @@ output.error {
   z-index: 0;
 }
 
-.spectrum-graph-y-axis .title {
+.error-graph-y-axis .title {
   writing-mode: vertical-rl;
   align-self: center;
   transform: rotate(180deg);
@@ -281,33 +281,33 @@ output.error {
   color: var(--color-halfway);
 }
 
-.spectrum-graph :is(.y-axis, .x-axis) :is(.max, .min) {
+.error-graph :is(.y-axis, .x-axis) :is(.max, .min) {
   font-size: 10px;
 }
 
-.spectrum-graph-y-axis::after,
-.spectrum-graph .x-axis::after {
+.error-graph-y-axis::after,
+.error-graph .x-axis::after {
   display: none;
 }
 
-.spectrum-graph-y-axis svg {
+.error-graph-y-axis svg {
   transform: translate(2px, 0);
   position: absolute;
   width: 2rem;
   height: 100%;
 }
 
-.spectrum-graph-y-axis svg .line {
+.error-graph-y-axis svg .line {
   stroke: var(--color-primary);
   stroke-width: var(--stroke-spectrum);
   fill: transparent;
 }
 
-.spectrum-graph-y-axis svg .volume {
+.error-graph-y-axis svg .volume {
   fill: var(--color-primary-o);
 }
 
-.spectrum-graph .x-axis {
+.error-graph .x-axis {
   position: absolute;
   width: 100%;
   border-top: 2px solid var(--color-foreground);
@@ -315,34 +315,34 @@ output.error {
   pointer-events: none;
 }
 
-.spectrum-graph .x-axis.hug-bottom {
+.error-graph .x-axis.hug-bottom {
   top: unset !important;
   bottom: 0px !important;
   border-top: none;
   border-bottom: 2px solid var(--color-foreground);
 }
 
-.spectrum-graph .point.unassigned {
+.error-graph .point.unassigned {
   z-index: 1;
 }
 
-.spectrum-graph .point {
+.error-graph .point {
   width: 5px;
   height: 5px;
   background-color: var(--color);
   border-radius: var(--radius);
   position: absolute;
   top: calc(100% * (var(--y-max) - var(--abs)) / (var(--y-max) - var(--y-min)));
-  left: calc(100% * (1 - (var(--max-mz) - var(--mz)) / (var(--max-mz) - var(--min-mz))));
+  left: calc(100% * (1 - (var(--max-mz) - attr(data-mz number)) / (var(--max-mz) - var(--min-mz))));
   display: block;
   z-index: 2;
 }
 
-.spectrum.spectrum-graph-relative .point {
+.spectrum.error-graph-relative .point {
   top: calc(100% * (var(--y-max) - var(--rel)) / (var(--y-max) - var(--y-min)));
 }
 
-.spectrum-graph .ruler {
+.error-graph .ruler {
   border-top: 2px dashed var(--color-foreground);
   width: 100%;
   height: 0;
@@ -354,39 +354,39 @@ output.error {
   pointer-events: none;
 }
 
-.spectrum-graph:hover .ruler {
+.error-graph:hover .ruler {
   display: block;
 }
 
-.spectrum.spectrum-graph-relative .abs,
-.spectrum.spectrum-graph-absolute .rel {
+.spectrum.error-graph-relative .abs,
+.spectrum.error-graph-absolute .rel {
   display: none;
 }
 
-.spectrum.spectrum-graph-intensity .point {
-  width: calc((var(--intensity)) / var(--max-intensity) * 6px + 2px);
-  height: calc((var(--intensity)) / var(--max-intensity) * 6px + 2px);
+.spectrum.error-graph-intensity .point {
+  width: calc((attr(data-intensity number)) / var(--max-intensity) * 6px + 2px);
+  height: calc((attr(data-intensity number)) / var(--max-intensity) * 6px + 2px);
 }
 
-.spectrum .spectrum-graph.highlight .point {
+.spectrum .error-graph.highlight .point {
   opacity: 0.2;
 }
 
-.spectrum .spectrum-graph.highlight .point.highlight {
+.spectrum .error-graph.highlight .point.highlight {
   opacity: 1;
 }
 
-.spectrum-graph-y-axis .density.rel {
+.error-graph-y-axis .density.rel {
   --scale: calc((var(--rel-max-initial) - var(--rel-min-initial)) / (var(--y-max) - var(--y-min)));
   --translate: calc((var(--y-max) - var(--rel-max-initial)) / (var(--rel-max-initial) - var(--rel-min-initial)) * var(--height));
 }
 
-.spectrum-graph-y-axis .density.abs {
+.error-graph-y-axis .density.abs {
   --scale: calc((var(--abs-max-initial) - var(--abs-min-initial)) / (var(--y-max) - var(--y-min)));
   --translate: calc((var(--y-max) - var(--abs-max-initial)) / (var(--abs-max-initial) - var(--abs-min-initial)) * var(--height));
 }
 
-.spectrum-graph-y-axis .density {
+.error-graph-y-axis .density {
   transform:
     scale(1, var(--scale)) translate(0, var(--translate));
 }

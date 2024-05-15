@@ -204,7 +204,7 @@ fn main() {
           <button id="annotate-button" type="button" class="col-2">Annotate</button>
         </div>
       <output id="spectrum-error" class="hidden error"></output>
-      <div id='spectrum-wrapper' class="spectrum show-unassigned hidden legend-ion" onload='SpectrumSetUp()'>
+      <div id='spectrum-wrapper' class="spectrum show-unassigned legend-ion" onload='SpectrumSetUp()'>
         <div class='all-settings'>
           <fieldset class='settings graphics-settings'>
             <legend>Graphics settings</legend>
@@ -217,26 +217,39 @@ fn main() {
             <label class='row align' for='spectrum-spectrum-stroke-unassigned'><span>Spectrum unassigned stroke width</span><input id='spectrum-spectrum-stroke-unassigned' class='stroke-spectrum-unassigned' type='text' value='1px'/></label>
           </fieldset>
     
-          <fieldset class='settings spectrum-graph-settings'>
-            <legend>Spectrum graph settings</legend>
+          <fieldset class='settings error-graph-settings'>
+            <legend>Error graph settings</legend>
     
             <div class='row'>
+              <span class='title'>X axis mode</span>
+              <div class='select-box' id='error-graph-x-type'>
+                <label tabindex='0'><input type='radio' name='error-graph-x-type' value='assigned' id='error-graph-x-type-assigned' checked>Assigned</label>
+                <label tabindex='0'><input type='radio' name='error-graph-x-type' value='unassigned' id='error-graph-x-type-unassigned'>Unassigned</label>
+              </div>
+            </div>
+
+            <label><input type='checkbox' name='error-graph-show-assigned' id='error-graph-show-assigned' value='error-graph-show-assigned' switch/>On X unassigned still show assigned peaks</label>
+
+            <div class='row'>
               <span class='title'>Y axis mode</span>
-              <div class='select-box' id='spectrum-graph-type'>
-                <label for='spectrum-graph-type-absolute' tabindex='0'><input type='radio' name='spectrum-graph-type' value='absolute' id='spectrum-graph-type-absolute' checked>Absolute</label>
-                <label for='spectrum-graph-type-relative' tabindex='0'><input type='radio' name='spectrum-graph-type' value='relative' id='spectrum-graph-type-relative'>Relative</label>
+              <div class='select-box' id='error-graph-y-type'>
+                <label tabindex='0'><input type='radio' name='error-graph-y-type' value='absolute' id='error-graph-y-type-absolute' checked>Absolute</label>
+                <label tabindex='0'><input type='radio' name='error-graph-y-type' value='relative' id='error-graph-y-type-relative'>Relative</label>
               </div>
             </div>
     
-            <label for='intensity'><input type='checkbox' name='intensity' id='intensity' value='intensity' switch/>Intensity</label>
+            <label><input type='checkbox' name='error-graph-intensity' id='error-graph-intensity' value='error-graph-intensity' switch/>Intensity</label>
             
             <div class='manual-zoom'>
               <span>Y</span>
               <label for='y-min'>min</label>
-              <input id='spectrum-graph-y-min' class='y-min' type='number' value='-20'/>
+              <input id='error-graph-y-min' class='y-min' type='number' value='-20'/>
               <label for='y-max'>max</label>
-              <input id='spectrum-graph-y-max' class='y-max' type='number' value='20'/>
+              <input id='error-graph-y-max' class='y-max' type='number' value='20'/>
             </div>
+
+            <div class='
+
           </fieldset>
     
           <fieldset class='settings peptide-settings'>

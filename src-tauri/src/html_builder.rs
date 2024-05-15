@@ -88,6 +88,17 @@ impl HtmlElement {
         self.extend(content);
         self
     }
+
+    /// Create a list of data element. The first of the tuple is the attribute name (without 'data-' in front), the second the value
+    pub fn data(
+        mut self,
+        data: impl IntoIterator<Item = (impl Display, impl Into<String>)>,
+    ) -> Self {
+        for (name, value) in data {
+            self = self.header(format!("data-{}", name), value);
+        }
+        self
+    }
 }
 
 impl<A: Into<HtmlContent>> Extend<A> for HtmlElement {
@@ -454,6 +465,13 @@ pub enum HtmlTag {
     wbr,
     /// Obsolete and deprecated - The <xmp> HTML element renders text between the start and end tags without interpreting the HTML in between and using a monospaced font. The HTML2 specification recommended that it should be rendered wide enough to allow 80 characters per line.
     xmp,
+}
+
+impl HtmlTag {
+    /// Convenience method to create a new empty element
+    pub fn empty(self) -> HtmlElement {
+        HtmlElement::new(self)
+    }
 }
 
 impl Display for HtmlTag {
