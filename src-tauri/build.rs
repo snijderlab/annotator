@@ -224,7 +224,7 @@ fn main() {
               <span class='title'>Y axis mode</span>
               <div class='select-box' id='error-graph-y-type'>
               <label tabindex='0'><input type='radio' name='error-graph-y-type' value='relative' id='error-graph-y-type-relative' checked>Relative</label>
-                <label tabindex='0'><input type='radio' name='error-graph-y-type' value='absolute' id='error-graph-y-type-absolute'>Absolute</label>
+              <label tabindex='0'><input type='radio' name='error-graph-y-type' value='absolute' id='error-graph-y-type-absolute'>Absolute</label>
               </div>
             </div>
     

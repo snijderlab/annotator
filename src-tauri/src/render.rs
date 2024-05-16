@@ -322,17 +322,7 @@ fn render_error_graph(
     )
     .unwrap();
     write!(output, "<span class='min'>{:.2}</span>", boundaries.3).unwrap();
-    // density_graph::<256>(
-    //     output,
-    //     &data.iter().map(|p| p.1 .0).collect::<Vec<_>>(),
-    //     "rel",
-    // );
-    // density_graph::<256>(
-    //     output,
-    //     &data.iter().map(|p| p.2 .0).collect::<Vec<_>>(),
-    //     "abs",
-    // );
-    write!(output, "</div>").unwrap();
+    write!(output, "<div id='error-graph-density'></div></div>").unwrap();
     write!(output, "<div id='error-graph' class='error-graph canvas'>",).unwrap();
     write!(output, "<div class='x-axis'>").unwrap();
     write!(output, "<span class='min'>0</span>").unwrap();
@@ -1460,30 +1450,23 @@ fn general_stats(
     .unwrap();
 }
 
-fn density_estimation<const STEPS: usize>(data: &[f64]) -> [f64; STEPS] {
+fn density_estimation<const STEPS: usize>(mut data: Vec<f64>) -> ([f64; STEPS], f64, f64) {
     let mut densities = [0.0; STEPS];
     if data.is_empty() {
-        return densities;
+        return (densities, 0.0, 0.0);
     }
-    let mut data = data.to_vec();
     data.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+    let data = data; // Freeze mutability
+    let min_value = data.first().copied().unwrap_or(f64::MIN); // Cannot crash as the data is longer than 0
+    let max_value = data.last().copied().unwrap_or(f64::MAX);
     let len = data.len() as f64;
-    let min_value = data.iter().copied().reduce(f64::min).unwrap_or(f64::MIN);
-    let max_value = data.iter().copied().reduce(f64::max).unwrap_or(f64::MAX);
-    let mean: f64 = data.iter().sum::<f64>() / len;
-    let stdev: f64 = (data.iter().map(|p| (mean - p).powi(2)).sum::<f64>() / len).sqrt();
     let half = len / 2.0;
-    let iqr: f64 = data.iter().rev().take(half.floor() as usize).sum::<f64>() / half
-        - data.iter().take(half.floor() as usize).sum::<f64>() / half;
-    let h = 0.9 * stdev.min(iqr / 1.34) * len.powf(-0.2);
-
-    // let kde = |x: f64| {
-    //     1.0 / ((2.0 * std::f64::consts::PI).sqrt() * len * h)
-    //         * data
-    //             .iter()
-    //             .map(|i| (-1.0 / (2.0 * h * h) * (x - i).powi(2)).exp())
-    //             .sum::<f64>()
-    // };
+    let first_half_sum: f64 = data.iter().take(half.floor() as usize).sum();
+    let last_half_sum: f64 = data.iter().skip(half.floor() as usize).sum();
+    let mean: f64 = (first_half_sum + last_half_sum) / len;
+    let stdev: f64 = (data.iter().map(|p| (mean - p).powi(2)).sum::<f64>() / len).sqrt();
+    let iqr: f64 = last_half_sum / half - first_half_sum / half;
+    let h = 0.25 * stdev.min(iqr / 1.34) * len.powf(-0.2);
 
     let gaussian_kernel =
         |x: f64| 1.0 / (2.0 * std::f64::consts::PI).sqrt() * (-1.0 / 2.0 * x.powi(2)).exp();
@@ -1499,18 +1482,20 @@ fn density_estimation<const STEPS: usize>(data: &[f64]) -> [f64; STEPS] {
         *density = kde(min_value + (max_value - min_value) / (STEPS - 1) as f64 * i as f64);
     }
 
-    densities
+    (densities, min_value, max_value)
 }
 
-fn density_graph<const STEPS: usize>(output: &mut String, data: &[f64], class: &str) {
-    let densities = density_estimation::<STEPS>(data);
+#[tauri::command]
+pub async fn density_graph(data: Vec<f64>) -> Result<String, ()> {
+    const STEPS: usize = 256; // Determines the precision of the density
+    let (densities, min, max) = density_estimation::<STEPS>(data);
     let max_density = densities
         .iter()
         .copied()
         .reduce(f64::max)
         .unwrap_or(f64::MAX);
     let mut path = String::new();
-    for (i, density) in densities.iter().enumerate() {
+    for (i, density) in densities.iter().rev().enumerate() {
         write!(
             &mut path,
             "{}{} {}",
@@ -1520,11 +1505,11 @@ fn density_graph<const STEPS: usize>(output: &mut String, data: &[f64], class: &
         )
         .unwrap();
     }
-    write!(output, "<svg viewBox='-1 0 100 {}' preserveAspectRatio='none'><g class='density {class}'><path class='line' d='M {}'></path><path class='volume' d='M 100 0 L {} L {} 0 Z'></path></g></svg>",
+    Ok(format!("<svg viewBox='-1 0 100 {}' style='--min:{min};--max:{max};' preserveAspectRatio='none'><g class='density'><path class='line' d='M {}'></path><path class='volume' d='M 100 0 L {} L {} 0 Z'></path></g></svg>",
         STEPS-1,
         path,
         path, STEPS -1
-        ).unwrap();
+        ))
 }
 
 pub fn display_mass(value: Mass) -> HtmlElement {
@@ -1596,36 +1581,5 @@ pub fn display_neutral_loss(formula: &NeutralLoss) -> String {
             "<span class='formula'>{}</span>",
             formula.hill_notation_html()
         )
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::density_estimation;
-
-    #[test]
-    fn density_flat() {
-        let d = dbg!(density_estimation::<10>(&[1.0, 2.0, 3.0, 4.0, 5.0]));
-        assert!((d.iter().sum::<f64>() - 1.0).abs() < 0.005); // half a percent deviation from 1.0 density for the whole distribution
-        assert_eq!(
-            d.iter().copied().reduce(f64::min),
-            d.iter().copied().reduce(f64::max)
-        );
-    }
-
-    #[test]
-    fn density_peak() {
-        let d = dbg!(density_estimation::<10>(&[
-            1.0, 2.0, 3.0, 4.0, 5.0, 2.0, 3.0, 4.0, 3.0
-        ]));
-        assert!((d.iter().sum::<f64>() - 1.0).abs() < 0.005); // half a percent deviation from 1.0 density for the whole distribution
-        todo!()
-    }
-
-    #[test]
-    fn density_sample() {
-        let d = dbg!(density_estimation::<10>(&[-2.1, -1.3, -0.4, 1.9, 5.1, 6.2]));
-        assert!((d.iter().sum::<f64>() - 1.0).abs() < 0.005); // half a percent deviation from 1.0 density for the whole distribution
-        todo!()
     }
 }

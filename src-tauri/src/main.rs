@@ -792,6 +792,7 @@ fn main() {
             search_modification,
             search_peptide,
             spectrum_details,
+            render::density_graph,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

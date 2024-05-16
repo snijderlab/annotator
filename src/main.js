@@ -1,6 +1,9 @@
+"use strict";
 const { invoke } = window.__TAURI__.tauri;
 
 const { listen } = window.__TAURI__.event
+
+import { SetUpSpectrumInterface } from "./stitch-assets/script.js";
 // const controller = new AbortController();
 
 listen('tauri://file-drop', event => {
@@ -326,7 +329,7 @@ async function annotate_spectrum() {
 }
 
 function showError(error) {
-  console.log(error);
+  console.error(error);
   if (typeof error == "string") {
     return "<div class='raw'>" + error + "</div>";
   } else {
