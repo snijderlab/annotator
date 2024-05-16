@@ -204,7 +204,7 @@ fn main() {
           <button id="annotate-button" type="button" class="col-2">Annotate</button>
         </div>
       <output id="spectrum-error" class="hidden error"></output>
-      <div id='spectrum-wrapper' class="spectrum show-unassigned legend-ion" onload='SpectrumSetUp()'>
+      <div id='spectrum-wrapper' class="spectrum show-unassigned legend-ion hidden" onload='SpectrumSetUp()'>
         <div class='all-settings'>
           <fieldset class='settings graphics-settings'>
             <legend>Graphics settings</legend>
@@ -221,20 +221,10 @@ fn main() {
             <legend>Error graph settings</legend>
     
             <div class='row'>
-              <span class='title'>X axis mode</span>
-              <div class='select-box' id='error-graph-x-type'>
-                <label tabindex='0'><input type='radio' name='error-graph-x-type' value='assigned' id='error-graph-x-type-assigned' checked>Assigned</label>
-                <label tabindex='0'><input type='radio' name='error-graph-x-type' value='unassigned' id='error-graph-x-type-unassigned'>Unassigned</label>
-              </div>
-            </div>
-
-            <label><input type='checkbox' name='error-graph-show-assigned' id='error-graph-show-assigned' value='error-graph-show-assigned' switch/>On X unassigned still show assigned peaks</label>
-
-            <div class='row'>
               <span class='title'>Y axis mode</span>
               <div class='select-box' id='error-graph-y-type'>
-                <label tabindex='0'><input type='radio' name='error-graph-y-type' value='absolute' id='error-graph-y-type-absolute' checked>Absolute</label>
-                <label tabindex='0'><input type='radio' name='error-graph-y-type' value='relative' id='error-graph-y-type-relative'>Relative</label>
+              <label tabindex='0'><input type='radio' name='error-graph-y-type' value='relative' id='error-graph-y-type-relative' checked>Relative</label>
+                <label tabindex='0'><input type='radio' name='error-graph-y-type' value='absolute' id='error-graph-y-type-absolute'>Absolute</label>
               </div>
             </div>
     
@@ -248,8 +238,32 @@ fn main() {
               <input id='error-graph-y-max' class='y-max' type='number' value='20'/>
             </div>
 
-            <div class='
+            <div class='row'>
+              <span class='title'>X axis mode</span>
+              <div class='select-box' id='error-graph-x-type'>
+                <label tabindex='0'><input type='radio' name='error-graph-x-type' value='assigned' id='error-graph-x-type-assigned' checked>Assigned</label>
+                <label tabindex='0'><input type='radio' name='error-graph-x-type' value='unassigned' id='error-graph-x-type-unassigned'>Unassigned</label>
+              </div>
+            </div>
 
+            <fieldset>
+              <legend>Unassigned mode settings</legend>
+              
+              <div class='row'>
+                <span class='title'>Reference ions</span>
+                <div class='error-graph-ion-selection multi-checkbox'>
+                  <label><input id='error-graph-ion-a' type='checkbox'/>a</label>
+                  <label><input id='error-graph-ion-b' type='checkbox'/>b</label>
+                  <label><input id='error-graph-ion-c' type='checkbox'/>c</label>
+                  <label><input id='error-graph-ion-x' type='checkbox'/>x</label>
+                  <label><input id='error-graph-ion-y' type='checkbox'/>y</label>
+                  <label><input id='error-graph-ion-z' type='checkbox'/>z</label>
+                </div>
+              </div>
+
+              <label><input type='checkbox' name='error-graph-sh ow-assigned' id='error-graph-show-assigned' value='error-graph-show-assigned' switch/>Show assigned peaks</label>
+
+            </fieldset>
           </fieldset>
     
           <fieldset class='settings peptide-settings'>

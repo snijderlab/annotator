@@ -313,6 +313,7 @@ output.error {
   border-top: 2px solid var(--color-foreground);
   top: clamp(0px, calc(var(--y-max) / (var(--y-max) - var(--y-min)) * 100% - 1px), 100%);
   pointer-events: none;
+  transform: translateY(2px);
 }
 
 .error-graph .x-axis.hug-bottom {
@@ -332,14 +333,15 @@ output.error {
   background-color: var(--color);
   border-radius: var(--radius);
   position: absolute;
-  top: calc(100% * (var(--y-max) - var(--abs)) / (var(--y-max) - var(--y-min)));
-  left: calc(100% * (1 - (var(--max-mz) - attr(data-mz number)) / (var(--max-mz) - var(--min-mz))));
+  --y: 0;
+  top: calc(100% * (var(--y-max) - var(--y)) / (var(--y-max) - var(--y-min)));
+  left: calc(100% * (1 - (var(--max-mz) - var(--mz)) / (var(--max-mz) - var(--min-mz))));
   display: block;
   z-index: 2;
-}
 
-.spectrum.error-graph-relative .point {
-  top: calc(100% * (var(--y-max) - var(--rel)) / (var(--y-max) - var(--y-min)));
+  &.hidden {
+    display: none;
+  }
 }
 
 .error-graph .ruler {
@@ -364,8 +366,8 @@ output.error {
 }
 
 .spectrum.error-graph-intensity .point {
-  width: calc((attr(data-intensity number)) / var(--max-intensity) * 6px + 2px);
-  height: calc((attr(data-intensity number)) / var(--max-intensity) * 6px + 2px);
+  width: calc((var(--intensity)) / var(--max-intensity) * 6px + 2px);
+  height: calc((var(--intensity)) / var(--max-intensity) * 6px + 2px);
 }
 
 .spectrum .error-graph.highlight .point {

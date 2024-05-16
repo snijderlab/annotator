@@ -1,18 +1,17 @@
 use std::{cmp::Ordering, collections::HashSet, fmt::Write};
 
 use itertools::Itertools;
-use ordered_float::OrderedFloat;
 use rustyms::{
     fragment::*,
     model::Location,
     modification::SimpleModification,
-    spectrum::{PeakSpectrum, Recovered, Score},
-    system::{da, e, mz, usize::Charge, Mass, MassOverCharge},
+    spectrum::{AnnotatedPeak, PeakSpectrum, Recovered, Score},
+    system::{da, mz, Mass, MassOverCharge},
     AnnotatedSpectrum, LinearPeptide, Linked, MassMode, Model, Modification, MolecularFormula,
     NeutralLoss,
 };
 
-use crate::html_builder::{self, HtmlElement, HtmlTag};
+use crate::html_builder::{HtmlElement, HtmlTag};
 
 pub fn annotated_spectrum(
     spectrum: &AnnotatedSpectrum,
@@ -23,8 +22,8 @@ pub fn annotated_spectrum(
 ) -> (String, Limits) {
     let mut output = String::new();
     let (limits, overview) = get_overview(spectrum);
-    let (graph_data, graph_boundaries, ions) =
-        spectrum_graph_boundaries(spectrum, fragments, model);
+    let (graph_data, graph_boundaries) =
+        spectrum_graph_boundaries(spectrum, fragments, model, mass_mode);
     let multiple_peptidoforms = spectrum.peptide.peptidoforms().len() > 1;
     let multiple_peptides = spectrum
         .peptide
@@ -71,13 +70,7 @@ pub fn annotated_spectrum(
         mass_mode,
     );
     // Error graph
-    render_error_graph(
-        &mut output,
-        &graph_boundaries,
-        &graph_data,
-        &ions,
-        limits.mz.value,
-    );
+    render_error_graph(&mut output, &graph_boundaries, &graph_data, limits.mz.value);
     write!(output, "</div></div>").unwrap();
     // General stats
     general_stats(
@@ -118,6 +111,33 @@ struct RelAndAbs<T> {
     abs: T,
 }
 
+impl RelAndAbs<(f64, Fragment)> {
+    fn retrieve(
+        point: &AnnotatedPeak,
+        fragments: &[Fragment],
+        filter: impl FnMut(&&Fragment) -> bool,
+        mass_mode: MassMode,
+    ) -> Self {
+        RelAndAbs::get(
+            fragments,
+            filter,
+            |f| {
+                (
+                    ((f.mz(mass_mode).value - point.experimental_mz.value) / f.mz(mass_mode).value
+                        * 1e6),
+                    f.clone(),
+                )
+            },
+            |f| ((f.mz(mass_mode) - point.experimental_mz).value, f.clone()),
+            &|a: (f64, Fragment), b: (f64, Fragment)| b.0.abs().total_cmp(&a.0.abs()),
+            RelAndAbs {
+                rel: (f64::MAX, Fragment::default()),
+                abs: (f64::MAX, Fragment::default()),
+            },
+        )
+    }
+}
+
 impl<T: Default + Clone> RelAndAbs<T> {
     fn get(
         fragments: &[Fragment],
@@ -125,11 +145,12 @@ impl<T: Default + Clone> RelAndAbs<T> {
         rel: impl Fn(&Fragment) -> T,
         abs: impl Fn(&Fragment) -> T,
         cmp: &impl Fn(T, T) -> Ordering,
+        init: Self,
     ) -> Self {
         fragments
             .iter()
             .filter(filter)
-            .fold(Self::default(), |acc, fragment| Self {
+            .fold(init, |acc, fragment| Self {
                 rel: Self::min_by(acc.rel, rel(fragment), cmp),
                 abs: Self::min_by(acc.abs, abs(fragment), cmp),
             })
@@ -173,7 +194,8 @@ fn spectrum_graph_boundaries(
     spectrum: &AnnotatedSpectrum,
     fragments: &[Fragment],
     model: &Model,
-) -> (SpectrumGraphData, Boundaries, String) {
+    mass_mode: MassMode,
+) -> (SpectrumGraphData, Boundaries) {
     let data: SpectrumGraphData = spectrum
         .spectrum()
         .map(|point| Point {
@@ -183,166 +205,66 @@ fn spectrum_graph_boundaries(
                     .annotation
                     .iter()
                     .map(|(f, _)| {
-                        OrderedFloat(
-                            f.mz(MassMode::Monoisotopic)
-                                .ppm(point.experimental_mz)
-                                .value,
-                        )
+                        (f.mz(mass_mode).value - point.experimental_mz.value)
+                            / f.mz(mass_mode).value
+                            * 1e6
                     })
-                    .min()
-                    .unwrap()
-                    .0,
+                    .min_by(|a, b| b.abs().total_cmp(&a.abs()))
+                    .unwrap(),
                 abs: point
                     .annotation
                     .iter()
-                    .map(|(f, _)| {
-                        OrderedFloat(
-                            (f.mz(MassMode::Monoisotopic) - point.experimental_mz)
-                                .abs()
-                                .value,
-                        )
-                    })
-                    .min()
-                    .unwrap()
-                    .0,
+                    .map(|(f, _)| (f.mz(mass_mode) - point.experimental_mz).value)
+                    .min_by(|a, b| b.abs().total_cmp(&a.abs()))
+                    .unwrap(),
             }),
             unassigned: UnassignedData {
                 a: (model.a.0 != Location::None).then(|| {
-                    RelAndAbs::get(
+                    RelAndAbs::retrieve(
+                        point,
                         fragments,
                         |f| matches!(f.ion, FragmentType::a(_)),
-                        |f| {
-                            (
-                                f.mz(MassMode::Monoisotopic)
-                                    .ppm(point.experimental_mz)
-                                    .value,
-                                f.clone(),
-                            )
-                        },
-                        |f| {
-                            (
-                                (f.mz(MassMode::Monoisotopic) - point.experimental_mz)
-                                    .abs()
-                                    .value,
-                                f.clone(),
-                            )
-                        },
-                        &|a: (f64, Fragment), b: (f64, Fragment)| a.0.total_cmp(&b.0),
+                        mass_mode,
                     )
                 }),
                 b: (model.b.0 != Location::None).then(|| {
-                    RelAndAbs::get(
+                    RelAndAbs::retrieve(
+                        point,
                         fragments,
                         |f| matches!(f.ion, FragmentType::b(_)),
-                        |f| {
-                            (
-                                f.mz(MassMode::Monoisotopic)
-                                    .ppm(point.experimental_mz)
-                                    .value,
-                                f.clone(),
-                            )
-                        },
-                        |f| {
-                            (
-                                (f.mz(MassMode::Monoisotopic) - point.experimental_mz)
-                                    .abs()
-                                    .value,
-                                f.clone(),
-                            )
-                        },
-                        &|a: (f64, Fragment), b: (f64, Fragment)| a.0.total_cmp(&b.0),
+                        mass_mode,
                     )
                 }),
                 c: (model.c.0 != Location::None).then(|| {
-                    RelAndAbs::get(
+                    RelAndAbs::retrieve(
+                        point,
                         fragments,
                         |f| matches!(f.ion, FragmentType::c(_)),
-                        |f| {
-                            (
-                                f.mz(MassMode::Monoisotopic)
-                                    .ppm(point.experimental_mz)
-                                    .value,
-                                f.clone(),
-                            )
-                        },
-                        |f| {
-                            (
-                                (f.mz(MassMode::Monoisotopic) - point.experimental_mz)
-                                    .abs()
-                                    .value,
-                                f.clone(),
-                            )
-                        },
-                        &|a: (f64, Fragment), b: (f64, Fragment)| a.0.total_cmp(&b.0),
+                        mass_mode,
                     )
                 }),
                 x: (model.x.0 != Location::None).then(|| {
-                    RelAndAbs::get(
+                    RelAndAbs::retrieve(
+                        point,
                         fragments,
                         |f| matches!(f.ion, FragmentType::x(_)),
-                        |f| {
-                            (
-                                f.mz(MassMode::Monoisotopic)
-                                    .ppm(point.experimental_mz)
-                                    .value,
-                                f.clone(),
-                            )
-                        },
-                        |f| {
-                            (
-                                (f.mz(MassMode::Monoisotopic) - point.experimental_mz)
-                                    .abs()
-                                    .value,
-                                f.clone(),
-                            )
-                        },
-                        &|a: (f64, Fragment), b: (f64, Fragment)| a.0.total_cmp(&b.0),
+                        mass_mode,
                     )
                 }),
                 y: (model.y.0 != Location::None).then(|| {
-                    RelAndAbs::get(
+                    RelAndAbs::retrieve(
+                        point,
                         fragments,
                         |f| matches!(f.ion, FragmentType::y(_)),
-                        |f| {
-                            (
-                                f.mz(MassMode::Monoisotopic)
-                                    .ppm(point.experimental_mz)
-                                    .value,
-                                f.clone(),
-                            )
-                        },
-                        |f| {
-                            (
-                                (f.mz(MassMode::Monoisotopic) - point.experimental_mz)
-                                    .abs()
-                                    .value,
-                                f.clone(),
-                            )
-                        },
-                        &|a: (f64, Fragment), b: (f64, Fragment)| a.0.total_cmp(&b.0),
+                        mass_mode,
                     )
                 }),
                 z: (model.z.0 != Location::None).then(|| {
-                    RelAndAbs::get(
+                    RelAndAbs::retrieve(
+                        point,
                         fragments,
                         |f| matches!(f.ion, FragmentType::z(_)),
-                        |f| {
-                            (
-                                f.mz(MassMode::Monoisotopic)
-                                    .ppm(point.experimental_mz)
-                                    .value,
-                                f.clone(),
-                            )
-                        },
-                        |f| {
-                            (
-                                (f.mz(MassMode::Monoisotopic) - point.experimental_mz)
-                                    .abs()
-                                    .value,
-                                f.clone(),
-                            )
-                        },
-                        &|a: (f64, Fragment), b: (f64, Fragment)| a.0.total_cmp(&b.0),
+                        mass_mode,
                     )
                 }),
             },
@@ -383,35 +305,20 @@ fn spectrum_graph_boundaries(
             )
         },
     );
-    let n = if model.c.0 != Location::None {
-        "c"
-    } else if model.b.0 != Location::None {
-        "b"
-    } else {
-        "a"
-    };
-    let c = if model.z.0 != Location::None {
-        "z"
-    } else if model.y.0 != Location::None {
-        "y"
-    } else {
-        "x"
-    };
-    (data, bounds, format!("{n}/{c}"))
+    (data, bounds)
 }
 
 fn render_error_graph(
     output: &mut String,
     boundaries: &Boundaries,
     data: &SpectrumGraphData,
-    ions: &str,
     x_max: f64,
 ) {
     write!(output, "<div class='error-graph-y-axis'>").unwrap();
     write!(output, "<span class='max'>{:.2}</span>", boundaries.2).unwrap();
     write!(
         output,
-        "<span class='title abs'>Absolute distance to closest {ions} ion (Da)</span><span class='title rel'>Relative distance to closest {ions} ion (ppm)</span>"
+        "<span class='title' id='error-graph-y-title'>Y title</span>"
     )
     .unwrap();
     write!(output, "<span class='min'>{:.2}</span>", boundaries.3).unwrap();
@@ -426,7 +333,7 @@ fn render_error_graph(
     //     "abs",
     // );
     write!(output, "</div>").unwrap();
-    write!(output, "<div class='error-graph canvas'>",).unwrap();
+    write!(output, "<div id='error-graph' class='error-graph canvas'>",).unwrap();
     write!(output, "<div class='x-axis'>").unwrap();
     write!(output, "<span class='min'>0</span>").unwrap();
     write!(output, "<span class='max'>{:.2}</span>", x_max).unwrap();
@@ -444,6 +351,10 @@ fn render_error_graph(
             HtmlTag::span
                 .empty()
                 .header("class", format!("point {}", get_classes(&point.annotation)))
+                .style(format!(
+                    "--mz:{};--intensity:{};",
+                    point.mz.value, point.intensity
+                ))
                 .data(
                     [
                         (
