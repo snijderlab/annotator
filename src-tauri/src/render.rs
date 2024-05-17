@@ -1562,6 +1562,14 @@ fn engineering_notation(value: f64, precision: usize) -> (String, Option<char>, 
     }
 }
 
+pub fn display_stubs(formula: &(MolecularFormula, MolecularFormula)) -> String {
+    format!(
+        "{}&{}",
+        display_formula(&formula.0),
+        display_formula(&formula.1)
+    )
+}
+
 pub fn display_formula(formula: &MolecularFormula) -> String {
     if formula.is_empty() {
         "<span class='formula empty'>(empty)</span>".to_string()

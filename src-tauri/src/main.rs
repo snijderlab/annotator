@@ -24,7 +24,7 @@ use std::sync::Mutex;
 
 use crate::{
     html_builder::{HtmlElement, HtmlTag},
-    metadata_render::RenderToHtml, render::display_neutral_loss,
+    metadata_render::RenderToHtml, render::{display_neutral_loss, display_stubs},
 };
 use serde::{Deserialize, Serialize};
 
@@ -350,7 +350,7 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Custo
                         ]);
                     }
                 }
-            } else if let Modification::Simple(SimpleModification::Linker { specificities, name, id, length, ontology, diagnostic_ions, .. }) = &modification {
+            } else if let Modification::Simple(SimpleModification::Linker { specificities, name, id, length, ontology,  .. }) = &modification {
                 output = output.content(
                     HtmlElement::new(HtmlTag::p)
                         .content(format!(
@@ -366,19 +366,22 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Custo
                 output = output.content(
                     HtmlElement::new(HtmlTag::p)
                         .content(format!(
-                            "Length: {}{}{}", length.map_or("-".to_string(), |l|l.to_string()), if diagnostic_ions.is_empty() {""} else {", diagnostic ions: "}, diagnostic_ions.iter().map(|d| &d.0).map(display_formula).join(",")
+                            "Length: {}", length.map_or("-".to_string(), |l|l.to_string()), 
                         ))
                 );
                 output = output.content(HtmlElement::new(HtmlTag::p).content("Placement rules"));
                 let mut ul = HtmlElement::new(HtmlTag::ul);
 
-                match specificities {
-                    LinkerSpecificity::Symmetric(places, stubs) => {
-                        ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!("Positions: {}{}{}", render_places(places), if stubs.is_empty() {""} else {", stubs: "}, stubs.iter().map(display_formula).join(","))));
-                    }
-                    LinkerSpecificity::Asymmetric((left_places, left_stubs),(right_places,right_stubs)) => {
-                        ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!("Positions: {}{}{}", render_places(left_places), if left_stubs.is_empty() {""} else {", stubs: "}, left_stubs.iter().map(display_formula).join(","))));
-                        ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!("Positions: {}{}{}", render_places(right_places), if right_stubs.is_empty() {""} else {", stubs: "}, right_stubs.iter().map(display_formula).join(","))));
+                for specificity in specificities {
+                    match specificity {
+                        LinkerSpecificity::Symmetric(places, stubs, diagnostic_ions) => {
+                            ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!("Positions: {}{}{}{}{}", render_places(places), if stubs.is_empty() {""} else {", stubs: "}, stubs.iter().map(display_stubs).join(","),if diagnostic_ions.is_empty() {""} else {", diagnostic ions: "}, diagnostic_ions.iter().map(|d| &d.0).map(display_formula).join(","))));
+                        }
+                        LinkerSpecificity::Asymmetric((left_places, right_places),stubs, diagnostic_ions) => {
+                            ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!("Positions: {}{}{}<br>", render_places(left_places), if stubs.is_empty() {""} else {", stubs: "}, stubs.iter().map(|(s,_)|display_formula(s)).join(","))))
+                            .content(format!("Positions: {}{}{}", render_places(right_places), if stubs.is_empty() {""} else {", stubs: "}, stubs.iter().map(|(_,s)|display_formula(s)).join(",")))
+                            .content(format!("{}{}",if diagnostic_ions.is_empty() {""} else {"<br>Diagnostic ions: "}, diagnostic_ions.iter().map(|d| &d.0).map(display_formula).join(",")));
+                        }
                     }
                 }
                 output = output.content(ul);
