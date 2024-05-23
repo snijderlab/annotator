@@ -4,7 +4,7 @@ use itertools::Itertools;
 use rustyms::{
     fragment::*,
     model::Location,
-    modification::SimpleModification,
+    modification::{Ontology, SimpleModification},
     spectrum::{AnnotatedPeak, PeakSpectrum, Recovered, Score},
     system::{da, mz, Mass, MassOverCharge},
     AnnotatedSpectrum, LinearPeptide, Linked, MassMode, Model, Modification, MolecularFormula,
@@ -759,14 +759,12 @@ fn render_linear_peptide(
             .filter_map(|m| {
                 if let Modification::CrossLink { peptide, name, .. } = m {
                     Some(format!(
-                        "{}#{}",
+                        "{}{name}",
                         if *peptide != index {
                             format!("p{}", peptide + 1)
                         } else {
                             String::new()
                         },
-                        name.clone()
-                            .map_or("BRANCH".to_string(), |name| format!("XL{name}"))
                     ))
                 } else {
                     None
@@ -954,6 +952,7 @@ fn render_spectrum(
 pub fn spectrum_table(
     spectrum: &AnnotatedSpectrum,
     fragments: &[Fragment],
+    multiple_peptidoforms: bool,
     multiple_peptides: bool,
 ) -> String {
     fn generate_text(
@@ -1017,6 +1016,7 @@ pub fn spectrum_table(
         <table id='spectrum-table' class='wide-table'>
             <thead><tr>
                 {}
+                {}
                 <th>Position</th>
                 <th>Ion type</th>
                 <th>Loss</th>
@@ -1029,6 +1029,11 @@ pub fn spectrum_table(
                 <th>Series Number</th>
                 <th>Additional label</th>
             </tr></thead><tdata>",
+        if multiple_peptidoforms {
+            "<th>Peptidoform</th>"
+        } else {
+            ""
+        },
         if multiple_peptides {
             "<th>Peptide</th>"
         } else {
@@ -1044,6 +1049,7 @@ pub fn spectrum_table(
                 peak.experimental_mz.value,
                 [
                     "unassigned".to_string(),
+                    "-".to_string(),
                     "-".to_string(),
                     "-".to_string(),
                     "-".to_string(),
@@ -1065,6 +1071,11 @@ pub fn spectrum_table(
                     peak.experimental_mz.value,
                     [
                         "matched".to_string(),
+                        if multiple_peptidoforms {
+                            format!("{}", annotation.peptidoform_index + 1)
+                        } else {
+                            String::new()
+                        },
                         if multiple_peptides {
                             format!("{}", annotation.peptide_index + 1)
                         } else {
@@ -1111,6 +1122,11 @@ pub fn spectrum_table(
                 fragment.mz(MassMode::Monoisotopic).value,
                 [
                     "fragment".to_string(),
+                    if multiple_peptidoforms {
+                        format!("{}", fragment.peptidoform_index + 1)
+                    } else {
+                        String::new()
+                    },
                     if multiple_peptides {
                         format!("{}", fragment.peptide_index + 1)
                     } else {
@@ -1589,5 +1605,13 @@ pub fn display_neutral_loss(formula: &NeutralLoss) -> String {
             "<span class='formula'>{}</span>",
             formula.hill_notation_html()
         )
+    }
+}
+
+pub fn link_modification(ontology: Ontology, id: usize, name: &str) -> String {
+    if ontology == Ontology::Gnome {
+        format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'>{0}:{1}</a>", ontology.char(), name)
+    } else {
+        format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'>{0}:{1}</a>", ontology.name(), id)
     }
 }

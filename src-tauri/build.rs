@@ -399,6 +399,19 @@ fn main() {
         <output class="error collapsible-content hidden" id="details-formula-error"></output>
         <output class="collapsible-content" id="details-formula-result"></output>
       </fieldset>
+      <input type="checkbox" id="collapsible-custom-mods">
+      <fieldset class="collapsible" data-linked-item="collapsible-custom-mods">
+        <legend>Custom mods</legend>
+        <dialog id="custom-mod-edit">
+            <label>Id<input id="custom-mod-id" type="number" disabled></input></label>
+            <label>Name<input id="custom-mod-name" type="text"></input></label>
+            <label>Formula<input id="custom-mod-formula" type="text"></input></label>
+            <button>Save</button>
+        </dialog>
+        <button>Create new</button>
+        <ol id="custom-mods">
+        </ol>
+      </fieldset>
       <input type="checkbox" id="collapsible-logs">
       <fieldset class="collapsible" data-linked-item="collapsible-logs">
       <legend>Logs</legend>
@@ -407,7 +420,7 @@ fn main() {
       </fieldset>
       <div class="grow"></div>
       <footer>
-        <p>Annotator by Snijderlab</p>
+        <p>Annotator by Douwe Schulte at the Snijderlab</p>
         <a href='https://github.com/snijderlab/annotator'>Open source at github (bugs can be reported here)</a>
         <p>Licensed under MIT OR Apache-2.0</p>
         <p>Version {}</p>

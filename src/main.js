@@ -319,7 +319,7 @@ async function annotate_spectrum() {
     document.querySelector("#annotate-button").classList.remove("loading");
   }).catch((error) => {
     document.querySelector("#spectrum-error").classList.remove("hidden");
-    document.querySelector("#spectrum-error").innerHTML = showError(error);
+    document.querySelector("#spectrum-error").innerHTML = showError(error, false);
     if (error.context.hasOwnProperty('Line') && error.context.Line.line == document.querySelector("#peptide").innerText) {
       let Line = error.context.Line;
       document.querySelector("#peptide").innerHTML = Line.line.slice(0, Line.offset) + "<span class='error'>" + Line.line.slice(Line.offset, Line.offset + Line.length) + "</span>" + Line.line.slice(Line.offset + Line.length, Line.line.length);
@@ -328,12 +328,20 @@ async function annotate_spectrum() {
   })
 }
 
-function showError(error) {
+function showError(error, showContext = true) {
   console.error(error);
   if (typeof error == "string") {
     return "<div class='raw'>" + error + "</div>";
   } else {
     let msg = "<p class='title'>" + error.short_description + "</p><p class='description'>" + error.long_description + "</p>";
+    if (showContext) {
+      if (error.context.hasOwnProperty('Line')) {
+        let Line = error.context.Line;
+        msg += "<pre>" + Line.line + "\n" + " ".repeat(Line.offset) + "^".repeat(Line.length) + "</pre>";
+      } else {
+        msg += "<pre>" + error.context + "</pre>";
+      }
+    }
     if (error.suggestions.length > 0) {
       msg += "<p>Did you mean any of the following?</p><ul>";
       for (let suggestion in error.suggestions) {

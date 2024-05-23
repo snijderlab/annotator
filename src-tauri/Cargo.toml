@@ -13,7 +13,7 @@ tauri-build = { version = "1.5", features = [] }
 tauri = { version = "1.6", features = ["dialog-open", "updater"] }
 
 [dependencies]
-itertools = "0.12"
+itertools = "0.13"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.6", features = ["shell-open", "dialog-open"] }

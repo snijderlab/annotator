@@ -24,7 +24,7 @@ use std::sync::Mutex;
 
 use crate::{
     html_builder::{HtmlElement, HtmlTag},
-    metadata_render::RenderToHtml, render::{display_neutral_loss, display_stubs},
+    metadata_render::RenderToHtml, render::{display_neutral_loss, display_stubs, link_modification},
 };
 use serde::{Deserialize, Serialize};
 
@@ -108,7 +108,7 @@ async fn search_peptide<'a>(
     let state = state
         .lock()
         .map_err(|_| CustomError::error("Cannot search", "The state is locked, are you trying to do many things at the same time?", Context::None))?;
-    let search = LinearPeptide::<Linked>::pro_forma(text, None)?
+    let search = LinearPeptide::<Linked>::pro_forma(text, Some(&state.database))?
         .simple()
         .ok_or_else(|| CustomError::error("Invalid search peptide", "A search peptide should be simple", Context::None))?;
     let data = state
@@ -165,12 +165,11 @@ async fn search_peptide<'a>(
 
 #[tauri::command]
 async fn details_formula(text: &str) -> Result<String, CustomError> {
-    let mut formula = if text.is_empty() {
+    let formula = if text.is_empty() {
         Err(CustomError::error("Invalid molecular formula", "The test is empty", Context::None))
     } else {
         MolecularFormula::from_pro_forma(text)
-    };
-    let formula = formula?;
+    }?;
     let isotopes = formula.isotopic_distribution(0.001);
     let (max, max_occurrence) = isotopes
         .iter()
@@ -263,6 +262,9 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Custo
                 }
                 PlacementRule::Terminal(pos) => {
                     format!("{}", pos)
+                }
+                PlacementRule::Anywhere => {
+                    "Anywhere".to_string()
                 }
             })
             .join(",")
@@ -394,10 +396,10 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Custo
                 Some(&["Name", "Id", "Monoisotopic mass", "Formula"]),
                 modifications
                     .iter()
-                    .map(|(ontology, id, _, modification)| {
+                    .map(|(ontology, id, name, modification)| {
                         [
                             modification.to_string(),
-                            format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'>{0}:{1}</a>", ontology.name(), id),
+                            link_modification(*ontology, *id, name),
                             display_mass(modification.formula().monoisotopic_mass()).to_string(),
                             display_formula(&modification.formula()),
                         ]
@@ -410,10 +412,10 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Custo
                 Some(&["Name", "Id"]),
                 modifications
                     .iter()
-                    .map(|(ontology, id, _, modification)| {
+                    .map(|(ontology, id, name, modification)| {
                         [
                             modification.to_string(),
-                            format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'>{0}:{1}</a>", ontology.name(), id),
+                            link_modification(*ontology, *id, name),
                         ]
                     }),
             )
@@ -423,9 +425,9 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Custo
             Some(&["Name", "Structure"]),
             modifications
                 .iter()
-                .map(|(_, _, _, modification)| {
+                .map(|(ontology, id, name, modification)| {
                     [
-                        format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}\";document.getElementById(\"search-modification-button\").click()'>{0}</a>", modification),
+                        link_modification(*ontology, *id, name),
                         if let SimpleModification::Gno(GnoComposition::Structure(structure), _) =
                             modification
                         {
@@ -437,6 +439,21 @@ async fn search_modification(text: &str, tolerance: f64) -> Result<String, Custo
                 }),
         )
         .to_string()),
+    }
+}
+
+fn edit_modification(state: ModifiableState, id: usize, name: &str, formula: &str) -> Result<(), CustomError> {
+    let formula = formula.parse::<f64>().map(|mass| Ok(MolecularFormula::with_additional_mass(mass))).unwrap_or_else(|_| MolecularFormula::from_pro_forma(formula))?;
+    if let Ok(mut state) = state.lock() {
+        let modification = (id, name.to_string(), SimpleModification::Predefined(formula, Vec::new(), Ontology::Custom, name.to_string(), id));
+        if let Some(index) = state.database.iter().position(|p| p.0 == id) {
+            state.database[index] = modification;
+        } else {
+            state.database.push(modification);
+        }
+        Ok(())
+    } else {
+        Err(CustomError::error("State locked", "Cannot unlock the mutable state, are you doing many things in parallel?", Context::None))
     }
 }
 
@@ -747,7 +764,7 @@ async fn annotate_spectrum<'a>(
         "most_abundant" => MassMode::MostAbundant,
         _ => return Err(CustomError::error("Invalid mass mode", "", Context::None)),
     };
-    let peptide = rustyms::CompoundPeptidoform::pro_forma(peptide, None)?;
+    let peptide = rustyms::CompoundPeptidoform::pro_forma(peptide, Some(&state.database))?;
     let multiple_peptidoforms = peptide.peptidoforms().len() == 1;
     let multiple_peptides = peptide
         .peptidoforms()
@@ -769,7 +786,7 @@ async fn annotate_spectrum<'a>(
         render::annotated_spectrum(&annotated, "spectrum", &fragments, &model, mass_mode);
     Ok(AnnotationResult {
         spectrum,
-        fragment_table: render::spectrum_table(&annotated, &fragments, multiple_peptides),
+        fragment_table: render::spectrum_table(&annotated, &fragments, multiple_peptidoforms, multiple_peptides),
         logs: format!("{annotated:#?}\n{model:#?}"),
         mz_max: limits.mz.value,
         intensity_max: limits.intensity,
@@ -781,6 +798,7 @@ fn main() {
         .manage(Mutex::new(State {
             spectra: Vec::new(),
             peptides: Vec::new(),
+            database: Vec::new(),
         }))
         .invoke_handler(tauri::generate_handler![
             annotate_spectrum,
