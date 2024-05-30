@@ -15,7 +15,7 @@ use crate::html_builder::{HtmlElement, HtmlTag};
 
 pub fn annotated_spectrum(
     spectrum: &AnnotatedSpectrum,
-    id: &str,
+    _id: &str,
     fragments: &[Fragment],
     model: &Model,
     mass_mode: MassMode,

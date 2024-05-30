@@ -1,10 +1,6 @@
 use itertools::Itertools;
-use rustyms::{
-    identification::{
-        FastaData, IdentifiedPeptide, MaxQuantData, MetaData, NovorData, OpairData, PeaksData,
-        SageData,
-    },
-    MultiChemical,
+use rustyms::identification::{
+    FastaData, IdentifiedPeptide, MaxQuantData, MetaData, NovorData, OpairData, PeaksData, SageData,
 };
 
 use crate::{

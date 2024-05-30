@@ -10,10 +10,9 @@ use rustyms::{
         GnoComposition, LinkerSpecificity, ModificationSearchResult, Ontology, SimpleModification,
     },
     placement_rule::PlacementRule,
-    system::{da, dalton, e, mz, usize::Charge, Mass, MassOverCharge},
+    system::{dalton, Mass},
     ReturnModification, *,
 };
-use std::sync::Mutex;
 
 use crate::{
     html_builder::{HtmlElement, HtmlTag},
@@ -85,9 +84,7 @@ pub async fn search_modification(text: &str, tolerance: f64) -> Result<String, C
             )));
 
             if let modification::SimpleModification::Database {
-                specificities,
-                formula,
-                id,
+                specificities, id, ..
             } = &modification
             {
                 output = output.content(render_modification_id(id));
@@ -146,7 +143,7 @@ pub async fn search_modification(text: &str, tolerance: f64) -> Result<String, C
                 specificities,
                 id,
                 length,
-                formula,
+                ..
             } = &modification
             {
                 output = output.content(render_modification_id(id));
