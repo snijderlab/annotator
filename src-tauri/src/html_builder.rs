@@ -170,6 +170,11 @@ impl From<String> for HtmlContent {
         HtmlContent::Text(value) // TODO: escape all html thingies
     }
 }
+impl From<&String> for HtmlContent {
+    fn from(value: &String) -> Self {
+        HtmlContent::Text(value.to_string()) // TODO: escape all html thingies
+    }
+}
 
 impl From<HtmlElement> for HtmlContent {
     fn from(value: HtmlElement) -> Self {

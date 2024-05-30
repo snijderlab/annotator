@@ -390,7 +390,11 @@ fn get_classes(annotations: &[(Fragment, Vec<MatchedIsotopeDistribution>)]) -> S
     let mut first_peptide_index = None;
     for (annotation, _) in annotations {
         output.push(annotation.ion.label().to_string());
-        output.push(format!("p{}", annotation.peptide_index));
+        output.push(format!("p{}", annotation.peptidoform_index));
+        output.push(format!(
+            "p{}-{}",
+            annotation.peptidoform_index, annotation.peptide_index
+        ));
         if let Some(num) = first_peptide_index {
             if num != annotation.peptide_index {
                 output.push("mp".to_string());
@@ -400,8 +404,8 @@ fn get_classes(annotations: &[(Fragment, Vec<MatchedIsotopeDistribution>)]) -> S
         }
         if let Some(pos) = annotation.ion.position() {
             output.push(format!(
-                "p{}-{}",
-                annotation.peptide_index, pos.sequence_index
+                "p{}-{}-{}",
+                annotation.peptidoform_index, annotation.peptide_index, pos.sequence_index
             ));
         }
         if annotation.ion.kind() == FragmentKind::Oxonium {
@@ -730,23 +734,25 @@ fn render_linear_peptide(
     multiple_peptides: bool,
 ) {
     write!(output, "<div class='peptide'>").unwrap();
-    if multiple_peptidoforms && multiple_peptides {
+    if multiple_peptides || multiple_peptidoforms {
         write!(
             output,
-            "<span class='name'>{}.{}</span>",
-            peptidoform_index + 1,
-            peptide_index + 1
+            "{}",
+            HtmlTag::span
+                .empty()
+                .class("name")
+                .data([("pos", format!("{peptidoform_index}-{peptide_index}"))])
+                .content(if multiple_peptidoforms && multiple_peptides {
+                    format!("{}.{}", peptidoform_index + 1, peptide_index + 1)
+                } else if multiple_peptidoforms {
+                    (peptidoform_index + 1).to_string()
+                } else if multiple_peptides {
+                    (peptide_index + 1).to_string()
+                } else {
+                    String::new()
+                })
         )
         .unwrap();
-    } else if multiple_peptidoforms {
-        write!(
-            output,
-            "<span class='name'>{}</span>",
-            peptidoform_index + 1
-        )
-        .unwrap();
-    } else if multiple_peptides {
-        write!(output, "<span class='name'>{}</span>", peptide_index + 1).unwrap();
     }
     if peptide.n_term.is_some() {
         write!(output, "<span class='modification term'></span>").unwrap();

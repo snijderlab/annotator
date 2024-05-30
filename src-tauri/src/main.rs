@@ -11,27 +11,22 @@ use rustyms::{
     error::*,
     identification::*,
     model::*,
-    modification::{
-        GnoComposition, LinkerSpecificity, ModificationSearchResult, Ontology, SimpleModification,
+    modification::{ Ontology, SimpleModification,
     },
-    placement_rule::PlacementRule,
     spectrum::*,
-    system::{da, dalton, e, mz, usize::Charge, Mass, MassOverCharge},
-    ReturnModification, *,
+    system::{da, e, mz, usize::Charge, MassOverCharge},*,
 };
 use state::State;
 use std::sync::Mutex;
 
-use crate::{
-    html_builder::{HtmlElement, HtmlTag},
-    metadata_render::RenderToHtml, render::{display_neutral_loss, display_stubs, link_modification},
-};
+use crate::metadata_render::RenderToHtml;
 use serde::{Deserialize, Serialize};
 
 mod html_builder;
 mod metadata_render;
 mod render;
 mod state;
+mod search;
 
 type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
 
@@ -237,215 +232,10 @@ async fn details_formula(text: &str) -> Result<String, CustomError> {
         ))
 }
 
-#[tauri::command]
-async fn search_modification(text: &str, tolerance: f64) -> Result<String, CustomError> {
-    fn render_places(places: &[PlacementRule]) -> String {
-        if places.is_empty() {
-            "Anywhere".to_string()
-        } else {
-        places
-            .iter()
-            .map(|rule| match rule {
-                PlacementRule::AminoAcid(aa, pos) => {
-                    format!(
-                        "{}@{}",
-                        aa.iter().map(|a| a.char()).collect::<String>(),
-                        pos
-                    )
-                }
-                PlacementRule::PsiModification(index, pos) => {
-                    format!(
-                        "{}@{}",
-                        Ontology::Psimod.find_id(*index, None).unwrap(),
-                        pos
-                    )
-                }
-                PlacementRule::Terminal(pos) => {
-                    format!("{}", pos)
-                }
-                PlacementRule::Anywhere => {
-                    "Anywhere".to_string()
-                }
-            })
-            .join(",")
-        }
-    }
-
-    let modification = if text.is_empty() {
-        Err(CustomError::error("Invalid modification", "The modification is empty", Context::None))
-    } else {
-        Modification::try_from(text, 0..text.len(), &mut Vec::new(), &mut Vec::new(), None)
-            .map(|m| match m {
-                ReturnModification::Defined(d) => Ok(d),
-                _ => Err(
-                    CustomError::error("Invalid modification", "Can not define ambiguous modifications for the modifications parameter", Context::None)
-                ),
-            })
-    }??;
-    let tolerance = Tolerance::new_absolute(Mass::new::<dalton>(tolerance));
-    let result = Modification::search(&modification, tolerance, None);
-
-    match result {
-        ModificationSearchResult::Single(modification) => {
-            let mut output = HtmlElement::new(HtmlTag::div);
-
-            output = output.content(HtmlElement::new(HtmlTag::p).content(format!(
-                "Formula {} monoisotopic mass {} average mass {} most abundant mass {}",
-                display_formula(&modification.formula()), 
-                display_mass(modification.formula().monoisotopic_mass()),
-                display_mass(modification.formula().average_weight()),
-                display_mass(modification.formula().most_abundant_mass()),
-            )));
-
-            if let Modification::Simple(modification::SimpleModification::Predefined(_, rules, ontology, name, index)) = &modification {
-                output = output.content(
-                    HtmlElement::new(HtmlTag::p)
-                        .content(format!(
-                            "Ontology: {ontology}, name: {name}, index: {index}, "
-                        ))
-                        .maybe_content(
-                            modification.ontology_url().map(|url| HtmlElement::new(HtmlTag::a)
-                                .content("ontology link")
-                                .header("href", url)
-                                .header("target", "_blank")),
-                        ),
-                );
-                output = output.content(HtmlElement::new(HtmlTag::p).content("Placement rules"));
-                let mut ul = HtmlElement::new(HtmlTag::ul);
-
-                for rule in rules {
-                    ul = ul.content(HtmlElement::new(HtmlTag::li).content(
-                        format!("Positions: {}{}{}{}{}", render_places(&rule.0),
-                            if rule.1.is_empty() { ""} else {", Neutral losses: "},
-                            rule.1.iter().map(display_neutral_loss).join(","),
-                            if rule.2.is_empty() { ""} else {", Diagnostic ions: "},
-                            rule.2.iter().map(|d| &d.0).map(display_formula).join(","))
-                        ));                    
-                }
-                output = output.content(ul);
-            } else if let Modification::Simple(SimpleModification::Gno(composition, name)) = &modification {
-                output = output.content(
-                    HtmlElement::new(HtmlTag::p)
-                        .content(format!("Ontology: Gnome, name: {name}, "))
-                        .maybe_content(
-                            modification.ontology_url().map(|url| HtmlElement::new(HtmlTag::a)
-                                .content("ontology link")
-                                .header("href", url)
-                                .header("target", "_blank")),
-                        ),
-                );
-                match composition {
-                    GnoComposition::Mass(_) => {
-                        output =
-                            output.content(HtmlElement::new(HtmlTag::p).content("Only mass known"));
-                    }
-                    GnoComposition::Structure(structure) => {
-                        output.extend([
-                            HtmlElement::new(HtmlTag::p).content(format!(
-                                "Composition: {}",
-                                structure
-                                    .composition()
-                                    .iter()
-                                    .fold(String::new(), |acc, m| acc + &format!("{}{}", m.0, m.1))
-                            )),
-                            HtmlElement::new(HtmlTag::p).content(format!("Structure: {structure}")),
-                        ]);
-                    }
-                }
-            } else if let Modification::Simple(SimpleModification::Linker { specificities, name, id, length, ontology,  .. }) = &modification {
-                output = output.content(
-                    HtmlElement::new(HtmlTag::p)
-                        .content(format!(
-                            "Ontology: {ontology}, name: {name}, index: {id}"
-                        ))
-                        .maybe_content(
-                            modification.ontology_url().map(|url| HtmlElement::new(HtmlTag::a)
-                                .content("ontology link")
-                                .header("href", url)
-                                .header("target", "_blank")),
-                        ),
-                );
-                output = output.content(
-                    HtmlElement::new(HtmlTag::p)
-                        .content(format!(
-                            "Length: {}", length.map_or("-".to_string(), |l|l.to_string()), 
-                        ))
-                );
-                output = output.content(HtmlElement::new(HtmlTag::p).content("Placement rules"));
-                let mut ul = HtmlElement::new(HtmlTag::ul);
-
-                for specificity in specificities {
-                    match specificity {
-                        LinkerSpecificity::Symmetric(places, stubs, diagnostic_ions) => {
-                            ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!("Positions: {}{}{}{}{}", render_places(places), if stubs.is_empty() {""} else {", stubs: "}, stubs.iter().map(display_stubs).join(","),if diagnostic_ions.is_empty() {""} else {", diagnostic ions: "}, diagnostic_ions.iter().map(|d| &d.0).map(display_formula).join(","))));
-                        }
-                        LinkerSpecificity::Asymmetric((left_places, right_places),stubs, diagnostic_ions) => {
-                            ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!("Positions: {}{}{}<br>", render_places(left_places), if stubs.is_empty() {""} else {", stubs: "}, stubs.iter().map(|(s,_)|display_formula(s)).join(","))))
-                            .content(format!("Positions: {}{}{}", render_places(right_places), if stubs.is_empty() {""} else {", stubs: "}, stubs.iter().map(|(_,s)|display_formula(s)).join(",")))
-                            .content(format!("{}{}",if diagnostic_ions.is_empty() {""} else {"<br>Diagnostic ions: "}, diagnostic_ions.iter().map(|d| &d.0).map(display_formula).join(",")));
-                        }
-                    }
-                }
-                output = output.content(ul);
-            }
-
-            Ok(output.to_string())
-        }
-        ModificationSearchResult::Mass(_, _, modifications) => {
-            Ok(html_builder::HtmlElement::table(
-                Some(&["Name", "Id", "Monoisotopic mass", "Formula"]),
-                modifications
-                    .iter()
-                    .map(|(ontology, id, name, modification)| {
-                        [
-                            modification.to_string(),
-                            link_modification(*ontology, *id, name),
-                            display_mass(modification.formula().monoisotopic_mass()).to_string(),
-                            display_formula(&modification.formula()),
-                        ]
-                    }),
-            )
-            .to_string())
-        }
-        ModificationSearchResult::Formula(_, modifications) => {
-            Ok(html_builder::HtmlElement::table(
-                Some(&["Name", "Id"]),
-                modifications
-                    .iter()
-                    .map(|(ontology, id, name, modification)| {
-                        [
-                            modification.to_string(),
-                            link_modification(*ontology, *id, name),
-                        ]
-                    }),
-            )
-            .to_string())
-        }
-        ModificationSearchResult::Glycan(_, modifications) => Ok(html_builder::HtmlElement::table(
-            Some(&["Name", "Structure"]),
-            modifications
-                .iter()
-                .map(|(ontology, id, name, modification)| {
-                    [
-                        link_modification(*ontology, *id, name),
-                        if let SimpleModification::Gno(GnoComposition::Structure(structure), _) =
-                            modification
-                        {
-                            structure.to_string()
-                        } else {
-                            "-".to_string()
-                        },
-                    ]
-                }),
-        )
-        .to_string()),
-    }
-}
-
 fn edit_modification(state: ModifiableState, id: usize, name: &str, formula: &str) -> Result<(), CustomError> {
     let formula = formula.parse::<f64>().map(|mass| Ok(MolecularFormula::with_additional_mass(mass))).unwrap_or_else(|_| MolecularFormula::from_pro_forma(formula))?;
     if let Ok(mut state) = state.lock() {
-        let modification = (id, name.to_string(), SimpleModification::Predefined(formula, Vec::new(), Ontology::Custom, name.to_string(), id));
+        let modification = (id, name.to_string(), SimpleModification::Database{formula, specificities: Vec::new(), id: modification::ModificationId { ontology: Ontology::Custom, name: name.to_string(), id, description: String::new(), synonyms: Vec::new(), cross_ids: Vec::new() }});
         if let Some(index) = state.database.iter().position(|p| p.0 == id) {
             state.database[index] = modification;
         } else {
@@ -810,7 +600,7 @@ fn main() {
             load_identified_peptides,
             load_mgf,
             refresh,
-            search_modification,
+            search::search_modification,
             search_peptide,
             spectrum_details,
             render::density_graph,
