@@ -338,7 +338,7 @@ impl RenderToHtml for MaxQuantData {
                     ],
                     &["Charge".to_string(), self.z.value.to_string()],
                     &["Fragmentation".to_string(), self.fragmentation.to_string()],
-                    &["Mass analyzer".to_string(), self.mass_analyser.to_string()],
+                    &["Mass analyser".to_string(), self.mass_analyser.to_string()],
                     &["Type".to_string(), self.ty.to_string()],
                     &[
                         "Scan event number".to_string(),
@@ -419,7 +419,7 @@ impl RenderToHtml for MaxQuantData {
                         self.score_diff.to_optional_string(),
                     ],
                     &[
-                        "Localization prob".to_string(),
+                        "Localization probability".to_string(),
                         self.localisation_probability.to_optional_string(),
                     ],
                     &[

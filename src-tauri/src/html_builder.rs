@@ -202,7 +202,7 @@ pub enum HtmlTag {
     acronym,
     /// Content sectioning - The <address> HTML element indicates that the enclosed HTML provides contact information for a person or people, or for an organization.
     address,
-    /// Obsolete and deprecated - The obsolete HTML Applet Element (<applet>) embeds a Java applet into the document; this element has been deprecated in favor of object.
+    /// Obsolete and deprecated - The obsolete HTML Applet Element (<applet>) embeds a Java applet into the document; this element has been deprecated in favour of object.
     applet,
     /// Image and multimedia - The <area> HTML element defines an area inside an image map that has predefined clickable areas. An image map allows geometric areas on an image to be associated with Hyperlink.
     area,
@@ -236,7 +236,7 @@ pub enum HtmlTag {
     canvas,
     /// Table content - The <caption> HTML element specifies the caption (or title) of a table.
     caption,
-    /// Obsolete and deprecated - The <center> HTML element is a block-level element that displays its block-level or inline contents centered horizontally within its containing element. The container is usually, but isn't required to be, body.
+    /// Obsolete and deprecated - The <center> HTML element is a block-level element that displays its block-level or inline contents centred horizontally within its containing element. The container is usually, but isn't required to be, body.
     center,
     /// Inline text semantics - The <cite> HTML element is used to describe a reference to a cited creative work, and must include the title of that work. The reference may be in an abbreviated form according to context-appropriate conventions related to citation metadata.
     cite,
@@ -356,7 +356,7 @@ pub enum HtmlTag {
     nav,
     /// Obsolete and deprecated - The <nobr> HTML element prevents the text it contains from automatically wrapping across multiple lines, potentially resulting in the user having to scroll horizontally to see the entire width of the text.
     nobr,
-    /// Obsolete and deprecated - The <noembed> HTML element is an obsolete, non-standard way to provide alternative, or "fallback", content for browsers that do not support the embed element or do not support the type of embedded content an author wishes to use. This element was deprecated in HTML 4.01 and above in favor of placing fallback content between the opening and closing tags of an object element.
+    /// Obsolete and deprecated - The <noembed> HTML element is an obsolete, non-standard way to provide alternative, or "fallback", content for browsers that do not support the embed element or do not support the type of embedded content an author wishes to use. This element was deprecated in HTML 4.01 and above in favour of placing fallback content between the opening and closing tags of an object element.
     noembed,
     /// Obsolete and deprecated - The <noframes> HTML element provides content to be presented in browsers that don't support (or have disabled support for) the frame element. Although most commonly-used browsers support frames, there are exceptions, including certain special-use browsers including some mobile browsers, as well as text-mode browsers.
     noframes,
@@ -462,7 +462,7 @@ pub enum HtmlTag {
     u,
     /// Text content - The <ul> HTML element represents an unordered list of items, typically rendered as a bulleted list.
     ul,
-    /// Inline text semantics - The <var> HTML element represents the name of a variable in a mathematical expression or a programming context. It's typically presented using an italicized version of the current typeface, although that behavior is browser-dependent.
+    /// Inline text semantics - The <var> HTML element represents the name of a variable in a mathematical expression or a programming context. It's typically presented using an italicized version of the current typeface, although that behaviour is browser-dependent.
     var,
     /// Image and multimedia - The <video> HTML element embeds a media player which supports video playback into the document. You can use <video> for audio content as well, but the audio element may provide a more appropriate user experience.
     video,

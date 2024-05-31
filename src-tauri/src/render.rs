@@ -682,10 +682,10 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
         max_intensity_unassigned = max_intensity_unassigned.max(peak.intensity.0);
         if !peak.annotation.is_empty() {
             max_intensity = max_intensity.max(peak.intensity.0);
-            peak.annotation.iter().for_each(|(frag, _)| {
-                frag.ion.position().map(|i| {
-                    output[frag.peptidoform_index][frag.peptide_index][i.sequence_index]
-                        .insert(frag.ion.clone())
+            peak.annotation.iter().for_each(|(fragment, _)| {
+                fragment.ion.position().map(|i| {
+                    output[fragment.peptidoform_index][fragment.peptide_index][i.sequence_index]
+                        .insert(fragment.ion.clone())
                 });
             });
         }
@@ -1486,9 +1486,10 @@ fn density_estimation<const STEPS: usize>(mut data: Vec<f64>) -> ([f64; STEPS], 
     let first_half_sum: f64 = data.iter().take(half.floor() as usize).sum();
     let last_half_sum: f64 = data.iter().skip(half.floor() as usize).sum();
     let mean: f64 = (first_half_sum + last_half_sum) / len;
-    let stdev: f64 = (data.iter().map(|p| (mean - p).powi(2)).sum::<f64>() / len).sqrt();
+    let standard_deviation: f64 =
+        (data.iter().map(|p| (mean - p).powi(2)).sum::<f64>() / len).sqrt();
     let iqr: f64 = last_half_sum / half - first_half_sum / half;
-    let h = 0.25 * stdev.min(iqr / 1.34) * len.powf(-0.2);
+    let h = 0.25 * standard_deviation.min(iqr / 1.34) * len.powf(-0.2);
 
     let gaussian_kernel =
         |x: f64| 1.0 / (2.0 * std::f64::consts::PI).sqrt() * (-1.0 / 2.0 * x.powi(2)).exp();
