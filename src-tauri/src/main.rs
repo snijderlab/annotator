@@ -121,6 +121,11 @@ async fn details_formula(text: &str) -> Result<String, CustomError> {
         ))
 }
 
+#[tauri::command]
+fn validate_molecular_formula(text: String) -> Result<String, CustomError> {
+    text.parse::<f64>().map(MolecularFormula::with_additional_mass).or_else(|_|MolecularFormula::from_pro_forma(&text)).map(|f| f.hill_notation_html())
+}
+
 fn edit_modification(state: ModifiableState, id: usize, name: &str, formula: &str) -> Result<(), CustomError> {
     let formula = formula.parse::<f64>().map(|mass| Ok(MolecularFormula::with_additional_mass(mass))).unwrap_or_else(|_| MolecularFormula::from_pro_forma(formula))?;
     if let Ok(mut state) = state.lock() {
@@ -439,6 +444,7 @@ fn main() {
             identified_peptides::search_peptide,
             spectrum_details,
             render::density_graph,
+            validate_molecular_formula,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

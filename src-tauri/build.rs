@@ -200,7 +200,7 @@ fn main() {
             <input type="text" id="model-glycan-loss" value="" title="Supply all losses as +/- followed by the chemical formula, supply multiple by separating them by commas. Example: '+H2O,-H2O'."/>
           </fieldset>
           <label class="wide" for="peptide">Peptide sequence </label>
-          <div class="peptide-input wide" id="peptide" contentEditable="plaintext-only"></div>
+          <div class="peptide-input wide context" id="peptide" contentEditable="plaintext-only"></div>
           <button id="annotate-button" type="button" class="col-2">Annotate</button>
         </div>
       <output id="spectrum-error" class="hidden error"></output>
@@ -403,14 +403,72 @@ fn main() {
       <fieldset class="collapsible" data-linked-item="collapsible-custom-mods">
         <legend>Custom mods</legend>
         <dialog id="custom-mod-edit">
+          <fieldset>
+            <legend>Basic features</legend>
             <label>Id<input id="custom-mod-id" type="number" disabled></input></label>
             <label>Name<input id="custom-mod-name" type="text"></input></label>
             <label>Formula<input id="custom-mod-formula" type="text"></input></label>
-            <button>Save</button>
+          </fieldset>
+          <fieldset>
+            <legend>Metadata</legend>
+            <label>Description<input id="custom-mod-description" type="text"></input></label>
+            <div class="list-input">
+              <h2>Synonyms</h2>
+              <div id="custom-mod-synonyms"></div>
+              <button id="custom-mod-synonym-add">Add</button>
+              <dialog id="custom-mod-synonym-add-dialog">
+                <label>Synonym<input type="text" id="custom-mod-synonym-new"></input></label>
+                <button>Save</button>
+                <button>Delete</button>
+              </dialog>
+            </div>
+            <div class="list-input">
+              <h2>Cross IDs</h2>
+              <div id="custom-mod-cross-ids"></div>
+              <button id="custom-mod-cross-ids-add">Add</button>
+              <dialog id="custom-mod-cross-ids-add-dialog">
+                <label>System<input type="text" id="custom-mod-cross-ids-new-system"></input></label>
+                <label>Value<input type="text" id="custom-mod-cross-ids-new-value"></input></label>
+                <button>Save</button>
+                <button>Delete</button>
+              </dialog>
+            </div>
+          </fieldset>
+          <div class='row'>
+            <span class='title'>Modification type</span>
+            <div class='select-box' id='custom-mod-type'>
+              <label for='custom-mod-type-single' tabindex='0'><input type='radio' name='custom-mod-type' value='single' id='custom-mod-type-single' checked>Single</label>
+              <label for='custom-mod-type-linker' tabindex='0'><input type='radio' name='custom-mod-type' value='linker' id='custom-mod-type-linker'>Linker</label>
+            </div>
+          </div>
+          <fieldset>
+            <legend>Single</legend>
+            <div class="list-input">
+              <h2>Placement rules</h2>
+              <div id="custom-mod-single-specificities"></div>
+              <button id="custom-mod-single-specificities-add">Add</button>
+              <dialog id="custom-mod-single-specificities-add-dialog">
+                
+
+                <button>Save</button>
+                <button>Delete</button>
+              </dialog>
+            </div>
+          </fieldset>
+          <button>Save</button>
+          <button>Delete</button>
         </dialog>
         <button>Create new</button>
         <ol id="custom-mods">
         </ol>
+
+        <div class="separated-input">
+          <div class="values">
+            <div class="input context" placeholder="Add molecular formula or mass" data-type="molecular_formula" contentEditable="plaintext-only"></div>
+          </div>
+          <output class="error"></output>
+        </div>
+
       </fieldset>
       <input type="checkbox" id="collapsible-logs">
       <fieldset class="collapsible" data-linked-item="collapsible-logs">

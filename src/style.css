@@ -123,10 +123,11 @@ pre {
   overflow: hidden;
 }
 
-.peptide-input .error {
+.context .error {
   text-decoration: underline;
   text-decoration-style: wavy;
-  text-decoration-color: red;
+  text-decoration-color: var(--color-red);
+  color: var(--color-red);
 }
 
 .input-settings .wide {
@@ -599,4 +600,81 @@ footer {
 
 label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-detail {
   display: none;
+}
+
+.separated-input {
+  & output.error {
+    display: none
+  }
+
+  &.error:focus-within output.error {
+    display: block;
+  }
+
+  & .values {
+    display: flex;
+    flex-wrap: wrap;
+    border-radius: 0;
+    padding: .2rem;
+    cursor: pointer;
+    border: 2px solid var(--color-halfway);
+    background: var(--color-background);
+    font-size: 1rem;
+
+    &:hover {
+      border-color: var(--color-halfway-fg);
+    }
+
+    &:focus-visible,
+    &:focus-within {
+      border-color: var(--color-foreground);
+      outline: none;
+    }
+
+    &:active {
+      border-color: var(--color-primary);
+    }
+
+    & .input {
+      border: none;
+      padding: 0;
+      margin-left: .5rem;
+      flex-grow: 1;
+      padding: 5px 0;
+      outline: none;
+    }
+
+    & .element {
+      list-style: none;
+      border: 2px solid var(--color-halfway);
+      padding: 2px;
+      margin: 0;
+      cursor: default;
+
+      &:not(:first-child) {
+        margin-left: .5rem;
+      }
+
+      & sub {
+        margin-bottom: -4px;
+        display: inline-block;
+      }
+
+      & sup {
+        margin-top: -4px;
+        display: inline-block;
+      }
+
+      & .delete {
+        background: transparent;
+        color: var(--color-red);
+        border: none;
+        border-radius: 0;
+        padding: 0;
+        margin: 0;
+        padding-left: .5rem;
+        cursor: pointer;
+      }
+    }
+  }
 }

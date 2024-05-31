@@ -302,7 +302,7 @@ async function annotate_spectrum() {
     modification_diagnostic: document.querySelector("#model-modification-diagnostic-enabled").checked,
     glycan: [document.querySelector("#model-glycan-enabled").checked, get_losses("glycan")],
   };
-  invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), tolerance: [Number(document.querySelector("#spectrum-tolerance").value), document.querySelector("#spectrum-tolerance-unit").value], charge: charge, filter: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").innerText, cmodel: model, massMode: document.querySelector("#spectrum-mass-mode").value }).then((result) => {
+  invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), tolerance: [Number(document.querySelector("#spectrum-tolerance").value), document.querySelector("#spectrum-tolerance-unit").value], charge: charge, filter: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").innerText, customModel: model, massMode: document.querySelector("#spectrum-mass-mode").value }).then((result) => {
     document.querySelector("#spectrum-results-wrapper").innerHTML = result.spectrum;
     document.querySelector("#spectrum-fragment-table").innerHTML = result.fragment_table;
     document.querySelector("#spectrum-log").innerText = result.log;
@@ -320,10 +320,7 @@ async function annotate_spectrum() {
   }).catch((error) => {
     document.querySelector("#spectrum-error").classList.remove("hidden");
     document.querySelector("#spectrum-error").innerHTML = showError(error, false);
-    if (error.context.hasOwnProperty('Line') && error.context.Line.line == document.querySelector("#peptide").innerText) {
-      let Line = error.context.Line;
-      document.querySelector("#peptide").innerHTML = Line.line.slice(0, Line.offset) + "<span class='error'>" + Line.line.slice(Line.offset, Line.offset + Line.length) + "</span>" + Line.line.slice(Line.offset + Line.length, Line.line.length);
-    }
+    document.querySelector("#peptide").innerHTML = showContext(error, document.querySelector("#peptide").innerText);
     document.querySelector("#annotate-button").classList.remove("loading");
   })
 }
@@ -350,6 +347,21 @@ function showError(error, showContext = true) {
       msg += "</ul>";
     }
     return msg;
+  }
+}
+
+function showContext(error, fallback) {
+  if (error.context.hasOwnProperty('Line')) {
+    let Line = error.context.Line;
+    return Line.line.slice(0, Line.offset) + "<span class='error'>" + Line.line.slice(Line.offset, Line.offset + Line.length) + "</span>" + Line.line.slice(Line.offset + Line.length, Line.line.length);
+  } else if (error.context.hasOwnProperty('FullLine')) {
+    let FullLine = error.context.FullLine;
+    return "<span class='error'>" + FullLine.line + "</span>";
+  } else if (error.context = "None") {
+    return fallback;
+  } else {
+    console.error("Error type not handled", error);
+    return fallback;
   }
 }
 
@@ -418,6 +430,54 @@ window.addEventListener("DOMContentLoaded", () => {
       event.target.innerHTML = event.target.innerText;
     });
   enter_event("#peptide", annotate_spectrum)
+  document.querySelectorAll(".separated-input").forEach(t => {
+    t.addEventListener("click", event => {
+      if (event.target.classList.contains("separated-input")) {
+        event.target.querySelector(".input").focus({ focusVisible: true })
+        event.preventDefault();
+      }
+    });
+  });
+  document.querySelectorAll(".separated-input .input").forEach(t => {
+    t.addEventListener("keydown", async event => {
+      let input = event.target;
+      let outer = input.parentElement.parentElement;
+      outer.classList.toggle("error", false);
+      if (event.keyCode == 13 || event.keyCode == 9) {
+        let value = undefined;
+        switch (input.dataset.type) {
+          case "molecular_formula":
+            value = await invoke("validate_molecular_formula", { text: input.innerText })
+              .catch(error => {
+                input.innerHTML = showContext(error, input.innerText);
+                outer.querySelector("output.error").innerHTML = showError(error, false);
+              });
+            break;
+          case "text":
+            value = input.innerText.trim();
+            break;
+          default: console.error("Invalid separated input type");
+        }
+        if (value !== undefined) {
+          let new_element = document.createElement("span");
+          new_element.classList.add("element");
+          new_element.innerHTML = value;
+          let delete_button = document.createElement("button");
+          delete_button.classList.add("delete");
+          delete_button.appendChild(document.createTextNode("X"));
+          delete_button.addEventListener("click", e => e.target.parentElement.remove());
+          new_element.appendChild(delete_button);
+
+          input.parentElement.insertBefore(new_element, input);
+          input.innerText = "";
+        } else {
+          console.log("Verification failed");
+          outer.classList.toggle("error", true);
+        }
+        event.preventDefault();
+      } else { }
+    });
+  });
 
   // Refresh interface for hot reload
   invoke("refresh").then((result) => {
@@ -442,5 +502,5 @@ function add_event(selector, events, callback) {
 function enter_event(selector, callback) {
   document
     .querySelector(selector)
-    .addEventListener("keypress", event => { if (event.keyCode == 13) { callback(event); event.preventDefault(); } else { } });
+    .addEventListener("keydown", event => { if (event.keyCode == 13) { callback(event); event.preventDefault(); } else { } });
 }
