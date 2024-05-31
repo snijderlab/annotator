@@ -167,7 +167,12 @@ fn main() {
               <input type="number" value="1" min="1">
               </div>
               {1}
-              <input type="text" id="model-{0}-loss" value="" title="Supply all losses as +/- followed by the chemical formula, supply multiple by separating them by commas. Example: '+H2O,-H2O'."/>"#,
+              <div class="separated-input">
+                <div class="values" id="model-{0}-loss">
+                  <div class="input context" placeholder="Add molecular formula or mass" data-type="molecular_formula" contentEditable="plaintext-only"></div>
+                </div>
+                <output class="error"></output>
+              </div>"#,
                 ion, create_loss_modal(ion)
             )
             .unwrap();

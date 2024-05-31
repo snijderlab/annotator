@@ -270,12 +270,16 @@ function get_losses(ion) {
       }
     }
   });
-  let custom = document.querySelector("#model-" + ion + "-loss").value;
-  if (loss == "") {
-    loss = custom;
-  } else {
-    loss += "," + custom;
-  }
+  document.querySelectorAll("#model-" + ion + "-loss>*").forEach(child => {
+    if (child.classList.contains("element")) { // TODO: handle numeric neutral losses + potentially make the handling of the separate ones somewhat better, give a list or something
+      let custom = "-" + child.dataset.value;
+      if (loss == "") {
+        loss = custom;
+      } else {
+        loss += "," + custom;
+      }
+    }
+  });
   return loss;
 }
 
@@ -462,9 +466,10 @@ window.addEventListener("DOMContentLoaded", () => {
           let new_element = document.createElement("span");
           new_element.classList.add("element");
           new_element.innerHTML = value;
+          new_element.dataset.value = new_element.innerText;
           let delete_button = document.createElement("button");
           delete_button.classList.add("delete");
-          delete_button.appendChild(document.createTextNode("X"));
+          delete_button.appendChild(document.createTextNode("x"));
           delete_button.addEventListener("click", e => e.target.parentElement.remove());
           new_element.appendChild(delete_button);
 
