@@ -434,6 +434,8 @@ window.addEventListener("DOMContentLoaded", () => {
       event.target.innerHTML = event.target.innerText;
     });
   enter_event("#peptide", annotate_spectrum)
+
+  // Set up all separated inputs
   document.querySelectorAll(".separated-input").forEach(t => {
     t.addEventListener("click", event => {
       if (event.target.classList.contains("separated-input")) {
@@ -445,9 +447,10 @@ window.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".separated-input .input").forEach(t => {
     t.addEventListener("keydown", async event => {
       let input = event.target;
+      let values_container = input.parentElement;
       let outer = input.parentElement.parentElement;
       outer.classList.toggle("error", false);
-      if (event.keyCode == 13 || event.keyCode == 9) {
+      if (event.keyCode == 13 || event.keyCode == 9) { // Enter or Tab
         let value = undefined;
         switch (input.dataset.type) {
           case "molecular_formula":
@@ -467,21 +470,45 @@ window.addEventListener("DOMContentLoaded", () => {
           new_element.classList.add("element");
           new_element.innerHTML = value;
           new_element.dataset.value = new_element.innerText;
+          new_element.addEventListener("click", e => {
+            let input = e.target.parentElement.querySelector(".input");
+            input.innerText = e.target.innerText.slice(0, -1);
+            moveCursorToEnd(input);
+            e.target.remove();
+          });
+          new_element.title = "Edit";
           let delete_button = document.createElement("button");
           delete_button.classList.add("delete");
           delete_button.appendChild(document.createTextNode("x"));
           delete_button.addEventListener("click", e => e.target.parentElement.remove());
+          delete_button.title = "Delete";
           new_element.appendChild(delete_button);
 
-          input.parentElement.insertBefore(new_element, input);
+          values_container.insertBefore(new_element, input);
           input.innerText = "";
         } else {
           console.log("Verification failed");
           outer.classList.toggle("error", true);
         }
         event.preventDefault();
-      } else { }
+      } else if (event.keyCode == 8 && !input.hasChildNodes()) { // Backspace
+        if (values_container.children.length >= 3) {
+          let target = values_container.children[values_container.children.length - 3];
+          input.innerText = target.innerText.slice(0, -1);
+          target.remove();
+          moveCursorToEnd(input);
+          event.preventDefault();
+        }
+      }
     });
+  });
+  document.querySelectorAll(".separated-input .clear").forEach(t => {
+    t.addEventListener("click", e => {
+      e.target.parentElement.querySelectorAll(".element").forEach(c => c.remove());
+      e.target.parentElement.querySelector(".input").innerText = "";
+      e.target.parentElement.parentElement.classList.remove("error");
+      e.target.parentElement.parentElement.querySelector(".error").innerText = "";
+    })
   });
 
   // Refresh interface for hot reload
@@ -497,6 +524,15 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   })
 });
+
+function moveCursorToEnd(contentEle) {
+  const range = document.createRange();
+  const selection = window.getSelection();
+  range.setStart(contentEle, contentEle.childNodes.length);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
+};
 
 function add_event(selector, events, callback) {
   for (let i = 0; i < events.length; i++) {

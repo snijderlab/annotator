@@ -170,6 +170,7 @@ fn main() {
               <div class="separated-input">
                 <div class="values" id="model-{0}-loss">
                   <div class="input context" placeholder="Add molecular formula or mass" data-type="molecular_formula" contentEditable="plaintext-only"></div>
+                  <button class="clear">Clear</button>
                 </div>
                 <output class="error"></output>
               </div>"#,
@@ -182,7 +183,13 @@ fn main() {
             r#"<label>precursor</label>
             <div class="empty"></div>
             {}
-            <input type="text" id="model-precursor-loss" value="" title="Supply all losses as +/- followed by the chemical formula, supply multiple by separating them by commas. Example: '+H2O,-H2O'."/>
+            <div class="separated-input">
+              <div class="values" id="model-precursor-loss">
+                <div class="input context" placeholder="Add molecular formula or mass" data-type="molecular_formula" contentEditable="plaintext-only"></div>
+                <button class="clear">Clear</button>
+              </div>
+              <output class="error"></output>
+            </div>
             <div class="grid-row">
               <label>immonium</label>
               <label><input id='model-immonium-enabled' type='checkbox' switch/>Enable</label>
@@ -202,7 +209,13 @@ fn main() {
             <label>glycan</label>
             <label><input id='model-glycan-enabled' type='checkbox' switch/>Enable</label>
             {}
-            <input type="text" id="model-glycan-loss" value="" title="Supply all losses as +/- followed by the chemical formula, supply multiple by separating them by commas. Example: '+H2O,-H2O'."/>
+            <div class="separated-input">
+              <div class="values" id="model-glycan-loss">
+                <div class="input context" placeholder="Add molecular formula or mass" data-type="molecular_formula" contentEditable="plaintext-only"></div>
+                <button class="clear">Clear</button>
+              </div>
+              <output class="error"></output>
+            </div>
           </fieldset>
           <label class="wide" for="peptide">Peptide sequence </label>
           <div class="peptide-input wide context" id="peptide" contentEditable="plaintext-only"></div>
@@ -470,6 +483,7 @@ fn main() {
         <div class="separated-input">
           <div class="values">
             <div class="input context" placeholder="Add molecular formula or mass" data-type="molecular_formula" contentEditable="plaintext-only"></div>
+            <button class="clear">Clear</button>
           </div>
           <output class="error"></output>
         </div>

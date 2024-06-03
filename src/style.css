@@ -642,6 +642,12 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
       flex-grow: 1;
       padding: 5px 0;
       outline: none;
+
+      &:empty::after {
+        content: attr(placeholder);
+        display: inline-block;
+        color: var(--color-halfway);
+      }
     }
 
     & .element {
@@ -649,7 +655,19 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
       border: 2px solid var(--color-halfway);
       padding: 2px;
       margin: 0;
-      cursor: default;
+
+      &:hover {
+        border-color: var(--color-halfway-fg);
+      }
+
+      &:active {
+        border-color: var(--color-primary);
+      }
+
+      &:focus-visible {
+        border-color: var(--color-foreground);
+        outline: none;
+      }
 
       &:not(:first-child) {
         margin-left: .5rem;
@@ -665,16 +683,41 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
         display: inline-block;
       }
 
+      &>*:not(.delete) {
+        pointer-events: none;
+      }
+
       & .delete {
         background: transparent;
-        color: var(--color-red);
+        color: var(--color-halfway);
         border: none;
         border-radius: 0;
         padding: 0;
         margin: 0;
         padding-left: .5rem;
         cursor: pointer;
+
+        &:hover {
+          color: var(--color-halfway-fg);
+        }
+
+        &:active {
+          color: var(--color-red);
+        }
+
+        &:focus-visible {
+          color: var(--color-foreground);
+          outline: none;
+        }
       }
+    }
+
+    & .clear {
+      display: none;
+    }
+
+    & *+*+.clear {
+      display: block;
     }
   }
 }
