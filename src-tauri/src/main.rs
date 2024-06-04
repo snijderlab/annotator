@@ -5,27 +5,28 @@
 
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
-use render::{display_formula, display_mass};
+use placement_rule::PlacementRule;
+use render::{display_formula, display_mass, display_neutral_loss, display_placement_rule};
 use rustyms::{
     error::*,
     model::*,
-    modification::{ Ontology, SimpleModification,
-    },
+    modification::{Ontology, SimpleModification},
     spectrum::*,
-    system::{e, mz, usize::Charge, MassOverCharge},*,
+    system::{e, mz, usize::Charge, MassOverCharge},
+    *,
 };
 use state::State;
-use std::sync::Mutex;
+use std::{str::FromStr, sync::Mutex};
 
 use crate::metadata_render::RenderToHtml;
 use serde::{Deserialize, Serialize};
 
 mod html_builder;
+mod identified_peptides;
 mod metadata_render;
 mod render;
-mod state;
 mod search_modification;
-mod identified_peptides;
+mod state;
 
 type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
 
@@ -50,7 +51,11 @@ async fn load_mgf<'a>(path: &'a str, state: ModifiableState<'a>) -> Result<usize
 #[tauri::command]
 async fn details_formula(text: &str) -> Result<String, CustomError> {
     let formula = if text.is_empty() {
-        Err(CustomError::error("Invalid molecular formula", "The test is empty", Context::None))
+        Err(CustomError::error(
+            "Invalid molecular formula",
+            "The test is empty",
+            Context::None,
+        ))
     } else {
         MolecularFormula::from_pro_forma(text)
     }?;
@@ -105,31 +110,119 @@ async fn details_formula(text: &str) -> Result<String, CustomError> {
                 .map(|(offset, i)| format!("<span class='{} {}' style='--intensity:{}' title='mono + {} Da {:.4}% of total intensity {:.4}% of highest intensity'></span>", 
                     if offset == 0 {"mono"} else {""}, 
                     if offset == max {"most-abundant"} else {""}, 
-                    i / *max_occurrence, 
-                    offset, 
-                    i * 100.0, 
+                    i / *max_occurrence,
+                    offset,
+                    i * 100.0,
                     i / * max_occurrence * 100.0))
                 .join(""))
     };
 
     Ok(format!(
         "<p>Details on {}</p><p><span style='color:var(--color-red)'>Monoisotopic mass</span> {}, average weight {}, <span style='color:var(--color-green)'>most abundant isotope</span> offset {max} Da</p>{}", 
-            display_formula(&formula), 
-            display_mass(formula.monoisotopic_mass()), 
-            display_mass(formula.average_weight()), 
+            display_formula(&formula),
+            display_mass(formula.monoisotopic_mass()),
+            display_mass(formula.average_weight()),
             isotopes_display,
         ))
 }
 
 #[tauri::command]
 fn validate_molecular_formula(text: String) -> Result<String, CustomError> {
-    text.parse::<f64>().map(MolecularFormula::with_additional_mass).or_else(|_|MolecularFormula::from_pro_forma(&text)).map(|f| f.hill_notation_html())
+    text.parse::<f64>()
+        .map(MolecularFormula::with_additional_mass)
+        .or_else(|_| MolecularFormula::from_pro_forma(&text))
+        .map(|f| display_formula(&f))
 }
 
-fn edit_modification(state: ModifiableState, id: usize, name: &str, formula: &str) -> Result<(), CustomError> {
-    let formula = formula.parse::<f64>().map(|mass| Ok(MolecularFormula::with_additional_mass(mass))).unwrap_or_else(|_| MolecularFormula::from_pro_forma(formula))?;
+#[tauri::command]
+fn validate_neutral_loss(text: String) -> Result<String, CustomError> {
+    text.parse::<NeutralLoss>()
+        .map(|f| display_neutral_loss(&f))
+}
+
+#[tauri::command]
+fn validate_placement_rule(text: String) -> Result<String, CustomError> {
+    text.parse::<PlacementRule>()
+        .map(|r| display_placement_rule(&r))
+}
+
+#[tauri::command]
+fn validate_custom_single_specificity(
+    placement_rules: Vec<String>,
+    neutral_losses: Vec<String>,
+    diagnostic_ions: Vec<String>,
+) -> Result<String, CustomError> {
+    let rules = placement_rules
+        .into_iter()
+        .map(|text| text.parse::<PlacementRule>())
+        .collect::<Result<Vec<_>, _>>()?;
+    let rules = if rules.is_empty() {
+        vec![PlacementRule::Anywhere]
+    } else {
+        rules
+    };
+
+    let neutral_losses = neutral_losses
+        .into_iter()
+        .map(|text| text.parse::<NeutralLoss>())
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let diagnostic_ions = diagnostic_ions
+        .into_iter()
+        .map(|text| {
+            text.parse::<f64>()
+                .map(MolecularFormula::with_additional_mass)
+                .or_else(|_| MolecularFormula::from_pro_forma(&text))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(format!(
+        "<span data-value='{{\"placement_rules\":[{}],\"neutral_losses\":[{}],\"diagnostic_ions\":[{}]}}'>Placement rules: {}{}{}{}{}</span>",
+        rules.iter().map(|r| format!("\"{}\"", display_placement_rule(r))).join(","),
+        neutral_losses.iter().map(|n| format!("\"{}\"", n.hill_notation())).join(","),
+        diagnostic_ions.iter().map(|n| format!("\"{}\"", n.hill_notation())).join(","),
+        rules.iter().map(display_placement_rule).join(","),
+        if neutral_losses.is_empty() {
+            ""
+        } else {
+            ", Neutral losses: "
+        },
+        neutral_losses.iter().map(display_neutral_loss).join(","),
+        if diagnostic_ions.is_empty() {
+            ""
+        } else {
+            ", Diagnostic ions: "
+        },
+        diagnostic_ions.iter().map(display_formula).join(","),
+    ))
+}
+
+fn edit_modification(
+    state: ModifiableState,
+    id: usize,
+    name: &str,
+    formula: &str,
+) -> Result<(), CustomError> {
+    let formula = formula
+        .parse::<f64>()
+        .map(|mass| Ok(MolecularFormula::with_additional_mass(mass)))
+        .unwrap_or_else(|_| MolecularFormula::from_pro_forma(formula))?;
     if let Ok(mut state) = state.lock() {
-        let modification = (id, name.to_string(), SimpleModification::Database{formula, specificities: Vec::new(), id: modification::ModificationId { ontology: Ontology::Custom, name: name.to_string(), id, description: String::new(), synonyms: Vec::new(), cross_ids: Vec::new() }});
+        let modification = (
+            id,
+            name.to_string(),
+            SimpleModification::Database {
+                formula,
+                specificities: Vec::new(),
+                id: modification::ModificationId {
+                    ontology: Ontology::Custom,
+                    name: name.to_string(),
+                    id,
+                    description: String::new(),
+                    synonyms: Vec::new(),
+                    cross_ids: Vec::new(),
+                },
+            },
+        );
         if let Some(index) = state.database.iter().position(|p| p.0 == id) {
             state.database[index] = modification;
         } else {
@@ -137,7 +230,11 @@ fn edit_modification(state: ModifiableState, id: usize, name: &str, formula: &st
         }
         Ok(())
     } else {
-        Err(CustomError::error("State locked", "Cannot unlock the mutable state, are you doing many things in parallel?", Context::None))
+        Err(CustomError::error(
+            "State locked",
+            "Cannot unlock the mutable state, are you doing many things in parallel?",
+            Context::None,
+        ))
     }
 }
 
@@ -292,21 +389,21 @@ pub enum NoiseFilter {
 
 #[derive(Debug, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
 pub struct ModelParameters {
-    pub a: (Location, String),
-    pub b: (Location, String),
-    pub c: (Location, String),
-    pub d: (Location, String),
-    pub v: (Location, String),
-    pub w: (Location, String),
-    pub x: (Location, String),
-    pub y: (Location, String),
-    pub z: (Location, String),
-    pub precursor: String,
+    pub a: (Location, Vec<String>),
+    pub b: (Location, Vec<String>),
+    pub c: (Location, Vec<String>),
+    pub d: (Location, Vec<String>),
+    pub v: (Location, Vec<String>),
+    pub w: (Location, Vec<String>),
+    pub x: (Location, Vec<String>),
+    pub y: (Location, Vec<String>),
+    pub z: (Location, Vec<String>),
+    pub precursor: Vec<String>,
     pub immonium: bool,
     pub m: bool,
     pub modification_diagnostic: bool,
     pub modification_neutral: bool,
-    pub glycan: (bool, String),
+    pub glycan: (bool, Vec<String>),
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
@@ -339,9 +436,9 @@ async fn annotate_spectrum<'a>(
             Context::none(),
         ));
     }
-    let get_model_param = |neutral_losses: &String| {
+    let get_model_param = |neutral_losses: &[String]| {
         neutral_losses
-            .split(',')
+            .iter()
             .filter(|n| !n.is_empty())
             .map(|n| n.parse::<NeutralLoss>())
             .collect::<Result<Vec<_>, _>>()
@@ -416,7 +513,12 @@ async fn annotate_spectrum<'a>(
         render::annotated_spectrum(&annotated, "spectrum", &fragments, &model, mass_mode);
     Ok(AnnotationResult {
         spectrum,
-        fragment_table: render::spectrum_table(&annotated, &fragments, multiple_peptidoforms, multiple_peptides),
+        fragment_table: render::spectrum_table(
+            &annotated,
+            &fragments,
+            multiple_peptidoforms,
+            multiple_peptides,
+        ),
         logs: format!("{annotated:#?}\n{model:#?}"),
         mz_max: limits.mz.value,
         intensity_max: limits.intensity,
@@ -445,6 +547,9 @@ fn main() {
             spectrum_details,
             render::density_graph,
             validate_molecular_formula,
+            validate_neutral_loss,
+            validate_placement_rule,
+            validate_custom_single_specificity,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

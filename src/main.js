@@ -260,24 +260,10 @@ function get_noise_filter(id) {
 }
 
 function get_losses(ion) {
-  let loss = ""
+  let loss = loadSeparatedInput("model-" + ion + "-loss");
   document.getElementsByName("model-" + ion + "-loss-selection").forEach(element => {
     if (element.checked) {
-      if (loss == "") {
-        loss = element.value;
-      } else {
-        loss += "," + element.value;
-      }
-    }
-  });
-  document.querySelectorAll("#model-" + ion + "-loss>*").forEach(child => {
-    if (child.classList.contains("element")) { // TODO: handle numeric neutral losses + potentially make the handling of the separate ones somewhat better, give a list or something
-      let custom = "-" + child.dataset.value;
-      if (loss == "") {
-        loss = custom;
-      } else {
-        loss += "," + custom;
-      }
+      loss.push(element.value);
     }
   });
   return loss;
@@ -450,46 +436,8 @@ window.addEventListener("DOMContentLoaded", () => {
       let values_container = input.parentElement;
       let outer = input.parentElement.parentElement;
       outer.classList.toggle("error", false);
-      if (event.keyCode == 13 || event.keyCode == 9) { // Enter or Tab
-        let value = undefined;
-        switch (input.dataset.type) {
-          case "molecular_formula":
-            value = await invoke("validate_molecular_formula", { text: input.innerText })
-              .catch(error => {
-                input.innerHTML = showContext(error, input.innerText);
-                outer.querySelector("output.error").innerHTML = showError(error, false);
-              });
-            break;
-          case "text":
-            value = input.innerText.trim();
-            break;
-          default: console.error("Invalid separated input type");
-        }
-        if (value !== undefined) {
-          let new_element = document.createElement("span");
-          new_element.classList.add("element");
-          new_element.innerHTML = value;
-          new_element.dataset.value = new_element.innerText;
-          new_element.addEventListener("click", e => {
-            let input = e.target.parentElement.querySelector(".input");
-            input.innerText = e.target.innerText.slice(0, -1);
-            moveCursorToEnd(input);
-            e.target.remove();
-          });
-          new_element.title = "Edit";
-          let delete_button = document.createElement("button");
-          delete_button.classList.add("delete");
-          delete_button.appendChild(document.createTextNode("x"));
-          delete_button.addEventListener("click", e => e.target.parentElement.remove());
-          delete_button.title = "Delete";
-          new_element.appendChild(delete_button);
-
-          values_container.insertBefore(new_element, input);
-          input.innerText = "";
-        } else {
-          console.log("Verification failed");
-          outer.classList.toggle("error", true);
-        }
+      if ((event.keyCode == 13 || event.keyCode == 9) && input.innerText.trim() != "") { // Enter or Tab
+        addValueSeparatedElement(values_container, input.innerText);
         event.preventDefault();
       } else if (event.keyCode == 8 && !input.hasChildNodes()) { // Backspace
         if (values_container.children.length >= 3) {
@@ -504,10 +452,49 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   document.querySelectorAll(".separated-input .clear").forEach(t => {
     t.addEventListener("click", e => {
-      e.target.parentElement.querySelectorAll(".element").forEach(c => c.remove());
-      e.target.parentElement.querySelector(".input").innerText = "";
-      e.target.parentElement.parentElement.classList.remove("error");
-      e.target.parentElement.parentElement.querySelector(".error").innerText = "";
+      clearSeparatedInput(e.target.parentElement.parentElement);
+    })
+  });
+
+  // Custom mods
+  document.getElementById("custom-mod-create").addEventListener("click", () => document.getElementById("custom-mod-dialog").showModal());
+  document.querySelectorAll(".list-input").forEach(t => {
+    t.querySelector(".create").addEventListener("click", e => {
+      e.target.parentElement.classList.add("creating");
+    })
+    t.querySelector(".save").addEventListener("click", async e => {
+      let listInput = e.target.parentElement.parentElement;
+      listInput.classList.remove("creating");
+      let new_element = document.createElement("li");
+      new_element.classList.add("element");
+      new_element.innerHTML = await invoke("validate_custom_single_specificity", {
+        placementRules: loadSeparatedInput("custom-mod-single-placement-rules"),
+        neutralLosses: loadSeparatedInput("custom-mod-single-neutral-losses"),
+        diagnosticIons: loadSeparatedInput("custom-mod-single-diagnostic-ions")
+      }).catch(error => {
+        console.error(error)
+      });
+      new_element.children[0].title = "Edit";
+      new_element.children[0].addEventListener("click", e => {
+        let data = JSON.parse(e.target.dataset.value);
+        populateSeparatedInput("custom-mod-single-placement-rules", data.placement_rules);
+        populateSeparatedInput("custom-mod-single-neutral-losses", data.neutral_losses);
+        populateSeparatedInput("custom-mod-single-diagnostic-ions", data.diagnostic_ions);
+        listInput.classList.add("creating");
+        e.target.parentElement.remove();
+      });
+      let delete_button = document.createElement("button");
+      delete_button.classList.add("delete");
+      delete_button.appendChild(document.createTextNode("x"));
+      delete_button.addEventListener("click", e => e.target.parentElement.remove());
+      delete_button.title = "Delete";
+      new_element.appendChild(delete_button);
+      listInput.querySelector(".values").appendChild(new_element);
+      listInput.querySelectorAll(".modal .separated-input").forEach(s => clearSeparatedInput(s));
+    })
+    t.querySelector(".delete").addEventListener("click", e => {
+      e.target.parentElement.parentElement.classList.remove("creating");
+      e.target.parentElement.parentElement.querySelectorAll(".modal .separated-input").forEach(s => clearSeparatedInput(s));
     })
   });
 
@@ -533,6 +520,104 @@ function moveCursorToEnd(contentEle) {
   selection.removeAllRanges();
   selection.addRange(range);
 };
+
+/** 
+ * @param {String} id - The ID of the `.separated-input .values` element. 
+ * @returns {String[]} - List of all elements, each of those as a string.
+*/
+function loadSeparatedInput(id) {
+  return [...document.getElementById(id).querySelectorAll(".element")].map(c => { return c.innerText.slice(0, -1); });
+}
+
+/**
+ * @param {Element} element - The outer `.separate-input` element.
+ */
+function clearSeparatedInput(element) {
+  element.querySelectorAll(".element").forEach(c => c.remove());
+  element.querySelector(".input").innerText = "";
+  element.classList.remove("error");
+  element.querySelector(".error").innerText = "";
+}
+
+/**
+ * @param {String} id - The ID of the `.separated-input .values` element.
+ * @param {String[]} values - The separate values to populate the field with.
+ */
+function populateSeparatedInput(id, values) {
+  let element = document.getElementById(id);
+  clearSeparatedInput(element.parentElement);
+  for (let value of values) {
+    addValueSeparatedElement(element, value);
+  }
+}
+
+/**
+ * @param {Element} element - The `.separated-input .values` element.
+ * @param {String} value - The value to add
+ */
+async function addValueSeparatedElement(element, value) {
+  let input = element.querySelector(".input");
+  let outer = element.parentElement;
+  let verified_value = undefined;
+  switch (input.dataset.type) {
+    case "molecular_formula":
+      verified_value = await invoke("validate_molecular_formula", { text: value })
+        .catch(error => {
+          input.innerHTML = showContext(error, value);
+          outer.querySelector("output.error").innerHTML = showError(error, false);
+        });
+      break;
+    case "neutral_loss":
+      verified_value = await invoke("validate_neutral_loss", { text: value })
+        .catch(error => {
+          input.innerHTML = showContext(error, value);
+          outer.querySelector("output.error").innerHTML = showError(error, false);
+        });
+      break;
+    case "placement_rule":
+      verified_value = await invoke("validate_placement_rule", { text: value })
+        .catch(error => {
+          input.innerHTML = showContext(error, value);
+          outer.querySelector("output.error").innerHTML = showError(error, false);
+        });
+      break;
+    case "cross_id":
+      verified_value = value.trim();
+      if (!value.includes(':')) {
+        outer.querySelector("output.error").innerText = "Cross ID should contain a colon ':'";
+        value = undefined;
+      }
+      break;
+    case "text":
+      verified_value = value.trim();
+      break;
+    default: console.error("Invalid separated input type");
+  }
+  if (verified_value !== undefined) {
+    let new_element = document.createElement("span");
+    new_element.classList.add("element");
+    new_element.innerHTML = verified_value;
+    new_element.dataset.value = new_element.innerText;
+    new_element.addEventListener("click", e => {
+      let input = e.target.parentElement.querySelector(".input");
+      input.innerText = e.target.innerText.slice(0, -1);
+      moveCursorToEnd(input);
+      e.target.remove();
+    });
+    let delete_button = document.createElement("button");
+    delete_button.classList.add("delete");
+    delete_button.appendChild(document.createTextNode("x"));
+    delete_button.addEventListener("click", e => e.target.parentElement.remove());
+    delete_button.title = "Delete";
+    new_element.appendChild(delete_button);
+
+    element.insertBefore(new_element, input);
+    input.innerText = "";
+  } else {
+    outer.classList.toggle("error", true);
+    moveCursorToEnd(input);
+  }
+}
 
 function add_event(selector, events, callback) {
   for (let i = 0; i < events.length; i++) {

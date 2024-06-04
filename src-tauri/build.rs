@@ -169,7 +169,7 @@ fn main() {
               {1}
               <div class="separated-input">
                 <div class="values" id="model-{0}-loss">
-                  <div class="input context" placeholder="Add molecular formula or mass" data-type="molecular_formula" contentEditable="plaintext-only"></div>
+                  <div class="input context" placeholder="Add molecular formula or mass preceded by '+' or '-'" data-type="neutral_loss" contentEditable="plaintext-only"></div>
                   <button class="clear">Clear</button>
                 </div>
                 <output class="error"></output>
@@ -185,7 +185,7 @@ fn main() {
             {}
             <div class="separated-input">
               <div class="values" id="model-precursor-loss">
-                <div class="input context" placeholder="Add molecular formula or mass" data-type="molecular_formula" contentEditable="plaintext-only"></div>
+                <div class="input context" placeholder="Add molecular formula or mass preceded by '+' or '-'" data-type="neutral_loss" contentEditable="plaintext-only"></div>
                 <button class="clear">Clear</button>
               </div>
               <output class="error"></output>
@@ -211,7 +211,7 @@ fn main() {
             {}
             <div class="separated-input">
               <div class="values" id="model-glycan-loss">
-                <div class="input context" placeholder="Add molecular formula or mass" data-type="molecular_formula" contentEditable="plaintext-only"></div>
+                <div class="input context" placeholder="Add molecular formula or mass preceded by '+' or '-'" data-type="neutral_loss" contentEditable="plaintext-only"></div>
                 <button class="clear">Clear</button>
               </div>
               <output class="error"></output>
@@ -420,38 +420,39 @@ fn main() {
       <input type="checkbox" id="collapsible-custom-mods">
       <fieldset class="collapsible" data-linked-item="collapsible-custom-mods">
         <legend>Custom mods</legend>
-        <dialog id="custom-mod-edit">
-          <fieldset>
-            <legend>Basic features</legend>
-            <label>Id<input id="custom-mod-id" type="number" disabled></input></label>
-            <label>Name<input id="custom-mod-name" type="text"></input></label>
-            <label>Formula<input id="custom-mod-formula" type="text"></input></label>
-          </fieldset>
-          <fieldset>
-            <legend>Metadata</legend>
-            <label>Description<input id="custom-mod-description" type="text"></input></label>
-            <div class="list-input">
-              <h2>Synonyms</h2>
-              <div id="custom-mod-synonyms"></div>
-              <button id="custom-mod-synonym-add">Add</button>
-              <dialog id="custom-mod-synonym-add-dialog">
-                <label>Synonym<input type="text" id="custom-mod-synonym-new"></input></label>
-                <button>Save</button>
-                <button>Delete</button>
-              </dialog>
+        <dialog id="custom-mod-dialog">
+          <h1>Custom modification</h1>
+
+          <h2>Basic features</h2>
+          <div class="basic">
+            <label>Formula<input id="custom-mod-formula" type="text" placeholder="Molecular formula or mass"></input></label>
+            <label>Id<input id="custom-mod-id" type="number" disabled value="0"></input></label>
+            <label>Name<input id="custom-mod-name" type="text" placeholder="Identifying name"></input></label>
+            <p class="justify-end">Use as follows:</p>
+            <span class="example" id="custom-mod-example-id">CUSTOM:0</span>
+            <span class="example" id="custom-mod-example-name">C:NAME</span>
+          </div>
+
+          <h2>Metadata</h2>
+          <label for="custom-mod-description">Description</label>
+          <textarea id="custom-mod-description" class="wide" placeholder="Describe the modification"></textarea>
+          <label for="custom-mod-synonyms">Synonyms</label>
+          <div class="separated-input">
+            <div class="values" id="custom-mod-synonyms">
+              <div class="input context" placeholder="Add synonyms" data-type="text" contentEditable="plaintext-only"></div>
+              <button class="clear">Clear</button>
             </div>
-            <div class="list-input">
-              <h2>Cross IDs</h2>
-              <div id="custom-mod-cross-ids"></div>
-              <button id="custom-mod-cross-ids-add">Add</button>
-              <dialog id="custom-mod-cross-ids-add-dialog">
-                <label>System<input type="text" id="custom-mod-cross-ids-new-system"></input></label>
-                <label>Value<input type="text" id="custom-mod-cross-ids-new-value"></input></label>
-                <button>Save</button>
-                <button>Delete</button>
-              </dialog>
+            <output class="error"></output>
+          </div>
+          <label for="custom-mod-cross-ids">Cross IDs</label>
+          <div class="separated-input">
+            <div class="values" id="custom-mod-cross-ids">
+              <div class="input context" placeholder="Specify like: 'System:ID'" data-type="cross_id" contentEditable="plaintext-only"></div>
+              <button class="clear">Clear</button>
             </div>
-          </fieldset>
+            <output class="error"></output>
+          </div>
+
           <div class='row'>
             <span class='title'>Modification type</span>
             <div class='select-box' id='custom-mod-type'>
@@ -459,35 +460,48 @@ fn main() {
               <label for='custom-mod-type-linker' tabindex='0'><input type='radio' name='custom-mod-type' value='linker' id='custom-mod-type-linker'>Linker</label>
             </div>
           </div>
-          <fieldset>
-            <legend>Single</legend>
+          <div class="single">
+            <h2>Single</h2>
+            <label for="custom-mod-single-specificities">Placement rules</label>
             <div class="list-input">
-              <h2>Placement rules</h2>
-              <div id="custom-mod-single-specificities"></div>
-              <button id="custom-mod-single-specificities-add">Add</button>
-              <dialog id="custom-mod-single-specificities-add-dialog">
-                
-
-                <button>Save</button>
-                <button>Delete</button>
-              </dialog>
+              <ul class="values" id="custom-mod-single-specificities"></ul>
+              <button class="create" id="custom-mod-single-specificities-create">Create</button>
+              <div class="modal" id="custom-mod-single-specificities-create">
+                <label for="custom-mod-single-placement-rules">Placement rules</label>
+                <div class="separated-input">
+                  <div class="values" id="custom-mod-single-placement-rules">
+                    <div class="input context" title="Add placement rules with 'AMINOACIDS@Position' or 'Position'. Position can be any of the following: Anywhere, AnyNTerm, ProteinNTerm, AnyCTerm, ProteinCTerm." placeholder="Add placement rules with 'AMINOACIDS@Position' or 'Position'" data-type="placement_rule" contentEditable="plaintext-only"></div>
+                    <button class="clear">Clear</button>
+                  </div>
+                  <output class="error"></output>
+                </div>
+                <label for="custom-mod-single-neutral-losses">Neutral losses</label>
+                <div class="separated-input">
+                  <div class="values" id="custom-mod-single-neutral-losses">
+                    <div class="input context" placeholder="Add molecular formula or mass preceded by '+' or '-'" data-type="neutral_loss" contentEditable="plaintext-only"></div>
+                    <button class="clear">Clear</button>
+                  </div>
+                  <output class="error"></output>
+                </div>
+                <label for="custom-mod-single-diagnostic-ions">Diagnostic ions</label>
+                <div class="separated-input">
+                  <div class="values" id="custom-mod-single-diagnostic-ions">
+                    <div class="input context" placeholder="Add molecular formula or mass" data-type="molecular_formula" contentEditable="plaintext-only"></div>
+                    <button class="clear">Clear</button>
+                  </div>
+                  <output class="error"></output>
+                </div>
+                <button class="save" id="custom-mod-single-save">Save</button>
+                <button class="delete" id="custom-mod-single-delete">Delete</button>
+              </div>
             </div>
-          </fieldset>
-          <button>Save</button>
-          <button>Delete</button>
+          </div>
+          <button id="custom-mod-save">Save</button>
+          <button id="custom-mod-delete">Delete</button>
         </dialog>
-        <button>Create new</button>
+        <button id="custom-mod-create">Create new</button>
         <ol id="custom-mods">
         </ol>
-
-        <div class="separated-input">
-          <div class="values">
-            <div class="input context" placeholder="Add molecular formula or mass" data-type="molecular_formula" contentEditable="plaintext-only"></div>
-            <button class="clear">Clear</button>
-          </div>
-          <output class="error"></output>
-        </div>
-
       </fieldset>
       <input type="checkbox" id="collapsible-logs">
       <fieldset class="collapsible" data-linked-item="collapsible-logs">

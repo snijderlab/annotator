@@ -5,6 +5,7 @@ use rustyms::{
     fragment::*,
     model::Location,
     modification::{Ontology, SimpleModification},
+    placement_rule::PlacementRule,
     spectrum::{AnnotatedPeak, PeakSpectrum, Recovered, Score},
     system::{da, mz, Mass, MassOverCharge},
     AnnotatedSpectrum, LinearPeptide, Linked, MassMode, Model, Modification, MolecularFormula,
@@ -1612,6 +1613,24 @@ pub fn display_neutral_loss(formula: &NeutralLoss) -> String {
             "<span class='formula'>{}</span>",
             formula.hill_notation_html()
         )
+    }
+}
+
+pub fn display_placement_rule(rule: &PlacementRule) -> String {
+    match rule {
+        PlacementRule::AminoAcid(aa, pos) => format!("{}@{pos}", aa.iter().join("")),
+        PlacementRule::Terminal(pos) => pos.to_string(),
+        PlacementRule::Anywhere => "Anywhere".to_string(),
+        PlacementRule::PsiModification(index, pos) => {
+            format!(
+                "{}@{pos}",
+                Ontology::Psimod
+                    .find_id(*index, None)
+                    .unwrap_or_else(|| panic!(
+                        "Invalid PsiMod placement rule, non existing modification {index}"
+                    ))
+            )
+        }
     }
 }
 

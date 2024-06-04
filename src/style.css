@@ -169,8 +169,13 @@ output.error {
   }
 }
 
+
 .hidden {
   display: none;
+}
+
+.input-settings:has(option[value="custom"]:checked) .custom-model {
+  display: grid;
 }
 
 .custom-model {
@@ -178,20 +183,17 @@ output.error {
   display: none;
   grid-template-columns: max-content 1fr max-content 1fr;
   gap: inherit;
-}
+  align-items: baseline;
 
-.input-settings:has(option[value="custom"]:checked) .custom-model {
-  display: grid;
-}
+  & .col-2 {
+    grid-column: span 2;
+  }
 
-.custom-model .col-2 {
-  grid-column: span 2;
-}
-
-.custom-model .grid-row {
-  display: grid;
-  grid-template-columns: subgrid;
-  grid-column: 1 / -1;
+  & .grid-row {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+  }
 }
 
 .select-input,
@@ -611,7 +613,7 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
     display: block;
   }
 
-  & .values {
+  &>.values {
     display: flex;
     flex-wrap: wrap;
     border-radius: 0;
@@ -635,7 +637,7 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
       border-color: var(--color-primary);
     }
 
-    & .input {
+    &>.input {
       border: none;
       padding: 0;
       margin-left: .5rem;
@@ -645,12 +647,13 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
 
       &:empty::after {
         content: attr(placeholder);
-        display: inline-block;
+        display: inline;
         color: var(--color-halfway);
+        text-overflow: ellipsis;
       }
     }
 
-    & .element {
+    &>.element {
       list-style: none;
       border: 2px solid var(--color-halfway);
       padding: 2px;
@@ -683,11 +686,15 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
         display: inline-block;
       }
 
+      & .formula {
+        border: none;
+      }
+
       &>*:not(.delete) {
         pointer-events: none;
       }
 
-      & .delete {
+      &>.delete {
         background: transparent;
         color: var(--color-halfway);
         border: none;
@@ -695,6 +702,7 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
         padding: 0;
         margin: 0;
         padding-left: .5rem;
+        padding-right: 2px;
         cursor: pointer;
 
         &:hover {
@@ -718,6 +726,110 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
 
     & *+*+.clear {
       display: block;
+    }
+  }
+}
+
+#custom-mod-dialog .basic {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 2fr 1fr 2fr;
+  justify-items: baseline;
+
+  p {
+    margin: 0;
+  }
+
+  label {
+    display: flex;
+    gap: .5rem;
+    align-items: baseline;
+    justify-self: normal;
+
+    input {
+      flex-grow: 1;
+    }
+  }
+}
+
+.list-input {
+  &>.modal {
+    border: 2px solid var(--color-foreground);
+    padding: .5rem;
+  }
+
+  &:not(.creating) .modal {
+    display: none;
+  }
+
+  &.creating .create {
+    pointer-events: none;
+    --_clr-main: var(--color-halfway);
+    cursor: not-allowed;
+    display: none;
+  }
+
+  &>.values {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    margin: .5rem;
+    gap: .5rem;
+
+    &>.element {
+      list-style: none;
+      border: 2px solid var(--color-halfway);
+      padding: 2px;
+      margin: 0;
+      width: fit-content;
+      cursor: default;
+
+      &:hover {
+        border-color: var(--color-halfway-fg);
+      }
+
+      &:active {
+        border-color: var(--color-primary);
+      }
+
+      &:focus-visible {
+        border-color: var(--color-foreground);
+        outline: none;
+      }
+
+      &>span {
+        cursor: pointer;
+
+        &>* {
+          pointer-events: none;
+        }
+      }
+
+
+      &>.delete {
+        background: transparent;
+        color: var(--color-halfway);
+        border: none;
+        border-radius: 0;
+        padding: 0;
+        margin: 0;
+        padding-left: .5rem;
+        padding-right: 2px;
+        cursor: pointer;
+
+        &:hover {
+          color: var(--color-halfway-fg);
+        }
+
+        &:active {
+          color: var(--color-red);
+        }
+
+        &:focus-visible {
+          color: var(--color-foreground);
+          outline: none;
+        }
+      }
     }
   }
 }

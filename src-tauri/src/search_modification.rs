@@ -1,6 +1,6 @@
 use crate::{
     html_builder,
-    render::{display_formula, display_mass},
+    render::{display_formula, display_mass, display_placement_rule},
 };
 use itertools::Itertools;
 use modification::ModificationId;
@@ -25,29 +25,7 @@ pub async fn search_modification(text: &str, tolerance: f64) -> Result<String, C
         if places.is_empty() {
             "Anywhere".to_string()
         } else {
-            places
-                .iter()
-                .map(|rule| match rule {
-                    PlacementRule::AminoAcid(aa, pos) => {
-                        format!(
-                            "{}@{}",
-                            aa.iter().map(|a| a.char()).collect::<String>(),
-                            pos
-                        )
-                    }
-                    PlacementRule::PsiModification(index, pos) => {
-                        format!(
-                            "{}@{}",
-                            Ontology::Psimod.find_id(*index, None).unwrap(),
-                            pos
-                        )
-                    }
-                    PlacementRule::Terminal(pos) => {
-                        format!("{}", pos)
-                    }
-                    PlacementRule::Anywhere => "Anywhere".to_string(),
-                })
-                .join(",")
+            places.iter().map(display_placement_rule).join(",")
         }
     }
 
