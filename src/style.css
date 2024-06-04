@@ -733,53 +733,68 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
   }
 }
 
-#custom-mod-dialog .basic {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: 2fr 1fr 2fr;
-  align-items: baseline;
-
-  p {
-    margin: 0;
-  }
-
-  label,
-  &>span {
-    display: flex;
-    gap: .5rem;
+#custom-mod-dialog {
+  & .basic {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 2fr 1fr 2fr;
     align-items: baseline;
-    justify-self: normal;
 
-    input {
+    p {
+      margin: 0;
+    }
+
+    label,
+    &>span {
+      display: flex;
+      gap: .5rem;
+      align-items: baseline;
+      justify-self: normal;
+
+      input {
+        flex-grow: 1;
+      }
+    }
+
+    #custom-mod-formula {
       flex-grow: 1;
+
+      & .formula {
+        border: none;
+
+        & sub {
+          margin-bottom: -4px;
+          display: inline-block;
+        }
+
+        & sup {
+          margin-top: -4px;
+          display: inline-block;
+        }
+      }
+    }
+
+    & output.error {
+      grid-column: 1 / -1;
+      justify-self: normal;
+      margin: 0;
+    }
+
+    &:not(.error) output.error {
+      display: none;
     }
   }
 
-  #custom-mod-formula {
-    flex-grow: 1;
-
-    & .formula {
-      border: none;
-
-      & sub {
-        margin-bottom: -4px;
-        display: inline-block;
-      }
-
-      & sup {
-        margin-top: -4px;
-        display: inline-block;
-      }
-    }
+  & .row {
+    justify-content: start;
+    align-items: baseline;
+    gap: .5rem;
+    margin-top: .5rem;
   }
 
-  & output.error {
-    grid-column: 1 / -1;
-    justify-self: normal;
-    margin: 0;
-  }
-
-  &:not(.error) output.error {
+  &:not(:has(#custom-mod-type-single:checked)) .single,
+  &:not(:has(#custom-mod-type-linker:checked)) .linker,
+  &:not(:has(#custom-mod-linker-asymmetric:checked)) .asymmetric {
     display: none;
   }
 }

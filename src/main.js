@@ -487,19 +487,41 @@ window.addEventListener("DOMContentLoaded", () => {
       listInput.classList.remove("creating");
       let new_element = document.createElement("li");
       new_element.classList.add("element");
-      new_element.innerHTML = await invoke("validate_custom_single_specificity", {
-        placementRules: loadSeparatedInput("custom-mod-single-placement-rules"),
-        neutralLosses: loadSeparatedInput("custom-mod-single-neutral-losses"),
-        diagnosticIons: loadSeparatedInput("custom-mod-single-diagnostic-ions")
-      }).catch(error => {
-        console.error(error)
-      });
+      if (listInput.classList.contains("single")) {
+        new_element.innerHTML = await invoke("validate_custom_single_specificity", {
+          placementRules: loadSeparatedInput("custom-mod-single-placement-rules"),
+          neutralLosses: loadSeparatedInput("custom-mod-single-neutral-losses"),
+          diagnosticIons: loadSeparatedInput("custom-mod-single-diagnostic-ions")
+        }).catch(error => {
+          console.error(error)
+        });
+      } else if (listInput.classList.contains("linker")) {
+        new_element.innerHTML = await invoke("validate_custom_linker_specificity", {
+          asymmetric: document.getElementById("custom-mod-linker-asymmetric").checked,
+          placementRules: loadSeparatedInput("custom-mod-linker-placement-rules"),
+          secondaryPlacementRules: loadSeparatedInput("custom-mod-linker-secondary-placement-rules"),
+          stubs: loadSeparatedInput("custom-mod-linker-stubs"),
+          diagnosticIons: loadSeparatedInput("custom-mod-linker-diagnostic-ions")
+        }).catch(error => {
+          console.error(error)
+        });
+      }
       new_element.children[0].title = "Edit";
       new_element.children[0].addEventListener("click", e => {
+        console.log(e.target.dataset.value);
         let data = JSON.parse(e.target.dataset.value);
-        populateSeparatedInput("custom-mod-single-placement-rules", data.placement_rules);
-        populateSeparatedInput("custom-mod-single-neutral-losses", data.neutral_losses);
-        populateSeparatedInput("custom-mod-single-diagnostic-ions", data.diagnostic_ions);
+        console.log(data);
+        if (listInput.classList.contains("single")) {
+          populateSeparatedInput("custom-mod-single-placement-rules", data.placement_rules);
+          populateSeparatedInput("custom-mod-single-neutral-losses", data.neutral_losses);
+          populateSeparatedInput("custom-mod-single-diagnostic-ions", data.diagnostic_ions);
+        } else if (listInput.classList.contains("linker")) {
+          document.getElementById("custom-mod-linker-asymmetric").checked = data.asymmetric;
+          populateSeparatedInput("custom-mod-linker-placement-rules", data.placement_rules);
+          populateSeparatedInput("custom-mod-linker-secondary-placement-rules", data.secondary_placement_rules);
+          populateSeparatedInput("custom-mod-linker-stubs", data.stubs);
+          populateSeparatedInput("custom-mod-linker-diagnostic-ions", data.diagnostic_ions);
+        }
         listInput.classList.add("creating");
         e.target.parentElement.remove();
       });
@@ -517,6 +539,8 @@ window.addEventListener("DOMContentLoaded", () => {
       e.target.parentElement.parentElement.querySelectorAll(".modal .separated-input").forEach(s => clearSeparatedInput(s));
     })
   });
+  document.getElementById("custom-mod-save").addEventListener("click", () => document.getElementById("custom-mod-dialog").close());
+  document.getElementById("custom-mod-delete").addEventListener("click", () => document.getElementById("custom-mod-dialog").close());
 
   // Refresh interface for hot reload
   invoke("refresh").then((result) => {
@@ -596,6 +620,13 @@ async function addValueSeparatedElement(element, value) {
       break;
     case "placement_rule":
       verified_value = await invoke("validate_placement_rule", { text: value })
+        .catch(error => {
+          input.innerHTML = showContext(error, value);
+          outer.querySelector("output.error").innerHTML = showError(error, false);
+        });
+      break;
+    case "stub":
+      verified_value = await invoke("validate_stub", { text: value })
         .catch(error => {
           input.innerHTML = showContext(error, value);
           outer.querySelector("output.error").innerHTML = showError(error, false);

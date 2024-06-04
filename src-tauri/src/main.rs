@@ -146,6 +146,31 @@ fn validate_placement_rule(text: String) -> Result<String, CustomError> {
         .map(|r| display_placement_rule(&r))
 }
 
+fn parse_stub(text: &str) -> Result<(MolecularFormula, MolecularFormula), CustomError> {
+    if let Some(index) = text.find(':') {
+        let f1 = text[..index]
+            .parse::<f64>()
+            .map(MolecularFormula::with_additional_mass)
+            .or_else(|_| MolecularFormula::from_pro_forma_inner(text, ..index, false))?;
+        let f2 = text[index + 1..]
+            .parse::<f64>()
+            .map(MolecularFormula::with_additional_mass)
+            .or_else(|_| MolecularFormula::from_pro_forma_inner(text, index + 1.., false))?;
+        Ok((f1, f2))
+    } else {
+        Err(CustomError::error(
+            "Invalid breakage",
+            "A breakage should be specified with 'formula1:formula2'",
+            Context::full_line(0, text),
+        ))
+    }
+}
+
+#[tauri::command]
+fn validate_stub(text: String) -> Result<String, CustomError> {
+    parse_stub(&text).map(|(f1, f2)| format!("{}:{}", display_formula(&f1), display_formula(&f2)))
+}
+
 #[tauri::command]
 fn validate_custom_single_specificity(
     placement_rules: Vec<String>,
@@ -176,23 +201,86 @@ fn validate_custom_single_specificity(
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(
-        "<span data-value='{{\"placement_rules\":[{}],\"neutral_losses\":[{}],\"diagnostic_ions\":[{}]}}'>Placement rules: {}{}{}{}{}</span>",
+        "<span data-value='{{\"placement_rules\":[{}],\"neutral_losses\":[{}],\"diagnostic_ions\":[{}]}}'>Placement rules: {}{}{}</span>",
         rules.iter().map(|r| format!("\"{}\"", display_placement_rule(r))).join(","),
         neutral_losses.iter().map(|n| format!("\"{}\"", n.hill_notation())).join(","),
         diagnostic_ions.iter().map(|n| format!("\"{}\"", n.hill_notation())).join(","),
         rules.iter().map(display_placement_rule).join(","),
         if neutral_losses.is_empty() {
-            ""
+            String::new()
         } else {
-            ", Neutral losses: "
+            ", Neutral losses: ".to_string() + &neutral_losses.iter().map(display_neutral_loss).join(",")
         },
-        neutral_losses.iter().map(display_neutral_loss).join(","),
         if diagnostic_ions.is_empty() {
-            ""
+            String::new()
         } else {
-            ", Diagnostic ions: "
+            ", Diagnostic ions: ".to_string() + &diagnostic_ions.iter().map(display_formula).join(",")
         },
-        diagnostic_ions.iter().map(display_formula).join(","),
+    ))
+}
+
+#[tauri::command]
+fn validate_custom_linker_specificity(
+    asymmetric: bool,
+    placement_rules: Vec<String>,
+    secondary_placement_rules: Vec<String>,
+    stubs: Vec<String>,
+    diagnostic_ions: Vec<String>,
+) -> Result<String, CustomError> {
+    let rules1 = placement_rules
+        .into_iter()
+        .map(|text| text.parse::<PlacementRule>())
+        .collect::<Result<Vec<_>, _>>()?;
+    let rules1 = if rules1.is_empty() {
+        vec![PlacementRule::Anywhere]
+    } else {
+        rules1
+    };
+    let rules2 = secondary_placement_rules
+        .into_iter()
+        .map(|text| text.parse::<PlacementRule>())
+        .collect::<Result<Vec<_>, _>>()?;
+    let rules2 = if rules2.is_empty() {
+        vec![PlacementRule::Anywhere]
+    } else {
+        rules2
+    };
+
+    let stubs = stubs
+        .into_iter()
+        .map(|text| parse_stub(&text))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let diagnostic_ions = diagnostic_ions
+        .into_iter()
+        .map(|text| {
+            text.parse::<f64>()
+                .map(MolecularFormula::with_additional_mass)
+                .or_else(|_| MolecularFormula::from_pro_forma(&text))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(format!(
+        "<span data-value='{{\"asymmetric\":{asymmetric},\"placement_rules\":[{}],\"secondary_placement_rules\":[{}],\"stubs\":[{}],\"diagnostic_ions\":[{}]}}'>Placement rules: {}{}{}{}</span>",
+        rules1.iter().map(|r| format!("\"{}\"", display_placement_rule(r))).join(","),
+        rules2.iter().map(|r| format!("\"{}\"", display_placement_rule(r))).join(","),
+        stubs.iter().map(|(f1,f2)| format!("\"{}:{}\"", f1.hill_notation(), f2.hill_notation())).join(","),
+        diagnostic_ions.iter().map(|n| format!("\"{}\"", n.hill_notation())).join(","),
+        rules1.iter().map(display_placement_rule).join(","),
+        if asymmetric {
+            ", Secondary placement rules: ".to_string() + &rules2.iter().map(display_placement_rule).join(",")
+        } else {
+            String::new()
+        },
+        if stubs.is_empty() {
+            String::new()
+        } else {
+            ", Neutral losses: ".to_string() + &stubs.iter().map(|(f1,f2)|format!("{}:{}", display_formula(f1), display_formula(f2))).join(",")
+        },
+        if diagnostic_ions.is_empty() {
+            String::new()
+        } else {
+            ", Diagnostic ions: ".to_string() + &diagnostic_ions.iter().map(display_formula).join(",")
+        },
     ))
 }
 
@@ -549,7 +637,9 @@ fn main() {
             validate_molecular_formula,
             validate_neutral_loss,
             validate_placement_rule,
+            validate_stub,
             validate_custom_single_specificity,
+            validate_custom_linker_specificity,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

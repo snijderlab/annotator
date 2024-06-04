@@ -458,14 +458,14 @@ fn main() {
           <div class='row'>
             <span class='title'>Modification type</span>
             <div class='select-box' id='custom-mod-type'>
-              <label for='custom-mod-type-single' tabindex='0'><input type='radio' name='custom-mod-type' value='single' id='custom-mod-type-single' checked>Single</label>
-              <label for='custom-mod-type-linker' tabindex='0'><input type='radio' name='custom-mod-type' value='linker' id='custom-mod-type-linker'>Linker</label>
+              <label for='custom-mod-type-single' tabindex='0'><input type='radio' name='custom-mod-type' value='single' id='custom-mod-type-single' checked>Modification</label>
+              <label for='custom-mod-type-linker' tabindex='0'><input type='radio' name='custom-mod-type' value='linker' id='custom-mod-type-linker'>Cross Linker</label>
             </div>
           </div>
+
           <div class="single">
-            <h2>Single</h2>
             <label for="custom-mod-single-specificities">Placement rules</label>
-            <div class="list-input">
+            <div class="list-input single">
               <ul class="values" id="custom-mod-single-specificities"></ul>
               <button class="create" id="custom-mod-single-specificities-create">Create</button>
               <div class="modal" id="custom-mod-single-specificities-create">
@@ -494,12 +494,59 @@ fn main() {
                   <output class="error"></output>
                 </div>
                 <button class="save" id="custom-mod-single-save">Save</button>
-                <button class="delete" id="custom-mod-single-delete">Delete</button>
+                <button class="delete secondary" id="custom-mod-single-delete">Delete</button>
               </div>
             </div>
           </div>
-          <button id="custom-mod-save">Save</button>
-          <button id="custom-mod-delete">Delete</button>
+          <div class="linker">
+            <label class="row">Length<input type="number" id="custom-mod-linker-length"></input></label>
+            <label for="custom-mod-linker-specificities">Placement rules</label>
+            <div class="list-input linker">
+              <ul class="values" id="custom-mod-linker-specificities"></ul>
+              <button class="create" id="custom-mod-linker-specificities-create">Create</button>
+              <div class="modal" id="custom-mod-linker-specificities-create">
+                <label class="block">Asymmetric linker<input type="checkbox" switch id="custom-mod-linker-asymmetric"></input></label>
+                <label for="custom-mod-linker-placement-rules">Placement rules</label>
+                <div class="separated-input">
+                  <div class="values" id="custom-mod-linker-placement-rules">
+                    <div class="input context" title="Add placement rules with 'AMINOACIDS@Position' or 'Position'. Position can be any of the following: Anywhere, AnyNTerm, ProteinNTerm, AnyCTerm, ProteinCTerm." placeholder="Add placement rules with 'AMINOACIDS@Position' or 'Position'" data-type="placement_rule" contentEditable="plaintext-only"></div>
+                    <button class="clear">Clear</button>
+                  </div>
+                  <output class="error"></output>
+                </div>
+                <label class="asymmetric" for="custom-mod-linker-placement-rules">Placement rules second position</label>
+                <div class="separated-input asymmetric">
+                  <div class="values" id="custom-mod-linker-secondary-placement-rules">
+                    <div class="input context" title="Add placement rules with 'AMINOACIDS@Position' or 'Position'. Position can be any of the following: Anywhere, AnyNTerm, ProteinNTerm, AnyCTerm, ProteinCTerm." placeholder="Add placement rules with 'AMINOACIDS@Position' or 'Position'" data-type="placement_rule" contentEditable="plaintext-only"></div>
+                    <button class="clear">Clear</button>
+                  </div>
+                  <output class="error"></output>
+                </div>
+                <label for="custom-mod-linker-stubs">Breakage</label>
+                <div class="separated-input">
+                  <div class="values" id="custom-mod-linker-stubs">
+                    <div class="input context" placeholder="Add breakage with a mass or molecular formula as 'formula1:formula2'." data-type="stub" contentEditable="plaintext-only"></div>
+                    <button class="clear">Clear</button>
+                  </div>
+                  <output class="error"></output>
+                </div>
+                <label for="custom-mod-linker-diagnostic-ions">Diagnostic ions</label>
+                <div class="separated-input">
+                  <div class="values" id="custom-mod-linker-diagnostic-ions">
+                    <div class="input context" placeholder="Add molecular formula or mass" data-type="molecular_formula" contentEditable="plaintext-only"></div>
+                    <button class="clear">Clear</button>
+                  </div>
+                  <output class="error"></output>
+                </div>
+                <button class="save" id="custom-mod-linker-save">Save</button>
+                <button class="delete secondary" id="custom-mod-linker-delete">Delete</button>
+                </div>
+            </div>
+          </div>
+          <div class="row">
+            <button id="custom-mod-save">Save</button>
+            <button id="custom-mod-delete" class="secondary">Delete</button>
+          </div>
         </dialog>
         <button id="custom-mod-create">Create new</button>
         <ol id="custom-mods">
