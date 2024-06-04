@@ -48,6 +48,7 @@ fn main() {
     
     <body>
       <button class="secondary print" onclick="window.print()">Export</button>
+      <button class="secondary cancel-drop" onclick='document.querySelector("html").classList.remove("file-drop-hover")'>Cancel drop</button>
       <!-- <button class="print" id="abort">Abort</button> -->
       <div class="input-flex">
         <button type="button" id="load-mgf-path">Load raw data file</button>
@@ -425,12 +426,13 @@ fn main() {
 
           <h2>Basic features</h2>
           <div class="basic">
-            <label>Formula<input id="custom-mod-formula" type="text" placeholder="Molecular formula or mass"></input></label>
+            <label>Formula<span class="input context" id="custom-mod-formula" type="text" placeholder="Molecular formula or mass" contentEditable="plaintext-only"></span></label>
             <label>Id<input id="custom-mod-id" type="number" disabled value="0"></input></label>
             <label>Name<input id="custom-mod-name" type="text" placeholder="Identifying name"></input></label>
             <p class="justify-end">Use as follows:</p>
-            <span class="example" id="custom-mod-example-id">CUSTOM:0</span>
-            <span class="example" id="custom-mod-example-name">C:NAME</span>
+            <span>Id<span class="example" id="custom-mod-example-id">CUSTOM:0</span></span>
+            <span>Name<span class="example" id="custom-mod-example-name">C:NAME</span></span>
+            <output class="error"></output>
           </div>
 
           <h2>Metadata</h2>

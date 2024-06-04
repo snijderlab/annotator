@@ -123,6 +123,10 @@ pre {
   overflow: hidden;
 }
 
+.context:has(.error) {
+  border-color: var(--color-red);
+}
+
 .context .error {
   text-decoration: underline;
   text-decoration-style: wavy;
@@ -153,7 +157,7 @@ pre {
 output.error {
   margin: .5rem;
   padding-left: .5rem;
-  border: 2px solid red;
+  border: 2px solid var(--color-red);
 
   &:not(.hidden) {
     display: block;
@@ -165,7 +169,7 @@ output.error {
   }
 
   & .title {
-    color: red;
+    color: var(--color-red);
   }
 }
 
@@ -498,6 +502,16 @@ output.error {
 
 /* file drop hover */
 
+html:not(.file-drop-hover) .cancel-drop {
+  display: none;
+}
+
+.cancel-drop {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+}
+
 html.file-drop-hover::before {
   content: "Drop here";
   display: flex;
@@ -637,20 +651,9 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
       border-color: var(--color-primary);
     }
 
-    &>.input {
+    & .input {
       border: none;
-      padding: 0;
-      margin-left: .5rem;
       flex-grow: 1;
-      padding: 5px 0;
-      outline: none;
-
-      &:empty::after {
-        content: attr(placeholder);
-        display: inline;
-        color: var(--color-halfway);
-        text-overflow: ellipsis;
-      }
     }
 
     &>.element {
@@ -673,7 +676,7 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
       }
 
       &:not(:first-child) {
-        margin-left: .5rem;
+        margin-left: 2px;
       }
 
       & sub {
@@ -734,13 +737,14 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
   display: grid;
   gap: 1rem;
   grid-template-columns: 2fr 1fr 2fr;
-  justify-items: baseline;
+  align-items: baseline;
 
   p {
     margin: 0;
   }
 
-  label {
+  label,
+  &>span {
     display: flex;
     gap: .5rem;
     align-items: baseline;
@@ -749,6 +753,34 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
     input {
       flex-grow: 1;
     }
+  }
+
+  #custom-mod-formula {
+    flex-grow: 1;
+
+    & .formula {
+      border: none;
+
+      & sub {
+        margin-bottom: -4px;
+        display: inline-block;
+      }
+
+      & sup {
+        margin-top: -4px;
+        display: inline-block;
+      }
+    }
+  }
+
+  & output.error {
+    grid-column: 1 / -1;
+    justify-self: normal;
+    margin: 0;
+  }
+
+  &:not(.error) output.error {
+    display: none;
   }
 }
 

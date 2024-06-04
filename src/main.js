@@ -340,6 +340,11 @@ function showError(error, showContext = true) {
   }
 }
 
+/**
+ * @param {Object} error - The error object
+ * @param {String} fallback - The fallback full original text if the error is unsupported or None
+ * @returns {String} String representation of HTML for use in `element.innerHTML = result;`
+ */
 function showContext(error, fallback) {
   if (error.context.hasOwnProperty('Line')) {
     let Line = error.context.Line;
@@ -458,6 +463,21 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // Custom mods
   document.getElementById("custom-mod-create").addEventListener("click", () => document.getElementById("custom-mod-dialog").showModal());
+  document.getElementById("custom-mod-formula").addEventListener("focusin", e => e.target.innerText = e.target.innerText);
+  document.getElementById("custom-mod-formula").addEventListener("focusout", async e => {
+    e.target.parentElement.classList.remove("error");
+    if (e.target.innerText.trim() != "") {
+      let text = e.target.innerText;
+      invoke("validate_molecular_formula", { text: text })
+        .then(value => e.target.innerHTML = value)
+        .catch(error => {
+          e.target.parentElement.parentElement.classList.add("error");
+          e.target.parentElement.parentElement.querySelector("output.error").innerHTML = showError(error, false);
+          e.target.innerHTML = showContext(error, text);
+        });
+    }
+  });
+  document.getElementById("custom-mod-name").addEventListener("input", e => document.getElementById("custom-mod-example-name").innerText = "C:" + e.target.value);
   document.querySelectorAll(".list-input").forEach(t => {
     t.querySelector(".create").addEventListener("click", e => {
       e.target.parentElement.classList.add("creating");
