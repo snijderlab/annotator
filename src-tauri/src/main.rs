@@ -412,7 +412,7 @@ async fn update_modification(
         // Store mods config file
         let path = app
             .path_resolver()
-            .app_data_dir()
+            .app_config_dir()
             .map(|dir| dir.join("custom_modifications.json"))
             .ok_or(CustomError::error(
                 "Cannot find app data directory",
@@ -735,7 +735,7 @@ fn load_custom_mods(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
     let path = app
         .handle()
         .path_resolver()
-        .app_data_dir()
+        .app_config_dir()
         .map(|dir| dir.join("custom_modifications.json"));
     if let Some(path) = path {
         let state = app.state::<Mutex<State>>();
