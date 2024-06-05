@@ -4,6 +4,7 @@
 )]
 
 use itertools::Itertools;
+use modification::ModificationId;
 use ordered_float::OrderedFloat;
 use placement_rule::PlacementRule;
 use render::{display_formula, display_mass, display_neutral_loss, display_placement_rule};
@@ -16,7 +17,8 @@ use rustyms::{
     *,
 };
 use state::State;
-use std::{str::FromStr, sync::Mutex};
+use std::{io::BufWriter, str::FromStr, sync::Mutex};
+use tauri::Manager;
 
 use crate::metadata_render::RenderToHtml;
 use serde::{Deserialize, Serialize};
@@ -284,38 +286,154 @@ fn validate_custom_linker_specificity(
     ))
 }
 
-fn edit_modification(
-    state: ModifiableState,
+#[tauri::command]
+fn get_custom_modifications(state: ModifiableState) -> Result<Vec<(usize, String)>, &'static str> {
+    let state = state.lock().map_err(|_| "Could not lock mutex")?;
+    Ok(state
+        .database
+        .iter()
+        .map(|(index, _, modification)| {
+            (
+                *index,
+                search_modification::render_modification(modification).to_string(),
+            )
+        })
+        .collect())
+}
+
+#[tauri::command]
+fn get_custom_modification(
     id: usize,
-    name: &str,
-    formula: &str,
-) -> Result<(), CustomError> {
-    let formula = formula
-        .parse::<f64>()
-        .map(|mass| Ok(MolecularFormula::with_additional_mass(mass)))
-        .unwrap_or_else(|_| MolecularFormula::from_pro_forma(formula))?;
-    if let Ok(mut state) = state.lock() {
-        let modification = (
-            id,
-            name.to_string(),
+    state: ModifiableState,
+) -> Result<CustomModification, &'static str> {
+    let state = state.lock().map_err(|_| "Could not lock mutex")?;
+    if let Some(index) = state.database.iter().position(|p| p.0 == id) {
+        match &state.database[index].2 {
             SimpleModification::Database {
+                specificities,
                 formula,
-                specificities: Vec::new(),
-                id: modification::ModificationId {
-                    ontology: Ontology::Custom,
-                    name: name.to_string(),
-                    id,
-                    description: String::new(),
-                    synonyms: Vec::new(),
-                    cross_ids: Vec::new(),
-                },
+                id,
+            } => Ok(CustomModification {
+                id: id.id,
+                name: id.name.clone(),
+                formula: formula.to_string(),
+                description: id.description.clone(),
+                synonyms: id.synonyms.clone(),
+                cross_ids: id
+                    .cross_ids
+                    .iter()
+                    .map(|(a, b)| format!("{a}:{b}"))
+                    .collect(),
+                linker: false,
+                single_specificity: specificities
+                    .iter()
+                    .map(|(rules, neutral_losses, diagnostic_ions)| {
+                        (
+                            rules.iter().map(display_placement_rule).collect(),
+                            neutral_losses.iter().map(|n| n.hill_notation()).collect(),
+                            diagnostic_ions
+                                .iter()
+                                .map(|n| n.0.hill_notation())
+                                .collect(),
+                        )
+                    })
+                    .collect(),
+                linker_specificity: Vec::new(),
+                linker_length: None,
+            }),
+            SimpleModification::Linker {
+                specificities,
+                formula,
+                id,
+                length,
+            } => todo!(),
+            _ => Err("Invalid custom modification type"),
+        }
+    } else {
+        Err("Given index does not exist")
+    }
+}
+
+/// To be sent back and forth with the JS side.
+/// This structure is way easier to handle over there.
+#[derive(Deserialize, Serialize)]
+struct CustomModification {
+    id: usize,
+    name: String,
+    formula: String,
+    description: String,
+    synonyms: Vec<String>,
+    cross_ids: Vec<String>,
+    linker: bool,
+    single_specificity: Vec<(Vec<String>, Vec<String>, Vec<String>)>,
+    linker_specificity: Vec<(bool, Vec<String>, Vec<String>, Vec<String>, Vec<String>)>,
+    linker_length: Option<f64>,
+}
+
+#[tauri::command]
+async fn update_modification(
+    custom_modification: CustomModification,
+    app: tauri::AppHandle,
+) -> Result<(), CustomError> {
+    let modification = (
+        custom_modification.id,
+        custom_modification.name.to_lowercase(),
+        SimpleModification::Database {
+            specificities: Vec::new(),
+            formula: custom_modification
+                .formula
+                .parse::<f64>()
+                .map(MolecularFormula::with_additional_mass)
+                .or_else(|_| MolecularFormula::from_pro_forma(&custom_modification.formula))?,
+            id: ModificationId {
+                ontology: Ontology::Custom,
+                name: custom_modification.name,
+                id: custom_modification.id,
+                description: custom_modification.description,
+                synonyms: custom_modification.synonyms,
+                cross_ids: custom_modification
+                    .cross_ids
+                    .iter()
+                    .filter_map(|id| id.split_once(':'))
+                    .map(|(a, b)| (a.to_string(), b.to_string()))
+                    .collect(),
             },
-        );
-        if let Some(index) = state.database.iter().position(|p| p.0 == id) {
+        },
+    );
+
+    if let Ok(mut state) = app.state::<Mutex<State>>().lock() {
+        // Update state
+        if let Some(index) = state.database.iter().position(|p| p.0 == modification.0) {
             state.database[index] = modification;
         } else {
             state.database.push(modification);
         }
+
+        // Store mods config file
+        let path = app
+            .path_resolver()
+            .app_data_dir()
+            .map(|dir| dir.join("custom_modifications.json"))
+            .ok_or(CustomError::error(
+                "Cannot find app data directory",
+                "",
+                Context::None,
+            ))?;
+        let file = BufWriter::new(std::fs::File::create(path).map_err(|err| {
+            CustomError::error(
+                "Could not open custom modifications configuration file",
+                err,
+                Context::None,
+            )
+        })?);
+        serde_json::to_writer_pretty(file, &state.database).map_err(|err| {
+            CustomError::error(
+                "Could not write custom modifications to configuration file",
+                err,
+                Context::None,
+            )
+        })?;
+
         Ok(())
     } else {
         Err(CustomError::error(
@@ -613,33 +731,80 @@ async fn annotate_spectrum<'a>(
     })
 }
 
+fn load_custom_mods(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let path = app
+        .handle()
+        .path_resolver()
+        .app_data_dir()
+        .map(|dir| dir.join("custom_modifications.json"));
+    if let Some(path) = path {
+        let state = app.state::<Mutex<State>>();
+        if let Ok(data) = std::fs::read(path) {
+            let mods: Vec<(usize, String, SimpleModification)> = serde_json::from_slice(&data)?;
+            state
+                .lock()
+                .expect("Poisoned mutex at setup of custom mods")
+                .database = mods;
+        }
+        Ok(())
+    } else {
+        Err("Could not find configuration file".into())
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .manage(Mutex::new(State {
             spectra: Vec::new(),
             peptides: Vec::new(),
-            database: Vec::new(),
+            database: vec![(
+                0,
+                "test".to_string(),
+                SimpleModification::Database {
+                    specificities: vec![(
+                        vec![PlacementRule::AminoAcid(
+                            vec![AminoAcid::A],
+                            placement_rule::Position::Anywhere,
+                        )],
+                        vec![NeutralLoss::Gain(molecular_formula!(U 1))],
+                        vec![DiagnosticIon(molecular_formula!(C 1 H 2 U 1 O 4))],
+                    )],
+                    formula: molecular_formula!(C 1 H 2),
+                    id: ModificationId {
+                        ontology: Ontology::Custom,
+                        name: "Test".to_string(),
+                        id: 0,
+                        description: "Some stuff".to_string(),
+                        synonyms: vec!["Example".to_string()],
+                        cross_ids: vec![("Answer".to_string(), "42".to_string())],
+                    },
+                },
+            )],
         }))
+        .setup(load_custom_mods)
         .invoke_handler(tauri::generate_handler![
             annotate_spectrum,
             details_formula,
             find_scan_number,
+            get_custom_modification,
+            get_custom_modifications,
             identified_peptide_details,
-            load_clipboard,
             identified_peptides::load_identified_peptide,
             identified_peptides::load_identified_peptides,
+            identified_peptides::search_peptide,
+            load_clipboard,
             load_mgf,
             refresh,
-            search_modification::search_modification,
-            identified_peptides::search_peptide,
-            spectrum_details,
             render::density_graph,
+            search_modification::search_modification,
+            spectrum_details,
+            update_modification,
+            validate_custom_linker_specificity,
+            validate_custom_single_specificity,
             validate_molecular_formula,
             validate_neutral_loss,
             validate_placement_rule,
             validate_stub,
-            validate_custom_single_specificity,
-            validate_custom_linker_specificity,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

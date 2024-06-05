@@ -454,6 +454,13 @@ window.addEventListener("DOMContentLoaded", () => {
         }
       }
     });
+    t.addEventListener("focusout", async event => {
+      let input = event.target;
+      if (input.innerText.trim() != "") {
+        input.parentElement.parentElement.classList.toggle("error", false);
+        addValueSeparatedElement(input.parentElement, input.innerText);
+      }
+    });
   });
   document.querySelectorAll(".separated-input .clear").forEach(t => {
     t.addEventListener("click", e => {
@@ -462,7 +469,12 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   // Custom mods
-  document.getElementById("custom-mod-create").addEventListener("click", () => document.getElementById("custom-mod-dialog").showModal());
+  document.getElementById("custom-mod-create").addEventListener("click", e => {
+    loadCustomModification();
+    document.getElementById("custom-mod-id").value = e.target.dataset.newId;
+    document.getElementById("custom-mod-example-id").innerText = "CUSTOM:" + e.target.dataset.newId;
+    document.getElementById("custom-mod-dialog").showModal()
+  });
   document.getElementById("custom-mod-formula").addEventListener("focusin", e => e.target.innerText = e.target.innerText);
   document.getElementById("custom-mod-formula").addEventListener("focusout", async e => {
     e.target.parentElement.classList.remove("error");
@@ -536,11 +548,41 @@ window.addEventListener("DOMContentLoaded", () => {
     })
     t.querySelector(".delete").addEventListener("click", e => {
       e.target.parentElement.parentElement.classList.remove("creating");
+      addValueListInput(
+        e.target.parentElement.parentElement,
+        loadSeparatedInput("custom-mod-single-placement-rules"),
+        loadSeparatedInput("custom-mod-single-neutral-losses"),
+        loadSeparatedInput("custom-mod-single-diagnostic-ions"),
+        document.getElementById("custom-mod-linker-asymmetric").checked,
+        loadSeparatedInput("custom-mod-linker-placement-rules"),
+        loadSeparatedInput("custom-mod-linker-secondary-placement-rules"),
+        loadSeparatedInput("custom-mod-linker-stubs"),
+        loadSeparatedInput("custom-mod-linker-diagnostic-ions"),
+      );
       e.target.parentElement.parentElement.querySelectorAll(".modal .separated-input").forEach(s => clearSeparatedInput(s));
     })
   });
-  document.getElementById("custom-mod-save").addEventListener("click", () => document.getElementById("custom-mod-dialog").close());
-  document.getElementById("custom-mod-delete").addEventListener("click", () => document.getElementById("custom-mod-dialog").close());
+  document.getElementById("custom-mod-save").addEventListener("click", () => {
+    document.getElementById("custom-mod-dialog").close();
+    invoke("update_modification", {
+      customModification: {
+        id: Number(document.getElementById("custom-mod-id").value),
+        name: document.getElementById("custom-mod-name").value,
+        formula: document.getElementById("custom-mod-formula").innerText,
+        description: document.getElementById("custom-mod-description").value,
+        synonyms: loadSeparatedInput("custom-mod-synonyms"),
+        cross_ids: loadSeparatedInput("custom-mod-cross-ids"),
+        linker: document.getElementById("custom-mod-linker-asymmetric").checked,
+        single_specificity: [],
+        linker_specificity: [],
+        linker_length: Number(document.getElementById("custom-mod-linker-length").value),
+      }
+    })
+      .then(() => updateCustomModifications())
+      .catch(error => console.error(error))
+  });
+  document.getElementById("custom-mod-cancel").addEventListener("click", () => document.getElementById("custom-mod-dialog").close());
+  updateCustomModifications();
 
   // Refresh interface for hot reload
   invoke("refresh").then((result) => {
@@ -555,6 +597,127 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   })
 });
+
+function updateCustomModifications() {
+  invoke("get_custom_modifications")
+    .then(modifications => {
+      let container = document.getElementById("custom-mods");
+      container.innerText = "";
+      let highest_id = -1;
+      for (let modification of modifications) {
+        let new_element = document.createElement("li");
+        new_element.innerHTML = modification[1]; // TODO: add edit and delete buttons
+        let edit_button = document.createElement("button");
+        edit_button.classList.add("edit");
+        edit_button.appendChild(document.createTextNode("Edit"));
+        edit_button.addEventListener("click", () =>
+          invoke("get_custom_modification", { id: modification[0] })
+            .then(result => {
+              loadCustomModification(result);
+              document.getElementById("custom-mod-dialog").showModal();
+            })
+            .catch(error => console.error(error)));
+        new_element.appendChild(edit_button);
+        container.appendChild(new_element);
+        highest_id = Math.max(highest_id, modification[0]);
+      }
+      document.getElementById("custom-mod-create").dataset.newId = highest_id + 1;
+    })
+    .catch(error => console.error(error))
+}
+
+/**
+ * @param {Object?} modification - If null clear
+ */
+function loadCustomModification(modification = null) {
+  if (modification == null) {
+    document.getElementById("custom-mod-id").value = 0;
+    document.getElementById("custom-mod-example-id").innerText = "CUSTOM:0";
+    document.getElementById("custom-mod-name").value = "";
+    document.getElementById("custom-mod-example-name").innerText = "C:NAME";
+    document.getElementById("custom-mod-formula").innerText = "";
+    document.getElementById("custom-mod-description").value = "";
+    clearSeparatedInput(document.getElementById("custom-mod-synonyms").parentElement);
+    clearSeparatedInput(document.getElementById("custom-mod-cross-ids").parentElement);
+    document.getElementById("custom-mod-type-single").checked = true;
+    document.getElementById("custom-mod-type-linker").checked = false;
+    document.getElementById("custom-mod-single-specificities").innerText = "";
+  } else {
+    console.log(modification);
+    document.getElementById("custom-mod-id").value = modification.id;
+    document.getElementById("custom-mod-example-id").innerText = "CUSTOM:" + modification.id;
+    document.getElementById("custom-mod-name").value = modification.name;
+    document.getElementById("custom-mod-example-name").innerText = "C:" + modification.name;
+    document.getElementById("custom-mod-formula").innerText = modification.formula;
+    document.getElementById("custom-mod-description").value = modification.description;
+    populateSeparatedInput("custom-mod-synonyms", modification.synonyms);
+    populateSeparatedInput("custom-mod-cross-ids", modification.cross_ids);
+    document.getElementById("custom-mod-type-single").checked = !modification.linker;
+    document.getElementById("custom-mod-type-linker").checked = modification.linker;
+    document.getElementById("custom-mod-single-specificities").innerText = "";
+    for (let specificity of modification.single_specificity) {
+      console.log(specificity);
+      addValueListInput(
+        document.getElementById("custom-mod-single-specificities").parentElement,
+        specificity[0],
+        specificity[1],
+        specificity[2],
+        false, [], [], [], []
+      )
+    }
+  }
+}
+
+async function addValueListInput(listInput, singlePlacementRules, singleNeutralLosses, singleDiagnosticIons, linkerAsymmetric, linkerPlacementRules, linkerSecondaryPlacementRules, linkerStubs, linkerDiagnosticIons) {
+  listInput.classList.remove("creating");
+  let new_element = document.createElement("li");
+  new_element.classList.add("element");
+  if (listInput.classList.contains("single")) {
+    new_element.innerHTML = await invoke("validate_custom_single_specificity", {
+      placementRules: singlePlacementRules,
+      neutralLosses: singleNeutralLosses,
+      diagnosticIons: singleDiagnosticIons,
+    }).catch(error => {
+      console.error(error)
+    });
+  } else if (listInput.classList.contains("linker")) {
+    new_element.innerHTML = await invoke("validate_custom_linker_specificity", {
+      asymmetric: linkerAsymmetric,
+      placementRules: linkerPlacementRules,
+      secondaryPlacementRules: linkerSecondaryPlacementRules,
+      stubs: linkerStubs,
+      diagnosticIons: linkerDiagnosticIons,
+    }).catch(error => {
+      console.error(error)
+    });
+  }
+  new_element.children[0].title = "Edit";
+  new_element.children[0].addEventListener("click", e => {
+    console.log(e.target.dataset.value);
+    let data = JSON.parse(e.target.dataset.value);
+    console.log(data);
+    if (listInput.classList.contains("single")) {
+      populateSeparatedInput("custom-mod-single-placement-rules", data.placement_rules);
+      populateSeparatedInput("custom-mod-single-neutral-losses", data.neutral_losses);
+      populateSeparatedInput("custom-mod-single-diagnostic-ions", data.diagnostic_ions);
+    } else if (listInput.classList.contains("linker")) {
+      document.getElementById("custom-mod-linker-asymmetric").checked = data.asymmetric;
+      populateSeparatedInput("custom-mod-linker-placement-rules", data.placement_rules);
+      populateSeparatedInput("custom-mod-linker-secondary-placement-rules", data.secondary_placement_rules);
+      populateSeparatedInput("custom-mod-linker-stubs", data.stubs);
+      populateSeparatedInput("custom-mod-linker-diagnostic-ions", data.diagnostic_ions);
+    }
+    listInput.classList.add("creating");
+    e.target.parentElement.remove();
+  });
+  let delete_button = document.createElement("button");
+  delete_button.classList.add("delete");
+  delete_button.appendChild(document.createTextNode("x"));
+  delete_button.addEventListener("click", e => e.target.parentElement.remove());
+  delete_button.title = "Delete";
+  new_element.appendChild(delete_button);
+  listInput.querySelector(".values").appendChild(new_element);
+}
 
 function moveCursorToEnd(contentEle) {
   const range = document.createRange();

@@ -545,12 +545,11 @@ fn main() {
           </div>
           <div class="row">
             <button id="custom-mod-save">Save</button>
-            <button id="custom-mod-delete" class="secondary">Delete</button>
+            <button id="custom-mod-cancel" class="secondary">Cancel</button>
           </div>
         </dialog>
-        <button id="custom-mod-create">Create new</button>
-        <ol id="custom-mods">
-        </ol>
+        <button id="custom-mod-create" data-new-id="0">Create new</button>
+        <ol id="custom-mods"></ol>
       </fieldset>
       <input type="checkbox" id="collapsible-logs">
       <fieldset class="collapsible" data-linked-item="collapsible-logs">
