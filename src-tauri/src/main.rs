@@ -443,29 +443,7 @@ fn main() {
         .manage(Mutex::new(State {
             spectra: Vec::new(),
             peptides: Vec::new(),
-            database: vec![(
-                0,
-                "test".to_string(),
-                SimpleModification::Database {
-                    specificities: vec![(
-                        vec![PlacementRule::AminoAcid(
-                            vec![AminoAcid::A],
-                            placement_rule::Position::Anywhere,
-                        )],
-                        vec![NeutralLoss::Gain(molecular_formula!(U 1))],
-                        vec![DiagnosticIon(molecular_formula!(C 1 H 2 U 1 O 4))],
-                    )],
-                    formula: molecular_formula!(C 1 H 2),
-                    id: ModificationId {
-                        ontology: Ontology::Custom,
-                        name: "Test".to_string(),
-                        id: 0,
-                        description: "Some stuff".to_string(),
-                        synonyms: vec!["Example".to_string()],
-                        cross_ids: vec![("Answer".to_string(), "42".to_string())],
-                    },
-                },
-            )],
+            database: Vec::new(),
         }))
         .setup(load_custom_mods)
         .invoke_handler(tauri::generate_handler![
