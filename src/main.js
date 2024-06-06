@@ -520,9 +520,7 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       new_element.children[0].title = "Edit";
       new_element.children[0].addEventListener("click", e => {
-        console.log(e.target.dataset.value);
         let data = JSON.parse(e.target.dataset.value);
-        console.log(data);
         if (listInput.classList.contains("single")) {
           populateSeparatedInput("custom-mod-single-placement-rules", data.placement_rules);
           populateSeparatedInput("custom-mod-single-neutral-losses", data.neutral_losses);
@@ -546,37 +544,38 @@ window.addEventListener("DOMContentLoaded", () => {
       listInput.querySelector(".values").appendChild(new_element);
       listInput.querySelectorAll(".modal .separated-input").forEach(s => clearSeparatedInput(s));
     })
-    t.querySelector(".delete").addEventListener("click", e => {
-      e.target.parentElement.parentElement.classList.remove("creating");
-      addValueListInput(
-        e.target.parentElement.parentElement,
-        loadSeparatedInput("custom-mod-single-placement-rules"),
-        loadSeparatedInput("custom-mod-single-neutral-losses"),
-        loadSeparatedInput("custom-mod-single-diagnostic-ions"),
-        document.getElementById("custom-mod-linker-asymmetric").checked,
-        loadSeparatedInput("custom-mod-linker-placement-rules"),
-        loadSeparatedInput("custom-mod-linker-secondary-placement-rules"),
-        loadSeparatedInput("custom-mod-linker-stubs"),
-        loadSeparatedInput("custom-mod-linker-diagnostic-ions"),
-      );
+    t.querySelector(".cancel").addEventListener("click", e => {
+      e.target.parentElement.parentElement.classList.remove("creating"); // TODO: removes element
+      // addValueListInput(
+      //   e.target.parentElement.parentElement,
+      //   loadSeparatedInput("custom-mod-single-placement-rules"),
+      //   loadSeparatedInput("custom-mod-single-neutral-losses"),
+      //   loadSeparatedInput("custom-mod-single-diagnostic-ions"),
+      //   document.getElementById("custom-mod-linker-asymmetric").checked,
+      //   loadSeparatedInput("custom-mod-linker-placement-rules"),
+      //   loadSeparatedInput("custom-mod-linker-secondary-placement-rules"),
+      //   loadSeparatedInput("custom-mod-linker-stubs"),
+      //   loadSeparatedInput("custom-mod-linker-diagnostic-ions"),
+      // );
       e.target.parentElement.parentElement.querySelectorAll(".modal .separated-input").forEach(s => clearSeparatedInput(s));
     })
   });
   document.getElementById("custom-mod-save").addEventListener("click", () => {
     document.getElementById("custom-mod-dialog").close();
+    let mod = {
+      id: Number(document.getElementById("custom-mod-id").value),
+      name: document.getElementById("custom-mod-name").value,
+      formula: document.getElementById("custom-mod-formula").innerText,
+      description: document.getElementById("custom-mod-description").value,
+      synonyms: loadSeparatedInput("custom-mod-synonyms"),
+      cross_ids: loadSeparatedInput("custom-mod-cross-ids"),
+      linker: document.getElementById("custom-mod-type-linker").checked,
+      single_specificities: loadListInput("custom-mod-single-specificities"),
+      linker_specificities: loadListInput("custom-mod-linker-specificities"),
+      linker_length: Number(document.getElementById("custom-mod-linker-length").value),
+    };
     invoke("update_modification", {
-      customModification: {
-        id: Number(document.getElementById("custom-mod-id").value),
-        name: document.getElementById("custom-mod-name").value,
-        formula: document.getElementById("custom-mod-formula").innerText,
-        description: document.getElementById("custom-mod-description").value,
-        synonyms: loadSeparatedInput("custom-mod-synonyms"),
-        cross_ids: loadSeparatedInput("custom-mod-cross-ids"),
-        linker: document.getElementById("custom-mod-linker-asymmetric").checked,
-        single_specificity: [],
-        linker_specificity: [],
-        linker_length: Number(document.getElementById("custom-mod-linker-length").value),
-      }
+      customModification: mod
     })
       .then(() => updateCustomModifications())
       .catch(error => console.error(error))
@@ -606,7 +605,8 @@ function updateCustomModifications() {
       let highest_id = -1;
       for (let modification of modifications) {
         let new_element = document.createElement("li");
-        new_element.innerHTML = modification[1]; // TODO: add edit and delete buttons
+        new_element.dataset.id = modification[0];
+        new_element.innerHTML = modification[1];
         let edit_button = document.createElement("button");
         edit_button.classList.add("edit");
         edit_button.appendChild(document.createTextNode("Edit"));
@@ -618,6 +618,17 @@ function updateCustomModifications() {
             })
             .catch(error => console.error(error)));
         new_element.appendChild(edit_button);
+        let delete_button = document.createElement("button");
+        delete_button.classList.add("delete");
+        delete_button.classList.add("secondary");
+        delete_button.appendChild(document.createTextNode("Delete"));
+        delete_button.addEventListener("click", () =>
+          invoke("delete_custom_modification", { id: modification[0] })
+            .then(() => {
+              updateCustomModifications();
+            })
+            .catch(error => console.error(error)));
+        new_element.appendChild(delete_button);
         container.appendChild(new_element);
         highest_id = Math.max(highest_id, modification[0]);
       }
@@ -642,8 +653,9 @@ function loadCustomModification(modification = null) {
     document.getElementById("custom-mod-type-single").checked = true;
     document.getElementById("custom-mod-type-linker").checked = false;
     document.getElementById("custom-mod-single-specificities").innerText = "";
+    document.getElementById("custom-mod-linker-length").value = "";
+    document.getElementById("custom-mod-linker-specificities").innerText = "";
   } else {
-    console.log(modification);
     document.getElementById("custom-mod-id").value = modification.id;
     document.getElementById("custom-mod-example-id").innerText = "CUSTOM:" + modification.id;
     document.getElementById("custom-mod-name").value = modification.name;
@@ -655,8 +667,7 @@ function loadCustomModification(modification = null) {
     document.getElementById("custom-mod-type-single").checked = !modification.linker;
     document.getElementById("custom-mod-type-linker").checked = modification.linker;
     document.getElementById("custom-mod-single-specificities").innerText = "";
-    for (let specificity of modification.single_specificity) {
-      console.log(specificity);
+    for (let specificity of modification.single_specificities) {
       addValueListInput(
         document.getElementById("custom-mod-single-specificities").parentElement,
         specificity[0],
@@ -665,6 +676,29 @@ function loadCustomModification(modification = null) {
         false, [], [], [], []
       )
     }
+    document.getElementById("custom-mod-linker-length").value = modification.linker_length;
+    document.getElementById("custom-mod-linker-specificities").innerText = "";
+    for (let specificity of modification.linker_specificities) {
+      addValueListInput(
+        document.getElementById("custom-mod-linker-specificities").parentElement,
+        [], [], [],
+        specificity[0],
+        specificity[1],
+        specificity[2],
+        specificity[3],
+        specificity[4],
+      )
+    }
+  }
+}
+
+function loadListInput(id) {
+  let listInput = document.getElementById(id).parentElement;
+  let values = [...document.getElementById(id).querySelectorAll(".element>span")].map(e => JSON.parse(e.dataset.value));
+  if (listInput.classList.contains("single")) {
+    return values.map(v => [v.placement_rules, v.neutral_losses, v.diagnostic_ions]);
+  } else if (listInput.classList.contains("linker")) {
+    return values.map(v => [v.asymmetric, v.placement_rules, v.secondary_placement_rules, v.stubs, v.diagnostic_ions]);
   }
 }
 
@@ -693,9 +727,7 @@ async function addValueListInput(listInput, singlePlacementRules, singleNeutralL
   }
   new_element.children[0].title = "Edit";
   new_element.children[0].addEventListener("click", e => {
-    console.log(e.target.dataset.value);
     let data = JSON.parse(e.target.dataset.value);
-    console.log(data);
     if (listInput.classList.contains("single")) {
       populateSeparatedInput("custom-mod-single-placement-rules", data.placement_rules);
       populateSeparatedInput("custom-mod-single-neutral-losses", data.neutral_losses);

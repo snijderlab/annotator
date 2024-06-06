@@ -97,9 +97,10 @@ pub async fn search_modification(text: &str, tolerance: f64) -> Result<String, C
 }
 
 pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
-    let mut output = HtmlElement::new(HtmlTag::div);
+    let mut output = HtmlTag::div.new();
+    output.class("modification");
 
-    output = output.content(HtmlElement::new(HtmlTag::p).content(format!(
+    output.content(HtmlElement::new(HtmlTag::p).content(format!(
         "Formula {} monoisotopic mass {} average mass {} most abundant mass {}",
         display_formula(&modification.formula()),
         display_mass(modification.formula().monoisotopic_mass()),
@@ -111,12 +112,12 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
         specificities, id, ..
     } = &modification
     {
-        output = output.content(render_modification_id(id));
-        output = output.content(HtmlElement::new(HtmlTag::p).content("Placement rules"));
+        output.content(render_modification_id(id));
+        output.content(HtmlElement::new(HtmlTag::p).content("Placement rules"));
         let mut ul = HtmlElement::new(HtmlTag::ul);
 
         for rule in specificities {
-            ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!(
+            ul.content(HtmlTag::li.new().content(format!(
                 "Positions: {}{}{}{}{}",
                 render_places(&rule.0),
                 if rule.1.is_empty() {
@@ -124,30 +125,31 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
                 } else {
                     ", Neutral losses: "
                 },
-                rule.1.iter().map(display_neutral_loss).join(","),
+                rule.1.iter().map(display_neutral_loss).join(", "),
                 if rule.2.is_empty() {
                     ""
                 } else {
                     ", Diagnostic ions: "
                 },
-                rule.2.iter().map(|d| &d.0).map(display_formula).join(",")
+                rule.2.iter().map(|d| &d.0).map(display_formula).join(", ")
             )));
         }
-        output = output.content(ul);
+        output.content(ul);
     } else if let SimpleModification::Gno(composition, name) = &modification {
-        output = output.content(
+        output.content(
             HtmlElement::new(HtmlTag::p)
                 .content(format!("Ontology: Gnome, name: {name}, "))
                 .maybe_content(modification.ontology_url().map(|url| {
                     HtmlElement::new(HtmlTag::a)
-                        .content("ontology link")
+                        .content("view online")
                         .header("href", url)
                         .header("target", "_blank")
+                        .clone()
                 })),
         );
         match composition {
             GnoComposition::Mass(_) => {
-                output = output.content(HtmlElement::new(HtmlTag::p).content("Only mass known"));
+                output.content(HtmlElement::new(HtmlTag::p).content("Only mass known"));
             }
             GnoComposition::Structure(structure) => {
                 output.extend([
@@ -169,114 +171,128 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
         ..
     } = &modification
     {
-        output = output.content(render_modification_id(id));
-        output = output.content(HtmlElement::new(HtmlTag::p).content(format!(
+        output.content(render_modification_id(id));
+        output.content(HtmlElement::new(HtmlTag::p).content(format!(
             "Length: {}",
             length.map_or("-".to_string(), |l| l.to_string()),
         )));
-        output = output.content(HtmlElement::new(HtmlTag::p).content("Placement rules"));
-        let mut ul = HtmlElement::new(HtmlTag::ul);
+        output.content(HtmlElement::new(HtmlTag::p).content("Placement rules"));
+        let mut ul = HtmlTag::ul.new();
+        ul.class("placement-rules");
 
         for specificity in specificities {
             match specificity {
                 LinkerSpecificity::Symmetric(places, stubs, diagnostic_ions) => {
-                    ul = ul.content(HtmlElement::new(HtmlTag::li).content(format!(
-                            "Positions: {}{}{}{}{}",
-                            render_places(places),
-                            if stubs.is_empty() { "" } else { ", stubs: " },
-                            stubs.iter().map(display_stubs).join(","),
-                            if diagnostic_ions.is_empty() {
-                                ""
-                            } else {
-                                ", diagnostic ions: "
-                            },
-                            diagnostic_ions
-                                .iter()
-                                .map(|d| &d.0)
-                                .map(display_formula)
-                                .join(",")
-                        )));
+                    ul.content(
+                        HtmlTag::li
+                            .new()
+                            .content(format!("Positions: {}", render_places(places)))
+                            .maybe_content((!stubs.is_empty()).then(|| {
+                                format!(
+                                    ", Breakages: {}",
+                                    stubs.iter().map(display_stubs).join(", ")
+                                )
+                            }))
+                            .maybe_content((!diagnostic_ions.is_empty()).then(|| {
+                                format!(
+                                    ", Diagnostic ions: {}",
+                                    diagnostic_ions
+                                        .iter()
+                                        .map(|d| display_formula(&d.0))
+                                        .join(", ")
+                                )
+                            })),
+                    );
                 }
                 LinkerSpecificity::Asymmetric(
                     (left_places, right_places),
                     stubs,
                     diagnostic_ions,
                 ) => {
-                    ul = ul
-                        .content(HtmlElement::new(HtmlTag::li).content(format!(
-                            "Positions: {}{}{}<br>",
-                            render_places(left_places),
-                            if stubs.is_empty() { "" } else { ", stubs: " },
-                            stubs.iter().map(|(s, _)| display_formula(s)).join(",")
-                        )))
-                        .content(format!(
-                            "Positions: {}{}{}",
-                            render_places(right_places),
-                            if stubs.is_empty() { "" } else { ", stubs: " },
-                            stubs.iter().map(|(_, s)| display_formula(s)).join(",")
-                        ))
-                        .content(format!(
-                            "{}{}",
-                            if diagnostic_ions.is_empty() {
-                                ""
-                            } else {
-                                "<br>Diagnostic ions: "
-                            },
-                            diagnostic_ions
-                                .iter()
-                                .map(|d| &d.0)
-                                .map(display_formula)
-                                .join(",")
-                        ));
+                    ul.content(
+                        HtmlElement::new(HtmlTag::li)
+                            .content(format!(
+                                "First positions: {}, Second positions: {}",
+                                render_places(left_places),
+                                render_places(right_places)
+                            ))
+                            .maybe_content((!stubs.is_empty()).then(|| {
+                                format!(
+                                    ", Breakages: {}",
+                                    stubs.iter().map(display_stubs).join(", ")
+                                )
+                            }))
+                            .maybe_content((!diagnostic_ions.is_empty()).then(|| {
+                                format!(
+                                    ", Diagnostic ions: {}",
+                                    diagnostic_ions
+                                        .iter()
+                                        .map(|d| display_formula(&d.0))
+                                        .join(", ")
+                                )
+                            })),
+                    );
                 }
             }
         }
-        output = output.content(ul);
+        output.content(ul);
     }
 
     output
 }
 
 fn render_modification_id(id: &ModificationId) -> HtmlElement {
-    let mut text = HtmlTag::div
-        .empty()
-        .content(HtmlTag::p.empty().content(format!(
-            "Ontology: {}, name: {}, index: {}, ",
-            id.ontology, id.name, id.id
+    let mut text = HtmlTag::div.new();
+    text
+        .content(HtmlTag::p.new().content(format!(
+            "Ontology: <span class='ontology'>{}</span>, name: <span class='name'>{}</span>, index: <span class='index'>{}</span>{}",
+            id.ontology, id.name, id.id, if let Some(url) = id.url() {
+                format!(", {}", HtmlElement::new(HtmlTag::a)
+                .content("view online")
+                .header("href", url)
+                .header("target", "_blank"))
+            } else {
+                String::new()
+            }
         )))
-        .maybe_content((!id.description.is_empty()).then_some(&id.description));
+        .maybe_content((!id.description.is_empty()).then_some(HtmlTag::p.new().class("description").content(&id.description)));
     if !id.synonyms.is_empty() {
-        text = text.content(HtmlTag::p.empty().content("Synonyms"));
-        text = text.content(
-            HtmlTag::ul.empty().children(
-                id.synonyms
-                    .iter()
-                    .map(|syn| HtmlTag::li.empty().content(syn)),
-            ),
-        )
+        text.content(
+            HtmlTag::ul
+                .new()
+                .class("synonyms")
+                .children([HtmlTag::li.new().class("title").content("Synonyms")])
+                .children(
+                    id.synonyms
+                        .iter()
+                        .map(|syn| HtmlTag::li.new().content(syn).clone()),
+                ),
+        );
     }
     if !id.cross_ids.is_empty() {
-        text = text.content(HtmlTag::p.empty().content("Cross IDs"));
-        text = text.content(
-            HtmlTag::ul.empty().children(
-                id.cross_ids
-                    .iter()
-                    .map(|(meta, id)| HtmlTag::li.empty().content(format!("{meta}: {id}"))),
-            ),
-        )
+        text.content(
+            HtmlTag::ul
+                .new()
+                .class("cross-ids")
+                .children([HtmlTag::li.new().class("title").content("Cross IDs")])
+                .children(id.cross_ids.iter().map(|(meta, id)| {
+                    HtmlTag::li
+                        .new()
+                        .content(format!("<span class='cross-id-system'>{meta}</span>: {id}"))
+                        .clone()
+                })),
+        );
     }
-    text.maybe_content(id.url().map(|url| {
-        HtmlElement::new(HtmlTag::a)
-            .content("ontology link")
-            .header("href", url)
-            .header("target", "_blank")
-    }))
+    text
 }
 
 fn render_places(places: &[PlacementRule]) -> String {
     if places.is_empty() {
         "Anywhere".to_string()
     } else {
-        places.iter().map(display_placement_rule).join(",")
+        places
+            .iter()
+            .map(|p| display_placement_rule(p, true))
+            .join(", ")
     }
 }

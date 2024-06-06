@@ -340,7 +340,7 @@ fn render_error_graph(
             output,
             "{}",
             HtmlTag::span
-                .empty()
+                .new()
                 .header("class", format!("point {}", get_classes(&point.annotation)))
                 .style(format!(
                     "--mz:{};--intensity:{};",
@@ -740,7 +740,7 @@ fn render_linear_peptide(
             output,
             "{}",
             HtmlTag::span
-                .empty()
+                .new()
                 .class("name")
                 .data([("pos", format!("{peptidoform_index}-{peptide_index}"))])
                 .content(if multiple_peptidoforms && multiple_peptides {
@@ -1539,7 +1539,8 @@ pub async fn density_graph(data: Vec<f64>) -> Result<String, ()> {
 pub fn display_mass(value: Mass) -> HtmlElement {
     let (num, suf, full) = engineering_notation(value.value, 3);
     let suf = suf.map_or(String::new(), |suf| suf.to_string());
-    HtmlElement::new(HtmlTag::span)
+    HtmlTag::span
+        .new()
         .class("mass")
         .header(
             "title",
@@ -1550,6 +1551,7 @@ pub fn display_mass(value: Mass) -> HtmlElement {
             },
         )
         .content(format!("{} {}Da", num, suf))
+        .clone()
 }
 
 /// Display the given value in engineering notation eg `1000` -> `10 k`, with the given number of decimal points and returns the suffix separately.
@@ -1588,7 +1590,7 @@ fn engineering_notation(value: f64, precision: usize) -> (String, Option<char>, 
 
 pub fn display_stubs(formula: &(MolecularFormula, MolecularFormula)) -> String {
     format!(
-        "{}&{}",
+        "{}:{}",
         display_formula(&formula.0),
         display_formula(&formula.1)
     )
@@ -1616,20 +1618,41 @@ pub fn display_neutral_loss(formula: &NeutralLoss) -> String {
     }
 }
 
-pub fn display_placement_rule(rule: &PlacementRule) -> String {
-    match rule {
-        PlacementRule::AminoAcid(aa, pos) => format!("{}@{pos}", aa.iter().join("")),
-        PlacementRule::Terminal(pos) => pos.to_string(),
-        PlacementRule::Anywhere => "Anywhere".to_string(),
-        PlacementRule::PsiModification(index, pos) => {
-            format!(
-                "{}@{pos}",
-                Ontology::Psimod
-                    .find_id(*index, None)
-                    .unwrap_or_else(|| panic!(
-                        "Invalid PsiMod placement rule, non existing modification {index}"
-                    ))
-            )
+pub fn display_placement_rule(rule: &PlacementRule, formatted: bool) -> String {
+    if formatted {
+        match rule {
+            PlacementRule::AminoAcid(aa, pos) => format!(
+                "<span class='aminoacid'>{}</span>@<span class='position'>{pos}</span>",
+                aa.iter().join("")
+            ),
+            PlacementRule::Terminal(pos) => format!("<span class='position'>{pos}</span>"),
+            PlacementRule::Anywhere => "<span class='position'>Anywhere</span>".to_string(),
+            PlacementRule::PsiModification(index, pos) => {
+                format!(
+                    "{}@<span class='position'>{pos}</span>",
+                    Ontology::Psimod
+                        .find_id(*index, None)
+                        .unwrap_or_else(|| panic!(
+                            "Invalid PsiMod placement rule, non existing modification {index}"
+                        ))
+                )
+            }
+        }
+    } else {
+        match rule {
+            PlacementRule::AminoAcid(aa, pos) => format!("{}@{pos}", aa.iter().join("")),
+            PlacementRule::Terminal(pos) => pos.to_string(),
+            PlacementRule::Anywhere => "Anywhere".to_string(),
+            PlacementRule::PsiModification(index, pos) => {
+                format!(
+                    "{}@{pos}",
+                    Ontology::Psimod
+                        .find_id(*index, None)
+                        .unwrap_or_else(|| panic!(
+                            "Invalid PsiMod placement rule, non existing modification {index}"
+                        ))
+                )
+            }
         }
     }
 }

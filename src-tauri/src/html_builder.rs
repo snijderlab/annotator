@@ -23,60 +23,65 @@ impl HtmlElement {
     ) -> Self {
         let mut base = HtmlElement::new(HtmlTag::table);
         if let Some(header) = header {
-            base = base.content(
-                HtmlElement::new(HtmlTag::thead).content(
-                    HtmlElement::new(HtmlTag::tr).children(
-                        header
-                            .iter()
-                            .map(|cell| HtmlElement::new(HtmlTag::th).content(cell.clone())),
-                    ),
-                ),
+            base.content(
+                HtmlElement::new(HtmlTag::thead)
+                    .content(
+                        HtmlElement::new(HtmlTag::tr)
+                            .children(header.iter().map(|cell| {
+                                HtmlElement::new(HtmlTag::th).content(cell.clone()).clone()
+                            }))
+                            .clone(),
+                    )
+                    .clone(),
             );
         }
         base.content(
-            HtmlElement::new(HtmlTag::tbody).children(data.into_iter().map(|row| {
-                HtmlElement::new(HtmlTag::tr).children(
-                    row.as_ref()
-                        .iter()
-                        .map(|cell| HtmlElement::new(HtmlTag::td).content(cell.clone())),
-                )
-            })),
-        )
+            HtmlElement::new(HtmlTag::tbody)
+                .children(data.into_iter().map(|row| {
+                    HtmlElement::new(HtmlTag::tr)
+                        .children(row.as_ref().iter().map(|cell| {
+                            HtmlElement::new(HtmlTag::td).content(cell.clone()).clone()
+                        }))
+                        .clone()
+                }))
+                .clone(),
+        );
+        base
     }
 
-    pub fn class(mut self, classes: impl Into<String>) -> Self {
+    pub fn class(&mut self, classes: impl Into<String>) -> &mut Self {
         self.header
             .push(("class".to_string(), Some(classes.into())));
         self
     }
 
-    pub fn id(mut self, id: impl Into<String>) -> Self {
+    pub fn id(&mut self, id: impl Into<String>) -> &mut Self {
         self.header.push(("id".to_string(), Some(id.into())));
         self
     }
 
-    pub fn style(mut self, style: impl Into<String>) -> Self {
+    pub fn style(&mut self, style: impl Into<String>) -> &mut Self {
         self.header.push(("style".to_string(), Some(style.into())));
         self
     }
 
-    pub fn header(mut self, title: impl Into<String>, value: impl Into<String>) -> Self {
+    pub fn header(&mut self, title: impl Into<String>, value: impl Into<String>) -> &mut Self {
         self.header
             .push((title.into(), Some(value.into().replace('\'', "\""))));
         self
     }
 
-    pub fn header2(mut self, title: impl Into<String>) -> Self {
+    pub fn header2(&mut self, title: impl Into<String>) -> &mut Self {
         self.header.push((title.into(), None));
         self
     }
 
-    pub fn content(mut self, content: impl Into<HtmlContent>) -> Self {
+    pub fn content(&mut self, content: impl Into<HtmlContent>) -> &mut Self {
         content.into().add_to(&mut self.content);
         self
     }
 
-    pub fn maybe_content(self, content: Option<impl Into<HtmlContent>>) -> Self {
+    pub fn maybe_content(&mut self, content: Option<impl Into<HtmlContent>>) -> &mut Self {
         if let Some(content) = content {
             self.content(content)
         } else {
@@ -84,18 +89,21 @@ impl HtmlElement {
         }
     }
 
-    pub fn children(mut self, content: impl IntoIterator<Item = impl Into<HtmlContent>>) -> Self {
+    pub fn children(
+        &mut self,
+        content: impl IntoIterator<Item = impl Into<HtmlContent>>,
+    ) -> &mut Self {
         self.extend(content);
         self
     }
 
     /// Create a list of data element. The first of the tuple is the attribute name (without 'data-' in front), the second the value
     pub fn data(
-        mut self,
+        &mut self,
         data: impl IntoIterator<Item = (impl Display, impl Into<String>)>,
-    ) -> Self {
+    ) -> &mut Self {
         for (name, value) in data {
-            self = self.header(format!("data-{}", name), value);
+            self.header(format!("data-{}", name), value);
         }
         self
     }
@@ -179,6 +187,16 @@ impl From<&String> for HtmlContent {
 impl From<HtmlElement> for HtmlContent {
     fn from(value: HtmlElement) -> Self {
         HtmlContent::Html(value)
+    }
+}
+impl From<&HtmlElement> for HtmlContent {
+    fn from(value: &HtmlElement) -> Self {
+        HtmlContent::Html(value.clone())
+    }
+}
+impl From<&mut HtmlElement> for HtmlContent {
+    fn from(value: &mut HtmlElement) -> Self {
+        HtmlContent::Html(value.clone())
     }
 }
 
@@ -474,7 +492,7 @@ pub enum HtmlTag {
 
 impl HtmlTag {
     /// Convenience method to create a new empty element
-    pub fn empty(self) -> HtmlElement {
+    pub fn new(self) -> HtmlElement {
         HtmlElement::new(self)
     }
 }

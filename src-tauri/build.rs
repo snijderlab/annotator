@@ -494,7 +494,7 @@ fn main() {
                   <output class="error"></output>
                 </div>
                 <button class="save" id="custom-mod-single-save">Save</button>
-                <button class="delete secondary" id="custom-mod-single-delete">Delete</button>
+                <button class="cancel secondary" id="custom-mod-single-cancel">Cancel</button>
               </div>
             </div>
           </div>
@@ -539,7 +539,7 @@ fn main() {
                   <output class="error"></output>
                 </div>
                 <button class="save" id="custom-mod-linker-save">Save</button>
-                <button class="delete secondary" id="custom-mod-linker-delete">Delete</button>
+                <button class="cancel secondary" id="custom-mod-linker-cancel">Cancel</button>
                 </div>
             </div>
           </div>

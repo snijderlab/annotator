@@ -507,9 +507,10 @@ html:not(.file-drop-hover) .cancel-drop {
 }
 
 .cancel-drop {
-  position: absolute;
+  position: sticky;
   top: 1rem;
   right: 1rem;
+  width: fit-content;
 }
 
 html.file-drop-hover::before {
@@ -878,5 +879,61 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
         }
       }
     }
+  }
+}
+
+#custom-mods {
+  padding: 0;
+  margin: 0;
+
+  &>li {
+    display: block;
+    margin-top: .5rem;
+    margin-left: 2rem;
+    position: relative;
+
+    &::before {
+      position: absolute;
+      display: block;
+      content: attr(data-id);
+      width: 2rem;
+      left: -2rem;
+    }
+  }
+
+  .delete {
+    margin-left: .5rem;
+  }
+}
+
+.modification {
+  p {
+    margin: 0;
+    padding-bottom: .5rem;
+  }
+
+  .cross-ids,
+  .synonyms {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .5rem;
+    padding: 0;
+    margin: 0;
+    padding-bottom: .5rem;
+
+    &>li {
+      display: block;
+    }
+
+    &>li:not(.title) {
+      border: 2px solid var(--color-halfway-bg);
+      border-radius: 6px;
+      padding: 2px;
+    }
+  }
+
+  .formula {
+    color: var(--color-green);
   }
 }
