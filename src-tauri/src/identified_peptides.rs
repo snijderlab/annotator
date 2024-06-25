@@ -55,6 +55,13 @@ pub async fn load_identified_peptides<'a>(
         Some("fasta") => FastaData::parse_file(path).map(|peptides| {
             state.lock().unwrap().peptides = peptides.into_iter().map(|p| p.into()).collect()
         }),
+        Some("txt") => MSFraggerData::parse_file(path).map(|peptides| {
+            state.lock().unwrap().peptides = peptides
+                .into_iter()
+                .filter_map(|p| p.ok())
+                .map(|p| p.into())
+                .collect()
+        }),
         _ => Err(CustomError::error(
             "Unknown extension",
             "Use CSV, TSV, PSMTSV, or Fasta, or any of these as a gzipped file (eg csv.gz).",

@@ -1,6 +1,7 @@
 use itertools::Itertools;
 use rustyms::identification::{
-    FastaData, IdentifiedPeptide, MaxQuantData, MetaData, NovorData, OpairData, PeaksData, SageData,
+    FastaData, IdentifiedPeptide, MSFraggerData, MaxQuantData, MetaData, NovorData, OpairData,
+    PeaksData, SageData,
 };
 
 use crate::{
@@ -99,6 +100,7 @@ impl RenderToHtml for MetaData {
             MetaData::Opair(o) => o.to_html(),
             MetaData::Fasta(f) => f.to_html(),
             MetaData::MaxQuant(m) => m.to_html(),
+            MetaData::MSFragger(m) => m.to_html(),
             MetaData::Sage(s) => s.to_html(),
             MetaData::None => HtmlElement::new(HtmlTag::i).content("No metadata").clone(),
         }
@@ -358,11 +360,6 @@ impl RenderToHtml for MaxQuantData {
                         &["Scan index".to_string(), self.scan_index.to_string()],
                         &["Modifications".to_string(), self.modifications.to_string()],
                         &["Proteins".to_string(), self.proteins.to_string()],
-                        &[
-                            "Modified sequence".to_string(),
-                            self.sequence.as_ref().to_optional_string(),
-                        ],
-                        &["Charge".to_string(), self.z.value.to_string()],
                         &["Fragmentation".to_string(), self.fragmentation.to_string()],
                         &["Mass analyser".to_string(), self.mass_analyser.to_string()],
                         &["Type".to_string(), self.ty.to_string()],
@@ -542,7 +539,6 @@ impl RenderToHtml for SageData {
                             "Theoretical mass".to_string(),
                             display_mass(self.theoretical_mass).to_string(),
                         ],
-                        &["Charge".to_string(), self.z.value.to_string()],
                         &[
                             "Missed cleavages".to_string(),
                             self.missed_cleavages.to_string(),
@@ -618,6 +614,96 @@ impl RenderToHtml for SageData {
                         &["Peptide q".to_string(), self.peptide_q.to_string()],
                         &["Protein q".to_string(), self.protein_q.to_string()],
                         &["MS2 intensity".to_string(), self.ms2_intensity.to_string()],
+                    ],
+                )
+                .clone(),
+            ])
+            .clone()
+    }
+}
+
+impl RenderToHtml for MSFraggerData {
+    fn to_html(&self) -> HtmlElement {
+        HtmlElement::new(HtmlTag::div)
+            .children([
+                HtmlElement::new(HtmlTag::p)
+                    .content(format!("Additional MetaData MSFragger {}", self.spectrum))
+                    .clone(),
+                HtmlElement::table::<HtmlContent, _>(
+                    None,
+                    &[
+                        &["Raw file".to_string(), self.spectrum.file.to_string()],
+                        &["Spectrum file".to_string(), self.spectrum_file.to_string()],
+                        &[
+                            "Scan number".to_string(),
+                            format!(
+                                "{}.{}.{}",
+                                self.spectrum.scan.0, self.spectrum.scan.1, self.spectrum.scan.2
+                            ),
+                        ],
+                        &[
+                            "Extended Peptide".to_string(),
+                            self.extended_peptide.to_string(),
+                        ],
+                        &[
+                            "Assigned modifications".to_string(),
+                            self.assigned_modifications.to_string(),
+                        ],
+                        &[
+                            "Experimental mass".to_string(),
+                            display_mass(self.experimental_mass).to_string(),
+                        ],
+                        &[
+                            "Calibrated experimental mass".to_string(),
+                            display_mass(self.calibrated_experimental_mass).to_string(),
+                        ],
+                        &[
+                            "Experimental m/z".to_string(),
+                            self.experimental_mz.value.to_string(),
+                        ],
+                        &[
+                            "Calibrated experimental m/z".to_string(),
+                            self.calibrated_experimental_mz.value.to_string(),
+                        ],
+                        &[
+                            "Retention time (min)".to_string(),
+                            self.rt.value.to_string(),
+                        ],
+                        &["Expectation".to_string(), self.expectation.to_string()],
+                        &["Hyperscore".to_string(), self.hyperscore.to_string()],
+                        &["Next score".to_string(), self.next_score.to_string()],
+                        &[
+                            "Peptide Prophet probability".to_string(),
+                            self.peptide_prophet_probability.to_string(),
+                        ],
+                        &[
+                            "Missed cleavages".to_string(),
+                            self.missed_cleavages.to_string(),
+                        ],
+                        &[
+                            "Number of enzymatic termini".to_string(),
+                            self.enzymatic_termini.to_string(),
+                        ],
+                        &["Protein start".to_string(), self.protein_start.to_string()],
+                        &["Protein end".to_string(), self.protein_end.to_string()],
+                        &["Intensity".to_string(), format!("{:e}", self.intensity)],
+                        &["Purity".to_string(), self.purity.to_string()],
+                        &["Is unique".to_string(), self.is_unique.to_string()],
+                        &["Protein".to_string(), self.protein.to_string()],
+                        &["Protein ID".to_string(), self.protein_id.to_string()],
+                        &["Entry name".to_string(), self.entry_name.to_string()],
+                        &["Gene".to_string(), self.gene.to_string()],
+                        &[
+                            "Protein description".to_string(),
+                            self.protein_description.to_string(),
+                        ],
+                        &["Mapped genes".to_string(), self.mapped_genes.join(",")],
+                        &[
+                            "Mapped proteins".to_string(),
+                            self.mapped_proteins.join(","),
+                        ],
+                        &["Condition".to_string(), self.condition.to_string()],
+                        &["Group".to_string(), self.group.to_string()],
                     ],
                 )
                 .clone(),

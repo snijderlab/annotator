@@ -61,7 +61,7 @@ async fn details_formula(text: &str) -> Result<String, CustomError> {
             Context::None,
         ))
     } else {
-        MolecularFormula::from_pro_forma(text)
+        MolecularFormula::from_pro_forma(text, .., false)
     }?;
     let isotopes = formula.isotopic_distribution(0.001);
     let (max, max_occurrence) = isotopes

@@ -75,24 +75,40 @@ pub async fn search_modification(text: &str, tolerance: f64) -> Result<String, C
             )
             .to_string())
         }
-        ModificationSearchResult::Glycan(_, modifications) => Ok(html_builder::HtmlElement::table(
-            Some(&["Name", "Structure"]),
-            modifications
-                .iter()
-                .map(|(ontology, id, name, modification)| {
-                    [
-                        link_modification(*ontology, *id, name),
-                        if let SimpleModification::Gno(GnoComposition::Structure(structure), _) =
-                            modification
-                        {
-                            structure.to_string()
-                        } else {
-                            "-".to_string()
-                        },
-                    ]
-                }),
-        )
-        .to_string()),
+        ModificationSearchResult::Glycan(_, modifications) => Ok(HtmlTag::div
+            .new()
+            .children(&[
+                HtmlTag::p
+                    .new()
+                    .content(format!(
+                        "Formula {} monoisotopic mass {} average mass {} most abundant mass {}",
+                        display_formula(&modification.formula()),
+                        display_mass(modification.formula().monoisotopic_mass()),
+                        display_mass(modification.formula().average_weight()),
+                        display_mass(modification.formula().most_abundant_mass()),
+                    ))
+                    .clone(),
+                html_builder::HtmlElement::table(
+                    Some(&["Name", "Structure"]),
+                    modifications
+                        .iter()
+                        .map(|(ontology, id, name, modification)| {
+                            [
+                                link_modification(*ontology, *id, name),
+                                if let SimpleModification::Gno(
+                                    GnoComposition::Structure(structure),
+                                    _,
+                                ) = modification
+                                {
+                                    structure.to_string()
+                                } else {
+                                    "-".to_string()
+                                },
+                            ]
+                        }),
+                ),
+            ])
+            .to_string()),
     }
 }
 

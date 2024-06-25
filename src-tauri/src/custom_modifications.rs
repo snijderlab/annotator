@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 use crate::{
-    render::{display_formula, display_neutral_loss, display_placement_rule, display_stubs},
+    render::{display_formula, display_neutral_loss, display_placement_rule},
     state::State,
     ModifiableState,
 };
@@ -21,7 +21,7 @@ use crate::{
 pub fn validate_molecular_formula(text: String) -> Result<String, CustomError> {
     text.parse::<f64>()
         .map(MolecularFormula::with_additional_mass)
-        .or_else(|_| MolecularFormula::from_pro_forma(&text))
+        .or_else(|_| MolecularFormula::from_pro_forma(&text, .., false))
         .map(|f| display_formula(&f))
 }
 
@@ -42,11 +42,11 @@ pub fn parse_stub(text: &str) -> Result<(MolecularFormula, MolecularFormula), Cu
         let f1 = text[..index]
             .parse::<f64>()
             .map(MolecularFormula::with_additional_mass)
-            .or_else(|_| MolecularFormula::from_pro_forma_inner(text, ..index, false))?;
+            .or_else(|_| MolecularFormula::from_pro_forma(text, ..index, false))?;
         let f2 = text[index + 1..]
             .parse::<f64>()
             .map(MolecularFormula::with_additional_mass)
-            .or_else(|_| MolecularFormula::from_pro_forma_inner(text, index + 1.., false))?;
+            .or_else(|_| MolecularFormula::from_pro_forma(text, index + 1.., false))?;
         Ok((f1, f2))
     } else {
         Err(CustomError::error(
@@ -88,7 +88,7 @@ pub fn validate_custom_single_specificity(
         .map(|text| {
             text.parse::<f64>()
                 .map(MolecularFormula::with_additional_mass)
-                .or_else(|_| MolecularFormula::from_pro_forma(&text))
+                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., false))
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(
@@ -147,7 +147,7 @@ pub fn validate_custom_linker_specificity(
         .map(|text| {
             text.parse::<f64>()
                 .map(MolecularFormula::with_additional_mass)
-                .or_else(|_| MolecularFormula::from_pro_forma(&text))
+                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., false))
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(
@@ -346,7 +346,7 @@ pub async fn update_modification(
         .formula
         .parse::<f64>()
         .map(MolecularFormula::with_additional_mass)
-        .or_else(|_| MolecularFormula::from_pro_forma(&custom_modification.formula))?;
+        .or_else(|_| MolecularFormula::from_pro_forma(&custom_modification.formula, .., false))?;
     let id = ModificationId {
         ontology: Ontology::Custom,
         name: custom_modification.name.clone(),
@@ -385,7 +385,7 @@ pub async fn update_modification(
                                 .map(|d| {
                                     d.parse::<f64>()
                                         .map(MolecularFormula::with_additional_mass)
-                                        .or_else(|_| MolecularFormula::from_pro_forma(d))
+                                        .or_else(|_| MolecularFormula::from_pro_forma(d, .., false))
                                         .map(DiagnosticIon)
                                 })
                                 .collect::<Result<Vec<_>, _>>()?;
@@ -441,7 +441,7 @@ pub async fn update_modification(
                                 .map(|d| {
                                     d.parse::<f64>()
                                         .map(MolecularFormula::with_additional_mass)
-                                        .or_else(|_| MolecularFormula::from_pro_forma(d))
+                                        .or_else(|_| MolecularFormula::from_pro_forma(d, .., false))
                                         .map(DiagnosticIon)
                                 })
                                 .collect::<Result<Vec<_>, _>>()?,

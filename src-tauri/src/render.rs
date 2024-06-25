@@ -112,57 +112,37 @@ struct RelAndAbs<T> {
     abs: T,
 }
 
-impl RelAndAbs<(f64, Fragment)> {
-    fn retrieve(
-        point: &AnnotatedPeak,
-        fragments: &[Fragment],
-        filter: impl FnMut(&&Fragment) -> bool,
-        mass_mode: MassMode,
-    ) -> Self {
-        RelAndAbs::get(
-            fragments,
-            filter,
-            |f| {
-                (
-                    ((f.mz(mass_mode).value - point.experimental_mz.value) / f.mz(mass_mode).value
-                        * 1e6),
-                    f.clone(),
-                )
-            },
-            |f| ((f.mz(mass_mode) - point.experimental_mz).value, f.clone()),
-            &|a: (f64, Fragment), b: (f64, Fragment)| b.0.abs().total_cmp(&a.0.abs()),
-            RelAndAbs {
-                rel: (f64::MAX, Fragment::default()),
-                abs: (f64::MAX, Fragment::default()),
-            },
-        )
-    }
-}
-
-impl<T: Default + Clone> RelAndAbs<T> {
-    fn get(
-        fragments: &[Fragment],
-        filter: impl FnMut(&&Fragment) -> bool,
-        rel: impl Fn(&Fragment) -> T,
-        abs: impl Fn(&Fragment) -> T,
-        cmp: &impl Fn(T, T) -> Ordering,
-        init: Self,
-    ) -> Self {
-        fragments
-            .iter()
-            .filter(filter)
-            .fold(init, |acc, fragment| Self {
-                rel: Self::min_by(acc.rel, rel(fragment), cmp),
-                abs: Self::min_by(acc.abs, abs(fragment), cmp),
-            })
-    }
-
+impl<T: Clone> RelAndAbs<T> {
     fn min_by(a: T, b: T, cmp: &impl Fn(T, T) -> Ordering) -> T {
         match cmp(a.clone(), b.clone()) {
             Ordering::Equal => a,
             Ordering::Greater => a,
             Ordering::Less => b,
         }
+    }
+}
+
+impl<A, B: Clone> RelAndAbs<(A, &B)> {
+    fn into_owned(self) -> RelAndAbs<(A, B)> {
+        RelAndAbs {
+            rel: (self.rel.0, self.rel.1.clone()),
+            abs: (self.abs.0, self.abs.1.clone()),
+        }
+    }
+}
+
+impl<'a> RelAndAbs<(f64, &'a Fragment)> {
+    fn fold(&mut self, fragment: &'a Fragment, point: &AnnotatedPeak, mass_mode: MassMode) {
+        self.rel = Self::min_by(
+            self.rel,
+            (
+                ((fragment.mz(mass_mode).value - point.experimental_mz.value)
+                    / fragment.mz(mass_mode).value
+                    * 1e6),
+                fragment,
+            ),
+            &|a: (f64, &Fragment), b: (f64, &Fragment)| b.0.abs().total_cmp(&a.0.abs()),
+        );
     }
 }
 
@@ -189,6 +169,57 @@ fn get_data(data: &Option<RelAndAbs<(f64, Fragment)>>, ion: char) -> [(String, S
                 .map_or("undefined".to_string(), |v| v.abs.1.to_string()),
         ),
     ]
+}
+
+fn get_unassigned_data(
+    point: &AnnotatedPeak,
+    fragments: &[Fragment],
+    model: &Model,
+    mass_mode: MassMode,
+) -> UnassignedData {
+    let mut a = RelAndAbs {
+        rel: (f64::MAX, &Fragment::default()),
+        abs: (f64::MAX, &Fragment::default()),
+    };
+    let mut b = RelAndAbs {
+        rel: (f64::MAX, &Fragment::default()),
+        abs: (f64::MAX, &Fragment::default()),
+    };
+    let mut c = RelAndAbs {
+        rel: (f64::MAX, &Fragment::default()),
+        abs: (f64::MAX, &Fragment::default()),
+    };
+    let mut x = RelAndAbs {
+        rel: (f64::MAX, &Fragment::default()),
+        abs: (f64::MAX, &Fragment::default()),
+    };
+    let mut y = RelAndAbs {
+        rel: (f64::MAX, &Fragment::default()),
+        abs: (f64::MAX, &Fragment::default()),
+    };
+    let mut z = RelAndAbs {
+        rel: (f64::MAX, &Fragment::default()),
+        abs: (f64::MAX, &Fragment::default()),
+    };
+    for fragment in fragments {
+        match &fragment.ion {
+            FragmentType::a(_) => a.fold(fragment, point, mass_mode),
+            FragmentType::b(_) => b.fold(fragment, point, mass_mode),
+            FragmentType::c(_) => c.fold(fragment, point, mass_mode),
+            FragmentType::x(_) => x.fold(fragment, point, mass_mode),
+            FragmentType::y(_) => y.fold(fragment, point, mass_mode),
+            FragmentType::z(_) => z.fold(fragment, point, mass_mode),
+            _ => (),
+        }
+    }
+    UnassignedData {
+        a: (model.a.0 != Location::None).then_some(a.into_owned()),
+        b: (model.b.0 != Location::None).then_some(b.into_owned()),
+        c: (model.c.0 != Location::None).then_some(c.into_owned()),
+        x: (model.x.0 != Location::None).then_some(x.into_owned()),
+        y: (model.y.0 != Location::None).then_some(y.into_owned()),
+        z: (model.z.0 != Location::None).then_some(z.into_owned()),
+    }
 }
 
 fn spectrum_graph_boundaries(
@@ -219,56 +250,7 @@ fn spectrum_graph_boundaries(
                     .min_by(|a, b| b.abs().total_cmp(&a.abs()))
                     .unwrap(),
             }),
-            unassigned: UnassignedData {
-                a: (model.a.0 != Location::None).then(|| {
-                    RelAndAbs::retrieve(
-                        point,
-                        fragments,
-                        |f| matches!(f.ion, FragmentType::a(_)),
-                        mass_mode,
-                    )
-                }),
-                b: (model.b.0 != Location::None).then(|| {
-                    RelAndAbs::retrieve(
-                        point,
-                        fragments,
-                        |f| matches!(f.ion, FragmentType::b(_)),
-                        mass_mode,
-                    )
-                }),
-                c: (model.c.0 != Location::None).then(|| {
-                    RelAndAbs::retrieve(
-                        point,
-                        fragments,
-                        |f| matches!(f.ion, FragmentType::c(_)),
-                        mass_mode,
-                    )
-                }),
-                x: (model.x.0 != Location::None).then(|| {
-                    RelAndAbs::retrieve(
-                        point,
-                        fragments,
-                        |f| matches!(f.ion, FragmentType::x(_)),
-                        mass_mode,
-                    )
-                }),
-                y: (model.y.0 != Location::None).then(|| {
-                    RelAndAbs::retrieve(
-                        point,
-                        fragments,
-                        |f| matches!(f.ion, FragmentType::y(_)),
-                        mass_mode,
-                    )
-                }),
-                z: (model.z.0 != Location::None).then(|| {
-                    RelAndAbs::retrieve(
-                        point,
-                        fragments,
-                        |f| matches!(f.ion, FragmentType::z(_)),
-                        mass_mode,
-                    )
-                }),
-            },
+            unassigned: get_unassigned_data(point, fragments, model, mass_mode),
             mz: point.experimental_mz,
             mass: da(point.experimental_mz.value * point.charge.value as f64),
             intensity: point.intensity.0,
@@ -529,7 +511,7 @@ fn get_label(
                         let ch = format!("{:+}", annotation.charge.value);
                         write!(
                             multi,
-                            "<span>{}<sup>{:+}</sup><sub style='margin-left:-{}ch;min-width:{2}ch;display:inline-block;'>{}{}</sub>{}</span>",
+                            "<span>{}<sup class='charge'>{:+}</sup><sub class='series' style='--charge-width:{};'>{}{}</sub><span class='neutral-losses'>{}</span></span>",
                             breakages
                                 .iter()
                                 .filter(|b| !matches!(b, GlycanBreakPos::End(_)))
@@ -562,7 +544,7 @@ fn get_label(
                         let ch = format!("{:+}", annotation.charge.value);
                         write!(
                             multi,
-                            "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch;min-width:{2}ch;display:inline-block;'>{}{}{}</sub>{}</span>",
+                            "<span>{}<sup class='charge'>{}</sup><sub class='series' style='--charge-width:{};'>{}{}{}</sub><span class='neutral-losses'>{}</span></span>",
                             annotation.ion.label(),
                             ch,
                             ch.len(),
@@ -596,7 +578,7 @@ fn get_label(
             if single_internal_glycan {
                 if let FragmentType::Oxonium(breakages) = &annotations[0].0.ion {
                     format!(
-                        "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch;min-width:{2}ch;display:inline-block;'>{}{}</sub>{}</span>",
+                        "<span>{}<sup class='charge'>{}</sup><sub class='series' style='--charge-width:{};'>{}{}</sub><span class='neutral-losses'>{}</span></span>",
                         breakages
                             .iter()
                             .filter(|b| !matches!(b, GlycanBreakPos::End(_)))
@@ -628,7 +610,7 @@ fn get_label(
                 }
             } else {
                 format!(
-                    "<span>{}<sup>{}</sup><sub style='margin-left:-{}ch;min-width:{2}ch;display:inline-block;'>{}{}{}</sub>{}</span>{}",
+                    "<span>{}<sup class='charge'>{}</sup><sub class='series' style='--charge-width:{};'>{}{}{}</sub><span class='neutral-losses'>{}</span></span>{}",
                     ion_str,
                     charge_str,
                     charge_str.len(),

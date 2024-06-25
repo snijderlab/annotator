@@ -58,7 +58,7 @@ async function select_identified_peptides_file(e) {
     //defaultPath: 'C:\\',
     directory: false,
     filters: [{
-      extensions: ["csv", "csv.gz", "tsv", "tsv.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz"], name: "*"
+      extensions: ["csv", "csv.gz", "tsv", "tsv.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz", "txt", "txt.gz"], name: "*"
     }]
   };
   window.__TAURI__.dialog.open(properties).then((result) => {
@@ -214,7 +214,9 @@ async function load_identified_peptide() {
   invoke("load_identified_peptide", { index: index }).then((result) => {
     document.querySelector("#peptide").innerText = result.peptide;
     document.querySelector("#spectrum-charge").value = result.charge;
-    document.querySelector("#spectrum-model").value = result.mode.toLowerCase();
+    if (result.mode != null) {
+      document.querySelector("#spectrum-model").value = result.mode.toLowerCase();
+    }
     document.querySelector("#details-spectrum-index").value = result.scan_index;
   }).catch((error) => {
     document.querySelector("#spectrum-error").classList.remove("hidden");
@@ -303,8 +305,8 @@ async function annotate_spectrum() {
     document.querySelector("#spectrum-intensity-max").value = result.intensity_max;
     document.querySelector("#spectrum-label").value = 90;
     document.querySelector("#spectrum-label-value").value = 90;
-    document.querySelector("#spectrum-masses").value = 0;
-    document.querySelector("#spectrum-masses-value").value = 0;
+    document.querySelector("#spectrum-m-z").value = 0;
+    document.querySelector("#spectrum-m-z-value").value = 0;
     SetUpSpectrumInterface();
     document.querySelector("#annotate-button").classList.remove("loading");
   }).catch((error) => {
@@ -389,6 +391,29 @@ function resizeUp() {
 // Setup
 window.addEventListener("DOMContentLoaded", () => {
   document.querySelector(".resize").addEventListener("mousedown", resizeDown);
+  // document.querySelector("#capture").addEventListener("click", async () => {
+  //   const stream = await navigator.mediaDevices.getDisplayMedia({
+  //     video: { mediaSource: 'screen' },
+  //   })
+  //   // get correct video track
+  //   const track = stream.getVideoTracks()[0]
+  //   // init Image Capture and not Video stream
+  //   const imageCapture = new ImageCapture(track)
+  //   // take first frame only
+  //   const bitmap = await imageCapture.grabFrame()
+  //   // destory video track to prevent more recording / mem leak
+  //   track.stop()
+
+  //   try {
+  //     navigator.clipboard.write([
+  //       new ClipboardItem({
+  //         'image/png': bitmap
+  //       })
+  //     ]);
+  //   } catch (error) {
+  //     console.error(error);
+  //   }
+  // });
   document.querySelectorAll(".collapsible>legend").forEach(element => element.addEventListener("click", (e) => document.getElementById(e.target.parentElement.dataset.linkedItem).toggleAttribute("checked")));
   document
     .querySelector("#load-mgf-path")

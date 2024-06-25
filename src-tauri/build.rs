@@ -48,6 +48,7 @@ fn main() {
     
     <body>
       <button class="secondary print" onclick="window.print()">Export</button>
+      <!-- <button class="secondary capture" id="capture">Export bitmap</button> -->
       <button class="secondary cancel-drop" onclick='document.querySelector("html").classList.remove("file-drop-hover")'>Cancel drop</button>
       <!-- <button class="print" id="abort">Abort</button> -->
       <div class="input-flex">
@@ -223,7 +224,7 @@ fn main() {
           <button id="annotate-button" type="button" class="col-2">Annotate</button>
         </div>
       <output id="spectrum-error" class="hidden error"></output>
-      <div id='spectrum-wrapper' class="spectrum show-unassigned legend-ion hidden" onload='SpectrumSetUp()'>
+      <div id='spectrum-wrapper' class="spectrum show-unassigned legend-ion hidden show-charge show-series show-neutral-losses" onload='SpectrumSetUp()'>
         <div class='all-settings'>
           <fieldset class='settings graphics-settings'>
             <legend>Graphics settings</legend>
@@ -328,10 +329,10 @@ fn main() {
               %
             </label>
             
-            <label class='has-slider masses row align'>
-              <span>Show masses for top:</span>
-              <input id='spectrum-masses' type='range' min='0' max='100' value='0'/>
-              <input id='spectrum-masses-value' type='number' min='0' max='100' value='0'/>
+            <label class='has-slider mz row align'>
+              <span>Show m/z for top:</span>
+              <input id='spectrum-m-z' type='range' min='0' max='100' value='0'/>
+              <input id='spectrum-m-z-value' type='number' min='0' max='100' value='0'/>
               %
             </label>
     
@@ -340,9 +341,18 @@ fn main() {
               <div class='select-box' id='force-show'>
                 <label tabindex='0'><input type='radio' name='force-show' value='none' id='force-show-none' checked>None</label>
                 <label tabindex='0'><input type='radio' name='force-show' value='label' id='force-show-label'>Label</label>
-                <label tabindex='0'><input type='radio' name='force-show' value='mass' id='force-show-mass'>Mass</label>
+                <label tabindex='0'><input type='radio' name='force-show' value='m-z' id='force-show-m-z'>m/z</label>
               </div>
               <button tabindex='0' id='force-show-clear'>Clear</button>
+            </div>
+
+            <div>
+              <span class='title'>Show in label</span>
+                <div class='spectrum-label-parts-selection multi-checkbox'>
+                  <label><input checked id='spectrum-label-charge' type='checkbox'/>Charge</label>
+                  <label><input checked id='spectrum-label-series' type='checkbox'/>Series number</label>
+                  <label><input checked id='spectrum-label-neutral-losses' type='checkbox'/>Neutral losses</label>
+                </div>
             </div>
             
             <div>
