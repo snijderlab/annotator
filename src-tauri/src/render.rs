@@ -43,7 +43,11 @@ pub fn annotated_spectrum(
                     seq.modifications.iter().any(|m| {
                         matches!(
                             m,
-                            Modification::Simple(SimpleModification::GlycanStructure(_))
+                            Modification::Simple(
+                                SimpleModification::GlycanStructure(_)
+                                    | SimpleModification::Glycan(_)
+                                    | SimpleModification::Gno(_, _)
+                            )
                         )
                     })
                 })
@@ -511,7 +515,7 @@ fn get_label(
                         let ch = format!("{:+}", annotation.charge.value);
                         write!(
                             multi,
-                            "<span>{}<sup class='charge'>{:+}</sup><sub class='series' style='--charge-width:{};'>{}{}</sub><span class='neutral-losses'>{}</span></span>",
+                            "<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span></span>",
                             breakages
                                 .iter()
                                 .filter(|b| !matches!(b, GlycanBreakPos::End(_)))
@@ -544,7 +548,7 @@ fn get_label(
                         let ch = format!("{:+}", annotation.charge.value);
                         write!(
                             multi,
-                            "<span>{}<sup class='charge'>{}</sup><sub class='series' style='--charge-width:{};'>{}{}{}</sub><span class='neutral-losses'>{}</span></span>",
+                            "<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span></span>",
                             annotation.ion.label(),
                             ch,
                             ch.len(),
@@ -578,7 +582,7 @@ fn get_label(
             if single_internal_glycan {
                 if let FragmentType::Oxonium(breakages) = &annotations[0].0.ion {
                     format!(
-                        "<span>{}<sup class='charge'>{}</sup><sub class='series' style='--charge-width:{};'>{}{}</sub><span class='neutral-losses'>{}</span></span>",
+                        "<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span></span>",
                         breakages
                             .iter()
                             .filter(|b| !matches!(b, GlycanBreakPos::End(_)))
@@ -610,7 +614,7 @@ fn get_label(
                 }
             } else {
                 format!(
-                    "<span>{}<sup class='charge'>{}</sup><sub class='series' style='--charge-width:{};'>{}{}{}</sub><span class='neutral-losses'>{}</span></span>{}",
+                    "<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span></span>{}",
                     ion_str,
                     charge_str,
                     charge_str.len(),

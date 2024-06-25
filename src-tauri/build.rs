@@ -224,7 +224,7 @@ fn main() {
           <button id="annotate-button" type="button" class="col-2">Annotate</button>
         </div>
       <output id="spectrum-error" class="hidden error"></output>
-      <div id='spectrum-wrapper' class="spectrum show-unassigned legend-ion hidden show-charge show-series show-neutral-losses" onload='SpectrumSetUp()'>
+      <div id='spectrum-wrapper' class="spectrum show-unassigned legend-ion hidden show-charge show-series show-glycan-id show-peptide-id show-neutral-losses" onload='SpectrumSetUp()'>
         <div class='all-settings'>
           <fieldset class='settings graphics-settings'>
             <legend>Graphics settings</legend>
@@ -351,6 +351,8 @@ fn main() {
                 <div class='spectrum-label-parts-selection multi-checkbox'>
                   <label><input checked id='spectrum-label-charge' type='checkbox'/>Charge</label>
                   <label><input checked id='spectrum-label-series' type='checkbox'/>Series number</label>
+                  <label><input checked id='spectrum-label-glycan-id' type='checkbox'/>Glycan position</label>
+                  <label><input checked id='spectrum-label-peptide-id' type='checkbox'/>Peptide number</label>
                   <label><input checked id='spectrum-label-neutral-losses' type='checkbox'/>Neutral losses</label>
                 </div>
             </div>
