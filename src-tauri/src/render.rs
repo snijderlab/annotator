@@ -140,13 +140,21 @@ impl<'a> RelAndAbs<(f64, &'a Fragment)> {
         self.rel = Self::min_by(
             self.rel,
             (
-                ((fragment.mz(mass_mode).value - point.experimental_mz.value)
+                ((point.experimental_mz.value - fragment.mz(mass_mode).value)
                     / fragment.mz(mass_mode).value
                     * 1e6),
                 fragment,
             ),
             &|a: (f64, &Fragment), b: (f64, &Fragment)| b.0.abs().total_cmp(&a.0.abs()),
         );
+        self.abs = Self::min_by(
+            self.abs,
+            (
+                (point.experimental_mz - fragment.mz(mass_mode)).value,
+                fragment,
+            ),
+            &|a: (f64, &Fragment), b: (f64, &Fragment)| b.0.abs().total_cmp(&a.0.abs()),
+        )
     }
 }
 

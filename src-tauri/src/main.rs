@@ -4,20 +4,18 @@
 )]
 
 use itertools::Itertools;
-use modification::ModificationId;
 use ordered_float::OrderedFloat;
-use placement_rule::PlacementRule;
-use render::{display_formula, display_mass, display_neutral_loss, display_placement_rule};
+use render::{display_formula, display_mass};
 use rustyms::{
     error::*,
     model::*,
-    modification::{Ontology, SimpleModification},
+    modification::SimpleModification,
     spectrum::*,
     system::{e, mz, usize::Charge, MassOverCharge},
     *,
 };
 use state::State;
-use std::{io::BufWriter, str::FromStr, sync::Mutex};
+use std::sync::Mutex;
 use tauri::Manager;
 
 use crate::metadata_render::RenderToHtml;
@@ -31,7 +29,7 @@ mod render;
 mod search_modification;
 mod state;
 
-const CUSTOM_MODIFICATIONS_FILE: &'static str = "custom_modifications.json";
+const CUSTOM_MODIFICATIONS_FILE: &str = "custom_modifications.json";
 type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
 
 #[tauri::command]

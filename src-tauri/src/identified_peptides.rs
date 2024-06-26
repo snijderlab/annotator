@@ -1,6 +1,6 @@
 use itertools::Itertools;
 use rustyms::{
-    align::{align, matrix::BLOSUM62, Alignment},
+    align::{align, matrix::BLOSUM62},
     error::*,
     identification::*,
     system::da,
