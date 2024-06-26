@@ -397,7 +397,7 @@ fn main() {
                   <span class='ion v' tabindex='0'>v</span>
               </div>
               <div class='side'>
-                  <span class='ion precursor' tabindex='0'>Precursor</span>
+                  <span class='ion p' tabindex='0'>Precursor</span>
                   <span class='ion multi mp' tabindex='0'>Multi</span>
                   <span class='ion oxonium' tabindex='0'>Oxonium</span>
                   <span class='ion Y' tabindex='0'>Y</span>
