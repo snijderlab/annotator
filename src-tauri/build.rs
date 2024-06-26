@@ -221,7 +221,11 @@ fn main() {
           </fieldset>
           <label class="wide" for="peptide">Peptide sequence </label>
           <div class="peptide-input wide context" id="peptide" contentEditable="plaintext-only"></div>
-          <button id="annotate-button" type="button" class="col-2">Annotate</button>
+          <button id="annotate-button" type="button" class="col-2 center">Annotate</button>
+          <svg class='orbitrap' width='100' height='50' version='1.1' viewBox='0 0 26.458 13.229' xmlns='http://www.w3.org/2000/svg'>
+            <path class='base' d='m26.458 7.4586c-3.299-0.010534-4.2389 0.22021-6.6141 1.4114-2.5075 1.2575-3.9311 1.4114-6.6141 1.4114s-4.1066-0.1538-6.6141-1.4114c-2.3751-1.1911-3.3151-1.4219-6.6141-1.4114m26.456-1.6879c-3.299 0.010534-4.2389-0.2202-6.6141-1.4114-2.5075-1.2575-3.9311-1.4114-6.6141-1.4114s-4.1066 0.1538-6.6141 1.4114c-2.3751 1.1911-3.3151 1.4219-6.6141 1.4114' />
+            <path class='trace' d='m17.074 9.9441c0.52615 1.7417 1.1464 3.0166 2.0544 3.0166 1.1421-3e-6 1.8118-2.1616 2.0104-4.7007 0.08406-1.0746 0.08373-2.2168-8.64e-4 -3.2913-0.19988-2.5389-0.87019-4.7001-2.0096-4.7001-0.90806-3.63e-6 -1.5283 1.2749-2.0544 3.0166m-1.8388 6.9381c-0.55028 1.5971-1.226 2.7374-2.1908 2.7374-0.97053-2e-6 -1.6482-1.1555-2.2002-2.7691-0.68781-2.0107-1.1804-4.733-1.7569-6.6688-0.57644-1.9358-1.2028-3.2543-2.1269-3.2543-0.86681 3.63e-6 -1.3781 2.1348-1.534 4.6535m0 3.3852c0.15581 2.5186 0.66712 4.6535 1.534 4.6535 0.92431-2e-6 1.5507-1.3188 2.0829-3.1062 0.62072-2.0847 1.1133-4.807 1.8012-6.8176 0.55194-1.6132 1.2296-2.7684 2.1999-2.7684 0.96475 3.63e-6 1.6403 1.1401 2.1906 2.7369' />
+          </svg>
         </div>
       <output id="spectrum-error" class="hidden error"></output>
       <div id='spectrum-wrapper' class="spectrum show-unassigned legend-ion hidden show-charge show-series show-glycan-id show-peptide-id show-neutral-losses" onload='SpectrumSetUp()'>

@@ -178,6 +178,10 @@ output.error {
   display: none;
 }
 
+.center {
+  align-self: center;
+}
+
 .input-settings:has(option[value="custom"]:checked) .custom-model {
   display: grid;
 }
@@ -411,17 +415,66 @@ output.error {
 }
 
 /* Loading animation */
+
+#annotate-button {
+  height: 2rem;
+}
+
+.orbitrap {
+  stroke-width: 0.3px;
+  fill: none;
+  height: 1rem;
+  visibility: hidden;
+
+  & .base {
+    stroke: var(--color-foreground);
+  }
+
+  & .trace {
+    stroke-width: 0.5px;
+    stroke: var(--color-red);
+    stroke-dasharray: 1 6;
+    stroke-dashoffset: 0;
+    transform: translateX(-1px);
+    animation: move-dash 2s infinite linear;
+  }
+}
+
+.loading+.orbitrap {
+  visibility: visible;
+  height: 5rem;
+}
+
+@keyframes move-dash {
+  0% {
+    stroke-dashoffset: 0;
+    transform: translateX(-1px);
+  }
+
+  50% {
+    transform: translateX(+1px);
+  }
+
+  100% {
+    stroke-dashoffset: 100%;
+    transform: translateX(-1px);
+  }
+}
+
 .loading {
   pointer-events: none;
   border-color: var(--color-halfway);
   background-color: var(--color-halfway);
 }
 
-.loading::after {
-  content: ".";
+.loading:not(:has(+.orbitrap))::after {
+  content: "⌬";
   display: inline-block;
-  animation: rotate 1s infinite linear;
+  animation: rotate 2s infinite linear;
   margin-left: 1rem;
+  font-size: 0.9rem;
+  vertical-align: middle;
+  color: var(--color-foreground);
 }
 
 @keyframes rotate {
