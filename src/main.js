@@ -72,7 +72,6 @@ async function select_identified_peptides_file(e) {
 async function load_mgf(path) {
   document.querySelector("#load-mgf-path").classList.add("loading")
   invoke("load_mgf", { path: path }).then((result) => {
-    document.querySelector("#spectrum-log").innerText = "Loaded " + result + " spectra";
     document.querySelector("#loaded-path").classList.remove("error");
     document.querySelector("#loaded-path").innerText = path.split('\\').pop().split('/').pop();
     document.querySelector("#number-of-scans").innerText = result;
@@ -88,7 +87,6 @@ async function load_mgf(path) {
 async function load_identified_peptides(path) {
   document.querySelector("#load-identified-peptides").classList.add("loading")
   invoke("load_identified_peptides", { path: path }).then((result) => {
-    document.querySelector("#identified-peptides-log").innerText = "Loaded " + result + " peptides";
     document.querySelector("#loaded-identified-peptides-path").classList.remove("error");
     document.querySelector("#loaded-identified-peptides-path").innerText = path.split('\\').pop().split('/').pop();
     document.querySelector("#number-of-identified-peptides").innerText = result;
@@ -109,7 +107,6 @@ async function load_clipboard() {
     .readText()
     .then(async (clipText) => {
       invoke("load_clipboard", { data: clipText }).then((result) => {
-        document.querySelector("#spectrum-log").innerText = "Loaded " + result + " spectra";
         document.querySelector("#loaded-path").classList.remove("error");
         document.querySelector("#loaded-path").innerText = "Clipboard";
         document.querySelector("#number-of-scans").innerText = result;
@@ -297,7 +294,6 @@ async function annotate_spectrum() {
   invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), tolerance: [Number(document.querySelector("#spectrum-tolerance").value), document.querySelector("#spectrum-tolerance-unit").value], charge: charge, filter: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").innerText, customModel: model, massMode: document.querySelector("#spectrum-mass-mode").value }).then((result) => {
     document.querySelector("#spectrum-results-wrapper").innerHTML = result.spectrum;
     document.querySelector("#spectrum-fragment-table").innerHTML = result.fragment_table;
-    document.querySelector("#spectrum-log").innerText = result.log;
     document.querySelector("#spectrum-error").innerText = "";
     document.querySelector("#spectrum-wrapper").classList.remove("hidden"); // Remove hidden class if this is the first run
     document.querySelector("#spectrum-error").classList.add("hidden");
@@ -326,7 +322,7 @@ function showError(error, showContext = true) {
     if (showContext) {
       if (error.context.hasOwnProperty('Line')) {
         let Line = error.context.Line;
-        msg += "<pre>" + Line.line + "\n" + " ".repeat(Line.offset) + "^".repeat(Line.length) + "</pre>";
+        msg += "<div class='context'>" + (Line.line_index != null ? ("<span class='line-number'>" + (Line.line_index + 1) + "</span>") : "") + "<pre>" + Line.line + "\n" + " ".repeat(Line.offset) + "^".repeat(Line.length) + "</pre></div>";
       } else {
         msg += "<pre>" + error.context + "</pre>";
       }

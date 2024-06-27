@@ -12,7 +12,7 @@ use rustyms::{
     NeutralLoss,
 };
 
-use crate::html_builder::{HtmlElement, HtmlTag};
+use crate::html_builder::{HtmlContent, HtmlElement, HtmlTag};
 
 pub fn annotated_spectrum(
     spectrum: &AnnotatedSpectrum,
@@ -1011,7 +1011,8 @@ pub fn spectrum_table(
     let mut output = String::new();
     write!(
         output,
-        "<label class='show-unassigned'><input type='checkbox' switch/>Show background peaks</label>
+        "<p id='export-sequence' title='The inputted peptide written as fully compatible with the ProForma spec. So removes things like custom modifications.'>Universal ProForma definition: <span>{}</span></p>
+        <label class='show-unassigned'><input type='checkbox' switch/>Show background peaks</label>
         <label class='show-matched'><input type='checkbox' switch checked/>Show annotated peaks</label>
         <label class='show-missing-fragments'><input type='checkbox' switch/>Show missing fragments</label>
         <table id='spectrum-table' class='wide-table'>
@@ -1030,6 +1031,7 @@ pub fn spectrum_table(
                 <th>Series Number</th>
                 <th>Additional label</th>
             </tr></thead><tdata>",
+        spectrum.peptide,
         if multiple_peptidoforms {
             "<th>Peptidoform</th>"
         } else {
@@ -1206,16 +1208,7 @@ fn general_stats(
                 .clone()
                 .linear()
                 .map_or("Part of peptidoform".to_string(), |p| {
-                    p.formulas()
-                        .iter()
-                        .map(|f| {
-                            format!(
-                                "{} | avg: {}",
-                                display_mass(f.monoisotopic_mass()),
-                                display_mass(f.average_weight())
-                            )
-                        })
-                        .join(", ")
+                    p.formulas().iter().map(|f| display_masses(f)).join(", ")
                 });
             write!(mass_row, "<td>{precursor}</td>").unwrap();
             match score.score {
@@ -1530,18 +1523,41 @@ pub async fn density_graph(data: Vec<f64>) -> Result<String, ()> {
         ))
 }
 
-pub fn display_mass(value: Mass) -> HtmlElement {
+pub fn display_masses(value: &MolecularFormula) -> HtmlElement {
+    HtmlTag::span
+        .new()
+        .children([
+            display_mass(value.monoisotopic_mass(), Some(MassMode::Monoisotopic)).into(),
+            HtmlContent::Text(" / ".to_string()),
+            display_mass(value.average_weight(), Some(MassMode::Average)).into(),
+            HtmlContent::Text(" / ".to_string()),
+            display_mass(value.most_abundant_mass(), Some(MassMode::MostAbundant)).into(),
+        ])
+        .clone()
+}
+
+pub fn display_mass(value: Mass, kind: Option<MassMode>) -> HtmlElement {
     let (num, suf, full) = engineering_notation(value.value, 3);
     let suf = suf.map_or(String::new(), |suf| suf.to_string());
+    let kind = match kind {
+        Some(MassMode::Average) => "Average weight, average over all isotopes\n",
+        Some(MassMode::Monoisotopic) => {
+            "Monoisotopic mass, most abundant isotope for each separate element\n"
+        }
+        Some(MassMode::MostAbundant) => {
+            "Most abundant mass, averagine model of isotope distribution most abundant isotope mass\n"
+        }
+        _ => "",
+    };
     HtmlTag::span
         .new()
         .class("mass")
         .header(
             "title",
             if suf.is_empty() {
-                format!("{} Da", value.value)
+                format!("{kind}{} Da", value.value)
             } else {
-                format!("{} {}Da\n{} Da", full, suf, value.value)
+                format!("{kind}{} {}Da\n{} Da", full, suf, value.value)
             },
         )
         .content(format!("{} {}Da", num, suf))

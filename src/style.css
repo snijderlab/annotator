@@ -53,6 +53,15 @@ body {
   justify-content: center;
 }
 
+#export-sequence {
+  margin: 0;
+  padding: 0;
+
+  span {
+    user-select: all;
+  }
+}
+
 button {
   cursor: pointer;
 }
@@ -170,6 +179,27 @@ output.error {
 
   & .title {
     color: var(--color-red);
+  }
+
+  & .context {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+    overflow: auto;
+
+    & .line-number {
+      color: var(--color-halfway-fg);
+    }
+
+    & pre {
+      padding: 0;
+      margin: 0;
+      resize: none;
+      white-space: pre;
+      word-wrap: normal;
+      word-break: keep-all;
+      overflow: visible;
+    }
   }
 }
 

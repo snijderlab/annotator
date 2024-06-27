@@ -6,7 +6,7 @@ use rustyms::identification::{
 
 use crate::{
     html_builder::{HtmlContent, HtmlElement, HtmlTag},
-    render::display_mass,
+    render::{display_mass, display_masses},
 };
 
 pub trait RenderToHtml {
@@ -64,7 +64,7 @@ impl RenderToHtml for IdentifiedPeptide {
             );
         }
 
-        let mass = self.peptide.formulas()[0].monoisotopic_mass();
+        let formula = &self.peptide.formulas()[0];
         HtmlElement::new(HtmlTag::div)
             .children([
                 HtmlElement::new(HtmlTag::p)
@@ -72,13 +72,13 @@ impl RenderToHtml for IdentifiedPeptide {
                         "Score: {}, Length: {} AA, Mass: {}, Charge: {}, Mz: {} Th, Mode: {}",
                         self.score.map_or(String::from("-"), |s| format!("{s:.3}")),
                         self.peptide.sequence.len(),
-                        display_mass(mass),
+                        display_masses(formula),
                         self.metadata
                             .charge()
                             .map_or("-".to_string(), |c| c.value.to_string()),
                         self.metadata.charge().map_or("-".to_string(), |c| format!(
                             "{:.3}",
-                            mass.value / c.value as f64
+                            formula.monoisotopic_mass().value / c.value as f64
                         )),
                         self.metadata
                             .mode()
@@ -407,7 +407,9 @@ impl RenderToHtml for MaxQuantData {
                         ],
                         &[
                             "Mass error [absolute]".to_string(),
-                            self.mass_error_da.map(display_mass).to_optional_string(),
+                            self.mass_error_da
+                                .map(|m| display_mass(m, Some(rustyms::MassMode::Monoisotopic)))
+                                .to_optional_string(),
                         ],
                         &[
                             "Mass error [ppm]".to_string(),
@@ -533,11 +535,7 @@ impl RenderToHtml for SageData {
                         &["Decoy".to_string(), self.decoy.to_string()],
                         &[
                             "Experimental mass".to_string(),
-                            display_mass(self.experimental_mass).to_string(),
-                        ],
-                        &[
-                            "Theoretical mass".to_string(),
-                            display_mass(self.theoretical_mass).to_string(),
+                            display_mass(self.experimental_mass, None).to_string(),
                         ],
                         &[
                             "Missed cleavages".to_string(),
@@ -651,11 +649,11 @@ impl RenderToHtml for MSFraggerData {
                         ],
                         &[
                             "Experimental mass".to_string(),
-                            display_mass(self.experimental_mass).to_string(),
+                            display_mass(self.experimental_mass, None).to_string(),
                         ],
                         &[
                             "Calibrated experimental mass".to_string(),
-                            display_mass(self.calibrated_experimental_mass).to_string(),
+                            display_mass(self.calibrated_experimental_mass, None).to_string(),
                         ],
                         &[
                             "Experimental m/z".to_string(),

@@ -81,7 +81,7 @@ async fn details_formula(text: &str) -> Result<String, CustomError> {
                 .map(|(n, mass, occurrence)| {
                     [
                         n.to_string(),
-                        display_mass(*mass).to_string(),
+                        display_mass(*mass, Some(MassMode::Monoisotopic)).to_string(),
                         if *occurrence == 0.0 {
                             "-".to_string()
                         } else {
@@ -122,8 +122,8 @@ async fn details_formula(text: &str) -> Result<String, CustomError> {
     Ok(format!(
         "<p>Details on {}</p><p><span style='color:var(--color-red)'>Monoisotopic mass</span> {}, average weight {}, <span style='color:var(--color-green)'>most abundant isotope</span> offset {max} Da</p>{}", 
             display_formula(&formula),
-            display_mass(formula.monoisotopic_mass()),
-            display_mass(formula.average_weight()),
+            display_mass(formula.monoisotopic_mass(), Some(MassMode::Monoisotopic)),
+            display_mass(formula.average_weight(), Some(MassMode::Average)),
             isotopes_display,
         ))
 }
@@ -300,7 +300,6 @@ pub struct ModelParameters {
 pub struct AnnotationResult {
     pub spectrum: String,
     pub fragment_table: String,
-    pub logs: String,
     pub mz_max: f64,
     pub intensity_max: f64,
 }
@@ -409,7 +408,6 @@ async fn annotate_spectrum<'a>(
             multiple_peptidoforms,
             multiple_peptides,
         ),
-        logs: format!("{annotated:#?}\n{model:#?}"),
         mz_max: limits.mz.value,
         intensity_max: limits.intensity,
     })

@@ -1,6 +1,7 @@
 use crate::{
     html_builder,
-    render::{display_formula, display_mass, display_placement_rule},
+    render::{display_formula, display_mass, display_masses, display_placement_rule},
+    ModifiableState,
 };
 use itertools::Itertools;
 use modification::ModificationId;
@@ -20,7 +21,12 @@ use crate::{
 };
 
 #[tauri::command]
-pub async fn search_modification(text: &str, tolerance: f64) -> Result<String, CustomError> {
+pub async fn search_modification(
+    text: &str,
+    tolerance: f64,
+    state: ModifiableState<'_>,
+) -> Result<String, CustomError> {
+    let state = state.lock().unwrap();
     let modification = if text.is_empty() {
         Err(CustomError::error(
             "Invalid modification",
@@ -28,18 +34,24 @@ pub async fn search_modification(text: &str, tolerance: f64) -> Result<String, C
             Context::None,
         ))
     } else {
-        SimpleModification::try_from(text, 0..text.len(), &mut Vec::new(), &mut Vec::new(), None)
-            .map(|m| match m {
-                ReturnModification::Defined(d) => Ok(d),
-                _ => Err(CustomError::error(
-                    "Invalid modification",
-                    "Can not define ambiguous modifications for the modifications parameter",
-                    Context::None,
-                )),
-            })
+        SimpleModification::try_from(
+            text,
+            0..text.len(),
+            &mut Vec::new(),
+            &mut Vec::new(),
+            Some(&state.database),
+        )
+        .map(|m| match m {
+            ReturnModification::Defined(d) => Ok(d),
+            _ => Err(CustomError::error(
+                "Invalid modification",
+                "Can not define ambiguous modifications for the modifications parameter",
+                Context::None,
+            )),
+        })
     }??;
     let tolerance = Tolerance::new_absolute(Mass::new::<dalton>(tolerance));
-    let result = SimpleModification::search(&modification, tolerance, None);
+    let result = SimpleModification::search(&modification, tolerance, Some(&state.database));
 
     match result {
         ModificationSearchResult::Single(modification) => {
@@ -54,7 +66,7 @@ pub async fn search_modification(text: &str, tolerance: f64) -> Result<String, C
                         [
                             modification.to_string(),
                             link_modification(*ontology, *id, name),
-                            display_mass(modification.formula().monoisotopic_mass()).to_string(),
+                            display_masses(&modification.formula()).to_string(),
                             display_formula(&modification.formula()),
                         ]
                     }),
@@ -81,11 +93,9 @@ pub async fn search_modification(text: &str, tolerance: f64) -> Result<String, C
                 HtmlTag::p
                     .new()
                     .content(format!(
-                        "Formula {} monoisotopic mass {} average mass {} most abundant mass {}",
+                        "Formula {} Mass {}",
                         display_formula(&modification.formula()),
-                        display_mass(modification.formula().monoisotopic_mass()),
-                        display_mass(modification.formula().average_weight()),
-                        display_mass(modification.formula().most_abundant_mass()),
+                        display_masses(&modification.formula()),
                     ))
                     .clone(),
                 html_builder::HtmlElement::table(
@@ -117,11 +127,9 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
     output.class("modification");
 
     output.content(HtmlElement::new(HtmlTag::p).content(format!(
-        "Formula {} monoisotopic mass {} average mass {} most abundant mass {}",
+        "Formula {} Mass {}",
         display_formula(&modification.formula()),
-        display_mass(modification.formula().monoisotopic_mass()),
-        display_mass(modification.formula().average_weight()),
-        display_mass(modification.formula().most_abundant_mass()),
+        display_masses(&modification.formula()),
     )));
 
     if let modification::SimpleModification::Database {
