@@ -702,8 +702,14 @@ impl RenderToHtml for MSFraggerData {
                             "Mapped proteins".to_string(),
                             self.mapped_proteins.join(","),
                         ],
-                        &["Condition".to_string(), self.condition.to_string()],
-                        &["Group".to_string(), self.group.to_string()],
+                        &[
+                            "Condition".to_string(),
+                            self.condition.as_ref().to_optional_string(),
+                        ],
+                        &[
+                            "Group".to_string(),
+                            self.group.as_ref().to_optional_string(),
+                        ],
                     ],
                 )
                 .clone(),

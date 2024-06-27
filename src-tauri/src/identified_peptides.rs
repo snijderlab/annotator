@@ -44,23 +44,30 @@ pub async fn load_identified_peptides<'a>(
                     Context::None,
                 )
             }),
-        Some("tsv") => SageData::parse_file(path).map(|peptides| {
-            state.lock().unwrap().peptides =
-                peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()
-        }),
+        Some("tsv") => MSFraggerData::parse_file(path)
+            .map(|peptides| {
+                state.lock().unwrap().peptides =
+                    peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()
+            })
+            .or_else(|_| {
+                SageData::parse_file(path).map(|peptides| {
+                    state.lock().unwrap().peptides =
+                        peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()
+                })
+            })
+            .map_err(|_| {
+                CustomError::error(
+                    "Unknown file",
+                    "Could not be recognised as either a MSFragger or Sage file",
+                    Context::None,
+                )
+            }),
         Some("psmtsv") => OpairData::parse_file(path).map(|peptides| {
             state.lock().unwrap().peptides =
                 peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()
         }),
         Some("fasta") => FastaData::parse_file(path).map(|peptides| {
             state.lock().unwrap().peptides = peptides.into_iter().map(|p| p.into()).collect()
-        }),
-        Some("txt") => MSFraggerData::parse_file(path).map(|peptides| {
-            state.lock().unwrap().peptides = peptides
-                .into_iter()
-                .filter_map(|p| p.ok())
-                .map(|p| p.into())
-                .collect()
         }),
         _ => Err(CustomError::error(
             "Unknown extension",
