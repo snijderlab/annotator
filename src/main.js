@@ -197,12 +197,19 @@ async function search_modification() {
 }
 
 async function details_formula(event) {
-  invoke("details_formula", { text: event.target.value }).then((result) => {
+  const formula = document.getElementById("details-formula");
+  invoke("details_formula", { text: formula.innerText }).then((result) => {
     document.querySelector("#details-formula-result").innerHTML = result;
     document.querySelector("#details-formula-error").classList.add("hidden");
+    if (formula.querySelector(".error") != null) {
+      formula.innerText = formula.innerText;
+      moveCursorToEnd(formula);
+    }
   }).catch((error) => {
     document.querySelector("#details-formula-error").classList.remove("hidden");
-    document.querySelector("#details-formula-error").innerHTML = showError(error);
+    document.querySelector("#details-formula-error").innerHTML = showError(error, false);
+    formula.innerHTML = showContext(error, formula.innerText);
+    moveCursorToEnd(formula);
   })
 }
 

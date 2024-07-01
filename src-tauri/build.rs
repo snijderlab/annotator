@@ -313,9 +313,9 @@ fn main() {
           <fieldset class='settings spectrum-settings'>
             <legend>Spectrum settings</legend>
             
-            <label for='theoretical' title='Show the theoretical peptide spectrum on the x axis'><input id='theoretical' class='theoretical' type='checkbox' switch/>Theoretical spectrum</label>
+            <label for='theoretical' title='Show the theoretical peptide spectrum on the x axis'><input id='theoretical' class='theoretical' type='checkbox' switch/>Show theoretical spectrum</label>
             
-            <label for='unassigned' title='Show the unassigned peaks in the spectrum'><input id='unassigned' class='unassigned' type='checkbox' switch checked/>Unassigned</label>
+            <label for='unassigned' title='Show the unassigned peaks in the spectrum'><input id='unassigned' class='unassigned' type='checkbox' switch checked/>Show unassigned peaks</label>
     
             <div class='row'>
               <span class='title'>Ion colouration mode</span>
@@ -374,6 +374,9 @@ fn main() {
               <label for='spectrum-intensity-max'>max</label>
               <input id='spectrum-intensity-max' class='intensity-max' type='number' value='42' minimum='0'/>
             </div>
+
+            <label title='Show the intensity in square root, this emphasizes the lower intensity peaks'><input id='y-sqrt' class='y-sqrt' type='checkbox' switch/>Square root intensity</label>
+            <label><input id='y-percentage' class='y-percentage' type='checkbox' switch/>Intensity percent</label>
     
             <button id='reset-zoom' class='reset-zoom' title='Reset the zoom to the default' tabindex='0'>Reset zoom</button>
           </fieldset>
@@ -419,17 +422,17 @@ fn main() {
       <fieldset class="collapsible" data-linked-item="collapsible-tools">
         <legend>Tools</legend>
         <div class="flex-input collapsible-content">
-          <label for="search-modification">Modification</label>
-          <input id="search-modification" type="text"></input>
-          <label for="search-modification-tolerance" title="If searching for a numeric modification, the tolerance on the mass">Tolerance (in Da)</label>
+          <label for="search-modification">Search modification</label>
+          <input id="search-modification" type="text" title="Search for a ProForma modification, it will display its details. If you give a mass, formula, or glycan composition modification it instead will return all modifications with that composition."></input>
+          <label for="search-modification-tolerance" title="If searching for a mass modification, the tolerance on the mass">Tolerance (in Da)</label>
           <input id="search-modification-tolerance" type="number" value="0.1" min="0"></input>
           <button id="search-modification-button">Search</button>
         </div>
         <output class="error collapsible-content hidden" id="search-modification-error"></output>
         <output class="collapsible-content" id="search-modification-result"></output>
         <div class="flex-input collapsible-content">
-          <label for="details-formula">Formula</label>
-          <input id="details-formula" type="text"></input>
+          <label for="details-formula">Isotopic distribution for formula</label>
+          <span class="input context" id="details-formula" type="text" placeholder="Molecular formula" contentEditable="plaintext-only"></span>
         </div>
         <output class="error collapsible-content hidden" id="details-formula-error"></output>
         <output class="collapsible-content" id="details-formula-result"></output>

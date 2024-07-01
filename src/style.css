@@ -62,6 +62,11 @@ body {
   }
 }
 
+#details-formula {
+  min-width: 10rem;
+  display: inline-block;
+}
+
 button {
   cursor: pointer;
 }
@@ -417,8 +422,9 @@ output.error {
 }
 
 .spectrum.error-graph-intensity .point {
-  width: calc((var(--intensity)) / var(--max-intensity) * 6px + 2px);
-  height: calc((var(--intensity)) / var(--max-intensity) * 6px + 2px);
+  --s: calc(sqrt(var(--intensity)) / sqrt(var(--max-intensity)) * 6px + 2px);
+  width: var(--s);
+  height: var(--s);
 }
 
 .spectrum .error-graph.highlight .point {
