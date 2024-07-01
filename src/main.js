@@ -55,7 +55,6 @@ async function select_mgf_file(e) {
 */
 async function select_identified_peptides_file(e) {
   let properties = {
-    //defaultPath: 'C:\\',
     directory: false,
     filters: [{
       extensions: ["csv", "csv.gz", "tsv", "tsv.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz", "txt", "txt.gz"], name: "*"
@@ -561,7 +560,7 @@ window.addEventListener("DOMContentLoaded", () => {
           populateSeparatedInput("custom-mod-linker-diagnostic-ions", data.diagnostic_ions);
         }
         listInput.classList.add("creating");
-        e.target.parentElement.remove();
+        e.target.parentElement.classList.add("hidden");
       });
       let delete_button = document.createElement("button");
       delete_button.classList.add("delete");
@@ -573,18 +572,8 @@ window.addEventListener("DOMContentLoaded", () => {
       listInput.querySelectorAll(".modal .separated-input").forEach(s => clearSeparatedInput(s));
     })
     t.querySelector(".cancel").addEventListener("click", e => {
-      e.target.parentElement.parentElement.classList.remove("creating"); // TODO: removes element
-      // addValueListInput(
-      //   e.target.parentElement.parentElement,
-      //   loadSeparatedInput("custom-mod-single-placement-rules"),
-      //   loadSeparatedInput("custom-mod-single-neutral-losses"),
-      //   loadSeparatedInput("custom-mod-single-diagnostic-ions"),
-      //   document.getElementById("custom-mod-linker-asymmetric").checked,
-      //   loadSeparatedInput("custom-mod-linker-placement-rules"),
-      //   loadSeparatedInput("custom-mod-linker-secondary-placement-rules"),
-      //   loadSeparatedInput("custom-mod-linker-stubs"),
-      //   loadSeparatedInput("custom-mod-linker-diagnostic-ions"),
-      // );
+      e.target.parentElement.parentElement.classList.remove("creating");
+      e.target.parentElement.parentElement.querySelectorAll(".hidden").forEach(e => e.classList.remove("hidden"));
       e.target.parentElement.parentElement.querySelectorAll(".modal .separated-input").forEach(s => clearSeparatedInput(s));
     })
   });
@@ -768,7 +757,7 @@ async function addValueListInput(listInput, singlePlacementRules, singleNeutralL
       populateSeparatedInput("custom-mod-linker-diagnostic-ions", data.diagnostic_ions);
     }
     listInput.classList.add("creating");
-    e.target.parentElement.remove();
+    e.target.parentElement.classList.add("hidden");
   });
   let delete_button = document.createElement("button");
   delete_button.classList.add("delete");
