@@ -360,6 +360,8 @@ fn main() {
                   <label><input checked id='spectrum-label-neutral-losses' type='checkbox'/>Neutral losses</label>
                 </div>
             </div>
+
+            <label><input id='rotate-label' class='rotate-label' type='checkbox' switch/>Rotate labels</label>
             
             <div>
               <span>Mz</span>
