@@ -322,6 +322,7 @@ fn main() {
               <div class='select-box' id='peak-colour'>
                 <label for='peak-colour-ion' tabindex='0'><input type='radio' name='peak-colour' value='ion' id='peak-colour-ion' checked>Ion</label>
                 <label for='peak-colour-peptide' tabindex='0'><input type='radio' name='peak-colour' value='peptide' id='peak-colour-peptide'>Peptide</label>
+                <label for='peak-colour-peptidoform' tabindex='0'><input type='radio' name='peak-colour' value='peptidoform' id='peak-colour-peptidoform'>Peptidoform</label>
                 <label for='peak-colour-none' tabindex='0'><input type='radio' name='peak-colour' value='none' id='peak-colour-none'>None</label>
               </div>
             </div>
@@ -403,7 +404,7 @@ fn main() {
               </div>
               <div class='side'>
                   <span class='ion p' tabindex='0'>Precursor</span>
-                  <span class='ion multi mp' tabindex='0'>Multi</span>
+                  <span class='ion multi mp mpp' tabindex='0'>Multi</span>
                   <span class='ion oxonium' tabindex='0'>Oxonium</span>
                   <span class='ion Y' tabindex='0'>Y</span>
                   <span class='other'>Other</span>

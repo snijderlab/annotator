@@ -4,7 +4,7 @@ use itertools::Itertools;
 use rustyms::{
     fragment::*,
     model::Location,
-    modification::{Ontology, SimpleModification},
+    modification::{CrossLinkName, Ontology, SimpleModification},
     placement_rule::PlacementRule,
     spectrum::{AnnotatedPeak, PeakSpectrum, Recovered, Score},
     system::{da, mz, Mass, MassOverCharge},
@@ -54,13 +54,14 @@ pub fn annotated_spectrum(
                 .count()
                 > 1
         });
-
+    let mut unique_peptide_lookup = Vec::new();
     render_peptide(
         &mut output,
         spectrum,
         overview,
         multiple_peptidoforms,
         multiple_peptides,
+        &mut unique_peptide_lookup,
     );
     render_spectrum(
         &mut output,
@@ -73,9 +74,16 @@ pub fn annotated_spectrum(
         multiple_peptides,
         multiple_glycans,
         mass_mode,
+        &unique_peptide_lookup,
     );
     // Error graph
-    render_error_graph(&mut output, &graph_boundaries, &graph_data, limits.mz.value);
+    render_error_graph(
+        &mut output,
+        &graph_boundaries,
+        &graph_data,
+        limits.mz.value,
+        &unique_peptide_lookup,
+    );
     write!(output, "</div></div>").unwrap();
     // General stats
     general_stats(
@@ -308,6 +316,7 @@ fn render_error_graph(
     boundaries: &Boundaries,
     data: &SpectrumGraphData,
     x_max: f64,
+    unique_peptide_lookup: &[(usize, usize)],
 ) {
     write!(output, "<div class='error-graph-y-axis'>").unwrap();
     write!(output, "<span class='max'>{:.2}</span>", boundaries.2).unwrap();
@@ -335,7 +344,13 @@ fn render_error_graph(
             "{}",
             HtmlTag::span
                 .new()
-                .header("class", format!("point {}", get_classes(&point.annotation)))
+                .header(
+                    "class",
+                    format!(
+                        "point {}",
+                        get_classes(&point.annotation, unique_peptide_lookup)
+                    )
+                )
                 .style(format!(
                     "--mz:{};--intensity:{};",
                     point.mz.value, point.intensity
@@ -376,12 +391,18 @@ fn render_error_graph(
 
 /// Get all applicable classes for a set of annotations.
 /// These are:
-///   * The ion type(s) (eg 'precursor', 'y')
-///   * The peptide(s) (eg 'p0', 'p1')
-///   * The position(s) (eg 'p0-2', 'p2-123')
-fn get_classes(annotations: &[(Fragment, Vec<MatchedIsotopeDistribution>)]) -> String {
+///   * The ion type(s) (eg 'precursor', 'y') (and 'multi' if there are multiple)
+///   * The peptidoform(s) (eg 'p0', 'p1') (and 'mp' if there are multiple peptides)
+///   * The peptide(s) (eg 'p0-2', 'p2-1') (and 'mpp' if there are multiple peptides)
+///   * The position(s) (eg 'p0-2-3', 'p2-1-123')
+///   * The unique peptide index (eg 'pu1', 'pu12')
+fn get_classes(
+    annotations: &[(Fragment, Vec<MatchedIsotopeDistribution>)],
+    unique_peptide_lookup: &[(usize, usize)],
+) -> String {
     let mut output = Vec::new();
     let mut shared_ion = annotations.first().map(|a| a.0.ion.kind());
+    let mut first_peptidoform_index = None;
     let mut first_peptide_index = None;
     for (annotation, _) in annotations {
         output.push(annotation.ion.label().to_string());
@@ -390,12 +411,42 @@ fn get_classes(annotations: &[(Fragment, Vec<MatchedIsotopeDistribution>)]) -> S
             "p{}-{}",
             annotation.peptidoform_index, annotation.peptide_index
         ));
-        if let Some(num) = first_peptide_index {
-            if num != annotation.peptide_index {
-                output.push("mp".to_string());
+        if let Some(num) = first_peptidoform_index {
+            if num != annotation.peptidoform_index {
+                if !output.contains(&"mp".to_string()) {
+                    output.push("mp".to_string());
+                }
+            }
+        } else {
+            first_peptidoform_index = Some(annotation.peptidoform_index);
+        }
+        if let (Some(p), Some(pp)) = (first_peptidoform_index, first_peptide_index) {
+            if p != annotation.peptidoform_index && pp != annotation.peptide_index {
+                if !output.contains(&"mpp".to_string()) {
+                    output.push("mpp".to_string())
+                };
+                let pu = format!(
+                    "pu{}",
+                    unique_peptide_lookup
+                        .iter()
+                        .position(
+                            |id| *id == (annotation.peptidoform_index, annotation.peptide_index)
+                        )
+                        .unwrap()
+                );
+                if !output.contains(&pu) {
+                    output.push(pu)
+                };
             }
         } else {
             first_peptide_index = Some(annotation.peptide_index);
+            output.push(format!(
+                "pu{}",
+                unique_peptide_lookup
+                    .iter()
+                    .position(|id| *id == (annotation.peptidoform_index, annotation.peptide_index))
+                    .unwrap()
+            ))
         }
         if let Some(pos) = annotation.ion.position() {
             output.push(format!(
@@ -701,8 +752,10 @@ fn render_peptide(
     overview: PositionCoverage,
     multiple_peptidoforms: bool,
     multiple_peptides: bool,
+    unique_peptide_lookup: &mut Vec<(usize, usize)>,
 ) {
     write!(output, "<div class='complex-peptide'>").unwrap();
+    let mut cross_link_lookup = Vec::new();
     for (peptidoform_index, peptidoform) in spectrum.peptide.peptidoforms().iter().enumerate() {
         for (peptide_index, peptide) in peptidoform.peptides().iter().enumerate() {
             render_linear_peptide(
@@ -711,9 +764,12 @@ fn render_peptide(
                 &overview[peptidoform_index][peptide_index],
                 peptidoform_index,
                 peptide_index,
+                unique_peptide_lookup.len(),
                 multiple_peptidoforms,
                 multiple_peptides,
+                &mut cross_link_lookup,
             );
+            unique_peptide_lookup.push((peptidoform_index, peptide_index));
         }
     }
     write!(output, "</div>").unwrap();
@@ -725,10 +781,16 @@ fn render_linear_peptide(
     overview: &[HashSet<FragmentType>],
     peptidoform_index: usize,
     peptide_index: usize,
+    unique_peptide_index: usize,
     multiple_peptidoforms: bool,
     multiple_peptides: bool,
+    cross_link_lookup: &mut Vec<CrossLinkName>,
 ) {
-    write!(output, "<div class='peptide'>").unwrap();
+    write!(
+        output,
+        "<div class='peptide pu{unique_peptide_index} p{peptidoform_index}'>"
+    )
+    .unwrap();
     if multiple_peptides || multiple_peptidoforms {
         write!(
             output,
@@ -759,6 +821,18 @@ fn render_linear_peptide(
             .iter()
             .filter_map(|m| {
                 if let Modification::CrossLink { peptide, name, .. } = m {
+                    write!(
+                        classes,
+                        " c{}",
+                        cross_link_lookup
+                            .iter()
+                            .position(|xl| xl == name)
+                            .unwrap_or_else(|| {
+                                cross_link_lookup.push(name.clone());
+                                cross_link_lookup.len() - 1
+                            })
+                    )
+                    .unwrap();
                     Some(format!(
                         "{}{name}",
                         if *peptide != index {
@@ -835,6 +909,7 @@ fn render_spectrum(
     multiple_peptides: bool,
     multiple_glycans: bool,
     mass_mode: MassMode,
+    unique_peptide_lookup: &[(usize, usize)],
 ) {
     write!(
         output,
@@ -883,7 +958,7 @@ fn render_spectrum(
         write!(
             output,
             "<span class='peak {}' style='--mz:{};--intensity:{};' data-label='{}' {}>{}</span>",
-            get_classes(&peak.annotation),
+            get_classes(&peak.annotation, unique_peptide_lookup),
             peak.experimental_mz.value,
             peak.intensity,
             (peak.experimental_mz.value * 10.0).round() / 10.0,
@@ -905,7 +980,7 @@ fn render_spectrum(
         write!(
             output,
             "<span class='theoretical peak {}' style='--mz:{};' data-label='{}'>{}</span>",
-            get_classes(&[(peak.clone(), Vec::new())]),
+            get_classes(&[(peak.clone(), Vec::new())], unique_peptide_lookup),
             peak.mz(mass_mode).value,
             (peak.mz(mass_mode).value * 10.0).round() / 10.0,
             get_label(
