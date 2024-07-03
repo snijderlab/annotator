@@ -1,6 +1,6 @@
 use crate::{
     html_builder,
-    render::{display_formula, display_mass, display_masses, display_placement_rule},
+    render::{display_formula, display_masses, display_placement_rule},
     ModifiableState,
 };
 use itertools::Itertools;

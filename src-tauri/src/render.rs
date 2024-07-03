@@ -816,36 +816,39 @@ fn render_linear_peptide(
     }
     for (index, (pos, ions)) in peptide.sequence.iter().zip(overview).enumerate() {
         let mut classes = String::new();
-        let cross_links = pos
-            .modifications
-            .iter()
-            .filter_map(|m| {
-                if let Modification::CrossLink { peptide, name, .. } = m {
-                    write!(
-                        classes,
-                        " c{}",
-                        cross_link_lookup
-                            .iter()
-                            .position(|xl| xl == name)
-                            .unwrap_or_else(|| {
-                                cross_link_lookup.push(name.clone());
-                                cross_link_lookup.len() - 1
-                            })
-                    )
-                    .unwrap();
-                    Some(format!(
-                        "{}{name}",
-                        if *peptide != index {
-                            format!("p{}", peptide + 1)
-                        } else {
-                            String::new()
-                        },
-                    ))
-                } else {
-                    None
+        let mut xl_indices = Vec::new();
+        let mut xl_names = Vec::new();
+        let mut xl_peptides = Vec::new();
+        for m in &pos.modifications {
+            if let Modification::CrossLink { peptide, name, .. } = m {
+                let xl_index = cross_link_lookup
+                    .iter()
+                    .position(|xl| *xl == *name)
+                    .unwrap_or_else(|| {
+                        cross_link_lookup.push(name.clone());
+                        cross_link_lookup.len() - 1
+                    });
+                write!(classes, " c{xl_index}").unwrap();
+                xl_indices.push(xl_index + 1);
+                xl_names.push(name);
+                if *peptide != peptide_index {
+                    xl_peptides.push(*peptide + 1);
                 }
-            })
-            .join(",");
+            }
+        }
+
+        let cross_links = format!(
+            "xl.{}{}",
+            xl_indices.iter().join(","),
+            if xl_peptides.is_empty() {
+                String::new()
+            } else {
+                format!("p{}", xl_peptides.iter().join(","))
+            }
+        );
+
+        let cross_links_compact = format!("x{}", xl_indices.iter().join(","),);
+
         if pos
             .modifications
             .iter()
@@ -853,7 +856,7 @@ fn render_linear_peptide(
         {
             write!(classes, " modification").unwrap();
         }
-        if !cross_links.is_empty() {
+        if !xl_indices.is_empty() {
             write!(classes, " cross-link").unwrap();
         }
         if !pos.possible_modifications.is_empty() {
@@ -864,10 +867,15 @@ fn render_linear_peptide(
         }
         write!(
             output,
-            "<span data-pos='{peptidoform_index}-{peptide_index}-{index}' data-cross-links='{cross_links}'{classes} tabindex='0' title='N terminal position: {}, C terminal position: {}'>{}",
+            "<span data-pos='{peptidoform_index}-{peptide_index}-{index}' data-cross-links='{cross_links}' data-cross-links-compact='{cross_links_compact}'{classes} tabindex='0' title='N terminal position: {}, C terminal position: {}{}'>{}",
             index + 1,
             peptide.sequence.len() - index,
-            pos.aminoacid.char()
+            if xl_names.is_empty() {
+                String::new()
+            } else {
+                format!(", Cross-link{}: {}", if xl_names.len() == 1{""} else {"s"}, xl_names.iter().join(", "))
+            },
+            pos.aminoacid.char(),
         )
         .unwrap();
         for ion in ions {
