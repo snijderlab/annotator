@@ -320,7 +320,7 @@ fn main() {
             <label for='unassigned' title='Show the unassigned peaks in the spectrum'><input id='unassigned' class='unassigned' type='checkbox' switch checked/>Show unassigned peaks</label>
     
             <div class='row'>
-              <span class='title'>Ion colouration mode</span>
+              <span class='title'>Ion colour mode</span>
               <div class='select-box' id='peak-colour'>
                 <label for='peak-colour-ion' tabindex='0'><input type='radio' name='peak-colour' value='ion' id='peak-colour-ion' checked>Ion</label>
                 <label for='peak-colour-peptide' tabindex='0'><input type='radio' name='peak-colour' value='peptide' id='peak-colour-peptide'>Peptide</label>
@@ -369,15 +369,23 @@ fn main() {
             <div>
               <span>Mz</span>
               <label for='spectrum-mz-min'>min</label>
-              <input id='spectrum-mz-min' class='mz-min' type='number' value='0' minimum='0'/>
+              <input id='spectrum-mz-min' class='mz-min' type='number' value='0' min='0'/>
               <label for='spectrum-mz-max'>max</label>
-              <input id='spectrum-mz-max' class='mz-max' type='number' value='42' minimum='0'/>
+              <input id='spectrum-mz-max' class='mz-max' type='number' value='42' min='0'/>
             </div>
     
             <div>
               <span>Intensity</span>
               <label for='spectrum-intensity-max'>max</label>
-              <input id='spectrum-intensity-max' class='intensity-max' type='number' value='42' minimum='0'/>
+              <input id='spectrum-intensity-max' class='intensity-max' type='number' value='42' min='0'/>
+            </div>
+
+            <div>
+              <span>Tick marks</span>
+              <label for='spectrum-ticks-x'>X</label>
+              <input id='spectrum-ticks-x' type='number' value='5' min='2'/>
+              <label for='spectrum-ticks-y'>Y</label>
+              <input id='spectrum-ticks-y' type='number' value='5' min='2'/>
             </div>
 
             <label title='Show the intensity in square root, this emphasizes the lower intensity peaks'><input id='y-sqrt' class='y-sqrt' type='checkbox' switch/>Square root intensity</label>
@@ -444,7 +452,7 @@ fn main() {
       </fieldset>
       <input type="checkbox" id="collapsible-custom-mods">
       <fieldset class="collapsible" data-linked-item="collapsible-custom-mods">
-        <legend>Custom mods</legend>
+        <legend>Custom modifications</legend>
         <dialog id="custom-mod-dialog">
           <h1>Custom modification</h1>
 
