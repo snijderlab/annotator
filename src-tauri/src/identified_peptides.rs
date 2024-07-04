@@ -8,10 +8,10 @@ use rustyms::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{html_builder, ModifiableState};
+use crate::{html_builder, state::IdentifiedPeptideFile, ModifiableState};
 
 #[tauri::command]
-pub async fn load_identified_peptides<'a>(
+pub async fn load_identified_peptides_file<'a>(
     path: &'a str,
     state: ModifiableState<'a>,
 ) -> Result<usize, CustomError> {
@@ -26,48 +26,83 @@ pub async fn load_identified_peptides<'a>(
         })
         .map(|ex| ex.to_lowercase());
     match actual_extension.as_deref() {
-        Some("csv") => PeaksData::parse_file(path)
-            .map(|peptides| {
-                state.lock().unwrap().peptides =
-                    peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()
-            })
-            .or_else(|_| {
-                NovorData::parse_file(path).map(|peptides| {
-                    state.lock().unwrap().peptides =
-                        peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()
+        Some("csv") => {
+            PeaksData::parse_file(path)
+                .map(|peptides| {
+                    state.lock().unwrap().identified_peptide_files.push(
+                        IdentifiedPeptideFile::new(
+                            path.to_string(),
+                            peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
+                        ),
+                    );
                 })
-            })
-            .map_err(|_| {
-                CustomError::error(
-                    "Unknown file",
-                    "Could not be recognised as either a Peaks or Novor file",
-                    Context::None,
-                )
-            }),
-        Some("tsv") => MSFraggerData::parse_file(path)
-            .map(|peptides| {
-                state.lock().unwrap().peptides =
-                    peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()
-            })
-            .or_else(|_| {
-                SageData::parse_file(path).map(|peptides| {
-                    state.lock().unwrap().peptides =
-                        peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()
+                .or_else(|_| {
+                    NovorData::parse_file(path).map(|peptides| {
+                        state.lock().unwrap().identified_peptide_files.push(
+                            IdentifiedPeptideFile::new(
+                                path.to_string(),
+                                peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
+                            ),
+                        )
+                    })
                 })
-            })
-            .map_err(|_| {
-                CustomError::error(
-                    "Unknown file",
-                    "Could not be recognised as either a MSFragger or Sage file",
-                    Context::None,
-                )
-            }),
+                .map_err(|_| {
+                    CustomError::error(
+                        "Unknown file",
+                        "Could not be recognised as either a Peaks or Novor file",
+                        Context::None,
+                    )
+                })
+        }
+        Some("tsv") => {
+            MSFraggerData::parse_file(path)
+                .map(|peptides| {
+                    state
+                        .lock()
+                        .unwrap()
+                        .identified_peptide_files
+                        .push(IdentifiedPeptideFile::new(
+                            path.to_string(),
+                            peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
+                        ))
+                })
+                .or_else(|_| {
+                    SageData::parse_file(path).map(|peptides| {
+                        state.lock().unwrap().identified_peptide_files.push(
+                            IdentifiedPeptideFile::new(
+                                path.to_string(),
+                                peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
+                            ),
+                        )
+                    })
+                })
+                .map_err(|_| {
+                    CustomError::error(
+                        "Unknown file",
+                        "Could not be recognised as either a MSFragger or Sage file",
+                        Context::None,
+                    )
+                })
+        }
         Some("psmtsv") => OpairData::parse_file(path).map(|peptides| {
-            state.lock().unwrap().peptides =
-                peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect()
+            state
+                .lock()
+                .unwrap()
+                .identified_peptide_files
+                .push(IdentifiedPeptideFile::new(
+                    path.to_string(),
+                    peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
+                ))
         }),
         Some("fasta") => FastaData::parse_file(path).map(|peptides| {
-            state.lock().unwrap().peptides = peptides.into_iter().map(|p| p.into()).collect()
+            state
+                .lock()
+                .unwrap()
+                .identified_peptide_files
+                .push(IdentifiedPeptideFile::new(
+                    path.to_string(),
+                    peptides.into_iter().map(|p| p.into()).collect(),
+                ))
         }),
         _ => Err(CustomError::error(
             "Unknown extension",
@@ -75,7 +110,45 @@ pub async fn load_identified_peptides<'a>(
             Context::None,
         )),
     }?;
-    Ok(state.lock().unwrap().peptides.len())
+    Ok(state.lock().unwrap().identified_peptide_files.len())
+}
+
+#[tauri::command]
+pub async fn close_identified_peptides_file(
+    file: usize,
+    state: ModifiableState<'_>,
+) -> Result<(), CustomError> {
+    let mut state = state.lock().map_err(|_| {
+        CustomError::error(
+            "Could not lock mutex",
+            "You are likely doing to many things in parallel",
+            Context::none(),
+        )
+    })?;
+    if let Some(pos) = state
+        .identified_peptide_files
+        .iter()
+        .position(|f| f.id == file)
+    {
+        state.identified_peptide_files.remove(pos);
+        Ok(())
+    } else {
+        Err(CustomError::error("File does not exist", "This selected file could not be closed as it does not exist, did you already close it?", Context::none()))
+    }
+}
+
+/// Get the id, file name, path, and numbe rof peptides of all open identified peptides files
+#[tauri::command]
+pub async fn get_identified_peptides_files(
+    state: ModifiableState<'_>,
+) -> Result<Vec<(usize, String, String, usize)>, ()> {
+    Ok(state
+        .lock()
+        .map_err(|_| ())?
+        .identified_peptide_files
+        .iter()
+        .map(|f| (f.id, f.file_name(), f.path.clone(), f.peptides.len()))
+        .collect_vec())
 }
 
 #[tauri::command]
@@ -102,11 +175,12 @@ pub async fn search_peptide<'a>(
             )
         })?;
     let data = state
-        .peptides
+        .identified_peptide_files
         .iter()
-        .filter(|p| p.score.map_or(true, |score| score >= minimal_peptide_score))
+        .flat_map(|file| file.peptides.iter().map(|p| (file.id, p)))
+        .filter(|(_, p)| p.score.map_or(true, |score| score >= minimal_peptide_score))
         .enumerate()
-        .map(|(index, peptide)| {
+        .map(|(index, (id, peptide))| {
             (
                 index,
                 align::<4, VerySimple, Simple>(
@@ -117,16 +191,21 @@ pub async fn search_peptide<'a>(
                     align::AlignType::GLOBAL_B,
                 ),
                 peptide,
+                id,
             )
         })
         .sorted_unstable_by(|a, b| b.1.score().normalised.cmp(&a.1.score().normalised))
-        .filter(|(_, alignment, _)| alignment.normalised_score() >= minimal_match_score)
+        .filter(|(_, alignment, _, _)| alignment.normalised_score() >= minimal_match_score)
         .take(25)
-        .map(|(index, alignment, peptide)| {
+        .map(|(index, alignment, peptide, id)| {
             let start = alignment.start_a();
             let end = alignment.start_a() + alignment.len_a();
             vec![
-                format!("<a onclick=\"document.getElementById('details-identified-peptide-index').value={0};document.getElementById('details-identified-peptide-index').dispatchEvent(new FocusEvent('focus'))\">{0}</a>", index.to_string()),
+                // TODO: select the right file
+                format!(
+                    "<a onclick=\"load_peptide({id}, {index})\">F{}:{index}</a>",
+                    id + 1
+                ),
                 format!(
                     "{}<span class='match'>{}</span>{}",
                     peptide.peptide.sub_peptide(..start).to_string(),
@@ -183,25 +262,35 @@ impl Settings {
 }
 
 #[tauri::command]
-pub fn load_identified_peptide(index: usize, state: ModifiableState) -> Option<Settings> {
+pub fn load_identified_peptide(
+    file: usize,
+    index: usize,
+    state: ModifiableState,
+) -> Option<Settings> {
     if let Ok(state) = state.lock() {
-        state.peptides.get(index).map(|peptide| {
-            Settings::from_peptide(
-                peptide,
-                peptide.metadata.scan_number().and_then(|scan| {
-                    state
-                        .spectra
-                        .iter()
-                        .enumerate()
-                        .find(|(_, spectrum)| {
-                            spectrum
-                                .raw_scan_number
-                                .map_or(false, |spectrum_scan| scan == spectrum_scan)
-                        })
-                        .map(|(i, _)| i)
-                }),
-            )
-        })
+        state
+            .identified_peptide_files
+            .iter()
+            .find(|f| f.id == file)
+            .and_then(|file| {
+                file.peptides.get(index).map(|peptide| {
+                    Settings::from_peptide(
+                        peptide,
+                        peptide.metadata.scan_number().and_then(|scan| {
+                            state
+                                .spectra
+                                .iter()
+                                .enumerate()
+                                .find(|(_, spectrum)| {
+                                    spectrum
+                                        .raw_scan_number
+                                        .map_or(false, |spectrum_scan| scan == spectrum_scan)
+                                })
+                                .map(|(i, _)| i)
+                        }),
+                    )
+                })
+            })
     } else {
         None
     }

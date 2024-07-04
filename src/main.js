@@ -55,17 +55,28 @@ async function select_mgf_file(e) {
 /**
 * @param e: Element
 */
-async function select_identified_peptides_file(e) {
+async function dialog_select_identified_peptides_file(e) {
   let properties = {
     directory: false,
+    multiple: true,
     filters: [{
-      extensions: ["csv", "csv.gz", "tsv", "tsv.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz", "txt", "txt.gz"], name: "*"
+      extensions: ["csv", "csv.gz", "tsv", "tsv.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz"], name: "*"
     }]
   };
   window.__TAURI__.dialog.open(properties).then((result) => {
     if (result != null) {
-      e.dataset.filepath = result;
-      load_identified_peptides(e.dataset.filepath);
+      document.querySelector("#load-identified-peptides").classList.add("loading")
+      let opens = [];
+      for (let file of result) {
+        opens.push(load_identified_peptides(file));
+      }
+      console.log(opens);
+      Promise.all(opens).then(() => {
+        update_identified_peptide_file_select();
+        identified_peptide_details();
+        document.querySelector("#load-identified-peptides").classList.remove("loading");
+        document.querySelector("#peptides").style.display = "block";
+      });
     }
   })
 };
@@ -86,15 +97,47 @@ async function load_mgf(path) {
 }
 
 async function load_identified_peptides(path) {
-  document.querySelector("#load-identified-peptides").classList.add("loading")
-  invoke("load_identified_peptides", { path: path }).then((result) => {
+  return invoke("load_identified_peptides_file", { path: path }).then((result) => {
     document.querySelector("#loaded-identified-peptides-path").classList.remove("error");
-    document.querySelector("#loaded-identified-peptides-path").innerText = path.split('\\').pop().split('/').pop();
     document.querySelector("#number-of-identified-peptides").innerText = result;
-    document.querySelector("#peptides").style.display = "block";
     displayed_identified_peptide = undefined;
-    identified_peptide_details();
-    document.querySelector("#load-identified-peptides").classList.remove("loading")
+  }).catch((error) => {
+    document.querySelector("#loaded-identified-peptides-path").classList.add("error");
+    document.querySelector("#loaded-identified-peptides-path").innerHTML = showError(error)
+  });
+}
+
+async function select_identified_peptides_file(id) {
+  const select = document.getElementById("details-identified-peptide-files");
+  for (let child of select.children) {
+    if (child.value == id) {
+      document.getElementById("details-identified-peptide-index").value = 0;
+      document.getElementById("number-of-identified-peptides").innerText = child.dataset.length;
+      child.selected = true;
+      identified_peptide_details();
+      return;
+    }
+  }
+}
+
+async function update_identified_peptide_file_select() {
+  invoke("get_identified_peptides_files").then((result) => {
+    const select = document.getElementById("details-identified-peptide-files");
+    select.innerText = "";
+    let id = 0;
+    for (let row in result) {
+      let option = document.createElement("option");
+      option.value = result[row][0];
+      option.innerText = result[row][1];
+      option.title = result[row][2];
+      option.dataset.length = result[row][3];
+      if (row == result.length - 1) {
+        id = result[row][0];
+        option.selected = true;
+      }
+      select.appendChild(option);
+    }
+    select_identified_peptides_file(id);
   }).catch((error) => {
     document.querySelector("#loaded-identified-peptides-path").classList.add("error");
     document.querySelector("#loaded-identified-peptides-path").innerHTML = showError(error)
@@ -150,11 +193,14 @@ async function spectrum_details() {
 
 let displayed_identified_peptide = undefined;
 async function identified_peptide_details() {
+  let select = document.querySelector("#details-identified-peptide-files");
+  if (select.children.length == 0) return;
+  let file_id = Number(select.options[select.selectedIndex].value);
   let index = Number(document.querySelector("#details-identified-peptide-index").value);
-  if (displayed_identified_peptide != index) {
-    invoke("identified_peptide_details", { index: index }).then((result) => {
+  if (displayed_identified_peptide != [file_id, index]) {
+    invoke("identified_peptide_details", { file: file_id, index: index }).then((result) => {
       document.querySelector("#identified-peptide-details").innerHTML = result;
-      displayed_identified_peptide = index;
+      displayed_identified_peptide = [file_id, index];
     }).catch((error) => {
       document.querySelector("#spectrum-error").classList.remove("hidden");
       document.querySelector("#spectrum-error").innerHTML = showError(error);
@@ -179,6 +225,29 @@ async function search_peptide() {
     document.querySelector("#resulting-peptides").innerText = "";
   }
 }
+
+async function close_identified_peptide_file() {
+  let select = document.querySelector("#details-identified-peptide-files");
+  invoke("close_identified_peptides_file", { file: Number(select.options[select.selectedIndex].value) }).then(() => {
+    if (select.children.length <= 1) {
+      document.querySelector("#peptides").style.display = "none";
+    } else {
+      update_identified_peptide_file_select();
+      identified_peptide_details();
+    }
+  }).catch((error) => {
+    document.querySelector("#spectrum-error").classList.remove("hidden");
+    document.querySelector("#spectrum-error").innerHTML = showError(error);
+    document.querySelector("#identified-peptide-details").innerText = "ERROR";
+  })
+}
+
+export async function load_peptide(file, peptide) {
+  select_identified_peptides_file(file);
+  document.querySelector("#details-identified-peptide-index").value = peptide;
+  identified_peptide_details();
+}
+window.load_peptide = load_peptide;
 
 async function search_modification() {
   if (document.querySelector("#search-modification").value != "") {
@@ -215,8 +284,11 @@ async function details_formula(event) {
 }
 
 async function load_identified_peptide() {
+  let select = document.querySelector("#details-identified-peptide-files");
+  if (select.children.length == 0) return;
+  let file_id = Number(select.options[select.selectedIndex].value);
   let index = Number(document.querySelector("#details-identified-peptide-index").value);
-  invoke("load_identified_peptide", { index: index }).then((result) => {
+  invoke("load_identified_peptide", { index: index, file: file_id }).then((result) => {
     document.querySelector("#peptide").innerText = result.peptide;
     document.querySelector("#spectrum-charge").value = result.charge;
     if (result.mode != null) {
@@ -395,36 +467,21 @@ function resizeUp() {
 // Setup
 window.addEventListener("DOMContentLoaded", () => {
   document.querySelector(".resize").addEventListener("mousedown", resizeDown);
-  // document.querySelector("#capture").addEventListener("click", async () => {
-  //   const stream = await navigator.mediaDevices.getDisplayMedia({
-  //     video: { mediaSource: 'screen' },
-  //   })
-  //   // get correct video track
-  //   const track = stream.getVideoTracks()[0]
-  //   // init Image Capture and not Video stream
-  //   const imageCapture = new ImageCapture(track)
-  //   // take first frame only
-  //   const bitmap = await imageCapture.grabFrame()
-  //   // destory video track to prevent more recording / mem leak
-  //   track.stop()
-
-  //   try {
-  //     navigator.clipboard.write([
-  //       new ClipboardItem({
-  //         'image/png': bitmap
-  //       })
-  //     ]);
-  //   } catch (error) {
-  //     console.error(error);
-  //   }
-  // });
   document.querySelectorAll(".collapsible>legend").forEach(element => element.addEventListener("click", (e) => document.getElementById(e.target.parentElement.dataset.linkedItem).toggleAttribute("checked")));
   document
     .querySelector("#load-mgf-path")
     .addEventListener("click", (event) => select_mgf_file(event.target));
   document
     .querySelector("#load-identified-peptides")
-    .addEventListener("click", (event) => select_identified_peptides_file(event.target));
+    .addEventListener("click", (event) => dialog_select_identified_peptides_file(event.target));
+  document
+    .querySelector("#details-identified-peptide-files")
+    .addEventListener("change", (event) => {
+      select_identified_peptides_file(Number(event.target.options[event.target.selectedIndex].value))
+    });
+  document
+    .querySelector("#close-identified-peptide-file")
+    .addEventListener("click", (event) => close_identified_peptide_file());
   document
     .querySelector("#load-identified-peptide")
     .addEventListener("click", (event) => load_identified_peptide());
@@ -613,6 +670,7 @@ window.addEventListener("DOMContentLoaded", () => {
       document.querySelector("#peptides").style.display = "block";
       identified_peptide_details();
     }
+    update_identified_peptide_file_select();
   })
 });
 

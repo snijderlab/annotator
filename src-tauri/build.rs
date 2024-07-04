@@ -77,13 +77,16 @@ fn main() {
           <div class="resize"></div>
           <div>
             <div class="input-flex">
-              <label for="spectrum-index">Identified peptide index</label>
+              <label for="details-identified-peptide-files">File</label>
+              <select id="details-identified-peptide-files"></select>
+              <button id="close-identified-peptide-file" type="button">Close file</button>
+              <label for="details-identified-peptide-index">Peptide index</label>
               <div class="combined-input">
                 <input type="number" id="details-identified-peptide-index" value="0" min="0" />
                 <span>/</span>
                 <span id="number-of-identified-peptides">0</span>
               </div>
-              <button id="load-identified-peptide" type="button">Load identified peptide</button>
+              <button id="load-identified-peptide" title="Find this peptide in the raw data file and populate all setting fields with this peptide's data" type="button">Load</button>
             </div>
             <div id="identified-peptide-details"></div>
           </div>

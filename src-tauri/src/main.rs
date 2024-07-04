@@ -35,7 +35,7 @@ type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
 #[tauri::command]
 fn refresh(state: ModifiableState) -> (usize, usize) {
     let state = state.lock().unwrap();
-    (state.spectra.len(), state.peptides.len())
+    (state.spectra.len(), state.identified_peptide_files.len())
 }
 
 #[tauri::command]
@@ -167,11 +167,22 @@ fn spectrum_details(index: usize, state: ModifiableState) -> String {
 }
 
 #[tauri::command]
-fn identified_peptide_details(index: usize, state: ModifiableState) -> String {
-    state.lock().unwrap().peptides.get(index).map_or(
-        "Identified peptide index not valid".to_string(),
-        |peptide| peptide.to_html().to_string(),
-    )
+fn identified_peptide_details(file: usize, index: usize, state: ModifiableState) -> String {
+    state
+        .lock()
+        .unwrap()
+        .identified_peptide_files
+        .iter()
+        .find(|f| f.id == file)
+        .map_or(
+            "Identified peptide file index not valid".to_string(),
+            |file| {
+                file.peptides.get(index).map_or(
+                    "Identified peptide index not valid".to_string(),
+                    |peptide| peptide.to_html().to_string(),
+                )
+            },
+        )
 }
 
 #[tauri::command]
@@ -438,7 +449,7 @@ fn main() {
     tauri::Builder::default()
         .manage(Mutex::new(State {
             spectra: Vec::new(),
-            peptides: Vec::new(),
+            identified_peptide_files: Vec::new(),
             database: Vec::new(),
         }))
         .setup(load_custom_mods)
@@ -457,8 +468,10 @@ fn main() {
             details_formula,
             find_scan_number,
             identified_peptide_details,
+            identified_peptides::close_identified_peptides_file,
+            identified_peptides::get_identified_peptides_files,
             identified_peptides::load_identified_peptide,
-            identified_peptides::load_identified_peptides,
+            identified_peptides::load_identified_peptides_file,
             identified_peptides::search_peptide,
             load_clipboard,
             load_mgf,

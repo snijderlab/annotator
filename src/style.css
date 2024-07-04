@@ -111,7 +111,7 @@ button {
   flex-direction: row;
   gap: .5rem;
   padding: 1rem 0;
-  align-items: stretch;
+  align-items: baseline;
   justify-content: space-evenly;
   flex-wrap: wrap;
 }
