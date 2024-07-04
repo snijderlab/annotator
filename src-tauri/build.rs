@@ -349,6 +349,8 @@ fn main() {
                 <label tabindex='0'><input type='radio' name='force-show' value='none' id='force-show-none' checked>None</label>
                 <label tabindex='0'><input type='radio' name='force-show' value='label' id='force-show-label'>Label</label>
                 <label tabindex='0'><input type='radio' name='force-show' value='m-z' id='force-show-m-z'>m/z</label>
+                <label tabindex='0'><input type='radio' name='force-show' value='hide' id='force-show-hide' title='Select a peak to not show label & m/z regardless of the show range selected'>Hide</label>
+                <!--<label tabindex='0'><input type='radio' name='force-show' value='distance' id='force-show-distance'>Distance</label>-->
               </div>
               <button tabindex='0' id='force-show-clear'>Clear</button>
             </div>

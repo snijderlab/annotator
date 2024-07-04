@@ -420,8 +420,12 @@ fn get_classes(
         } else {
             first_peptidoform_index = Some(annotation.peptidoform_index);
         }
-        if let (Some(p), Some(pp)) = (first_peptidoform_index, first_peptide_index) {
-            if p != annotation.peptidoform_index && pp != annotation.peptide_index {
+        if let (Some(first_peptidoform_index), Some(fist_peptide_index)) =
+            (first_peptidoform_index, first_peptide_index)
+        {
+            if first_peptidoform_index != annotation.peptidoform_index
+                || fist_peptide_index != annotation.peptide_index
+            {
                 if !output.contains(&"mpp".to_string()) {
                     output.push("mpp".to_string())
                 };
@@ -969,7 +973,7 @@ fn render_spectrum(
             get_classes(&peak.annotation, unique_peptide_lookup),
             peak.experimental_mz.value,
             peak.intensity,
-            (peak.experimental_mz.value * 10.0).round() / 10.0,
+            (peak.experimental_mz.value * 100.0).round() / 100.0,
             if peak.intensity.0 / limits.intensity >= 0.1 {
                 "data-show-label='true'"
             } else {

@@ -26,6 +26,8 @@ listen('tauri://file-drop-cancelled', event => {
   document.querySelector("html").classList.remove("file-drop-hover");
 })
 
+document.addEventListener("dragend", () => document.querySelector("html").classList.remove("file-drop-hover"));
+
 // function abort() {
 //   console.log(controller);
 //   controller.abort("User manual abort");
