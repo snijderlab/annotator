@@ -69,7 +69,7 @@ impl RenderToHtml for IdentifiedPeptide {
             .children([
                 HtmlElement::new(HtmlTag::p)
                     .content(format!(
-                        "Score: {}, Length: {} AA, Mass: {}, Charge: {}, Mz: {} Th, Mode: {}",
+                        "Score: {}, Length: {} AA, Mass: {}, Charge: {}, m/z: {} Th, Mode: {}",
                         self.score.map_or(String::from("-"), |s| format!("{s:.3}")),
                         self.peptide.sequence.len(),
                         display_masses(formula),

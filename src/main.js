@@ -128,7 +128,7 @@ async function update_identified_peptide_file_select() {
     for (let row in result) {
       let option = document.createElement("option");
       option.value = result[row][0];
-      option.innerText = result[row][1];
+      option.innerText = "F" + (result[row][0] + 1) + ":" + result[row][1];
       option.title = result[row][2];
       option.dataset.length = result[row][3];
       if (row == result.length - 1) {

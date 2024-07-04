@@ -177,10 +177,14 @@ pub async fn search_peptide<'a>(
     let data = state
         .identified_peptide_files
         .iter()
-        .flat_map(|file| file.peptides.iter().map(|p| (file.id, p)))
-        .filter(|(_, p)| p.score.map_or(true, |score| score >= minimal_peptide_score))
-        .enumerate()
-        .map(|(index, (id, peptide))| {
+        .flat_map(|file| {
+            file.peptides
+                .iter()
+                .enumerate()
+                .map(|(index, p)| (file.id, index, p))
+        })
+        .filter(|(_, _, p)| p.score.map_or(true, |score| score >= minimal_peptide_score))
+        .map(|(id, index, peptide)| {
             (
                 index,
                 align::<4, VerySimple, Simple>(
