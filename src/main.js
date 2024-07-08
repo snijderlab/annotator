@@ -100,6 +100,7 @@ async function load_identified_peptides(path) {
   return invoke("load_identified_peptides_file", { path: path }).then((result) => {
     document.querySelector("#loaded-identified-peptides-path").classList.remove("error");
     document.querySelector("#number-of-identified-peptides").innerText = result;
+    document.querySelector("#loaded-identified-peptides-path").innerText = "";
     displayed_identified_peptide = undefined;
   }).catch((error) => {
     document.querySelector("#loaded-identified-peptides-path").classList.add("error");
@@ -369,6 +370,7 @@ async function annotate_spectrum() {
     m: document.querySelector("#model-m-enabled").checked,
     modification_neutral: document.querySelector("#model-modification-neutral-enabled").checked,
     modification_diagnostic: document.querySelector("#model-modification-diagnostic-enabled").checked,
+    cleave_cross_links: document.querySelector("#model-cleave-cross-links-enabled").checked,
     glycan: [document.querySelector("#model-glycan-enabled").checked, get_losses("glycan")],
   };
   invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), tolerance: [Number(document.querySelector("#spectrum-tolerance").value), document.querySelector("#spectrum-tolerance-unit").value], charge: charge, filter: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").innerText, customModel: model, massMode: document.querySelector("#spectrum-mass-mode").value }).then((result) => {
@@ -636,7 +638,8 @@ window.addEventListener("DOMContentLoaded", () => {
       e.target.parentElement.parentElement.querySelectorAll(".modal .separated-input").forEach(s => clearSeparatedInput(s));
     })
   });
-  document.getElementById("custom-mod-save").addEventListener("click", () => {
+  document.getElementById("custom-mod-save").addEventListener("click", e => {
+    e.target.parentElement.parentElement.querySelectorAll(".hidden").forEach(e => e.remove());
     document.getElementById("custom-mod-dialog").close();
     let mod = {
       id: Number(document.getElementById("custom-mod-id").value),
@@ -650,6 +653,7 @@ window.addEventListener("DOMContentLoaded", () => {
       linker_specificities: loadListInput("custom-mod-linker-specificities"),
       linker_length: Number(document.getElementById("custom-mod-linker-length").value),
     };
+    console.log(mod);
     invoke("update_modification", {
       customModification: mod
     })
@@ -772,6 +776,7 @@ function loadCustomModification(modification = null) {
 function loadListInput(id) {
   let listInput = document.getElementById(id).parentElement;
   let values = [...document.getElementById(id).querySelectorAll(".element>span")].map(e => JSON.parse(e.dataset.value));
+  console.log("loadListInput", id, values);
   if (listInput.classList.contains("single")) {
     return values.map(v => [v.placement_rules, v.neutral_losses, v.diagnostic_ions]);
   } else if (listInput.classList.contains("linker")) {
@@ -842,7 +847,9 @@ function moveCursorToEnd(contentEle) {
  * @returns {String[]} - List of all elements, each of those as a string.
 */
 function loadSeparatedInput(id) {
-  return [...document.getElementById(id).querySelectorAll(".element")].map(c => { return c.innerText.slice(0, -1); });
+  let res = [...document.getElementById(id).querySelectorAll(".element")].map(c => { return c.dataset.value; });
+  console.log("loadSeparatedInput", id, res);
+  return res;
 }
 
 /**
@@ -860,6 +867,7 @@ function clearSeparatedInput(element) {
  * @param {String[]} values - The separate values to populate the field with.
  */
 function populateSeparatedInput(id, values) {
+  console.log("populateSeparatedInput", id, values);
   let element = document.getElementById(id);
   clearSeparatedInput(element.parentElement);
   for (let value of values) {

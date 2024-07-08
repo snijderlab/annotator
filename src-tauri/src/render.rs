@@ -1179,7 +1179,7 @@ pub fn spectrum_table(
                             .map_or(String::new(), display_neutral_loss),
                         format!("{:.2}", peak.intensity),
                         format!("{:.2}", peak.experimental_mz.value),
-                        display_formula(&annotation.formula),
+                        display_formula(&annotation.formula, true),
                         format!(
                             "{:.5}",
                             (annotation.mz(MassMode::Monoisotopic) - peak.experimental_mz)
@@ -1230,7 +1230,7 @@ pub fn spectrum_table(
                         .map_or(String::new(), display_neutral_loss),
                     "-".to_string(),
                     format!("{:.2}", fragment.mz(MassMode::Monoisotopic).value),
-                    display_formula(&fragment.formula),
+                    display_formula(&fragment.formula, true),
                     "-".to_string(),
                     "-".to_string(),
                     format!("{:+}", fragment.charge.value),
@@ -1685,22 +1685,28 @@ fn engineering_notation(value: f64, precision: usize) -> (String, Option<char>, 
     }
 }
 
-pub fn display_stubs(formula: &(MolecularFormula, MolecularFormula)) -> String {
+pub fn display_stubs(formula: &(MolecularFormula, MolecularFormula), formatted: bool) -> String {
     format!(
         "{}:{}",
-        display_formula(&formula.0),
-        display_formula(&formula.1)
+        display_formula(&formula.0, formatted),
+        display_formula(&formula.1, formatted)
     )
 }
 
-pub fn display_formula(formula: &MolecularFormula) -> String {
-    if formula.is_empty() {
-        "<span class='formula empty'>(empty)</span>".to_string()
+pub fn display_formula(formula: &MolecularFormula, formatted: bool) -> String {
+    if formatted {
+        if formula.is_empty() {
+            "<span class='formula empty'>(empty)</span>".to_string()
+        } else {
+            format!(
+                "<span class='formula'>{}</span>",
+                formula.hill_notation_html()
+            )
+        }
+    } else if formula.is_empty() {
+        "(empty)".to_string()
     } else {
-        format!(
-            "<span class='formula'>{}</span>",
-            formula.hill_notation_html()
-        )
+        formula.hill_notation()
     }
 }
 

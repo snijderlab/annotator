@@ -122,7 +122,8 @@ button {
 
 pre,
 :is(.input-settings, .input-flex) textarea,
-.peptide-input {
+.peptide-input,
+#export-sequence span {
   font-family: 'Roboto Mono', monospace;
   min-height: 2rem;
   resize: vertical;

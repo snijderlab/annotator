@@ -59,7 +59,7 @@ async fn details_formula(text: &str) -> Result<String, CustomError> {
             Context::None,
         ))
     } else {
-        MolecularFormula::from_pro_forma(text, .., false)
+        MolecularFormula::from_pro_forma(text, .., false, true)
     }?;
     let isotopes = formula.isotopic_distribution(0.001);
     let (max, max_occurrence) = isotopes
@@ -121,7 +121,7 @@ async fn details_formula(text: &str) -> Result<String, CustomError> {
 
     Ok(format!(
         "<p>Details on {}</p><p><span style='color:var(--color-red)'>Monoisotopic mass</span> {}, average weight {}, <span style='color:var(--color-green)'>most abundant isotope</span> offset {max} Da</p>{}", 
-            display_formula(&formula),
+            display_formula(&formula, true),
             display_mass(formula.monoisotopic_mass(), Some(MassMode::Monoisotopic)),
             display_mass(formula.average_weight(), Some(MassMode::Average)),
             isotopes_display,
@@ -304,6 +304,7 @@ pub struct ModelParameters {
     pub m: bool,
     pub modification_diagnostic: bool,
     pub modification_neutral: bool,
+    pub cleave_cross_links: bool,
     pub glycan: (bool, Vec<String>),
 }
 
@@ -364,6 +365,7 @@ async fn annotate_spectrum<'a>(
             .m(custom_model.m)
             .modification_specific_diagnostic_ions(custom_model.modification_diagnostic)
             .modification_specific_neutral_losses(custom_model.modification_neutral)
+            .allow_cross_link_cleavage(custom_model.cleave_cross_links)
             .glycan(
                 custom_model
                     .glycan

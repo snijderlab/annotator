@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 use crate::{
-    render::{display_formula, display_neutral_loss, display_placement_rule},
+    render::{display_formula, display_neutral_loss, display_placement_rule, display_stubs},
     state::State,
     ModifiableState,
 };
@@ -21,8 +21,8 @@ use crate::{
 pub fn validate_molecular_formula(text: String) -> Result<String, CustomError> {
     text.parse::<f64>()
         .map(MolecularFormula::with_additional_mass)
-        .or_else(|_| MolecularFormula::from_pro_forma(&text, .., false))
-        .map(|f| display_formula(&f))
+        .or_else(|_| MolecularFormula::from_pro_forma(&text, .., false, true))
+        .map(|f| display_formula(&f, true))
 }
 
 #[tauri::command]
@@ -42,11 +42,11 @@ pub fn parse_stub(text: &str) -> Result<(MolecularFormula, MolecularFormula), Cu
         let f1 = text[..index]
             .parse::<f64>()
             .map(MolecularFormula::with_additional_mass)
-            .or_else(|_| MolecularFormula::from_pro_forma(text, ..index, false))?;
+            .or_else(|_| MolecularFormula::from_pro_forma(text, ..index, false, true))?;
         let f2 = text[index + 1..]
             .parse::<f64>()
             .map(MolecularFormula::with_additional_mass)
-            .or_else(|_| MolecularFormula::from_pro_forma(text, index + 1.., false))?;
+            .or_else(|_| MolecularFormula::from_pro_forma(text, index + 1.., false, true))?;
         Ok((f1, f2))
     } else {
         Err(CustomError::error(
@@ -59,7 +59,7 @@ pub fn parse_stub(text: &str) -> Result<(MolecularFormula, MolecularFormula), Cu
 
 #[tauri::command]
 pub fn validate_stub(text: String) -> Result<String, CustomError> {
-    parse_stub(&text).map(|(f1, f2)| format!("{}:{}", display_formula(&f1), display_formula(&f2)))
+    parse_stub(&text).map(|s| display_stubs(&s, true))
 }
 
 #[tauri::command]
@@ -88,7 +88,7 @@ pub fn validate_custom_single_specificity(
         .map(|text| {
             text.parse::<f64>()
                 .map(MolecularFormula::with_additional_mass)
-                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., false))
+                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., false, true))
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(
@@ -105,7 +105,7 @@ pub fn validate_custom_single_specificity(
         if diagnostic_ions.is_empty() {
             String::new()
         } else {
-            ", Diagnostic ions: ".to_string() + &diagnostic_ions.iter().map(display_formula).join(", ")
+            ", Diagnostic ions: ".to_string() + &diagnostic_ions.iter().map(|f| display_formula(f, true)).join(", ")
         },
     ))
 }
@@ -147,14 +147,14 @@ pub fn validate_custom_linker_specificity(
         .map(|text| {
             text.parse::<f64>()
                 .map(MolecularFormula::with_additional_mass)
-                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., false))
+                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., false, true))
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(
         "<span data-value='{{\"asymmetric\":{asymmetric},\"placement_rules\":[{}],\"secondary_placement_rules\":[{}],\"stubs\":[{}],\"diagnostic_ions\":[{}]}}'>Placement rules: {}{}{}{}</span>",
         rules1.iter().map(|r| format!("\"{}\"", display_placement_rule(r, false))).join(","),
         rules2.iter().map(|r| format!("\"{}\"", display_placement_rule(r, false))).join(","),
-        stubs.iter().map(|(f1,f2)| format!("\"{}:{}\"", f1.hill_notation(), f2.hill_notation())).join(","),
+        stubs.iter().map(|s| format!("\"{}\"", display_stubs(s, false))).join(","),
         diagnostic_ions.iter().map(|n| format!("\"{}\"", n.hill_notation())).join(","),
         rules1.iter().map(|p|display_placement_rule(p,true)).join(", "),
         if asymmetric {
@@ -165,12 +165,12 @@ pub fn validate_custom_linker_specificity(
         if stubs.is_empty() {
             String::new()
         } else {
-            ", Neutral losses: ".to_string() + &stubs.iter().map(|(f1,f2)|format!("{}:{}", display_formula(f1), display_formula(f2))).join(", ")
+            ", Neutral losses: ".to_string() + &stubs.iter().map(|s| display_stubs(s, true)).join(", ")
         },
         if diagnostic_ions.is_empty() {
             String::new()
         } else {
-            ", Diagnostic ions: ".to_string() + &diagnostic_ions.iter().map(display_formula).join(", ")
+            ", Diagnostic ions: ".to_string() + &diagnostic_ions.iter().map(|f| display_formula(f, true)).join(", ")
         },
     ))
 }
@@ -281,12 +281,7 @@ pub fn get_custom_modification(
                                 .iter()
                                 .map(|p| display_placement_rule(p, false))
                                 .collect(),
-                            stubs
-                                .iter()
-                                .map(|(s1, s2)| {
-                                    format!("{}:{}", s1.hill_notation(), s2.hill_notation())
-                                })
-                                .collect(),
+                            stubs.iter().map(|s| display_stubs(s, false)).collect(),
                             diagnostic_ions
                                 .iter()
                                 .map(|n| n.0.hill_notation())
@@ -299,12 +294,7 @@ pub fn get_custom_modification(
                                 .map(|p| display_placement_rule(p, false))
                                 .collect(),
                             Vec::new(),
-                            stubs
-                                .iter()
-                                .map(|(s1, s2)| {
-                                    format!("{}:{}", s1.hill_notation(), s2.hill_notation())
-                                })
-                                .collect(),
+                            stubs.iter().map(|s| display_stubs(s, false)).collect(),
                             diagnostic_ions
                                 .iter()
                                 .map(|n| n.0.hill_notation())
@@ -346,7 +336,9 @@ pub async fn update_modification(
         .formula
         .parse::<f64>()
         .map(MolecularFormula::with_additional_mass)
-        .or_else(|_| MolecularFormula::from_pro_forma(&custom_modification.formula, .., false))?;
+        .or_else(|_| {
+            MolecularFormula::from_pro_forma(&custom_modification.formula, .., false, true)
+        })?;
     let id = ModificationId {
         ontology: Ontology::Custom,
         name: custom_modification.name.clone(),
@@ -385,7 +377,9 @@ pub async fn update_modification(
                                 .map(|d| {
                                     d.parse::<f64>()
                                         .map(MolecularFormula::with_additional_mass)
-                                        .or_else(|_| MolecularFormula::from_pro_forma(d, .., false))
+                                        .or_else(|_| {
+                                            MolecularFormula::from_pro_forma(d, .., false, true)
+                                        })
                                         .map(DiagnosticIon)
                                 })
                                 .collect::<Result<Vec<_>, _>>()?;
@@ -441,7 +435,9 @@ pub async fn update_modification(
                                 .map(|d| {
                                     d.parse::<f64>()
                                         .map(MolecularFormula::with_additional_mass)
-                                        .or_else(|_| MolecularFormula::from_pro_forma(d, .., false))
+                                        .or_else(|_| {
+                                            MolecularFormula::from_pro_forma(d, .., false, true)
+                                        })
                                         .map(DiagnosticIon)
                                 })
                                 .collect::<Result<Vec<_>, _>>()?,

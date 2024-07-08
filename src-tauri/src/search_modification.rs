@@ -67,7 +67,7 @@ pub async fn search_modification(
                             modification.to_string(),
                             link_modification(*ontology, *id, name),
                             display_masses(&modification.formula()).to_string(),
-                            display_formula(&modification.formula()),
+                            display_formula(&modification.formula(), true),
                         ]
                     }),
             )
@@ -94,7 +94,7 @@ pub async fn search_modification(
                     .new()
                     .content(format!(
                         "Formula {} Mass {}",
-                        display_formula(&modification.formula()),
+                        display_formula(&modification.formula(), true),
                         display_masses(&modification.formula()),
                     ))
                     .clone(),
@@ -128,7 +128,7 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
 
     output.content(HtmlElement::new(HtmlTag::p).content(format!(
         "Formula {} Mass {}",
-        display_formula(&modification.formula()),
+        display_formula(&modification.formula(), true),
         display_masses(&modification.formula()),
     )));
 
@@ -155,7 +155,7 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
                 } else {
                     ", Diagnostic ions: "
                 },
-                rule.2.iter().map(|d| &d.0).map(display_formula).join(", ")
+                rule.2.iter().map(|d| &d.0).map(|f| display_formula(f, true)).join(", ")
             )));
         }
         output.content(ul);
@@ -214,7 +214,7 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
                             .maybe_content((!stubs.is_empty()).then(|| {
                                 format!(
                                     ", Breakages: {}",
-                                    stubs.iter().map(display_stubs).join(", ")
+                                    stubs.iter().map(|s| display_stubs(s, true)).join(", ")
                                 )
                             }))
                             .maybe_content((!diagnostic_ions.is_empty()).then(|| {
@@ -222,7 +222,7 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
                                     ", Diagnostic ions: {}",
                                     diagnostic_ions
                                         .iter()
-                                        .map(|d| display_formula(&d.0))
+                                        .map(|d| display_formula(&d.0, true))
                                         .join(", ")
                                 )
                             })),
@@ -243,7 +243,7 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
                             .maybe_content((!stubs.is_empty()).then(|| {
                                 format!(
                                     ", Breakages: {}",
-                                    stubs.iter().map(display_stubs).join(", ")
+                                    stubs.iter().map(|s| display_stubs(s, true)).join(", ")
                                 )
                             }))
                             .maybe_content((!diagnostic_ions.is_empty()).then(|| {
@@ -251,7 +251,7 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
                                     ", Diagnostic ions: {}",
                                     diagnostic_ions
                                         .iter()
-                                        .map(|d| display_formula(&d.0))
+                                        .map(|d| display_formula(&d.0, true))
                                         .join(", ")
                                 )
                             })),

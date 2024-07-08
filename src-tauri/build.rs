@@ -213,6 +213,10 @@ fn main() {
               <label title="Allow modification specific diagnostic ions, as defined by the database">modification diagnostic ions</label>
               <label><input id='model-modification-diagnostic-enabled' type='checkbox' switch/>Enable</label>
             </div>
+            <div class="grid-row">
+              <label title="Allow MS cleavable cross-links to be cleaved">MS cleavable cross-links</label>
+              <label><input id='model-cleave-cross-links-enabled' type='checkbox' switch/>Enable</label>
+            </div>
             <label>glycan</label>
             <label><input id='model-glycan-enabled' type='checkbox' switch/>Enable</label>
             {}
