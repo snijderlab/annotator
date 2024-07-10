@@ -8,11 +8,13 @@ use rustyms::{
     placement_rule::PlacementRule,
     spectrum::{AnnotatedPeak, PeakSpectrum, Recovered, Score},
     system::{da, mz, Mass, MassOverCharge},
-    AnnotatedSpectrum, LinearPeptide, Linked, MassMode, Model, Modification, MolecularFormula,
-    NeutralLoss,
+    AmbiguousLabel, AnnotatedSpectrum, LinearPeptide, Linked, MassMode, Model, Modification,
+    MolecularFormula, NeutralLoss,
 };
 
 use crate::html_builder::{HtmlContent, HtmlElement, HtmlTag};
+
+use super::label::get_label;
 
 pub fn annotated_spectrum(
     spectrum: &AnnotatedSpectrum,
@@ -475,232 +477,6 @@ fn get_classes(
         "unassigned".to_string()
     } else {
         output.join(" ")
-    }
-}
-
-fn get_label(
-    annotations: &[(Fragment, Vec<MatchedIsotopeDistribution>)],
-    multiple_peptidoforms: bool,
-    multiple_peptides: bool,
-    multiple_glycans: bool,
-) -> String {
-    if annotations.is_empty() {
-        String::new()
-    } else {
-        let mut shared_charge = Some(annotations[0].0.charge);
-        let mut shared_ion = Some(annotations[0].0.ion.label());
-        let mut shared_pos = Some(annotations[0].0.ion.position_label());
-        let mut shared_peptidoform = Some(annotations[0].0.peptidoform_index);
-        let mut shared_peptide = Some(annotations[0].0.peptide_index);
-        let mut shared_glycan = Some(
-            annotations[0]
-                .0
-                .ion
-                .glycan_position()
-                .map(|g| g.attachment()),
-        );
-        let mut shared_loss = Some(annotations[0].0.neutral_loss.clone());
-        for (a, _) in annotations {
-            if let Some(charge) = shared_charge {
-                if charge != a.charge {
-                    shared_charge = None;
-                }
-            }
-            if let Some(ion) = &shared_ion {
-                if *ion != a.ion.label() {
-                    shared_ion = None;
-                }
-            }
-            if let Some(pos) = &shared_pos {
-                if *pos != a.ion.position_label() {
-                    shared_pos = None;
-                }
-            }
-            if let Some(peptidoform) = shared_peptidoform {
-                if peptidoform != a.peptidoform_index {
-                    shared_peptidoform = None;
-                }
-            }
-            if let Some(peptide) = shared_peptide {
-                if peptide != a.peptide_index {
-                    shared_peptide = None;
-                }
-            }
-            if let Some(glycan) = &shared_glycan {
-                if *glycan != a.ion.glycan_position().map(|g| g.attachment()) {
-                    shared_glycan = None;
-                }
-            }
-            if let Some(loss) = &shared_loss {
-                if loss != &a.neutral_loss {
-                    shared_loss = None;
-                }
-            }
-        }
-
-        if shared_charge.is_none()
-            && shared_ion.is_none()
-            && shared_pos.is_none()
-            && shared_peptidoform.is_none()
-            && shared_peptide.is_none()
-            && shared_glycan.is_none()
-            && shared_loss.is_none()
-        {
-            "*".to_string()
-        } else {
-            let charge_str = shared_charge
-                .map(|charge| format!("{:+}", charge.value))
-                .unwrap_or("*".to_string());
-            let ion_str = shared_ion
-                .map(|c| c.into_owned())
-                .unwrap_or("*".to_string());
-            let pos_str = shared_pos
-                .map(|pos| pos.unwrap_or_default())
-                .unwrap_or("*".to_string());
-            let peptidoform_str = shared_peptidoform
-                .map(|pep| (pep + 1).to_string())
-                .unwrap_or("*".to_string());
-            let peptide_str = shared_peptide
-                .map(|pep| (pep + 1).to_string())
-                .unwrap_or("*".to_string());
-            let glycan_str = shared_glycan
-                .unwrap_or(Some("*".to_string()))
-                .unwrap_or_default();
-            let loss_str = shared_loss
-                .map(|o| o.map(|n| n.hill_notation_html()))
-                .unwrap_or(Some("*".to_string()))
-                .unwrap_or_default();
-
-            let multi = if annotations.len() > 1 {
-                let mut multi = String::new();
-                for (annotation, _) in annotations {
-                    if let FragmentType::Oxonium(breakages) = &annotation.ion {
-                        let ch = format!("{:+}", annotation.charge.value);
-                        write!(
-                            multi,
-                            "<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span></span>",
-                            breakages
-                                .iter()
-                                .filter(|b| !matches!(b, GlycanBreakPos::End(_)))
-                                .map(|b| format!(
-                                    "{}<sub>{}</sub>",
-                                    b.label(),
-                                    b.position().label()
-                                ))
-                                .join(""),
-                            ch,
-                            ch.len(),
-                            if multiple_glycans {
-                                breakages[0].position().attachment()
-                            } else {
-                                String::new()
-                            },
-                            if multiple_peptidoforms && multiple_peptides {
-                                format!("p{}.{}", annotation.peptidoform_index+1, annotation.peptide_index + 1)
-                            }else if multiple_peptidoforms {
-                                format!("p{}", annotation.peptidoform_index+1)
-                            } else if multiple_peptides {
-                                format!("p{}", annotation.peptide_index + 1)
-                            } else {
-                                String::new()
-                            },
-                            annotation.neutral_loss.as_ref().map(|n| n.hill_notation_html()).unwrap_or_default(),
-                        )
-                        .unwrap();
-                    } else {
-                        let ch = format!("{:+}", annotation.charge.value);
-                        write!(
-                            multi,
-                            "<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span></span>",
-                            annotation.ion.label(),
-                            ch,
-                            ch.len(),
-                            annotation.ion.position_label().unwrap_or(String::new()),
-                            if multiple_glycans {
-                                annotation.ion.glycan_position().map(|g| g.attachment()).unwrap_or(String::new())
-                            } else {
-                                String::new()
-                            },
-                            if multiple_peptidoforms && multiple_peptides {
-                                format!("p{}.{}", annotation.peptidoform_index+1, annotation.peptide_index + 1)
-                            }else if multiple_peptidoforms {
-                                format!("p{}", annotation.peptidoform_index+1)
-                            } else if multiple_peptides {
-                                format!("p{}", annotation.peptide_index + 1)
-                            } else {
-                                String::new()
-                            },
-                            annotation.neutral_loss.as_ref().map(|n| n.hill_notation_html()).unwrap_or_default(),
-                        )
-                        .unwrap();
-                    }
-                }
-                format!("<span class='multi'>{multi}</span>")
-            } else {
-                String::new()
-            };
-            let single_internal_glycan =
-                matches!(annotations[0].0.ion, FragmentType::Oxonium(_)) && annotations.len() == 1;
-
-            if single_internal_glycan {
-                if let FragmentType::Oxonium(breakages) = &annotations[0].0.ion {
-                    format!(
-                        "<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span></span>",
-                        breakages
-                            .iter()
-                            .filter(|b| !matches!(b, GlycanBreakPos::End(_)))
-                            .map(|b| format!("{}<sub>{}</sub>", b.label(), b.position().label()))
-                            .join(""),
-                        charge_str,
-                        charge_str.len(),
-                        if multiple_glycans {
-                            breakages[0].position().attachment()
-                        } else {
-                            String::new()
-                        },
-                        if multiple_peptidoforms && multiple_peptides {
-                            format!("p{}.{}", peptidoform_str, peptide_str)
-                        }else if multiple_peptidoforms {
-                            format!("p{}", peptidoform_str)
-                        } else if multiple_peptides {
-                            format!("p{}", peptide_str)
-                        } else {
-                            String::new()
-                        },
-                        annotations[0].0
-                            .neutral_loss.as_ref()
-                            .map(|n| n.hill_notation_html())
-                            .unwrap_or_default(),
-                    )
-                } else {
-                    unreachable!();
-                }
-            } else {
-                format!(
-                    "<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span></span>{}",
-                    ion_str,
-                    charge_str,
-                    charge_str.len(),
-                    pos_str,
-                    if multiple_glycans {
-                        glycan_str
-                    } else {
-                        String::new()
-                    },
-                    if multiple_peptidoforms && multiple_peptides {
-                        format!("p{}.{}", peptidoform_str, peptide_str)
-                    }else if multiple_peptidoforms {
-                        format!("p{}", peptidoform_str)
-                    } else if multiple_peptides {
-                        format!("p{}", peptide_str)
-                    } else {
-                        String::new()
-                    },
-                    loss_str,
-                    multi
-                )
-            }
-        }
     }
 }
 
@@ -1195,7 +971,7 @@ pub fn spectrum_table(
                         ),
                         format!("{:+}", annotation.charge.value),
                         series_number,
-                        annotation.label.clone(),
+                        format!("{:?}", annotation.formula.labels()),
                     ],
                 ));
             }
@@ -1235,7 +1011,7 @@ pub fn spectrum_table(
                     "-".to_string(),
                     format!("{:+}", fragment.charge.value),
                     series_number,
-                    fragment.label.clone(),
+                    format!("{:?}", fragment.formula.labels()),
                 ],
             ))
         }
