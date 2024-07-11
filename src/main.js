@@ -371,7 +371,7 @@ async function annotate_spectrum() {
     modification_neutral: document.querySelector("#model-modification-neutral-enabled").checked,
     modification_diagnostic: document.querySelector("#model-modification-diagnostic-enabled").checked,
     cleave_cross_links: document.querySelector("#model-cleave-cross-links-enabled").checked,
-    glycan: [document.querySelector("#model-glycan-enabled").checked, get_losses("glycan")],
+    glycan: [document.querySelector("#model-glycan-enabled").checked, [Number(document.querySelector("#model-glycan-composition-min").value), Number(document.querySelector("#model-glycan-composition-max").value)], get_losses("glycan")], //TODO: create glycan composition number input fields
   };
   invoke("annotate_spectrum", { index: Number(document.querySelector("#details-spectrum-index").value), tolerance: [Number(document.querySelector("#spectrum-tolerance").value), document.querySelector("#spectrum-tolerance-unit").value], charge: charge, filter: noise_threshold, model: document.querySelector("#spectrum-model").value, peptide: document.querySelector("#peptide").innerText, customModel: model, massMode: document.querySelector("#spectrum-mass-mode").value }).then((result) => {
     document.querySelector("#spectrum-results-wrapper").innerHTML = result.spectrum;

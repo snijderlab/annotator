@@ -305,7 +305,7 @@ pub struct ModelParameters {
     pub modification_diagnostic: bool,
     pub modification_neutral: bool,
     pub cleave_cross_links: bool,
-    pub glycan: (bool, Vec<String>),
+    pub glycan: (bool, (usize, usize), Vec<String>),
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
@@ -367,11 +367,9 @@ async fn annotate_spectrum<'a>(
             .modification_specific_neutral_losses(custom_model.modification_neutral)
             .allow_cross_link_cleavage(custom_model.cleave_cross_links)
             .glycan(
-                custom_model
-                    .glycan
-                    .0
-                    .then(|| get_model_param(&custom_model.glycan.1))
-                    .invert()?,
+                custom_model.glycan.0,
+                custom_model.glycan.1 .0..=custom_model.glycan.1 .1,
+                get_model_param(&custom_model.glycan.2)?,
             ),
         _ => Model::all(),
     };

@@ -971,7 +971,7 @@ pub fn spectrum_table(
                         ),
                         format!("{:+}", annotation.charge.value),
                         series_number,
-                        format!("{:?}", annotation.formula.labels()),
+                        String::new(), //format!("{:?}", annotation.formula.labels()),
                     ],
                 ));
             }
@@ -1011,7 +1011,7 @@ pub fn spectrum_table(
                     "-".to_string(),
                     format!("{:+}", fragment.charge.value),
                     series_number,
-                    format!("{:?}", fragment.formula.labels()),
+                    String::new(), //format!("{:?}", fragment.formula.labels()),
                 ],
             ))
         }

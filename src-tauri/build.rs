@@ -217,15 +217,22 @@ fn main() {
               <label title="Allow MS cleavable cross-links to be cleaved">MS cleavable cross-links</label>
               <label><input id='model-cleave-cross-links-enabled' type='checkbox' switch/>Enable</label>
             </div>
-            <label>glycan</label>
-            <label><input id='model-glycan-enabled' type='checkbox' switch/>Enable</label>
-            {}
-            <div class="separated-input">
-              <div class="values" id="model-glycan-loss">
-                <div class="input context" placeholder="Add molecular formula or mass preceded by '+' or '-'" data-type="neutral_loss" contentEditable="plaintext-only"></div>
-                <button class="clear">Clear</button>
+            <div class='grid-row'>
+              <label>glycan</label>
+              <label><input id='model-glycan-enabled' type='checkbox' switch/>Enable fragments from structure (GNO)</label>
+              <span style="grid-column: span 2">Enable fragments from compositions between <input id='model-glycan-composition-min' type='number' min='0' value='0'/> and <input id='model-glycan-composition-max' type='number' min='0' value='0'/> monosaccharides</span>
+            </div>
+            <div class="grid-row">
+              <label>glycan</label>
+              <span class='empty'></span>
+              {}
+              <div class="separated-input">
+                <div class="values" id="model-glycan-loss">
+                  <div class="input context" placeholder="Add molecular formula or mass preceded by '+' or '-'" data-type="neutral_loss" contentEditable="plaintext-only"></div>
+                  <button class="clear">Clear</button>
+                </div>
+                <output class="error"></output>
               </div>
-              <output class="error"></output>
             </div>
           </fieldset>
           <label class="wide" for="peptide">Peptide sequence </label>
