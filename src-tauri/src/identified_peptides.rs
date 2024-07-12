@@ -9,6 +9,7 @@ use rustyms::{
 use serde::{Deserialize, Serialize};
 
 use crate::{html_builder, state::IdentifiedPeptideFile, ModifiableState};
+use rayon::prelude::*;
 
 #[tauri::command]
 pub async fn load_identified_peptides_file<'a>(
@@ -184,6 +185,7 @@ pub async fn search_peptide<'a>(
                 .map(|(index, p)| (file.id, index, p))
         })
         .filter(|(_, _, p)| p.score.map_or(true, |score| score >= minimal_peptide_score))
+        .par_bridge()
         .map(|(id, index, peptide)| {
             (
                 index,
@@ -198,9 +200,12 @@ pub async fn search_peptide<'a>(
                 id,
             )
         })
-        .sorted_unstable_by(|a, b| b.1.score().normalised.cmp(&a.1.score().normalised))
         .filter(|(_, alignment, _, _)| alignment.normalised_score() >= minimal_match_score)
-        .take(25)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .k_largest_by(25, |a, b| {
+            a.1.score().normalised.cmp(&b.1.score().normalised)
+        })
         .map(|(index, alignment, peptide, id)| {
             let start = alignment.start_a();
             let end = alignment.start_a() + alignment.len_a();

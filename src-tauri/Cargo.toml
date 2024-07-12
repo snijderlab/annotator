@@ -23,6 +23,7 @@ rustyms = { version = "0.8.3", default-features = false, features = [
     "isotopes",
 ] }
 ordered-float = { version = "4.2", features = ["serde"] }
+rayon = "1.10"
 
 [patch.crates-io]
 # rustyms = { git = "https://github.com/snijderlab/rustyms", branch = "main" }
