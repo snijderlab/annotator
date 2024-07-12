@@ -210,7 +210,6 @@ pub async fn search_peptide<'a>(
             let start = alignment.start_a();
             let end = alignment.start_a() + alignment.len_a();
             vec![
-                // TODO: select the right file
                 format!(
                     "<a onclick=\"load_peptide({id}, {index})\">F{}:{index}</a>",
                     id + 1
