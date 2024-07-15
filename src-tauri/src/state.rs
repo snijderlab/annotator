@@ -1,11 +1,26 @@
-use std::sync::atomic::AtomicUsize;
+use std::{
+    cell::{Ref, RefCell, RefMut},
+    sync::atomic::AtomicUsize,
+};
 
 use rustyms::{identification::IdentifiedPeptide, ontologies::CustomDatabase, RawSpectrum};
 
 pub struct State {
     pub spectra: Vec<RawSpectrum>,
-    pub identified_peptide_files: Vec<IdentifiedPeptideFile>,
+    pub identified_peptide_files: RefCell<Vec<IdentifiedPeptideFile>>,
     pub database: CustomDatabase,
+}
+
+impl State {
+    pub fn database(&self) -> Option<&CustomDatabase> {
+        (!self.database.is_empty()).then_some(&self.database)
+    }
+    pub fn identified_peptide_files(&self) -> Ref<Vec<IdentifiedPeptideFile>> {
+        self.identified_peptide_files.borrow()
+    }
+    pub fn identified_peptide_files_mut(&self) -> RefMut<Vec<IdentifiedPeptideFile>> {
+        self.identified_peptide_files.borrow_mut()
+    }
 }
 
 pub struct IdentifiedPeptideFile {

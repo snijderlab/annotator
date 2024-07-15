@@ -35,7 +35,9 @@ type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
 #[tauri::command]
 fn refresh(state: ModifiableState) -> (usize, usize) {
     let state = state.lock().unwrap();
-    (state.spectra.len(), state.identified_peptide_files.len())
+    let res = (state.spectra.len(), state.identified_peptide_files().len());
+    drop(state);
+    res
 }
 
 #[tauri::command]
@@ -171,7 +173,7 @@ fn identified_peptide_details(file: usize, index: usize, state: ModifiableState)
     state
         .lock()
         .unwrap()
-        .identified_peptide_files
+        .identified_peptide_files()
         .iter()
         .find(|f| f.id == file)
         .map_or(
@@ -449,7 +451,7 @@ fn main() {
     tauri::Builder::default()
         .manage(Mutex::new(State {
             spectra: Vec::new(),
-            identified_peptide_files: Vec::new(),
+            identified_peptide_files: std::cell::RefCell::new(Vec::new()),
             database: Vec::new(),
         }))
         .setup(load_custom_mods)

@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use rayon::prelude::*;
 use rustyms::{
     align::{align, matrix::BLOSUM62},
     error::*,
@@ -9,13 +10,13 @@ use rustyms::{
 use serde::{Deserialize, Serialize};
 
 use crate::{html_builder, state::IdentifiedPeptideFile, ModifiableState};
-use rayon::prelude::*;
 
 #[tauri::command]
 pub async fn load_identified_peptides_file<'a>(
     path: &'a str,
     state: ModifiableState<'a>,
-) -> Result<usize, CustomError> {
+) -> Result<(), CustomError> {
+    let state = state.lock().unwrap();
     let actual_extension = path
         .rsplit('.')
         .next()
@@ -27,69 +28,61 @@ pub async fn load_identified_peptides_file<'a>(
         })
         .map(|ex| ex.to_lowercase());
     match actual_extension.as_deref() {
-        Some("csv") => {
-            PeaksData::parse_file(path)
-                .map(|peptides| {
-                    state.lock().unwrap().identified_peptide_files.push(
-                        IdentifiedPeptideFile::new(
-                            path.to_string(),
-                            peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
-                        ),
-                    );
-                })
-                .or_else(|_| {
-                    NovorData::parse_file(path).map(|peptides| {
-                        state.lock().unwrap().identified_peptide_files.push(
-                            IdentifiedPeptideFile::new(
-                                path.to_string(),
-                                peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
-                            ),
-                        )
-                    })
-                })
-                .map_err(|_| {
-                    CustomError::error(
-                        "Unknown file",
-                        "Could not be recognised as either a Peaks or Novor file",
-                        Context::None,
-                    )
-                })
-        }
-        Some("tsv") => {
-            MSFraggerData::parse_file(path)
-                .map(|peptides| {
+        Some("csv") => PeaksData::parse_file(path, state.database())
+            .map(|peptides| {
+                state
+                    .identified_peptide_files_mut()
+                    .push(IdentifiedPeptideFile::new(
+                        path.to_string(),
+                        peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
+                    ));
+            })
+            .or_else(|_| {
+                NovorData::parse_file(path, state.database()).map(|peptides| {
                     state
-                        .lock()
-                        .unwrap()
-                        .identified_peptide_files
+                        .identified_peptide_files_mut()
                         .push(IdentifiedPeptideFile::new(
                             path.to_string(),
                             peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
                         ))
                 })
-                .or_else(|_| {
-                    SageData::parse_file(path).map(|peptides| {
-                        state.lock().unwrap().identified_peptide_files.push(
-                            IdentifiedPeptideFile::new(
-                                path.to_string(),
-                                peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
-                            ),
-                        )
-                    })
+            })
+            .map_err(|_| {
+                CustomError::error(
+                    "Unknown file",
+                    "Could not be recognised as either a Peaks or Novor file",
+                    Context::None,
+                )
+            }),
+        Some("tsv") => MSFraggerData::parse_file(path, state.database())
+            .map(|peptides| {
+                state
+                    .identified_peptide_files_mut()
+                    .push(IdentifiedPeptideFile::new(
+                        path.to_string(),
+                        peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
+                    ))
+            })
+            .or_else(|_| {
+                SageData::parse_file(path, state.database()).map(|peptides| {
+                    state
+                        .identified_peptide_files_mut()
+                        .push(IdentifiedPeptideFile::new(
+                            path.to_string(),
+                            peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
+                        ))
                 })
-                .map_err(|_| {
-                    CustomError::error(
-                        "Unknown file",
-                        "Could not be recognised as either a MSFragger or Sage file",
-                        Context::None,
-                    )
-                })
-        }
-        Some("psmtsv") => OpairData::parse_file(path).map(|peptides| {
+            })
+            .map_err(|_| {
+                CustomError::error(
+                    "Unknown file",
+                    "Could not be recognised as either a MSFragger or Sage file",
+                    Context::None,
+                )
+            }),
+        Some("psmtsv") => OpairData::parse_file(path, state.database()).map(|peptides| {
             state
-                .lock()
-                .unwrap()
-                .identified_peptide_files
+                .identified_peptide_files_mut()
                 .push(IdentifiedPeptideFile::new(
                     path.to_string(),
                     peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
@@ -97,9 +90,7 @@ pub async fn load_identified_peptides_file<'a>(
         }),
         Some("fasta") => FastaData::parse_file(path).map(|peptides| {
             state
-                .lock()
-                .unwrap()
-                .identified_peptide_files
+                .identified_peptide_files_mut()
                 .push(IdentifiedPeptideFile::new(
                     path.to_string(),
                     peptides.into_iter().map(|p| p.into()).collect(),
@@ -111,7 +102,7 @@ pub async fn load_identified_peptides_file<'a>(
             Context::None,
         )),
     }?;
-    Ok(state.lock().unwrap().identified_peptide_files.len())
+    Ok(())
 }
 
 #[tauri::command]
@@ -119,23 +110,25 @@ pub async fn close_identified_peptides_file(
     file: usize,
     state: ModifiableState<'_>,
 ) -> Result<(), CustomError> {
-    let mut state = state.lock().map_err(|_| {
+    let state = state.lock().map_err(|_| {
         CustomError::error(
             "Could not lock mutex",
-            "You are likely doing to many things in parallel",
+            "You are likely doing too many things in parallel",
             Context::none(),
         )
     })?;
-    if let Some(pos) = state
-        .identified_peptide_files
+    let res = if let Some(pos) = state
+        .identified_peptide_files()
         .iter()
         .position(|f| f.id == file)
     {
-        state.identified_peptide_files.remove(pos);
+        state.identified_peptide_files_mut().remove(pos);
         Ok(())
     } else {
         Err(CustomError::error("File does not exist", "This selected file could not be closed as it does not exist, did you already close it?", Context::none()))
-    }
+    };
+    drop(state);
+    res
 }
 
 /// Get the id, file name, path, and numbe rof peptides of all open identified peptides files
@@ -146,7 +139,7 @@ pub async fn get_identified_peptides_files(
     Ok(state
         .lock()
         .map_err(|_| ())?
-        .identified_peptide_files
+        .identified_peptide_files()
         .iter()
         .map(|f| (f.id, f.file_name(), f.path.clone(), f.peptides.len()))
         .collect_vec())
@@ -176,7 +169,7 @@ pub async fn search_peptide<'a>(
             )
         })?;
     let data = state
-        .identified_peptide_files
+        .identified_peptide_files()
         .iter()
         .flat_map(|file| {
             file.peptides
@@ -277,7 +270,7 @@ pub fn load_identified_peptide(
 ) -> Option<Settings> {
     if let Ok(state) = state.lock() {
         state
-            .identified_peptide_files
+            .identified_peptide_files()
             .iter()
             .find(|f| f.id == file)
             .and_then(|file| {

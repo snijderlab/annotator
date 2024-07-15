@@ -209,6 +209,9 @@ output.error {
   }
 }
 
+.selected-neutral-loss {
+  padding-left: .5em;
+}
 
 .hidden {
   display: none;

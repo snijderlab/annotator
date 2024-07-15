@@ -3,26 +3,29 @@ use std::{fs::File, io::BufWriter};
 
 fn create_loss_modal(id: &str) -> String {
     format!(
-        r#"<div><button onclick='document.getElementById("model-{id}-loss-selection-dialog").showModal();'>Select</button><output id='model-{id}-loss-selection-output'>0 selected</output>
-  <dialog id="model-{id}-loss-selection-dialog" onclose='var num = 0; document.getElementsByName("model-{id}-loss-selection").forEach(e=>num += e.checked);document.getElementById("model-{id}-loss-selection-output").innerText = num + " selected";'>
-    <p>Losses</p>
-    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H2O"/>Water</label>
-    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H4O2"/>Double water</label>
-    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H6O3"/>Triple water</label>
-    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H"/>Hydrogen</label>
-    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H2"/>Double hydrogen</label>
-    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H3"/>Triple hydrogen</label>
-    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-NH3"/>Ammonia</label>
-    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-CO"/>Carbon monoxide</label>
-    <p>Gains</p>
-    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H2O"/>Water</label>
-    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H4O2"/>Double water</label>
-    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H6O3"/>Triple water</label>
-    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H"/>Hydrogen</label>
-    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H2"/>Double hydrogen</label>
-    <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H3"/>Triple hydrogen</label>
-    <button autofocus onclick='this.parentElement.close()'>Close</button>
-  </dialog></div>"#
+        r#"<div>
+            <button onclick='document.getElementById("model-{id}-loss-selection-dialog").showModal();'>Select</button>
+            <output id='model-{id}-loss-selection-output' class='selected-neutral-loss'>0 selected</output>
+            <dialog id="model-{id}-loss-selection-dialog" onclose='var num = 0; document.getElementsByName("model-{id}-loss-selection").forEach(e=>num += e.checked);document.getElementById("model-{id}-loss-selection-output").innerText = num + " selected";'>
+              <p>Losses</p>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H2O1"/>Water</label>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H4O2"/>Double water</label>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H6O3"/>Triple water</label>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H1"/>Hydrogen</label>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H2"/>Double hydrogen</label>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H3"/>Triple hydrogen</label>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-N1H3"/>Ammonia</label>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-C1O1"/>Carbon monoxide</label>
+              <p>Gains</p>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H2O1"/>Water</label>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H4O2"/>Double water</label>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H6O3"/>Triple water</label>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H1"/>Hydrogen</label>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H2"/>Double hydrogen</label>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H3"/>Triple hydrogen</label>
+              <button autofocus onclick='this.parentElement.close()'>Close</button>
+            </dialog>
+          </div>"#
     )
 }
 
@@ -146,7 +149,7 @@ fn main() {
           <option value="all" title="All possible ions with single water loss from all and additionally double water loss from glycans">All</option>
           <option value="ethcd" title="b+c+w+y+z+glycan with single water loss from all and additionally double water loss from glycans">EThcD/ETcaD</option>
           <option value="cidhcd" title="a+b+d+y+precursor with single water loss">CID/HCD</option>
-          <option value="etd" title="c+y+z with single water loss and precursor with single water and ammonia loss">ETD</option>
+          <option value="etd" title="c+y+z with single water loss and precursor with single water, ammonia, and ETD specific losses">ETD</option>
           <option value="none" title="Only the base precursor peak, no losses">None</option>
           <option value="custom">Custom</option>
         </select>
@@ -161,14 +164,14 @@ fn main() {
                 writer,
                 r#"<label>{0}</label>
               <div id="model-{0}-location" class="location select-input">
-            <select onchange="this.className=this.options[Number(this.value)].dataset.cls;">
-              <option value="0" data-cls="arg-0" data-value="All">All</option>
-              <option value="1" data-cls="arg-0" data-value="None" selected>None</option>
-              <option value="2" data-cls="arg-1" data-value="SkipN">SkipN</option>
-              <option value="3" data-cls="arg-1" data-value="SkipC">SkipC</option>
-              <option value="4" data-cls="arg-1" data-value="TakeC">TakeC</option>
-              <option value="5" data-cls="arg-2" data-value="SkipNC">SkipNC</option>
-              <option value="6" data-cls="arg-2" data-value="TakeN">TakeN</option>
+              <select onchange="this.className=this.options[Number(this.value)].dataset.cls;">
+                <option value="0" data-cls="arg-0" data-value="All" title="All backbone bonds produce fragments ions">All</option>
+                <option value="1" data-cls="arg-0" data-value="None" selected title="No fragments are generated">None</option>
+                <option value="2" data-cls="arg-1" data-value="SkipN" title="Select a number of amino acids from the N terminal that do not produce a fragment, the rest does produce fragments.">Skip from N terminal</option>
+                <option value="3" data-cls="arg-1" data-value="SkipC" title="Select a number of amino acids from the C terminal that do not produce a fragment, the rest does produce fragments.">Skip from C terminal</option>
+                <option value="6" data-cls="arg-2" data-value="TakeN" title="Select a number of amino acids from the N terminal that do produce a fragment, the rest does not produce fragments.">Take from N terminal</option>
+                <option value="4" data-cls="arg-1" data-value="TakeC" title="Select a number of amino acids from the C terminal that do produce a fragment, the rest does not produce fragments.">Take from C terminal</option>
+                <option value="5" data-cls="arg-2" data-value="SkipNC" title="Select an offset from the N terminal that do not produce fragments, then select a number of amino acids the do.">Skip from N and take a limited number</option>
               </select>
               <input type="number" value="1" min="1">
               <input type="number" value="1" min="1">
