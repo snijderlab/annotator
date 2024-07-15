@@ -24,6 +24,8 @@ impl RenderToHtml for IdentifiedPeptide {
             .unwrap_or(vec![0.0; self.peptide.len()]);
 
         if let Some(n) = self.peptide.n_term.as_ref() {
+            let mut modification = String::new();
+            n.display(&mut modification, false).unwrap();
             peptide.content(
                 HtmlElement::new(HtmlTag::div)
                     .style("--value:0")
@@ -33,7 +35,7 @@ impl RenderToHtml for IdentifiedPeptide {
                             .clone(),
                         HtmlElement::new(HtmlTag::p)
                             .class("modification")
-                            .content(n.to_string())
+                            .content(modification)
                             .clone(),
                     ])
                     .clone(),
@@ -46,20 +48,29 @@ impl RenderToHtml for IdentifiedPeptide {
                     .style(format!("--value:{confidence}"))
                     .children([
                         HtmlElement::new(HtmlTag::p).content(aa.aminoacid.char().to_string()),
-                        HtmlElement::new(HtmlTag::p)
-                            .class("modification")
-                            .content(aa.modifications.iter().map(ToString::to_string).join(",")),
+                        HtmlElement::new(HtmlTag::p).class("modification").content(
+                            aa.modifications
+                                .iter()
+                                .map(|m| {
+                                    let mut s = String::new();
+                                    m.display(&mut s, false).unwrap();
+                                    s
+                                })
+                                .join(","),
+                        ),
                     ]),
             );
         }
 
         if let Some(c) = self.peptide.c_term.as_ref() {
+            let mut modification = String::new();
+            c.display(&mut modification, false).unwrap();
             peptide.content(
                 HtmlElement::new(HtmlTag::div).style("--value:0").children([
                     HtmlElement::new(HtmlTag::p).content("⚬".to_string()),
                     HtmlElement::new(HtmlTag::p)
                         .class("modification")
-                        .content(c.to_string()),
+                        .content(modification),
                 ]),
             );
         }

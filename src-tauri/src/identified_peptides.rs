@@ -60,7 +60,10 @@ pub async fn load_identified_peptides_file<'a>(
                     .identified_peptide_files_mut()
                     .push(IdentifiedPeptideFile::new(
                         path.to_string(),
-                        peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
+                        peptides
+                            .filter_map(|p| p.map_err(|err| println!("{err}")).ok())
+                            .map(|p| p.into())
+                            .collect(),
                     ))
             })
             .or_else(|_| {
@@ -243,8 +246,13 @@ pub struct Settings {
 
 impl Settings {
     fn from_peptide(peptide: &IdentifiedPeptide, scan: Option<usize>) -> Self {
+        let mut str_peptide = String::new();
+        peptide
+            .peptide
+            .display(&mut str_peptide, true, false)
+            .unwrap();
         Self {
-            peptide: peptide.peptide.to_string(),
+            peptide: str_peptide,
             charge: peptide.metadata.charge().map(|v| v.value),
             mode: peptide
                 .metadata
