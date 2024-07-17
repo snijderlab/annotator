@@ -70,7 +70,6 @@ async function dialog_select_identified_peptides_file(e) {
       for (let file of result) {
         opens.push(load_identified_peptides(file));
       }
-      console.log(opens);
       Promise.all(opens).then(() => {
         update_identified_peptide_file_select();
         identified_peptide_details();
@@ -653,7 +652,6 @@ window.addEventListener("DOMContentLoaded", () => {
       linker_specificities: loadListInput("custom-mod-linker-specificities"),
       linker_length: Number(document.getElementById("custom-mod-linker-length").value),
     };
-    console.log(mod);
     invoke("update_modification", {
       customModification: mod
     })
@@ -776,7 +774,6 @@ function loadCustomModification(modification = null) {
 function loadListInput(id) {
   let listInput = document.getElementById(id).parentElement;
   let values = [...document.getElementById(id).querySelectorAll(".element>span")].map(e => JSON.parse(e.dataset.value));
-  console.log("loadListInput", id, values);
   if (listInput.classList.contains("single")) {
     return values.map(v => [v.placement_rules, v.neutral_losses, v.diagnostic_ions]);
   } else if (listInput.classList.contains("linker")) {
@@ -847,9 +844,7 @@ function moveCursorToEnd(contentEle) {
  * @returns {String[]} - List of all elements, each of those as a string.
 */
 function loadSeparatedInput(id) {
-  let res = [...document.getElementById(id).querySelectorAll(".element")].map(c => { return c.dataset.value; });
-  console.log("loadSeparatedInput", id, res);
-  return res;
+  return [...document.getElementById(id).querySelectorAll(".element")].map(c => { return c.dataset.value; });
 }
 
 /**
@@ -867,7 +862,6 @@ function clearSeparatedInput(element) {
  * @param {String[]} values - The separate values to populate the field with.
  */
 function populateSeparatedInput(id, values) {
-  console.log("populateSeparatedInput", id, values);
   let element = document.getElementById(id);
   clearSeparatedInput(element.parentElement);
   for (let value of values) {

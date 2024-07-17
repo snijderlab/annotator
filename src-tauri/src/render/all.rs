@@ -6,10 +6,10 @@ use rustyms::{
     model::Location,
     modification::{CrossLinkName, Ontology, SimpleModification},
     placement_rule::PlacementRule,
-    spectrum::{AnnotatedPeak, PeakSpectrum, Recovered, Score},
+    spectrum::{AnnotatedPeak, Fdr, PeakSpectrum, Recovered, Score},
     system::{da, mz, Mass, MassOverCharge},
-    AmbiguousLabel, AnnotatedSpectrum, LinearPeptide, Linked, MassMode, Model, Modification,
-    MolecularFormula, NeutralLoss,
+    AnnotatedSpectrum, LinearPeptide, Linked, MassMode, Model, Modification, MolecularFormula,
+    NeutralLoss,
 };
 
 use crate::html_builder::{HtmlContent, HtmlElement, HtmlTag};
@@ -94,6 +94,8 @@ pub fn annotated_spectrum(
         fragments,
         multiple_peptidoforms,
         multiple_peptides,
+        model,
+        mass_mode,
     );
 
     //write!(output, "</div>").unwrap();
@@ -1034,6 +1036,8 @@ fn general_stats(
     fragments: &[Fragment],
     multiple_peptidoforms: bool,
     multiple_peptides: bool,
+    model: &Model,
+    mass_mode: MassMode,
 ) {
     fn format(recovered: Recovered<u32>) -> String {
         format!(
@@ -1051,6 +1055,9 @@ fn general_stats(
             recovered.total
         )
     }
+    fn format_fdr(fdr: &Fdr) -> String {
+        format!("{:.2}% ({:.3} σ)", fdr.fdr() * 100.0, fdr.sigma())
+    }
 
     let mut mass_row = String::new();
     let mut fragments_row = String::new();
@@ -1061,8 +1068,10 @@ fn general_stats(
     let mut intensity_details_row = String::new();
     let mut positions_row = String::new();
     let mut positions_details_row = String::new();
+    let mut fdr_row = String::new();
 
     let (combined_scores, peptide_scores) = spectrum.scores(fragments);
+    let (combined_fdr, peptide_fdr) = spectrum.fdr(fragments, model, mass_mode);
 
     for (peptidoform_index, score) in peptide_scores.iter().enumerate() {
         for (peptide_index, score) in score.iter().enumerate() {
@@ -1071,7 +1080,7 @@ fn general_stats(
                 .clone()
                 .linear()
                 .map_or("Part of peptidoform".to_string(), |p| {
-                    p.formulas().iter().map(|f| display_masses(f)).join(", ")
+                    p.formulas().iter().map(display_masses).join(", ")
                 });
             write!(mass_row, "<td>{precursor}</td>").unwrap();
             match score.score {
@@ -1085,6 +1094,12 @@ fn general_stats(
                     write!(peaks_row, "<td>{}</td>", format(peaks)).unwrap();
                     write!(intensity_row, "<td>{}</td>", format_f64(intensity)).unwrap();
                     write!(positions_row, "<td>{} (positions)</td>", format(positions)).unwrap();
+                    write!(
+                        fdr_row,
+                        "<td>{}</td>",
+                        format_fdr(&peptide_fdr[peptidoform_index][peptide_index])
+                    )
+                    .unwrap();
                 }
                 Score::UniqueFormulas {
                     fragments,
@@ -1099,6 +1114,12 @@ fn general_stats(
                         positions_row,
                         "<td>{} (unique compositions)</td>",
                         format(unique_formulas)
+                    )
+                    .unwrap();
+                    write!(
+                        fdr_row,
+                        "<td>{}</td>",
+                        format_fdr(&peptide_fdr[peptidoform_index][peptide_index])
                     )
                     .unwrap();
                 }
@@ -1214,6 +1235,7 @@ fn general_stats(
                 write!(peaks_row, "<td>{}</td>", format(peaks)).unwrap();
                 write!(intensity_row, "<td>{}</td>", format_f64(intensity)).unwrap();
                 write!(positions_row, "<td>{} (positions)</td>", format(positions)).unwrap();
+                write!(fdr_row, "<td>{}</td>", format_fdr(&combined_fdr)).unwrap();
             }
             Score::UniqueFormulas {
                 fragments,
@@ -1230,6 +1252,7 @@ fn general_stats(
                     format(unique_formulas)
                 )
                 .unwrap();
+                write!(fdr_row, "<td>{}</td>", format_fdr(&combined_fdr)).unwrap();
             }
         }
         write!(fragments_details_row, "<td><table>").unwrap();
@@ -1318,6 +1341,7 @@ fn general_stats(
         <tr class='fragments-detail'><td>Intensity detailed</td>{intensity_details_row}</tr>
         <tr><td>Sequence positions covered</td>{positions_row}</tr>
         <tr class='fragments-detail'><td>Positions detailed</td>{positions_details_row}</tr>
+        <tr><td>FDR</td>{fdr_row}</tr>
     </table>"
     )
     .unwrap();
