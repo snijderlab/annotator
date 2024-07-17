@@ -77,6 +77,7 @@ pub fn annotated_spectrum(
         multiple_glycans,
         mass_mode,
         &unique_peptide_lookup,
+        model,
     );
     // Error graph
     render_error_graph(
@@ -700,6 +701,7 @@ fn render_spectrum(
     multiple_glycans: bool,
     mass_mode: MassMode,
     unique_peptide_lookup: &[(usize, usize)],
+    model: &Model,
 ) {
     write!(
         output,
@@ -767,12 +769,16 @@ fn render_spectrum(
         .unwrap();
     }
     for peak in fragments {
+        let peak_mz = peak.mz(mass_mode);
+        if !model.mz_range.contains(&peak_mz) {
+            continue;
+        }
         write!(
             output,
             "<span class='theoretical peak {}' style='--mz:{};' data-label='{}'>{}</span>",
             get_classes(&[(peak.clone(), Vec::new())], unique_peptide_lookup),
-            peak.mz(mass_mode).value,
-            (peak.mz(mass_mode).value * 10.0).round() / 10.0,
+            peak_mz.value,
+            (peak_mz.value * 100.0).round() / 100.0,
             get_label(
                 &[(peak.clone(), Vec::new())],
                 multiple_peptidoforms,
@@ -1070,7 +1076,7 @@ fn general_stats(
     let mut positions_details_row = String::new();
     let mut fdr_row = String::new();
 
-    let (combined_scores, peptide_scores) = spectrum.scores(fragments);
+    let (combined_scores, peptide_scores) = spectrum.scores(fragments, model, mass_mode);
     let (combined_fdr, peptide_fdr) = spectrum.fdr(fragments, model, mass_mode);
 
     for (peptidoform_index, score) in peptide_scores.iter().enumerate() {

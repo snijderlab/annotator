@@ -330,6 +330,7 @@ async fn annotate_spectrum<'a>(
     custom_model: ModelParameters,
     state: ModifiableState<'a>,
     mass_mode: &'a str,
+    mz_range: (Option<f64>, Option<f64>),
 ) -> Result<AnnotationResult, CustomError> {
     let state = state.lock().unwrap();
     if index >= state.spectra.len() {
@@ -386,6 +387,16 @@ async fn annotate_spectrum<'a>(
             "",
             Context::None,
         ));
+    }
+    if let (Some(min), Some(max)) = mz_range {
+        if min > max {
+            return Err(CustomError::error(
+                "m/z range invalid",
+                "The minimal value is less then the maximal value",
+                Context::None,
+            ));
+        }
+        model.mz_range = MassOverCharge::new::<mz>(min)..=MassOverCharge::new::<mz>(max);
     }
     let mass_mode = match mass_mode {
         "monoisotopic" => MassMode::Monoisotopic,

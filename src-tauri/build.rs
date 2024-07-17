@@ -131,6 +131,12 @@ fn main() {
         <label for="spectrum-charge">Max charge </label>
         <input type="number" id="spectrum-charge" value="" placeholder="Empty takes peptide charge from raw data" />
         
+        <label for="model-mz-range-min">m/z range</label>
+        <div class="row">
+          <input style='flex-grow:1' type="number" id="model-mz-range-min" min="0" value="" placeholder="Empty imposes no bounds" />
+          <span style='padding: 0 .5em'>up to and including</span>
+          <input style='flex-grow:1' type="number" id="model-mz-range-max" min="0" value="" placeholder="Empty imposes no bounds" />
+        </div>
         
         <label for="noise-filter">Noise filter</label>
         <div id="noise-filter" class="noise-filter select-input">
