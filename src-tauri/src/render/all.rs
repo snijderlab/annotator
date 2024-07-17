@@ -1341,7 +1341,7 @@ fn general_stats(
         <tr class='fragments-detail'><td>Intensity detailed</td>{intensity_details_row}</tr>
         <tr><td>Sequence positions covered</td>{positions_row}</tr>
         <tr class='fragments-detail'><td>Positions detailed</td>{positions_details_row}</tr>
-        <tr><td>FDR</td>{fdr_row}</tr>
+        <tr><td title='FDR estimation by permutation; Tests how many matches are found when the spectrum is shifted from -25 to +25 Da plus π (to have non integer offsets). The percentage is the number found for the actual matches divided by the average found number for the shifted spectra. The number between brackets denotes the number of standard deviations the actual matches is from the shifted matches.'>FDR</td>{fdr_row}</tr>
     </table>"
     )
     .unwrap();
