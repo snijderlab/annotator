@@ -1,11 +1,12 @@
 use itertools::Itertools;
 use rustyms::{
     fragment::{FragmentType, GlycanBreakPos, MatchedIsotopeDistribution},
-    AmbiguousLabel, Fragment,
+    AmbiguousLabel, CompoundPeptidoform, Fragment,
 };
 use std::fmt::Write;
 
 pub fn get_label(
+    compound_peptidoform: &CompoundPeptidoform,
     annotations: &[(Fragment, Vec<MatchedIsotopeDistribution>)],
     multiple_peptidoforms: bool,
     multiple_peptides: bool,
@@ -28,6 +29,16 @@ pub fn get_label(
         );
         let mut shared_loss = Some(annotations[0].0.neutral_loss.clone());
         let mut shared_xl = Some(get_xl(&annotations[0].0));
+        let mut shared_ambiguous_amino_acids = Some(get_ambiguous_amino_acids(
+            &annotations[0].0,
+            multiple_peptides,
+        ));
+        let mut shared_modifications = Some(get_modifications(
+            &annotations[0].0,
+            multiple_peptides,
+            compound_peptidoform,
+        ));
+        let mut shared_charge_carriers = Some(get_charge_carriers(&annotations[0].0));
 
         for (a, _) in annotations {
             if let Some(charge) = shared_charge {
@@ -70,6 +81,21 @@ pub fn get_label(
                     shared_xl = None;
                 }
             }
+            if let Some(aaa) = &shared_ambiguous_amino_acids {
+                if *aaa != get_ambiguous_amino_acids(a, multiple_peptides) {
+                    shared_ambiguous_amino_acids = None;
+                }
+            }
+            if let Some(sm) = &shared_modifications {
+                if *sm != get_modifications(a, multiple_peptides, compound_peptidoform) {
+                    shared_modifications = None;
+                }
+            }
+            if let Some(cc) = &shared_charge_carriers {
+                if *cc != get_charge_carriers(a) {
+                    shared_charge_carriers = None;
+                }
+            }
         }
 
         if shared_charge.is_none()
@@ -80,6 +106,9 @@ pub fn get_label(
             && shared_glycan.is_none()
             && shared_loss.is_none()
             && shared_xl.is_none()
+            && shared_ambiguous_amino_acids.is_none()
+            && shared_modifications.is_none()
+            && shared_charge_carriers.is_none()
         {
             "*".to_string()
         } else {
@@ -106,6 +135,9 @@ pub fn get_label(
                 .unwrap_or(Some("*".to_string()))
                 .unwrap_or_default();
             let xl_str = shared_xl.unwrap_or("*".to_string());
+            let aaa_str = shared_ambiguous_amino_acids.unwrap_or("*".to_string());
+            let sm_str = shared_modifications.unwrap_or("*".to_string());
+            let cc_str = shared_charge_carriers.unwrap_or("*".to_string());
 
             let multi = if annotations.len() > 1 {
                 let mut multi = String::new();
@@ -117,7 +149,8 @@ pub fn get_label(
                             annotation,
                             multiple_peptidoforms,
                             multiple_peptides,
-                            multiple_glycans
+                            multiple_glycans,
+                            compound_peptidoform,
                         )
                     )
                     .unwrap();
@@ -135,10 +168,11 @@ pub fn get_label(
                     multiple_peptidoforms,
                     multiple_peptides,
                     multiple_glycans,
+                    compound_peptidoform,
                 )
             } else {
                 format!(
-                    "<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span><span class='cross-links'>{}</span></span>{}",
+                    "<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span><span class='cross-links'>{}</span><span class='ambiguous-amino-acids'>{}</span><span class='modifications'>{}</span><span class='charge-carriers'>{}</span></span>{}",
                     ion_str,
                     charge_str,
                     charge_str.len(),
@@ -159,8 +193,10 @@ pub fn get_label(
                     },
                     loss_str,
                     xl_str,
+                    aaa_str,
+                    sm_str,
+                    cc_str,
                     multi,
-
                 )
             }
         }
@@ -172,10 +208,11 @@ fn get_single_label(
     multiple_peptidoforms: bool,
     multiple_peptides: bool,
     multiple_glycans: bool,
+    compound_peptidoform: &CompoundPeptidoform,
 ) -> String {
     let ch = format!("{:+}", annotation.charge.value);
     format!(
-        "<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span><span class='cross-links'>{}</span></span>",
+        "<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span><span class='cross-links'>{}</span><span class='ambiguous-amino-acids'>{}</span><span class='modifications'>{}</span><span class='charge-carriers'>{}</span></span>",
         if let FragmentType::Oxonium(breakages) = &annotation.ion {
             breakages
             .iter()
@@ -212,6 +249,9 @@ fn get_single_label(
         },
         annotation.neutral_loss.as_ref().map(|n| n.hill_notation_html()).unwrap_or_default(),
         get_xl(annotation),
+        get_ambiguous_amino_acids(annotation, multiple_peptides),
+        get_modifications(annotation, multiple_peptides, compound_peptidoform),
+        get_charge_carriers(annotation),
     )
 }
 
@@ -256,4 +296,90 @@ fn get_xl(annotation: &Fragment) -> String {
         .unwrap();
     }
     output
+}
+
+fn get_ambiguous_amino_acids(annotation: &Fragment, multiple_peptides: bool) -> String {
+    annotation
+        .formula
+        .labels()
+        .iter()
+        .flat_map(|label| {
+            if let AmbiguousLabel::AminoAcid {
+                option,
+                sequence_index,
+                peptide_index,
+            } = label
+            {
+                Some(format!(
+                    "{option}<sub>{sequence_index}</sub>{}",
+                    if multiple_peptides {
+                        format!("<sub class='peptide-id'>p{peptide_index}</sub>")
+                    } else {
+                        String::new()
+                    }
+                ))
+            } else {
+                None
+            }
+        })
+        .join("")
+}
+
+fn get_modifications(
+    annotation: &Fragment,
+    multiple_peptides: bool,
+    compound_peptidoform: &CompoundPeptidoform,
+) -> String {
+    annotation
+        .formula
+        .labels()
+        .iter()
+        .flat_map(|label| {
+            if let AmbiguousLabel::Modification {
+                id,
+                sequence_index,
+                peptide_index,
+            } = label
+            {
+                Some(format!(
+                    "{}<sub>{sequence_index}</sub>{}",
+                    compound_peptidoform.peptidoforms()[annotation.peptidoform_index].peptides()
+                        [annotation.peptide_index]
+                        .sequence[*sequence_index]
+                        .possible_modifications
+                        .iter()
+                        .find(|m| m.id == *id)
+                        .unwrap()
+                        .group,
+                    if multiple_peptides {
+                        format!("<sub class='peptide-id'>p{peptide_index}</sub>")
+                    } else {
+                        String::new()
+                    }
+                ))
+            } else {
+                None
+            }
+        })
+        .join("")
+}
+
+fn get_charge_carriers(annotation: &Fragment) -> String {
+    let str = annotation
+        .formula
+        .labels()
+        .iter()
+        .flat_map(|label| {
+            if let AmbiguousLabel::ChargeCarrier(charge) = label {
+                Some(charge.hill_notation_html())
+            } else {
+                None
+            }
+        })
+        .join(",");
+    if str.is_empty() {
+        str
+    } else {
+        format!("[{str}]")
+    }
 }

@@ -760,6 +760,7 @@ fn render_spectrum(
                 ""
             },
             get_label(
+                &spectrum.peptide,
                 &peak.annotation,
                 multiple_peptidoforms,
                 multiple_peptides,
@@ -780,6 +781,7 @@ fn render_spectrum(
             peak_mz.value,
             (peak_mz.value * 100.0).round() / 100.0,
             get_label(
+                &spectrum.peptide,
                 &[(peak.clone(), Vec::new())],
                 multiple_peptidoforms,
                 multiple_peptides,

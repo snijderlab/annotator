@@ -253,7 +253,7 @@ fn main() {
           </svg>
         </div>
       <output id="spectrum-error" class="hidden error"></output>
-      <div id='spectrum-wrapper' class="spectrum show-unassigned legend-ion hidden show-charge show-series show-glycan-id show-peptide-id show-neutral-losses show-cross-links" onload='SpectrumSetUp()'>
+      <div id='spectrum-wrapper' class="spectrum show-unassigned legend-ion hidden show-charge show-series show-glycan-id show-peptide-id show-neutral-losses show-cross-links show-ambiguous-amino-acids show-modifications" onload='SpectrumSetUp()'>
         <div class='all-settings'>
           <fieldset class='settings graphics-settings'>
             <legend>Graphics settings</legend>
@@ -387,6 +387,9 @@ fn main() {
                   <label><input checked id='spectrum-label-peptide-id' type='checkbox'/>Peptide number</label>
                   <label><input checked id='spectrum-label-neutral-losses' type='checkbox'/>Neutral losses</label>
                   <label><input checked id='spectrum-label-cross-links' type='checkbox'/>Cross-links</label>
+                  <label><input checked id='spectrum-label-ambiguous-amino-acids' type='checkbox'/>Ambiguous amino acids</label>
+                  <label><input checked id='spectrum-label-modifications' type='checkbox'/>Modifications of unknown position</label>
+                  <label><input id='spectrum-label-charge-carriers' type='checkbox'/>Charge carriers</label>
                 </div>
             </div>
 
