@@ -1063,8 +1063,19 @@ fn general_stats(
             recovered.total
         )
     }
-    fn format_fdr(fdr: &Fdr) -> String {
-        format!("{:.2}% ({:.3} σ)", fdr.fdr() * 100.0, fdr.sigma())
+    fn format_fdr_peaks(fdr: &Fdr) -> String {
+        format!(
+            "{:.2}% ({:.3} σ)",
+            fdr.peaks_fdr() * 100.0,
+            fdr.peaks_sigma()
+        )
+    }
+    fn format_fdr_intensity(fdr: &Fdr) -> String {
+        format!(
+            "{:.2}% ({:.3} σ)",
+            fdr.intensity_fdr() * 100.0,
+            fdr.intensity_sigma()
+        )
     }
 
     let mut mass_row = String::new();
@@ -1076,7 +1087,8 @@ fn general_stats(
     let mut intensity_details_row = String::new();
     let mut positions_row = String::new();
     let mut positions_details_row = String::new();
-    let mut fdr_row = String::new();
+    let mut fdr_peaks_row = String::new();
+    let mut fdr_intensity_row = String::new();
 
     let (combined_scores, peptide_scores) = spectrum.scores(fragments, model, mass_mode);
     let (combined_fdr, peptide_fdr) = spectrum.fdr(fragments, model, mass_mode);
@@ -1103,9 +1115,15 @@ fn general_stats(
                     write!(intensity_row, "<td>{}</td>", format_f64(intensity)).unwrap();
                     write!(positions_row, "<td>{} (positions)</td>", format(positions)).unwrap();
                     write!(
-                        fdr_row,
+                        fdr_peaks_row,
                         "<td>{}</td>",
-                        format_fdr(&peptide_fdr[peptidoform_index][peptide_index])
+                        format_fdr_peaks(&peptide_fdr[peptidoform_index][peptide_index])
+                    )
+                    .unwrap();
+                    write!(
+                        fdr_intensity_row,
+                        "<td>{}</td>",
+                        format_fdr_intensity(&peptide_fdr[peptidoform_index][peptide_index])
                     )
                     .unwrap();
                 }
@@ -1125,9 +1143,15 @@ fn general_stats(
                     )
                     .unwrap();
                     write!(
-                        fdr_row,
+                        fdr_peaks_row,
                         "<td>{}</td>",
-                        format_fdr(&peptide_fdr[peptidoform_index][peptide_index])
+                        format_fdr_peaks(&peptide_fdr[peptidoform_index][peptide_index])
+                    )
+                    .unwrap();
+                    write!(
+                        fdr_intensity_row,
+                        "<td>{}</td>",
+                        format_fdr_intensity(&peptide_fdr[peptidoform_index][peptide_index])
                     )
                     .unwrap();
                 }
@@ -1243,7 +1267,18 @@ fn general_stats(
                 write!(peaks_row, "<td>{}</td>", format(peaks)).unwrap();
                 write!(intensity_row, "<td>{}</td>", format_f64(intensity)).unwrap();
                 write!(positions_row, "<td>{} (positions)</td>", format(positions)).unwrap();
-                write!(fdr_row, "<td>{}</td>", format_fdr(&combined_fdr)).unwrap();
+                write!(
+                    fdr_peaks_row,
+                    "<td>{}</td>",
+                    format_fdr_peaks(&combined_fdr)
+                )
+                .unwrap();
+                write!(
+                    fdr_intensity_row,
+                    "<td>{}</td>",
+                    format_fdr_intensity(&combined_fdr)
+                )
+                .unwrap();
             }
             Score::UniqueFormulas {
                 fragments,
@@ -1260,7 +1295,18 @@ fn general_stats(
                     format(unique_formulas)
                 )
                 .unwrap();
-                write!(fdr_row, "<td>{}</td>", format_fdr(&combined_fdr)).unwrap();
+                write!(
+                    fdr_peaks_row,
+                    "<td>{}</td>",
+                    format_fdr_peaks(&combined_fdr)
+                )
+                .unwrap();
+                write!(
+                    fdr_intensity_row,
+                    "<td>{}</td>",
+                    format_fdr_intensity(&combined_fdr)
+                )
+                .unwrap();
             }
         }
         write!(fragments_details_row, "<td><table>").unwrap();
@@ -1349,7 +1395,8 @@ fn general_stats(
         <tr class='fragments-detail'><td>Intensity detailed</td>{intensity_details_row}</tr>
         <tr><td>Sequence positions covered</td>{positions_row}</tr>
         <tr class='fragments-detail'><td>Positions detailed</td>{positions_details_row}</tr>
-        <tr><td title='FDR estimation by permutation; Tests how many matches are found when the spectrum is shifted from -25 to +25 Da plus π (to have non integer offsets). The percentage is the number found for the actual matches divided by the average found number for the shifted spectra. The number between brackets denotes the number of standard deviations the actual matches is from the shifted matches.'>FDR</td>{fdr_row}</tr>
+        <tr><td title='FDR estimation by permutation; Tests how many matches are found when the spectrum is shifted from -25 to +25 Da plus π (to have non integer offsets). The percentage is the number found for the actual matches divided by the average found number for the shifted spectra. The number between brackets denotes the number of standard deviations the actual matches is from the shifted matches.'>FDR</td>{fdr_peaks_row}</tr>
+        <tr><td title='FDR estimation by permutation; Same procedure as Peaks FDR, but this time counts the fraction of intensity annotated instead of the number of peaks. '>FDR (intensity)</td>{fdr_intensity_row}</tr>
     </table>"
     )
     .unwrap();

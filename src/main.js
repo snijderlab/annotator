@@ -380,7 +380,7 @@ async function annotate_spectrum() {
     model: document.querySelector("#spectrum-model").value,
     peptide: document.querySelector("#peptide").innerText, customModel: model,
     massMode: document.querySelector("#spectrum-mass-mode").value,
-    mzRange: [Number(document.querySelector("#model-mz-range-min").value), Number(document.querySelector("#model-mz-range-max").value)]
+    mzRange: [optional_number(document.querySelector("#model-mz-range-min").value), optional_number(document.querySelector("#model-mz-range-max").value)]
   }).then((result) => {
     document.querySelector("#spectrum-results-wrapper").innerHTML = result.spectrum;
     document.querySelector("#spectrum-fragment-table").innerHTML = result.fragment_table;
@@ -963,4 +963,8 @@ function enter_event(selector, callback) {
   document
     .querySelector(selector)
     .addEventListener("keydown", event => { if (event.keyCode == 13) { callback(event); event.preventDefault(); } else { } });
+}
+
+function optional_number(text) {
+  return text === "" ? null : Number(text);
 }

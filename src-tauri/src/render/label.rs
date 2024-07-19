@@ -311,9 +311,10 @@ fn get_ambiguous_amino_acids(annotation: &Fragment, multiple_peptides: bool) -> 
             } = label
             {
                 Some(format!(
-                    "{option}<sub>{sequence_index}</sub>{}",
+                    "{option}<sub>{}</sub>{}",
+                    sequence_index+1,
                     if multiple_peptides {
-                        format!("<sub class='peptide-id'>p{peptide_index}</sub>")
+                        format!("<sub class='peptide-id'>p{}</sub>", peptide_index+1)
                     } else {
                         String::new()
                     }
@@ -342,7 +343,7 @@ fn get_modifications(
             } = label
             {
                 Some(format!(
-                    "{}<sub>{sequence_index}</sub>{}",
+                    "{}<sub>{}</sub>{}",
                     compound_peptidoform.peptidoforms()[annotation.peptidoform_index].peptides()
                         [annotation.peptide_index]
                         .sequence[*sequence_index]
@@ -351,8 +352,9 @@ fn get_modifications(
                         .find(|m| m.id == *id)
                         .unwrap()
                         .group,
+                    sequence_index + 1,
                     if multiple_peptides {
-                        format!("<sub class='peptide-id'>p{peptide_index}</sub>")
+                        format!("<sub class='peptide-id'>p{}</sub>", peptide_index + 1)
                     } else {
                         String::new()
                     }
