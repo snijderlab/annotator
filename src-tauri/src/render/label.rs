@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use rustyms::{
     fragment::{FragmentType, GlycanBreakPos, MatchedIsotopeDistribution},
-    AmbiguousLabel, CompoundPeptidoform, Fragment,
+    AmbiguousLabel, CompoundPeptidoform, Fragment, SequencePosition,
 };
 use std::fmt::Write;
 
@@ -312,9 +312,9 @@ fn get_ambiguous_amino_acids(annotation: &Fragment, multiple_peptides: bool) -> 
             {
                 Some(format!(
                     "{option}<sub>{}</sub>{}",
-                    sequence_index+1,
+                    sequence_index + 1,
                     if multiple_peptides {
-                        format!("<sub class='peptide-id'>p{}</sub>", peptide_index+1)
+                        format!("<sub class='peptide-id'>p{}</sub>", peptide_index + 1)
                     } else {
                         String::new()
                     }
@@ -345,14 +345,13 @@ fn get_modifications(
                 Some(format!(
                     "{}<sub>{}</sub>{}",
                     compound_peptidoform.peptidoforms()[annotation.peptidoform_index].peptides()
-                        [annotation.peptide_index]
-                        .sequence[*sequence_index]
+                        [annotation.peptide_index][*sequence_index]
                         .possible_modifications
                         .iter()
                         .find(|m| m.id == *id)
                         .unwrap()
                         .group,
-                    sequence_index + 1,
+                    display_sequence_index(*sequence_index),
                     if multiple_peptides {
                         format!("<sub class='peptide-id'>p{}</sub>", peptide_index + 1)
                     } else {
@@ -383,5 +382,13 @@ fn get_charge_carriers(annotation: &Fragment) -> String {
         str
     } else {
         format!("[{str}]")
+    }
+}
+
+pub fn display_sequence_index(sequence_index: SequencePosition) -> String {
+    match sequence_index {
+        SequencePosition::NTerm => "N-terminal".to_string(),
+        SequencePosition::Index(i) => (i + 1).to_string(),
+        SequencePosition::CTerm => "C-terminal".to_string(),
     }
 }

@@ -12,7 +12,10 @@ use rustyms::{
     NeutralLoss,
 };
 
-use crate::html_builder::{HtmlContent, HtmlElement, HtmlTag};
+use crate::{
+    html_builder::{HtmlContent, HtmlElement, HtmlTag},
+    render::label::display_sequence_index,
+};
 
 use super::label::get_label;
 
@@ -513,8 +516,13 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
             max_intensity = max_intensity.max(peak.intensity.0);
             peak.annotation.iter().for_each(|(fragment, _)| {
                 fragment.ion.position().map(|i| {
-                    output[fragment.peptidoform_index][fragment.peptide_index][i.sequence_index]
-                        .insert(fragment.ion.clone())
+                    output[fragment.peptidoform_index][fragment.peptide_index][match i
+                        .sequence_index
+                    {
+                        rustyms::SequencePosition::Index(i) => i,
+                        _ => unreachable!(), // TODO: handle better
+                    }]
+                    .insert(fragment.ion.clone())
                 });
             });
         }
@@ -834,7 +842,7 @@ pub fn spectrum_table(
     ) -> (String, String, String) {
         if let Some(pos) = annotation.0.ion.position() {
             (
-                (pos.sequence_index + 1).to_string(),
+                display_sequence_index(pos.sequence_index),
                 pos.series_number.to_string(),
                 annotation.0.ion.label().to_string(),
             )
@@ -868,7 +876,7 @@ pub fn spectrum_table(
             )
         } else if let FragmentType::immonium(pos, aa) = &annotation.0.ion {
             (
-                (pos.sequence_index + 1).to_string(),
+                display_sequence_index(pos.sequence_index),
                 pos.series_number.to_string(),
                 format!("immonium {}", aa.char()),
             )
