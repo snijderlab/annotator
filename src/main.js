@@ -8,14 +8,26 @@ import { SetUpSpectrumInterface } from "./stitch-assets/script.js";
 
 listen('tauri://file-drop', event => {
   document.querySelector("html").classList.remove("file-drop-hover");
+  let opens = [];
+  let peptides = false;
+
   for (let i = 0; i < event.payload.length; i++) {
     let file = event.payload[i];
     if (file.toLowerCase().endsWith(".mgf") || file.toLowerCase().endsWith(".mgf.gz")) {
-      load_mgf(file);
+      opens.push(load_mgf(file));
     } else {
-      load_identified_peptides(file);
+      document.querySelector("#load-identified-peptides").classList.add("loading")
+      peptides = true;
+      opens.push(load_identified_peptides(file));
     }
   }
+  Promise.all(opens).then(() => {
+    if (peptides) {
+      update_identified_peptide_file_select();
+      identified_peptide_details();
+      document.querySelector("#load-identified-peptides").classList.remove("loading");
+    }
+  });
 })
 
 listen('tauri://file-drop-hover', event => {
@@ -74,7 +86,6 @@ async function dialog_select_identified_peptides_file(e) {
         update_identified_peptide_file_select();
         identified_peptide_details();
         document.querySelector("#load-identified-peptides").classList.remove("loading");
-        document.querySelector("#peptides").style.display = "block";
       });
     }
   })
@@ -138,6 +149,11 @@ async function update_identified_peptide_file_select() {
       select.appendChild(option);
     }
     select_identified_peptides_file(id);
+    if (result.length == 0) {
+      document.querySelector("#peptides").style.display = "hidden";
+    } else {
+      document.querySelector("#peptides").style.display = "block";
+    }
   }).catch((error) => {
     document.querySelector("#loaded-identified-peptides-path").classList.add("error");
     document.querySelector("#loaded-identified-peptides-path").innerHTML = showError(error)
@@ -413,6 +429,8 @@ function showError(error, showContext = true) {
       if (error.context.hasOwnProperty('Line')) {
         let Line = error.context.Line;
         msg += "<div class='context'>" + (Line.line_index != null ? ("<span class='line-number'>" + (Line.line_index + 1) + "</span>") : "") + "<pre>" + Line.line + "\n" + " ".repeat(Line.offset) + "^".repeat(Line.length) + "</pre></div>";
+      } else if (error.context.hasOwnProperty('Show')) {
+        msg += "<div class='error'>" + error.context.Show.line + "</div>";
       } else {
         msg += "<pre>" + error.context + "</pre>";
       }
@@ -440,6 +458,8 @@ function showContext(error, fallback) {
   } else if (error.context.hasOwnProperty('FullLine')) {
     let FullLine = error.context.FullLine;
     return "<span class='error'>" + FullLine.line + "</span>";
+  } else if (error.context.hasOwnProperty('Show')) {
+    return "<span class='error'>" + error.context.Show.line + "</span>";
   } else if (error.context = "None") {
     return fallback;
   } else {

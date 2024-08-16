@@ -428,6 +428,7 @@ fn main() {
           <div class='ion-series'>
               <div class='top'>
                   <span class='ion w' tabindex='0'>w</span>
+                  <span class='ion v' tabindex='0'>v</span>
                   <span class='ion x' tabindex='0'>x</span>
                   <span class='ion y' tabindex='0'>y</span>
                   <span class='ion z' tabindex='0'>z</span>
@@ -439,7 +440,6 @@ fn main() {
                   <span class='ion b' tabindex='0'>b</span>
                   <span class='ion c' tabindex='0'>c</span>
                   <span class='ion d' tabindex='0'>d</span>
-                  <span class='ion v' tabindex='0'>v</span>
               </div>
               <div class='side'>
                   <span class='ion p' tabindex='0'>Precursor</span>
@@ -461,7 +461,7 @@ fn main() {
       </div>
     
       <input type="checkbox" id="collapsible-tools">
-      <fieldset class="collapsible" data-linked-item="collapsible-tools">
+      <fieldset class="collapsible" data-linked-item="collapsible-tools" id="tools">
         <legend>Tools</legend>
         <div class="flex-input collapsible-content">
           <label for="search-modification">Search modification</label>
@@ -480,7 +480,7 @@ fn main() {
         <output class="collapsible-content" id="details-formula-result"></output>
       </fieldset>
       <input type="checkbox" id="collapsible-custom-mods">
-      <fieldset class="collapsible" data-linked-item="collapsible-custom-mods">
+      <fieldset class="collapsible" data-linked-item="collapsible-custom-mods" id="custom-modifications">
         <legend>Custom modifications</legend>
         <dialog id="custom-mod-dialog">
           <h1>Custom modification</h1>
@@ -549,7 +549,7 @@ fn main() {
                 <label for="custom-mod-single-diagnostic-ions">Diagnostic ions</label>
                 <div class="separated-input">
                   <div class="values" id="custom-mod-single-diagnostic-ions">
-                    <div class="input context" placeholder="Add molecular formula or mass" data-type="molecular_formula" contentEditable="plaintext-only"></div>
+                    <div class="input context" placeholder="Add molecular formula or mass (M not MH+)" data-type="molecular_formula" contentEditable="plaintext-only"></div>
                     <button class="clear">Clear</button>
                   </div>
                   <output class="error"></output>
@@ -594,7 +594,7 @@ fn main() {
                 <label for="custom-mod-linker-diagnostic-ions">Diagnostic ions</label>
                 <div class="separated-input">
                   <div class="values" id="custom-mod-linker-diagnostic-ions">
-                    <div class="input context" placeholder="Add molecular formula or mass" data-type="molecular_formula" contentEditable="plaintext-only"></div>
+                    <div class="input context" placeholder="Add molecular formula or mass (M not MH+)" data-type="molecular_formula" contentEditable="plaintext-only"></div>
                     <button class="clear">Clear</button>
                   </div>
                   <output class="error"></output>

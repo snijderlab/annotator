@@ -51,7 +51,7 @@ pub async fn load_identified_peptides_file<'a>(
                 CustomError::error(
                     "Unknown file",
                     "Could not be recognised as either a Peaks or Novor file",
-                    Context::None,
+                    Context::show(path),
                 )
             }),
         Some("tsv") => MSFraggerData::parse_file(path, state.database())
@@ -80,7 +80,7 @@ pub async fn load_identified_peptides_file<'a>(
                 CustomError::error(
                     "Unknown file",
                     "Could not be recognised as either a MSFragger or Sage file",
-                    Context::None,
+                    Context::show(path),
                 )
             }),
         Some("psmtsv") => OpairData::parse_file(path, state.database()).map(|peptides| {
@@ -102,7 +102,7 @@ pub async fn load_identified_peptides_file<'a>(
         _ => Err(CustomError::error(
             "Unknown extension",
             "Use CSV, TSV, PSMTSV, or Fasta, or any of these as a gzipped file (eg csv.gz).",
-            Context::None,
+            Context::show(path),
         )),
     }?;
     Ok(())

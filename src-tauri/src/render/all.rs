@@ -1067,15 +1067,24 @@ fn general_stats(
         theoretical_positions: Recovered<u32>,
         expected_positions: Recovered<u32>,
     ) -> String {
-        format!(
-            "{:.2}% ({}/{}) (expected) or {:.2}% ({}/{}) (full peptide)",
-            expected_positions.fraction() * 100.0,
-            expected_positions.found,
-            expected_positions.total,
-            theoretical_positions.fraction() * 100.0,
-            theoretical_positions.found,
-            theoretical_positions.total,
-        )
+        if theoretical_positions != expected_positions {
+            format!(
+                "<span title='The first numbers indicate the percentage of found positions of all positions that generated theoretical fragments. The second number indicates the percentage of found positions of all positions in the whole peptide.'>{:.2}% ({}/{}) (theoretical) and {:.2}% ({}/{}) (full peptide)</span>",
+                expected_positions.fraction() * 100.0,
+                expected_positions.found,
+                expected_positions.total,
+                theoretical_positions.fraction() * 100.0,
+                theoretical_positions.found,
+                theoretical_positions.total,
+            )
+        } else {
+            format!(
+                "{:.2}% ({}/{}) (positions)",
+                expected_positions.fraction() * 100.0,
+                expected_positions.found,
+                expected_positions.total,
+            )
+        }
     }
     fn format_f64(recovered: Recovered<f64>) -> String {
         format!(
