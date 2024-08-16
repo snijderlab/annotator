@@ -1063,6 +1063,20 @@ fn general_stats(
             recovered.total
         )
     }
+    fn format_positions(
+        theoretical_positions: Recovered<u32>,
+        expected_positions: Recovered<u32>,
+    ) -> String {
+        format!(
+            "{:.2}% ({}/{}) (expected) or {:.2}% ({}/{}) (full peptide)",
+            expected_positions.fraction() * 100.0,
+            expected_positions.found,
+            expected_positions.total,
+            theoretical_positions.fraction() * 100.0,
+            theoretical_positions.found,
+            theoretical_positions.total,
+        )
+    }
     fn format_f64(recovered: Recovered<f64>) -> String {
         format!(
             "{:.2}% ({:.2e}/{:.2e})",
@@ -1098,11 +1112,11 @@ fn general_stats(
     let mut fdr_peaks_row = String::new();
     let mut fdr_intensity_row = String::new();
 
-    let (combined_scores, peptide_scores) = spectrum.scores(fragments, model, mass_mode);
-    let (combined_fdr, peptide_fdr) = spectrum.fdr(fragments, model, mass_mode);
+    let (combined_scores, separate_peptide_scores) = spectrum.scores(fragments, model, mass_mode);
+    let (combined_fdr, separate_peptide_fdrs) = spectrum.fdr(fragments, model, mass_mode);
 
-    for (peptidoform_index, score) in peptide_scores.iter().enumerate() {
-        for (peptide_index, score) in score.iter().enumerate() {
+    for (peptidoform_index, peptidoform_scores) in separate_peptide_scores.iter().enumerate() {
+        for (peptide_index, peptide_score) in peptidoform_scores.iter().enumerate() {
             let precursor = spectrum.peptide.peptidoforms()[peptidoform_index].peptides()
                 [peptide_index]
                 .clone()
@@ -1111,27 +1125,35 @@ fn general_stats(
                     p.formulas().iter().map(display_masses).join(", ")
                 });
             write!(mass_row, "<td>{precursor}</td>").unwrap();
-            match score.score {
+            match peptide_score.score {
                 Score::Position {
                     fragments,
                     peaks,
                     intensity,
-                    positions,
+                    theoretical_positions,
+                    expected_positions,
                 } => {
                     write!(fragments_row, "<td>{}</td>", format(fragments)).unwrap();
                     write!(peaks_row, "<td>{}</td>", format(peaks)).unwrap();
                     write!(intensity_row, "<td>{}</td>", format_f64(intensity)).unwrap();
-                    write!(positions_row, "<td>{} (positions)</td>", format(positions)).unwrap();
+                    write!(
+                        positions_row,
+                        "<td>{}</td>",
+                        format_positions(theoretical_positions, expected_positions)
+                    )
+                    .unwrap();
                     write!(
                         fdr_peaks_row,
                         "<td>{}</td>",
-                        format_fdr_peaks(&peptide_fdr[peptidoform_index][peptide_index])
+                        format_fdr_peaks(&separate_peptide_fdrs[peptidoform_index][peptide_index])
                     )
                     .unwrap();
                     write!(
                         fdr_intensity_row,
                         "<td>{}</td>",
-                        format_fdr_intensity(&peptide_fdr[peptidoform_index][peptide_index])
+                        format_fdr_intensity(
+                            &separate_peptide_fdrs[peptidoform_index][peptide_index]
+                        )
                     )
                     .unwrap();
                 }
@@ -1153,13 +1175,15 @@ fn general_stats(
                     write!(
                         fdr_peaks_row,
                         "<td>{}</td>",
-                        format_fdr_peaks(&peptide_fdr[peptidoform_index][peptide_index])
+                        format_fdr_peaks(&separate_peptide_fdrs[peptidoform_index][peptide_index])
                     )
                     .unwrap();
                     write!(
                         fdr_intensity_row,
                         "<td>{}</td>",
-                        format_fdr_intensity(&peptide_fdr[peptidoform_index][peptide_index])
+                        format_fdr_intensity(
+                            &separate_peptide_fdrs[peptidoform_index][peptide_index]
+                        )
                     )
                     .unwrap();
                 }
@@ -1168,13 +1192,14 @@ fn general_stats(
             write!(peaks_details_row, "<td><table>").unwrap();
             write!(intensity_details_row, "<td><table>").unwrap();
             write!(positions_details_row, "<td><table>").unwrap();
-            for (ion, score) in &score.ions {
+            for (ion, score) in &peptide_score.ions {
                 match score {
                     Score::Position {
                         fragments,
                         peaks,
                         intensity,
-                        positions,
+                        theoretical_positions,
+                        expected_positions,
                     } => {
                         write!(
                             fragments_details_row,
@@ -1196,8 +1221,8 @@ fn general_stats(
                         .unwrap();
                         write!(
                             positions_details_row,
-                            "<tr><td>{ion}</td><td>{} (positions)</td></tr>",
-                            format(*positions)
+                            "<tr><td>{ion}</td><td>{}</td></tr>",
+                            format_positions(*theoretical_positions, *expected_positions)
                         )
                         .unwrap();
                     }
@@ -1269,12 +1294,18 @@ fn general_stats(
                 fragments,
                 peaks,
                 intensity,
-                positions,
+                theoretical_positions,
+                expected_positions,
             } => {
                 write!(fragments_row, "<td>{}</td>", format(fragments)).unwrap();
                 write!(peaks_row, "<td>{}</td>", format(peaks)).unwrap();
                 write!(intensity_row, "<td>{}</td>", format_f64(intensity)).unwrap();
-                write!(positions_row, "<td>{} (positions)</td>", format(positions)).unwrap();
+                write!(
+                    positions_row,
+                    "<td>{}</td>",
+                    format_positions(theoretical_positions, expected_positions)
+                )
+                .unwrap();
                 write!(
                     fdr_peaks_row,
                     "<td>{}</td>",
@@ -1327,7 +1358,8 @@ fn general_stats(
                     fragments,
                     peaks,
                     intensity,
-                    positions,
+                    theoretical_positions,
+                    expected_positions,
                 } => {
                     write!(
                         fragments_details_row,
@@ -1349,8 +1381,8 @@ fn general_stats(
                     .unwrap();
                     write!(
                         positions_details_row,
-                        "<tr><td>{ion}</td><td>{} (positions)</td></tr>",
-                        format(positions)
+                        "<tr><td>{ion}</td><td>{}</td></tr>",
+                        format_positions(theoretical_positions, expected_positions)
                     )
                     .unwrap();
                 }
