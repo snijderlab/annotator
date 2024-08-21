@@ -497,6 +497,8 @@ fn main() {
                   <span class='ion multi mp mpp' tabindex='0'>Multi</span>
                   <span class='ion oxonium' tabindex='0'>Oxonium</span>
                   <span class='ion Y' tabindex='0'>Y</span>
+                  <span class='ion neutral-loss' tabindex='0'>Neutral loss</span>
+                  <span class='ion diagnostic' tabindex='0'>Diagnostic ions</span>
                   <span class='other'>Other</span>
               </div>
           </div>
