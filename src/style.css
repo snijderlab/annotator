@@ -213,6 +213,14 @@ output.error {
   padding-left: .5em;
 }
 
+dialog.neutral-loss {
+  min-width: 525px;
+
+  button {
+    margin-top: 1rem;
+  }
+}
+
 .hidden {
   display: none;
 }
@@ -228,7 +236,7 @@ output.error {
 .custom-model {
   grid-column: 1 / -1;
   display: none;
-  grid-template-columns: max-content 1fr max-content 1fr;
+  grid-template-columns: repeat(4, auto);
   gap: inherit;
   align-items: baseline;
 
@@ -240,6 +248,19 @@ output.error {
     display: grid;
     grid-template-columns: subgrid;
     grid-column: 1 / -1;
+  }
+
+  & .charge-range {
+    display: flex;
+
+    span {
+      margin: 2px;
+    }
+
+    input {
+      border-left: none;
+      width: 3rem;
+    }
   }
 }
 
@@ -254,8 +275,13 @@ output.error {
   width: 1px;
 }
 
+.grouped-input *:where(input, select):not(:first-child) {
+  border-left: none;
+}
+
 .select-input input {
   display: none;
+  border-left: none;
 }
 
 .select-input:has(select.arg-1) input:nth-of-type(1),

@@ -241,12 +241,12 @@ fn get_unassigned_data(
         }
     }
     UnassignedData {
-        a: (model.a.0 != Location::None).then_some(a.into_owned()),
-        b: (model.b.0 != Location::None).then_some(b.into_owned()),
-        c: (model.c.0 != Location::None).then_some(c.into_owned()),
-        x: (model.x.0 != Location::None).then_some(x.into_owned()),
-        y: (model.y.0 != Location::None).then_some(y.into_owned()),
-        z: (model.z.0 != Location::None).then_some(z.into_owned()),
+        a: (model.a.location != Location::None).then_some(a.into_owned()),
+        b: (model.b.location != Location::None).then_some(b.into_owned()),
+        c: (model.c.location != Location::None).then_some(c.into_owned()),
+        x: (model.x.location != Location::None).then_some(x.into_owned()),
+        y: (model.y.location != Location::None).then_some(y.into_owned()),
+        z: (model.z.location != Location::None).then_some(z.into_owned()),
     }
 }
 

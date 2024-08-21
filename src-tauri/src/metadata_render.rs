@@ -360,23 +360,33 @@ impl RenderToHtml for MaxQuantData {
                 HtmlElement::new(HtmlTag::p)
                     .content(format!(
                         "Additional MetaData MaxQuant {}",
-                        self.id.unwrap_or(self.scan_number)
+                        self.id
+                            .unwrap_or(self.scan_number.first().copied().unwrap_or(0))
                     ))
                     .clone(),
                 HtmlElement::table::<HtmlContent, _>(
                     None,
                     &[
                         &["Raw file".to_string(), self.raw_file.to_string()],
-                        &["Scan number".to_string(), self.scan_number.to_string()],
-                        &["Scan index".to_string(), self.scan_index.to_string()],
+                        &["Scan number".to_string(), self.scan_number.iter().join(";")],
+                        &[
+                            "Scan index".to_string(),
+                            self.scan_index.to_optional_string(),
+                        ],
                         &["Modifications".to_string(), self.modifications.to_string()],
                         &["Proteins".to_string(), self.proteins.to_string()],
-                        &["Fragmentation".to_string(), self.fragmentation.to_string()],
-                        &["Mass analyser".to_string(), self.mass_analyser.to_string()],
+                        &[
+                            "Fragmentation".to_string(),
+                            self.fragmentation.as_ref().to_optional_string(),
+                        ],
+                        &[
+                            "Mass analyser".to_string(),
+                            self.mass_analyser.as_ref().to_optional_string(),
+                        ],
                         &["Type".to_string(), self.ty.to_string()],
                         &[
                             "Scan event number".to_string(),
-                            self.scan_event_number.to_string(),
+                            self.scan_event_number.to_optional_string(),
                         ],
                         &["Pep".to_string(), self.pep.to_string()],
                         &["Score".to_string(), self.score.to_string()],
@@ -386,19 +396,19 @@ impl RenderToHtml for MaxQuantData {
                         ],
                         &[
                             "Precursor intensity".to_string(),
-                            self.precursor_intensity.to_string(),
+                            self.precursor_intensity.to_optional_string(),
                         ],
                         &[
                             "Precursor apex fraction".to_string(),
-                            self.precursor_apex_function.to_string(),
+                            self.precursor_apex_function.to_optional_string(),
                         ],
                         &[
                             "Precursor apex offset".to_string(),
-                            self.precursor_apex_offset.to_string(),
+                            self.precursor_apex_offset.to_optional_string(),
                         ],
                         &[
                             "Precursor apex offset time".to_string(),
-                            self.precursor_apex_offset_time.to_string(),
+                            self.precursor_apex_offset_time.to_optional_string(),
                         ],
                         &[
                             "Missed cleavages".to_string(),
@@ -516,6 +526,37 @@ impl RenderToHtml for MaxQuantData {
                         &[
                             "DN mass left".to_string(),
                             self.dn_missing_mass.map(|v| v.value).to_optional_string(),
+                        ],
+                        &[
+                            "Ratio H/L".to_string(),
+                            self.ration_h_l
+                                .map(|v| {
+                                    format!(
+                                        "{v} normalised: {}",
+                                        self.ration_h_l_normalised.to_optional_string()
+                                    )
+                                })
+                                .to_optional_string(),
+                        ],
+                        &[
+                            "Intensity".to_string(),
+                            self.intensity
+                                .map(|i| {
+                                    format!(
+                                        "{i} H: {} L: {}",
+                                        self.intensity_h.to_optional_string(),
+                                        self.intensity_l.to_optional_string()
+                                    )
+                                })
+                                .to_optional_string(),
+                        ],
+                        &[
+                            "Experiment".to_string(),
+                            self.experiment.as_ref().to_optional_string(),
+                        ],
+                        &[
+                            "Labeling state".to_string(),
+                            self.labeling_state.to_optional_string(),
                         ],
                         &["Version".to_string(), self.version.to_string()],
                     ],

@@ -290,24 +290,24 @@ pub enum NoiseFilter {
     TopX(f64, usize),
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct ModelParameters {
-    pub a: (Location, Vec<String>),
-    pub b: (Location, Vec<String>),
-    pub c: (Location, Vec<String>),
-    pub d: (Location, Vec<String>),
-    pub v: (Location, Vec<String>),
-    pub w: (Location, Vec<String>),
-    pub x: (Location, Vec<String>),
-    pub y: (Location, Vec<String>),
-    pub z: (Location, Vec<String>),
-    pub precursor: Vec<String>,
-    pub immonium: bool,
+    pub a: (Location, Vec<String>, ChargeRange),
+    pub b: (Location, Vec<String>, ChargeRange),
+    pub c: (Location, Vec<String>, ChargeRange),
+    pub d: (Location, Vec<String>, ChargeRange),
+    pub v: (Location, Vec<String>, ChargeRange),
+    pub w: (Location, Vec<String>, ChargeRange),
+    pub x: (Location, Vec<String>, ChargeRange),
+    pub y: (Location, Vec<String>, ChargeRange),
+    pub z: (Location, Vec<String>, ChargeRange),
+    pub precursor: (Vec<String>, ChargeRange),
+    pub immonium: (bool, ChargeRange),
     pub m: bool,
-    pub modification_diagnostic: bool,
+    pub modification_diagnostic: (bool, ChargeRange),
     pub modification_neutral: bool,
     pub cleave_cross_links: bool,
-    pub glycan: (bool, (usize, usize), Vec<String>),
+    pub glycan: (bool, (usize, usize), Vec<String>, ChargeRange, ChargeRange),
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
@@ -354,26 +354,67 @@ async fn annotate_spectrum<'a>(
         "etd" => Model::etd(),
         "none" => Model::none(),
         "custom" => Model::none()
-            .a(custom_model.a.0, get_model_param(&custom_model.a.1)?)
-            .b(custom_model.b.0, get_model_param(&custom_model.b.1)?)
-            .c(custom_model.c.0, get_model_param(&custom_model.c.1)?)
-            .d(custom_model.d.0, get_model_param(&custom_model.d.1)?)
-            .v(custom_model.v.0, get_model_param(&custom_model.v.1)?)
-            .w(custom_model.w.0, get_model_param(&custom_model.w.1)?)
-            .x(custom_model.x.0, get_model_param(&custom_model.x.1)?)
-            .y(custom_model.y.0, get_model_param(&custom_model.y.1)?)
-            .z(custom_model.z.0, get_model_param(&custom_model.z.1)?)
-            .precursor(get_model_param(&custom_model.precursor)?)
+            .a(PrimaryIonSeries {
+                location: custom_model.a.0,
+                neutral_losses: get_model_param(&custom_model.a.1)?,
+                charge_range: custom_model.a.2,
+            })
+            .b(PrimaryIonSeries {
+                location: custom_model.b.0,
+                neutral_losses: get_model_param(&custom_model.b.1)?,
+                charge_range: custom_model.b.2,
+            })
+            .c(PrimaryIonSeries {
+                location: custom_model.c.0,
+                neutral_losses: get_model_param(&custom_model.c.1)?,
+                charge_range: custom_model.c.2,
+            })
+            .d(PrimaryIonSeries {
+                location: custom_model.d.0,
+                neutral_losses: get_model_param(&custom_model.d.1)?,
+                charge_range: custom_model.d.2,
+            })
+            .v(PrimaryIonSeries {
+                location: custom_model.v.0,
+                neutral_losses: get_model_param(&custom_model.v.1)?,
+                charge_range: custom_model.v.2,
+            })
+            .w(PrimaryIonSeries {
+                location: custom_model.w.0,
+                neutral_losses: get_model_param(&custom_model.w.1)?,
+                charge_range: custom_model.w.2,
+            })
+            .x(PrimaryIonSeries {
+                location: custom_model.x.0,
+                neutral_losses: get_model_param(&custom_model.x.1)?,
+                charge_range: custom_model.x.2,
+            })
+            .y(PrimaryIonSeries {
+                location: custom_model.y.0,
+                neutral_losses: get_model_param(&custom_model.y.1)?,
+                charge_range: custom_model.y.2,
+            })
+            .z(PrimaryIonSeries {
+                location: custom_model.z.0,
+                neutral_losses: get_model_param(&custom_model.z.1)?,
+                charge_range: custom_model.z.2,
+            })
+            .precursor(
+                get_model_param(&custom_model.precursor.0)?,
+                custom_model.precursor.1,
+            )
             .immonium(custom_model.immonium)
             .m(custom_model.m)
             .modification_specific_diagnostic_ions(custom_model.modification_diagnostic)
             .modification_specific_neutral_losses(custom_model.modification_neutral)
             .allow_cross_link_cleavage(custom_model.cleave_cross_links)
-            .glycan(
-                custom_model.glycan.0,
-                custom_model.glycan.1 .0..=custom_model.glycan.1 .1,
-                get_model_param(&custom_model.glycan.2)?,
-            ),
+            .glycan(GlycanModel {
+                allow_structural: custom_model.glycan.0,
+                compositional_range: custom_model.glycan.1 .0..=custom_model.glycan.1 .1,
+                neutral_losses: get_model_param(&custom_model.glycan.2)?,
+                oxonium_charge_range: custom_model.glycan.3,
+                other_charge_range: custom_model.glycan.4,
+            }),
         _ => Model::all(),
     };
     if tolerance.1 == "ppm" {

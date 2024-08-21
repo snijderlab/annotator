@@ -11,11 +11,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::{html_builder, state::IdentifiedPeptideFile, ModifiableState};
 
+/// Open a file and get all individual peptide errors.
+/// # Errors
+/// When the file could not be opened correctly.
 #[tauri::command]
 pub async fn load_identified_peptides_file<'a>(
     path: &'a str,
     state: ModifiableState<'a>,
-) -> Result<(), CustomError> {
+) -> Result<Vec<CustomError>, CustomError> {
     let state = state.lock().unwrap();
     let actual_extension = path
         .rsplit('.')
@@ -27,6 +30,7 @@ pub async fn load_identified_peptides_file<'a>(
                 .unwrap_or(ex)
         })
         .map(|ex| ex.to_lowercase());
+    let mut peptide_errors = Vec::new();
     match actual_extension.as_deref() {
         Some("csv") => PeaksData::parse_file(path, state.database())
             .map(|peptides| {
@@ -34,7 +38,16 @@ pub async fn load_identified_peptides_file<'a>(
                     .identified_peptide_files_mut()
                     .push(IdentifiedPeptideFile::new(
                         path.to_string(),
-                        peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
+                        peptides
+                            .filter_map(|p| match p {
+                                Ok(p) => Some(p),
+                                Err(e) => {
+                                    peptide_errors.push(e);
+                                    None
+                                }
+                            })
+                            .map(|p| p.into())
+                            .collect(),
                     ));
             })
             .or_else(|_| {
@@ -43,7 +56,16 @@ pub async fn load_identified_peptides_file<'a>(
                         .identified_peptide_files_mut()
                         .push(IdentifiedPeptideFile::new(
                             path.to_string(),
-                            peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
+                            peptides
+                                .filter_map(|p| match p {
+                                    Ok(p) => Some(p),
+                                    Err(e) => {
+                                        peptide_errors.push(e);
+                                        None
+                                    }
+                                })
+                                .map(|p| p.into())
+                                .collect(),
                         ))
                 })
             })
@@ -53,6 +75,7 @@ pub async fn load_identified_peptides_file<'a>(
                     "Could not be recognised as either a Peaks or Novor file",
                     Context::show(path),
                 )
+                .with_underlying_errors(peptide_errors.clone())
             }),
         Some("tsv") => MSFraggerData::parse_file(path, state.database())
             .map(|peptides| {
@@ -67,14 +90,25 @@ pub async fn load_identified_peptides_file<'a>(
                     ))
             })
             .or_else(|_| {
-                SageData::parse_file(path, state.database()).map(|peptides| {
-                    state
-                        .identified_peptide_files_mut()
-                        .push(IdentifiedPeptideFile::new(
-                            path.to_string(),
-                            peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
-                        ))
-                })
+                SageData::parse_file(path, state.database())
+                    .map(|peptides| {
+                        state
+                            .identified_peptide_files_mut()
+                            .push(IdentifiedPeptideFile::new(
+                                path.to_string(),
+                                peptides
+                                    .filter_map(|p| match p {
+                                        Ok(p) => Some(p),
+                                        Err(e) => {
+                                            peptide_errors.push(e);
+                                            None
+                                        }
+                                    })
+                                    .map(|p| p.into())
+                                    .collect(),
+                            ))
+                    })
+                    .map_err(|err| err.with_underlying_errors(peptide_errors.clone()))
             })
             .map_err(|_| {
                 CustomError::error(
@@ -82,15 +116,27 @@ pub async fn load_identified_peptides_file<'a>(
                     "Could not be recognised as either a MSFragger or Sage file",
                     Context::show(path),
                 )
+                .with_underlying_errors(peptide_errors.clone())
             }),
-        Some("psmtsv") => OpairData::parse_file(path, state.database()).map(|peptides| {
-            state
-                .identified_peptide_files_mut()
-                .push(IdentifiedPeptideFile::new(
-                    path.to_string(),
-                    peptides.filter_map(|p| p.ok()).map(|p| p.into()).collect(),
-                ))
-        }),
+        Some("psmtsv") => OpairData::parse_file(path, state.database())
+            .map(|peptides| {
+                state
+                    .identified_peptide_files_mut()
+                    .push(IdentifiedPeptideFile::new(
+                        path.to_string(),
+                        peptides
+                            .filter_map(|p| match p {
+                                Ok(p) => Some(p),
+                                Err(e) => {
+                                    peptide_errors.push(e);
+                                    None
+                                }
+                            })
+                            .map(|p| p.into())
+                            .collect(),
+                    ))
+            })
+            .map_err(|err| err.with_underlying_errors(peptide_errors.clone())),
         Some("fasta") => FastaData::parse_file(path).map(|peptides| {
             state
                 .identified_peptide_files_mut()
@@ -99,13 +145,32 @@ pub async fn load_identified_peptides_file<'a>(
                     peptides.into_iter().map(|p| p.into()).collect(),
                 ))
         }),
+        Some("txt") => MaxQuantData::parse_file(path, state.database())
+            .map(|peptides| {
+                state
+                    .identified_peptide_files_mut()
+                    .push(IdentifiedPeptideFile::new(
+                        path.to_string(),
+                        peptides
+                            .filter_map(|p| match p {
+                                Ok(p) => Some(p),
+                                Err(e) => {
+                                    peptide_errors.push(e);
+                                    None
+                                }
+                            })
+                            .map(|p| p.into())
+                            .collect(),
+                    ))
+            })
+            .map_err(|err| err.with_underlying_errors(peptide_errors.clone())), // TODO: Do this for all other files as well
         _ => Err(CustomError::error(
             "Unknown extension",
-            "Use CSV, TSV, PSMTSV, or Fasta, or any of these as a gzipped file (eg csv.gz).",
+            "Use CSV, TSV, TXT, PSMTSV, or Fasta, or any of these as a gzipped file (eg csv.gz).",
             Context::show(path),
         )),
     }?;
-    Ok(())
+    Ok(peptide_errors)
 }
 
 #[tauri::command]

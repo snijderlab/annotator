@@ -3,19 +3,22 @@ use std::{fs::File, io::BufWriter};
 
 fn create_loss_modal(id: &str) -> String {
     format!(
-        r#"<div>
+        r##"<div>
             <button onclick='document.getElementById("model-{id}-loss-selection-dialog").showModal();'>Select</button>
             <output id='model-{id}-loss-selection-output' class='selected-neutral-loss'>0 selected</output>
-            <dialog id="model-{id}-loss-selection-dialog" onclose='var num = 0; document.getElementsByName("model-{id}-loss-selection").forEach(e=>num += e.checked);document.getElementById("model-{id}-loss-selection-output").innerText = num + " selected";'>
+            <dialog class="neutral-loss" id="model-{id}-loss-selection-dialog" onclose='var num = 0; document.getElementsByName("model-{id}-loss-selection").forEach(e=>num += e.checked); num += document.querySelectorAll("#model-{id}-loss-selection-dialog .element").length;document.getElementById("model-{id}-loss-selection-output").innerText = num + " selected";'>
               <p>Losses</p>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H1O1"/>OH</label>
               <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H2O1"/>Water</label>
               <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H4O2"/>Double water</label>
               <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H6O3"/>Triple water</label>
               <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H1"/>Hydrogen</label>
               <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H2"/>Double hydrogen</label>
               <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H3"/>Triple hydrogen</label>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-N1H3"/>Ammonia</label>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H3N1"/>Ammonia</label>
               <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-C1O1"/>Carbon monoxide</label>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-C1H1O2"/>COOH (seen with ETD on Asp)</label>
+              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-C2H3O2"/>C<sub>2</sub>H<sub>3</sub>O<sub>2</sub> (seen with ETD on Glu)</label>
               <p>Gains</p>
               <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H2O1"/>Water</label>
               <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H4O2"/>Double water</label>
@@ -23,9 +26,74 @@ fn create_loss_modal(id: &str) -> String {
               <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H1"/>Hydrogen</label>
               <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H2"/>Double hydrogen</label>
               <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H3"/>Triple hydrogen</label>
+              <p>Custom</p>
+              <div class="separated-input">
+                <div class="values" id="model-{id}-loss">
+                  <div class="input context" placeholder="Add molecular formula or mass preceded by '+' or '-'" data-type="neutral_loss" contentEditable="plaintext-only"></div>
+                  <button class="clear">Clear</button>
+                </div>
+                <output class="error"></output>
+              </div>
               <button autofocus onclick='this.parentElement.close()'>Close</button>
             </dialog>
-          </div>"#
+          </div>"##
+    )
+}
+
+#[derive(Copy, Clone)]
+enum ChargeRange {
+    One,
+    OneToPrecursor,
+    Precursor,
+}
+
+impl ChargeRange {
+    fn settings(
+        self,
+    ) -> (
+        &'static str,
+        &'static str,
+        usize,
+        &'static str,
+        &'static str,
+        usize,
+    ) {
+        match self {
+            Self::One => (" selected", "", 1, " selected", "", 1),
+            Self::OneToPrecursor => (" selected", "", 1, "", " selected", 0),
+            Self::Precursor => ("", " selected", 0, "", " selected", 0),
+        }
+    }
+}
+
+fn create_charge_range_fields(id: &str, default: ChargeRange, comment: &str) -> String {
+    let settings = default.settings();
+    format!(
+        r##"<div class="charge-range">
+          <select id="model-{id}-charge-start-type">
+            <option value="Absolute" title="An absolute charge"{}>Absolute</option>
+            <option value="Relative" title="Relative to the precursor charge"{}>Precursor</option>
+          </select>
+          <input id="model-{id}-charge-start-value" type="number" value="{}">
+          <span>—</span>
+          <select id="model-{id}-charge-end-type">
+            <option value="Absolute" title="An absolute charge"{}>Absolute</option>
+            <option value="Relative" title="Relative to the precursor charge"{}>Precursor</option>
+          </select>
+          <input id="model-{id}-charge-end-value" type="number" value="{}">
+          {}
+        </div>"##,
+        settings.0,
+        settings.1,
+        settings.2,
+        settings.3,
+        settings.4,
+        settings.5,
+        if comment.is_empty() {
+            String::new()
+        } else {
+            format!("<span> {comment}</span>")
+        },
     )
 }
 
@@ -134,7 +202,7 @@ fn main() {
         <label for="model-mz-range-min">m/z range</label>
         <div class="row">
           <input style='flex-grow:1' type="number" id="model-mz-range-min" min="0" value="" placeholder="Empty imposes no bounds" />
-          <span style='padding: 0 .5em'>up to and including</span>
+          <span style='padding: 0 .5em'>—</span>
           <input style='flex-grow:1' type="number" id="model-mz-range-max" min="0" value="" placeholder="Empty imposes no bounds" />
         </div>
         
@@ -163,8 +231,8 @@ fn main() {
           <legend>Custom model</legend>
           <p>Ion</p>
           <p>Location</p>
-          <p>Loss</p>
-          <p>Custom loss</p>"#).unwrap();
+          <p>Neutral Loss/Gain</p>
+          <p>Charge range</p>"#).unwrap();
     for ion in ["a", "b", "c", "d", "v", "w", "x", "y", "z"] {
         write!(
                 writer,
@@ -173,24 +241,17 @@ fn main() {
               <select onchange="this.className=this.options[Number(this.value)].dataset.cls;">
                 <option value="0" data-cls="arg-0" data-value="All" title="All backbone bonds produce fragments ions">All</option>
                 <option value="1" data-cls="arg-0" data-value="None" selected title="No fragments are generated">None</option>
-                <option value="2" data-cls="arg-1" data-value="SkipN" title="Select a number of amino acids from the N terminal that do not produce a fragment, the rest does produce fragments.">Skip from N terminal</option>
-                <option value="3" data-cls="arg-1" data-value="SkipC" title="Select a number of amino acids from the C terminal that do not produce a fragment, the rest does produce fragments.">Skip from C terminal</option>
-                <option value="6" data-cls="arg-2" data-value="TakeN" title="Select a number of amino acids from the N terminal that do produce a fragment, the rest does not produce fragments.">Take from N terminal</option>
-                <option value="4" data-cls="arg-1" data-value="TakeC" title="Select a number of amino acids from the C terminal that do produce a fragment, the rest does not produce fragments.">Take from C terminal</option>
-                <option value="5" data-cls="arg-2" data-value="SkipNC" title="Select an offset from the N terminal that do not produce fragments, then select a number of amino acids the do.">Skip from N and take a limited number</option>
+                <option value="2" data-cls="arg-1" data-value="SkipN" title="Select a number of amino acids from the N terminal that do not produce a fragment, the rest does produce fragments.">Disallow x from N terminal</option>
+                <option value="3" data-cls="arg-1" data-value="SkipC" title="Select a number of amino acids from the C terminal that do not produce a fragment, the rest does produce fragments.">Disallow x from C terminal</option>
+                <option value="6" data-cls="arg-2" data-value="TakeN" title="Select a number of amino acids from the N terminal that do produce a fragment, the rest does not produce fragments.">Allow x from N terminal</option>
+                <option value="4" data-cls="arg-1" data-value="TakeC" title="Select a number of amino acids from the C terminal that do produce a fragment, the rest does not produce fragments.">Allow x from C terminal</option>
+                <option value="5" data-cls="arg-2" data-value="SkipNC" title="Select an offset from the N terminal that do not produce fragments, then select a number of amino acids that do.">Disallow x from N and allow y</option>
               </select>
               <input type="number" value="1" min="1">
               <input type="number" value="1" min="1">
               </div>
-              {1}
-              <div class="separated-input">
-                <div class="values" id="model-{0}-loss">
-                  <div class="input context" placeholder="Add molecular formula or mass preceded by '+' or '-'" data-type="neutral_loss" contentEditable="plaintext-only"></div>
-                  <button class="clear">Clear</button>
-                </div>
-                <output class="error"></output>
-              </div>"#,
-                ion, create_loss_modal(ion)
+              {1}{2}"#,
+                ion, create_loss_modal(ion), create_charge_range_fields(ion, ChargeRange::OneToPrecursor, "")
             )
             .unwrap();
     }
@@ -198,20 +259,31 @@ fn main() {
             writer,
             r#"<label>precursor</label>
             <div class="empty"></div>
-            {}
-            <div class="separated-input">
-              <div class="values" id="model-precursor-loss">
-                <div class="input context" placeholder="Add molecular formula or mass preceded by '+' or '-'" data-type="neutral_loss" contentEditable="plaintext-only"></div>
-                <button class="clear">Clear</button>
-              </div>
-              <output class="error"></output>
+            {}{}
+            <div class="grid-row">
+              <label>glycan</label>
+              <label><input id='model-glycan-enabled' type='checkbox' switch/>Enable fragments from structure (GNO)</label>
+              {}{}
+            </div>
+            <div class='grid-row'>
+              <label>glycan</label>
+              <span style="grid-column: span 2">Enable fragments from compositions between <input id='model-glycan-composition-min' type='number' min='0' value='0'/> — <input id='model-glycan-composition-max' type='number' min='0' value='0'/> monosaccharides</span>
+              {}
+            </div>
+            <div class="grid-row">
+              <label title="Allow modification specific diagnostic ions, as defined by the database">modification diagnostic ions</label>
+              <label><input id='model-modification-diagnostic-enabled' type='checkbox' switch/>Enable</label>
+              <span class='empty'></span>
+              {}
             </div>
             <div class="grid-row">
               <label>immonium</label>
               <label><input id='model-immonium-enabled' type='checkbox' switch/>Enable</label>
+              <span class='empty'></span>
+              {}
             </div>
             <div class="grid-row">
-              <label title="side chain loss from precursor">m</label>
+              <label title="side chain loss from precursor as seen in electron based fragmentation">precursor side chain loss</label>
               <label><input id='model-m-enabled' type='checkbox' switch/>Enable</label>
             </div>
             <div class="grid-row">
@@ -219,29 +291,8 @@ fn main() {
               <label><input id='model-modification-neutral-enabled' type='checkbox' switch/>Enable</label>
             </div>
             <div class="grid-row">
-              <label title="Allow modification specific diagnostic ions, as defined by the database">modification diagnostic ions</label>
-              <label><input id='model-modification-diagnostic-enabled' type='checkbox' switch/>Enable</label>
-            </div>
-            <div class="grid-row">
               <label title="Allow MS cleavable cross-links to be cleaved">MS cleavable cross-links</label>
               <label><input id='model-cleave-cross-links-enabled' type='checkbox' switch/>Enable</label>
-            </div>
-            <div class='grid-row'>
-              <label>glycan</label>
-              <label><input id='model-glycan-enabled' type='checkbox' switch/>Enable fragments from structure (GNO)</label>
-              <span style="grid-column: span 2">Enable fragments from compositions between <input id='model-glycan-composition-min' type='number' min='0' value='0'/> and <input id='model-glycan-composition-max' type='number' min='0' value='0'/> monosaccharides</span>
-            </div>
-            <div class="grid-row">
-              <label>glycan</label>
-              <span class='empty'></span>
-              {}
-              <div class="separated-input">
-                <div class="values" id="model-glycan-loss">
-                  <div class="input context" placeholder="Add molecular formula or mass preceded by '+' or '-'" data-type="neutral_loss" contentEditable="plaintext-only"></div>
-                  <button class="clear">Clear</button>
-                </div>
-                <output class="error"></output>
-              </div>
             </div>
           </fieldset>
           <label class="wide" for="peptide">Peptide sequence </label>
@@ -623,7 +674,12 @@ fn main() {
     
     </html>"#,
     create_loss_modal("precursor"),
+    create_charge_range_fields("precursor", ChargeRange::Precursor, ""),
     create_loss_modal("glycan"),
+    create_charge_range_fields("glycan-other", ChargeRange::OneToPrecursor, "Y"),
+    create_charge_range_fields("glycan-oxonium", ChargeRange::One, "Oxonium"),
+    create_charge_range_fields("diagnostic", ChargeRange::One, ""),
+    create_charge_range_fields("immonium", ChargeRange::One, ""),
     version
         )
         .unwrap();

@@ -72,7 +72,7 @@ async function dialog_select_identified_peptides_file(e) {
     directory: false,
     multiple: true,
     filters: [{
-      extensions: ["csv", "csv.gz", "tsv", "tsv.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz"], name: "*"
+      extensions: ["csv", "csv.gz", "tsv", "tsv.gz", "txt", "txt.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz"], name: "*"
     }]
   };
   window.__TAURI__.dialog.open(properties).then((result) => {
@@ -109,7 +109,7 @@ async function load_mgf(path) {
 async function load_identified_peptides(path) {
   return invoke("load_identified_peptides_file", { path: path }).then((result) => {
     document.querySelector("#loaded-identified-peptides-path").classList.remove("error");
-    document.querySelector("#number-of-identified-peptides").innerText = result;
+    console.log(result);
     document.querySelector("#loaded-identified-peptides-path").innerText = "";
     displayed_identified_peptide = undefined;
   }).catch((error) => {
@@ -364,6 +364,14 @@ function get_losses(ion) {
   return loss;
 }
 
+function get_charge_range(ion) {
+  let start_type = document.getElementById("model-" + ion + "-charge-start-type").value;
+  let start_value = Number(document.getElementById("model-" + ion + "-charge-start-value").value);
+  let end_type = document.getElementById("model-" + ion + "-charge-end-type").value;
+  let end_value = Number(document.getElementById("model-" + ion + "-charge-end-value").value);
+  return { start: { [start_type]: start_value }, end: { [end_type]: end_value } };
+}
+
 //import { SpectrumSetUp } from "./stitch-assets/script.js";
 async function annotate_spectrum() {
   document.querySelector("#annotate-button").classList.add("loading");
@@ -371,22 +379,27 @@ async function annotate_spectrum() {
   var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);
   var noise_threshold = get_noise_filter("#noise-filter");
   var model = {
-    a: [get_location("#model-a-location"), get_losses("a")],
-    b: [get_location("#model-b-location"), get_losses("b")],
-    c: [get_location("#model-c-location"), get_losses("c")],
-    d: [get_location("#model-d-location"), get_losses("d")],
-    v: [get_location("#model-v-location"), get_losses("v")],
-    w: [get_location("#model-w-location"), get_losses("w")],
-    x: [get_location("#model-x-location"), get_losses("x")],
-    y: [get_location("#model-y-location"), get_losses("y")],
-    z: [get_location("#model-z-location"), get_losses("z")],
-    precursor: get_losses("precursor"),
-    immonium: document.querySelector("#model-immonium-enabled").checked,
+    a: [get_location("#model-a-location"), get_losses("a"), get_charge_range("a")],
+    b: [get_location("#model-b-location"), get_losses("b"), get_charge_range("b")],
+    c: [get_location("#model-c-location"), get_losses("c"), get_charge_range("c")],
+    d: [get_location("#model-d-location"), get_losses("d"), get_charge_range("d")],
+    v: [get_location("#model-v-location"), get_losses("v"), get_charge_range("v")],
+    w: [get_location("#model-w-location"), get_losses("w"), get_charge_range("w")],
+    x: [get_location("#model-x-location"), get_losses("x"), get_charge_range("x")],
+    y: [get_location("#model-y-location"), get_losses("y"), get_charge_range("y")],
+    z: [get_location("#model-z-location"), get_losses("z"), get_charge_range("z")],
+    precursor: [get_losses("precursor"), get_charge_range("precursor")],
+    immonium: [document.querySelector("#model-immonium-enabled").checked, get_charge_range("immonium")],
     m: document.querySelector("#model-m-enabled").checked,
     modification_neutral: document.querySelector("#model-modification-neutral-enabled").checked,
-    modification_diagnostic: document.querySelector("#model-modification-diagnostic-enabled").checked,
+    modification_diagnostic: [document.querySelector("#model-modification-diagnostic-enabled").checked, get_charge_range("diagnostic")],
     cleave_cross_links: document.querySelector("#model-cleave-cross-links-enabled").checked,
-    glycan: [document.querySelector("#model-glycan-enabled").checked, [Number(document.querySelector("#model-glycan-composition-min").value), Number(document.querySelector("#model-glycan-composition-max").value)], get_losses("glycan")],
+    glycan: [
+      document.querySelector("#model-glycan-enabled").checked,
+      [Number(document.querySelector("#model-glycan-composition-min").value), Number(document.querySelector("#model-glycan-composition-max").value)],
+      get_losses("glycan"),
+      get_charge_range("glycan-oxonium"),
+      get_charge_range("glycan-other")],
   };
   invoke("annotate_spectrum", {
     index: Number(document.querySelector("#details-spectrum-index").value),
