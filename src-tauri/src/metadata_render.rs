@@ -399,16 +399,16 @@ impl RenderToHtml for MaxQuantData {
                             self.precursor_intensity.to_optional_string(),
                         ],
                         &[
-                            "Precursor apex fraction".to_string(),
-                            self.precursor_apex_function.to_optional_string(),
-                        ],
-                        &[
-                            "Precursor apex offset".to_string(),
-                            self.precursor_apex_offset.to_optional_string(),
-                        ],
-                        &[
-                            "Precursor apex offset time".to_string(),
-                            self.precursor_apex_offset_time.to_optional_string(),
+                            "Precursor apex".to_string(),
+                            self.precursor_apex_function
+                                .map(|function| {
+                                    format!(
+                                        "function: {function} offset: {} offset time: {}",
+                                        self.precursor_apex_offset.to_optional_string(),
+                                        self.precursor_apex_offset_time.to_optional_string(),
+                                    )
+                                })
+                                .to_optional_string(),
                         ],
                         &[
                             "Missed cleavages".to_string(),
@@ -417,24 +417,6 @@ impl RenderToHtml for MaxQuantData {
                         &[
                             "Isotope index".to_string(),
                             self.isotope_index.to_optional_string(),
-                        ],
-                        &[
-                            "M/z".to_string(),
-                            self.mz.map(|v| v.value).to_optional_string(),
-                        ],
-                        &[
-                            "Mass".to_string(),
-                            self.mass.map(|v| v.value).to_optional_string(),
-                        ],
-                        &[
-                            "Mass error [absolute]".to_string(),
-                            self.mass_error_da
-                                .map(|m| display_mass(m, Some(rustyms::MassMode::Monoisotopic)))
-                                .to_optional_string(),
-                        ],
-                        &[
-                            "Mass error [ppm]".to_string(),
-                            self.mass_error_ppm.map(|v| v.value).to_optional_string(),
                         ],
                         &[
                             "Simple mass error [ppm]".to_string(),
@@ -473,27 +455,24 @@ impl RenderToHtml for MaxQuantData {
                             self.all_modified_sequences
                                 .as_ref()
                                 .map(|v| v.iter().map(ToString::to_string).join(","))
-                                .unwrap_or("-".to_string()),
+                                .to_optional_string(),
                         ],
-                        &["Id".to_string(), self.id.to_optional_string()],
                         &[
                             "Protein group ids".to_string(),
                             self.protein_group_ids
                                 .as_ref()
                                 .map(|v| v.iter().map(ToString::to_string).join(","))
-                                .unwrap_or("-".to_string()),
+                                .to_optional_string(),
                         ],
                         &[
-                            "Peptide id".to_string(),
-                            self.peptide_id.to_optional_string(),
-                        ],
-                        &[
-                            "Mod. peptide id".to_string(),
-                            self.modified_peptide_id.to_optional_string(),
-                        ],
-                        &[
-                            "Evidence id".to_string(),
-                            self.evidence_id.to_optional_string(),
+                            "IDs".to_string(),
+                            format!(
+                                "id: {} peptide: {} mod. peptide: {} evidence: {}",
+                                self.id.to_optional_string(),
+                                self.peptide_id.to_optional_string(),
+                                self.modified_peptide_id.to_optional_string(),
+                                self.evidence_id.to_optional_string()
+                            ),
                         ],
                         &[
                             "Base peak intensity".to_string(),
@@ -516,16 +495,21 @@ impl RenderToHtml for MaxQuantData {
                             self.dn_combined_score.to_optional_string(),
                         ],
                         &[
-                            "DN N terminal mass left".to_string(),
-                            self.dn_n_mass.map(|v| v.value).to_optional_string(),
-                        ],
-                        &[
-                            "DN C terminal mass left".to_string(),
-                            self.dn_c_mass.map(|v| v.value).to_optional_string(),
-                        ],
-                        &[
                             "DN mass left".to_string(),
-                            self.dn_missing_mass.map(|v| v.value).to_optional_string(),
+                            self.dn_missing_mass
+                                .map(|v| {
+                                    format!(
+                                        "N: {} other: {} C: {}",
+                                        self.dn_n_mass
+                                            .map(|v| display_mass(v, None),)
+                                            .to_optional_string(),
+                                        display_mass(v, None),
+                                        self.dn_c_mass
+                                            .map(|v| display_mass(v, None),)
+                                            .to_optional_string(),
+                                    )
+                                })
+                                .to_optional_string(),
                         ],
                         &[
                             "Ratio H/L".to_string(),

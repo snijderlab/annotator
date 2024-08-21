@@ -92,7 +92,7 @@ fn create_charge_range_fields(id: &str, default: ChargeRange, comment: &str) -> 
         if comment.is_empty() {
             String::new()
         } else {
-            format!("<span> {comment}</span>")
+            format!("<span> ({comment})</span>")
         },
     )
 }

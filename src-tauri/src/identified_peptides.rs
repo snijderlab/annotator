@@ -1,3 +1,4 @@
+use crate::{html_builder, state::IdentifiedPeptideFile, ModifiableState};
 use itertools::Itertools;
 use rayon::prelude::*;
 use rustyms::{
@@ -8,8 +9,6 @@ use rustyms::{
     *,
 };
 use serde::{Deserialize, Serialize};
-
-use crate::{html_builder, state::IdentifiedPeptideFile, ModifiableState};
 
 /// Open a file and get all individual peptide errors.
 /// # Errors
@@ -163,7 +162,7 @@ pub async fn load_identified_peptides_file<'a>(
                             .collect(),
                     ))
             })
-            .map_err(|err| err.with_underlying_errors(peptide_errors.clone())), // TODO: Do this for all other files as well
+            .map_err(|err| err.with_underlying_errors(peptide_errors.clone())),
         _ => Err(CustomError::error(
             "Unknown extension",
             "Use CSV, TSV, TXT, PSMTSV, or Fasta, or any of these as a gzipped file (eg csv.gz).",
@@ -178,28 +177,29 @@ pub async fn close_identified_peptides_file(
     file: usize,
     state: ModifiableState<'_>,
 ) -> Result<(), CustomError> {
-    let state = state.lock().map_err(|_| {
+    state.lock().map_err(|_| {
         CustomError::error(
             "Could not lock mutex",
             "You are likely doing too many things in parallel",
             Context::none(),
         )
-    })?;
-    let res = if let Some(pos) = state
-        .identified_peptide_files()
-        .iter()
-        .position(|f| f.id == file)
-    {
-        state.identified_peptide_files_mut().remove(pos);
-        Ok(())
-    } else {
-        Err(CustomError::error("File does not exist", "This selected file could not be closed as it does not exist, did you already close it?", Context::none()))
-    };
-    drop(state);
-    res
+    }).and_then(|state| {
+            let pos = state
+            .identified_peptide_files()
+            .iter()
+            .position(|f| f.id == file);
+            if let Some(pos) = pos
+            {
+                state.identified_peptide_files_mut().remove(pos);
+                Ok(())
+            } else {
+                Err(CustomError::error("File does not exist", "This selected file could not be closed as it does not exist, did you already close it?", Context::none()))
+            }
+        }
+    )
 }
 
-/// Get the id, file name, path, and numbe rof peptides of all open identified peptides files
+/// Get the id, file name, path, and number of peptides of all open identified peptides files
 #[tauri::command]
 pub async fn get_identified_peptides_files(
     state: ModifiableState<'_>,
