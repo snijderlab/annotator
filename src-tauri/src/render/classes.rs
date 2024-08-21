@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use rustyms::{
     fragment::{FragmentKind, MatchedIsotopeDistribution},
-    AmbiguousLabel, Fragment,
+    Fragment,
 };
 
 /// Get all applicable classes for a set of annotations.
@@ -11,6 +11,7 @@ use rustyms::{
 ///   * The peptide(s) (eg 'p0-2', 'p2-1') (and 'mpp' if there are multiple peptides)
 ///   * The position(s) (eg 'p0-2-3', 'p2-1-123')
 ///   * The unique peptide index (eg 'pu1', 'pu12')
+///   * Other auxiliary classes ('oxonium', 'neutral-loss', & 'diagnostic')
 pub fn get_classes(
     annotations: &[(Fragment, Vec<MatchedIsotopeDistribution>)],
     unique_peptide_lookup: &[(usize, usize)],
@@ -27,10 +28,8 @@ pub fn get_classes(
             annotation.peptidoform_index, annotation.peptide_index
         ));
         if let Some(num) = first_peptidoform_index {
-            if num != annotation.peptidoform_index {
-                if !output.contains(&"mp".to_string()) {
-                    output.push("mp".to_string());
-                }
+            if num != annotation.peptidoform_index && !output.contains(&"mp".to_string()) {
+                output.push("mp".to_string());
             }
         } else {
             first_peptidoform_index = Some(annotation.peptidoform_index);
