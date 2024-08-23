@@ -1,12 +1,14 @@
 use std::{
     cell::{Ref, RefCell, RefMut},
+    fs::File,
     sync::atomic::AtomicUsize,
 };
 
-use rustyms::{identification::IdentifiedPeptide, ontologies::CustomDatabase, RawSpectrum};
+use mzdata::io::MZReaderType;
+use rustyms::{identification::IdentifiedPeptide, ontologies::CustomDatabase};
 
 pub struct State {
-    pub spectra: Vec<RawSpectrum>,
+    pub spectra: Option<MZReaderType<File>>,
     pub identified_peptide_files: RefCell<Vec<IdentifiedPeptideFile>>,
     pub database: CustomDatabase,
 }

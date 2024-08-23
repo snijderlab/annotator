@@ -31,3 +31,7 @@ See [releases](https://github.com/snijderlab/annotator/releases) for the latest 
 ### From source
 
 To build from source. Clone the repository. And build with cargo. Make sure you have installed [Rust](https://www.rust-lang.org/tools/install) and [Tauri](https://tauri.app/) beforehand.
+
+## Thermo RAW files
+
+The .NET 8.0 runtime is needed to open Thermo RAW files. [Which can be downloaded here.](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) Additionally on windows you can use `winget install Microsoft.DotNet.SDK.8` for a quick install.

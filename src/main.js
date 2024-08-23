@@ -3,6 +3,9 @@ const { invoke } = window.__TAURI__.tauri;
 
 const { listen } = window.__TAURI__.event
 
+const RAW_EXTENSIONS = ['mgf', 'mgf.gz', "mzML", "mzML.gz", "imzMl", "imzML.gz", "mzMLb", "mzMLb.gz", "raw", "raw.gz"];
+const IDENTIFIED_EXTENSIONS = ["csv", "csv.gz", "tsv", "tsv.gz", "txt", "txt.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz"];
+
 import { SetUpSpectrumInterface } from "./stitch-assets/script.js";
 // const controller = new AbortController();
 
@@ -13,8 +16,12 @@ listen('tauri://file-drop', event => {
 
   for (let i = 0; i < event.payload.length; i++) {
     let file = event.payload[i];
-    if (file.toLowerCase().endsWith(".mgf") || file.toLowerCase().endsWith(".mgf.gz")) {
-      opens.push(load_mgf(file));
+    let extension = file.toLowerCase().split('.').pop();
+    if (extension == "gz") {
+      let extension = file.toLowerCase().split('.').reverse()[1] + ".gz";
+    }
+    if (RAW_EXTENSIONS.contains(extension)) {
+      opens.push(load_raw(file));
     } else {
       document.querySelector("#load-identified-peptides").classList.add("loading")
       peptides = true;
@@ -48,18 +55,18 @@ document.addEventListener("dragend", () => document.querySelector("html").classL
 /**
 * @param e: Element
 */
-async function select_mgf_file(e) {
+async function select_raw_file(e) {
   let properties = {
     //defaultPath: 'C:\\',
     directory: false,
     filters: [{
-      extensions: ['mgf', 'mgf.gz'], name: "*"
+      extensions: RAW_EXTENSIONS, name: "*"
     }]
   };
   window.__TAURI__.dialog.open(properties).then((result) => {
     if (result != null) {
       e.dataset.filepath = result;
-      load_mgf(e.dataset.filepath);
+      load_raw(e.dataset.filepath);
     }
   })
 };
@@ -72,7 +79,7 @@ async function dialog_select_identified_peptides_file(e) {
     directory: false,
     multiple: true,
     filters: [{
-      extensions: ["csv", "csv.gz", "tsv", "tsv.gz", "txt", "txt.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz"], name: "*"
+      extensions: IDENTIFIED_EXTENSIONS, name: "*"
     }]
   };
   window.__TAURI__.dialog.open(properties).then((result) => {
@@ -91,7 +98,7 @@ async function dialog_select_identified_peptides_file(e) {
   })
 };
 
-async function load_mgf(path) {
+async function load_raw(path) {
   document.querySelector("#load-mgf-path").classList.add("loading")
   invoke("load_mgf", { path: path }).then((result) => {
     document.querySelector("#loaded-path").classList.remove("error");
@@ -199,7 +206,7 @@ async function find_scan_number() {
 
 async function spectrum_details() {
   invoke("spectrum_details", { index: Number(document.querySelector("#details-spectrum-index").value) }).then(
-    (result) => document.querySelector("#spectrum-details").innerText = result
+    (result) => document.querySelector("#spectrum-details").innerHTML = result
   ).catch((error) => {
     document.querySelector("#spectrum-error").classList.remove("hidden");
     document.querySelector("#spectrum-error").innerHTML = showError(error);
@@ -322,7 +329,6 @@ async function load_identified_peptide() {
 function get_location(id) {
   let loc = document.querySelector(id);
   let t = loc.children[0].options[Number(loc.children[0].value)].dataset.value;
-  // [[{\"SkipN\":1},[\"Water\"]],[\"All\",[\"Water\"]],[{\"SkipNC\":[1,2]},[\"Water\"]],[{\"TakeN\":{\"skip\":2,\"take\":1}},[\"Water\"]]]
   if (["SkipN", "SkipC", "TakeC"].includes(t)) {
     let obj = {};
     obj[t] = Number(loc.children[1].value);
@@ -332,7 +338,7 @@ function get_location(id) {
     obj[t] = [Number(loc.children[1].value), Number(loc.children[2].value)];
     return obj;
   } else if (t == "TakeN") {
-    return { t: { "skip": Number(loc.children[1].value), "take": Number(loc.children[2].value) } };
+    return { [t]: { "skip": Number(loc.children[1].value), "take": Number(loc.children[2].value) } };
   } else {
     return t;
   }
@@ -513,7 +519,7 @@ window.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".collapsible>legend").forEach(element => element.addEventListener("click", (e) => document.getElementById(e.target.parentElement.dataset.linkedItem).toggleAttribute("checked")));
   document
     .querySelector("#load-mgf-path")
-    .addEventListener("click", (event) => select_mgf_file(event.target));
+    .addEventListener("click", (event) => select_raw_file(event.target));
   document
     .querySelector("#load-identified-peptides")
     .addEventListener("click", (event) => dialog_select_identified_peptides_file(event.target));

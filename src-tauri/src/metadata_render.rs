@@ -769,7 +769,7 @@ impl RenderToHtml for FastaData {
     }
 }
 
-trait OptionalString {
+pub trait OptionalString {
     fn to_optional_string(self) -> String;
 }
 

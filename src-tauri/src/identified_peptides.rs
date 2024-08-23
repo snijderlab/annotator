@@ -1,5 +1,6 @@
 use crate::{html_builder, state::IdentifiedPeptideFile, ModifiableState};
 use itertools::Itertools;
+use mzdata::{io::SpectrumSource, prelude::SpectrumLike};
 use rayon::prelude::*;
 use rustyms::{
     align::{align, matrix::BLOSUM62},
@@ -341,30 +342,29 @@ pub fn load_identified_peptide(
     index: usize,
     state: ModifiableState,
 ) -> Option<Settings> {
-    if let Ok(state) = state.lock() {
-        state
+    if let Ok(mut state) = state.lock() {
+        let peptide = state
             .identified_peptide_files()
             .iter()
             .find(|f| f.id == file)
-            .and_then(|file| {
-                file.peptides.get(index).map(|peptide| {
-                    Settings::from_peptide(
-                        peptide,
-                        peptide.metadata.scan_number().and_then(|scan| {
-                            state
-                                .spectra
-                                .iter()
-                                .enumerate()
-                                .find(|(_, spectrum)| {
-                                    spectrum
-                                        .raw_scan_number
-                                        .map_or(false, |spectrum_scan| scan == spectrum_scan)
-                                })
-                                .map(|(i, _)| i)
-                        }),
-                    )
-                })
-            })
+            .and_then(|file| file.peptides.get(index))
+            .cloned();
+        peptide.map(|peptide| {
+            Settings::from_peptide(
+                &peptide,
+                peptide.metadata.scan_number().and_then(|scan_number| {
+                    state
+                        .spectra
+                        .as_mut()
+                        .and_then(|s| {
+                            s.get_spectrum_by_id(&format!(
+                                "controllerType=0 controllerNumber=1 scan={scan_number}"
+                            ))
+                        })
+                        .map(|s| s.index())
+                }),
+            )
+        })
     } else {
         None
     }

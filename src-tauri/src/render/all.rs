@@ -280,7 +280,7 @@ fn spectrum_graph_boundaries(
             }),
             unassigned: get_unassigned_data(point, fragments, model, mass_mode),
             mz: point.experimental_mz,
-            mass: da(point.experimental_mz.value * point.charge.value as f64),
+            mass: da(point.experimental_mz.value),
             intensity: point.intensity.0,
         })
         .collect();
