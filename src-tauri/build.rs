@@ -165,16 +165,9 @@ fn main() {
       </div>
       <output class="wrap" id="loaded-path"></output>
 
-      <div class="input-settings">
+      <div>
         <h2>Spectrum details</h2>
-        <label for="spectrum-index">Spectrum index</label>
-        <div class="combined-input">
-          <input type="number" id="details-spectrum-index" value="0" min="0" />
-          <span>/</span>
-          <span id="number-of-scans">0</span>
-        </div>
-        <label for="scan-number">Scan number</label>
-        <input type="number" id="scan-number" value="0" min="0" />
+        <ol id="spectra"></ol>
       </div>
       <p class="wrap" id="spectrum-details"></p>
 

@@ -355,9 +355,9 @@ pub fn load_identified_peptide(
                 peptide.metadata.scan_number().and_then(|scan_number| {
                     state
                         .spectra
-                        .as_mut()
+                        .first_mut()
                         .and_then(|s| {
-                            s.get_spectrum_by_id(&format!(
+                            s.0.get_spectrum_by_id(&format!(
                                 "controllerType=0 controllerNumber=1 scan={scan_number}"
                             ))
                         })

@@ -7,8 +7,11 @@ use std::{
 use mzdata::io::MZReaderType;
 use rustyms::{identification::IdentifiedPeptide, ontologies::CustomDatabase};
 
+use crate::spectra::RawFileDetails;
+
 pub struct State {
-    pub spectra: Option<MZReaderType<File>>,
+    /// File with all selected indices
+    pub spectra: Vec<(MZReaderType<File>, Vec<usize>, RawFileDetails)>,
     pub identified_peptide_files: RefCell<Vec<IdentifiedPeptideFile>>,
     pub database: CustomDatabase,
 }

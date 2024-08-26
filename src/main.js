@@ -100,11 +100,8 @@ async function dialog_select_identified_peptides_file(e) {
 
 async function load_raw(path) {
   document.querySelector("#load-mgf-path").classList.add("loading")
-  invoke("load_mgf", { path: path }).then((result) => {
-    document.querySelector("#loaded-path").classList.remove("error");
-    document.querySelector("#loaded-path").innerText = path.split('\\').pop().split('/').pop();
-    document.querySelector("#number-of-scans").innerText = result;
-    spectrum_details();
+  invoke("load_raw", { path: path }).then((result) => {
+    get_open_raw_files();
     document.querySelector("#load-mgf-path").classList.remove("loading")
   }).catch((error) => {
     document.querySelector("#loaded-path").classList.add("error");
@@ -177,7 +174,7 @@ async function load_clipboard() {
         document.querySelector("#loaded-path").classList.remove("error");
         document.querySelector("#loaded-path").innerText = "Clipboard";
         document.querySelector("#number-of-scans").innerText = result;
-        spectrum_details();
+        get_selected_spectra();
         document.querySelector("#load-clipboard").classList.remove("loading")
       }).catch((error) => {
         document.querySelector("#loaded-path").classList.add("error");
@@ -192,26 +189,108 @@ async function load_clipboard() {
     });
 }
 
-async function find_scan_number() {
-  invoke("find_scan_number", { scanNumber: Number(document.querySelector("#scan-number").value) }).then(
-    (result) => {
-      document.querySelector("#details-spectrum-index").value = result;
-      spectrum_details();
+async function get_open_raw_files() {
+  invoke("get_open_raw_files", {}).then((result) => {
+    let root = document.querySelector("#spectra");
+    root.innerHTML = '';
+
+    for (let file of result) {
+      let rawfile = document.createElement("div");
+      rawfile.className = "rawfile";
+      let header = document.createElement("div");
+      rawfile.appendChild(header);
+      header.className = "header";
+      header.id = "rawfile-" + file.id;
+      header.appendChild(createElement("span", { text: "R" + (file.id + 1) + ":" + file.description.split('\\').pop().split('/').pop(), title: file.description }));
+      let spectrum_selection = document.createElement("div");
+      spectrum_selection.className = "spectrum-selection";
+      let label_index = document.createElement("label");
+      label_index.setAttribute("for", "spectrum-" + file.id + "-index")
+      label_index.innerText = "Spectrum index";
+      spectrum_selection.appendChild(label_index)
+      let group_index = document.createElement("div");
+      group_index.className = "combined-input";
+      let input_index = document.createElement("input"); // TODO: hook up
+      input_index.id = "spectrum-" + file.id + "-index";
+      input_index.setAttribute("min", "0");
+      input_index.setAttribute("type", "number");
+      let select_on_index = () => invoke("select_spectrum_index", { fileIndex: file.id, index: Number(input_index.value) }).catch((error) => {
+        document.querySelector("#spectrum-error").classList.remove("hidden");
+        document.querySelector("#spectrum-error").innerHTML = showError(error);
+        document.querySelector("#spectrum-details").innerText = "ERROR";
+      }).then(
+        () => {
+          input_index.value = "";
+          get_selected_spectra();
+        }
+      );
+      input_index.addEventListener("focusout", select_on_index);
+      input_index.addEventListener("keydown", event => { if (event.keyCode == 13) { select_on_index() } else { } });
+      group_index.appendChild(input_index);
+      group_index.appendChild(createElement("span", { text: "/" }))
+      group_index.appendChild(createElement("span", { text: file.spectra, id: "spectrum-" + file.id + "-scans" }))
+      spectrum_selection.appendChild(group_index);
+      let label_scan = document.createElement("label");
+      label_scan.setAttribute("for", "spectrum-" + file.id + "-number")
+      label_scan.innerText = "Scan number";
+      spectrum_selection.appendChild(label_scan)
+      let input_scan = document.createElement("input"); // TODO: hook up
+      input_scan.id = "spectrum-" + file.id + "-number";
+      input_scan.setAttribute("min", "0");
+      let select_on_scan = () => invoke("select_spectrum_scan_number", { fileIndex: file.id, scanNumber: input_scan.value }).catch((error) => {
+        document.querySelector("#spectrum-error").classList.remove("hidden");
+        document.querySelector("#spectrum-error").innerHTML = showError(error);
+        document.querySelector("#spectrum-details").innerText = "ERROR";
+      }).then(
+        () => {
+          input_scan.value = "";
+          get_selected_spectra();
+        }
+      );
+      input_scan.addEventListener("focusout", select_on_scan);
+      input_scan.addEventListener("keydown", event => { if (event.keyCode == 13) { select_on_scan() } else { } });
+      spectrum_selection.appendChild(input_scan);
+      header.appendChild(spectrum_selection);
+      let close = document.createElement("button");
+      close.innerText = "Close file"; // TODO: hook up
+      header.appendChild(close);
+
+      let spectra_list = document.createElement("ul");
+      spectra_list.id = "rawfile-" + file.id + "-spectra";
+      rawfile.appendChild(spectra_list);
+
+      root.appendChild(rawfile);
     }
-  ).catch((error) => {
-    document.querySelector("#spectrum-error").classList.remove("hidden");
-    document.querySelector("#spectrum-error").innerHTML = showError(error);
-  })
+
+    // By definition always refresh the selected as well
+    get_selected_spectra();
+  });
 }
 
-async function spectrum_details() {
-  invoke("spectrum_details", { index: Number(document.querySelector("#details-spectrum-index").value) }).then(
-    (result) => document.querySelector("#spectrum-details").innerHTML = result
-  ).catch((error) => {
-    document.querySelector("#spectrum-error").classList.remove("hidden");
-    document.querySelector("#spectrum-error").innerHTML = showError(error);
-    document.querySelector("#spectrum-details").innerText = "ERROR";
-  })
+/// Refresh the selected spectra
+async function get_selected_spectra() {
+  invoke("get_selected_spectra", {}).then(
+    (result) => {
+      for (let index in result) {
+        let spectra = document.getElementById("rawfile-" + index + "-spectra");
+        spectra.innerHTML = '';
+        for (let element of result[index]) {
+          let li = document.createElement("li");
+          let close = document.createElement("button");
+          close.innerText = "Unselect"; // TODO: hook up
+          li.appendChild(close);
+          li.appendChild(createElement("span", { text: element.short }));
+          let tooltip = document.createElement("div");
+          tooltip.className = "tooltip";
+          tooltip.innerHTML = element.description;
+          li.appendChild(tooltip);
+          li.setAttribute("data-index", String(element.id));
+
+          spectra.appendChild(li);
+        }
+      }
+    }
+  )
 }
 
 let displayed_identified_peptide = undefined;
@@ -548,8 +627,8 @@ window.addEventListener("DOMContentLoaded", () => {
     .addEventListener("input", details_formula);
   enter_event("#search-peptide-input", search_peptide)
   enter_event("#search-modification", search_modification)
-  enter_event("#scan-number", find_scan_number)
-  add_event("#details-spectrum-index", ["change", "focus"], spectrum_details)
+  // enter_event("#scan-number", find_scan_number)
+  // add_event("#details-spectrum-index", ["change", "focus"], spectrum_details)
   add_event("#details-identified-peptide-index", ["change", "focus"], identified_peptide_details)
   document
     .querySelector("#annotate-button")
@@ -711,9 +790,9 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // Refresh interface for hot reload
   invoke("refresh").then((result) => {
-    document.querySelector("#number-of-scans").innerText = result[0];
+    // document.querySelector("#number-of-scans").innerText = result[0];
     if (result[0] > 0) {
-      spectrum_details();
+      get_selected_spectra();
     }
     document.querySelector("#number-of-identified-peptides").innerText = result[1];
     if (result[1] > 0) {
@@ -721,6 +800,7 @@ window.addEventListener("DOMContentLoaded", () => {
       identified_peptide_details();
     }
     update_identified_peptide_file_select();
+    get_open_raw_files();
   })
 });
 
@@ -1006,4 +1086,23 @@ function enter_event(selector, callback) {
 
 function optional_number(text) {
   return text === "" ? null : Number(text);
+}
+
+function createElement(element, settings = undefined) {
+  let node = document.createElement(element);
+  if (settings != undefined) {
+    if (settings.text != undefined) {
+      node.innerText = settings.text;
+    }
+    if (settings.html != undefined) {
+      node.innerHTML = settings.html;
+    }
+    if (settings.id != undefined) {
+      node.id = settings.id;
+    }
+    if (settings.title != undefined) {
+      node.title = settings.title;
+    }
+  }
+  return node;
 }

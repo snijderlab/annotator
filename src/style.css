@@ -1056,3 +1056,70 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
     color: var(--color-green);
   }
 }
+
+/* Raw files */
+
+.rawfile {
+  .header {
+    display: flex;
+    align-items: baseline;
+    gap: 2rem;
+    margin: .5rem 0;
+
+    .spectrum-selection {
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      margin-left: auto;
+
+      .combined-input {
+        display: flex;
+        align-items: baseline;
+        gap: .5rem;
+      }
+    }
+  }
+
+  ul {
+    padding: 0 0 0 .5rem;
+  }
+
+  li {
+    word-break: break-all;
+    display: block;
+    margin-top: .5rem;
+    margin-left: 2rem;
+    position: relative;
+
+    &::before {
+      content: attr(data-index);
+      position: absolute;
+      display: block;
+      width: 2rem;
+      left: -2rem;
+    }
+
+    button {
+      margin-right: .5rem;
+    }
+
+    span {
+      padding: .5rem 0;
+    }
+
+    .tooltip {
+      display: none;
+    }
+
+    &:has(span:hover) .tooltip,
+    &:has(span:focus-visible) .tooltip,
+    .tooltip:hover {
+      display: block;
+      position: absolute;
+      background-color: var(--color-background);
+      border: 2px solid var(--color-primary);
+      padding: .5rem;
+      z-index: 1;
+    }
+  }
+}

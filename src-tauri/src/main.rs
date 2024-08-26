@@ -4,12 +4,12 @@
 )]
 
 use itertools::Itertools;
-use metadata_render::OptionalString;
 use mzdata::{
-    io::{MZFileReader, SpectrumSource},
-    prelude::{IonProperties, PrecursorSelection, SpectrumLike},
-    spectrum::ActivationMethod,
+    io::SpectrumSource,
+    prelude::{IonProperties, SpectrumLike},
+    spectrum::{MultiLayerSpectrum, SignalContinuity, SpectrumDescription},
 };
+use mzpeaks::{CentroidPeak, DeconvolutedPeak};
 use mzsignal::{PeakFitType, PeakPicker};
 use ordered_float::OrderedFloat;
 use render::{display_formula, display_mass};
@@ -34,6 +34,7 @@ mod identified_peptides;
 mod metadata_render;
 mod render;
 mod search_modification;
+mod spectra;
 mod state;
 
 const CUSTOM_MODIFICATIONS_FILE: &str = "custom_modifications.json";
@@ -43,23 +44,11 @@ type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
 fn refresh(state: ModifiableState) -> (usize, usize) {
     let state = state.lock().unwrap();
     let res = (
-        state.spectra.as_ref().map(|s| s.len()).unwrap_or_default(),
+        0, // state.spectra.as_ref().map(|s| s.len()).unwrap_or_default(),
         state.identified_peptide_files().len(),
     );
     drop(state);
     res
-}
-
-#[tauri::command]
-async fn load_mgf<'a>(path: &'a str, state: ModifiableState<'a>) -> Result<usize, String> {
-    match mzdata::io::MZReaderType::open_path(path) {
-        Ok(v) => {
-            let len = v.len();
-            state.lock().unwrap().spectra = Some(v);
-            Ok(len)
-        }
-        Err(err) => Err(err.to_string()),
-    }
 }
 
 #[tauri::command]
@@ -141,86 +130,6 @@ async fn details_formula(text: &str) -> Result<String, CustomError> {
 }
 
 #[tauri::command]
-fn find_scan_number(scan_number: usize, state: ModifiableState) -> Result<usize, &'static str> {
-    state
-        .lock()
-        .unwrap()
-        .spectra
-        .as_mut()
-        .ok_or("No spectra loaded")
-        .and_then(|s| {
-            s.get_spectrum_by_id(&format!(
-                "controllerType=0 controllerNumber=1 scan={scan_number}"
-            ))
-            .map(|s| s.index())
-            .ok_or("Could not find scan number")
-        })
-}
-
-#[tauri::command]
-fn spectrum_details(index: usize, state: ModifiableState) -> String {
-    state
-        .lock()
-        .unwrap()
-        .spectra
-        .as_mut()
-        .map(|s: &mut mzdata::io::MZReaderType<std::fs::File>| {
-            s.get_spectrum_by_index(index).map_or(
-                "Spectrum index not valid".to_string(),
-                |spectrum| {
-                    let d = spectrum.description();
-                    let p = spectrum.precursor();
-                    format!(
-                        "{}\ntime: {} signal mode: {:?} ms level: {} ion mobility: {}\n{}{}",
-                        d.id,
-                        spectrum.start_time(),
-                        spectrum.signal_continuity(),
-                        spectrum.ms_level(),
-                        spectrum.ion_mobility().to_optional_string(),
-                        p.map_or("No precursor".to_string(), |p| {
-                            let i = p.isolation_window();
-                            format!(
-                                "Precursor mass: {:.3} charge: {} target: {} range: {} — {} method: {} energy: {:.1}",
-                                p.neutral_mass(),
-                                p.charge().map_or("-".to_string(), |v| format!("{v:+.0}")),
-                                i.target,
-                                i.lower_bound,
-                                i.upper_bound,
-                                p.activation
-                                    .method()
-                                    .map_or("-", |m| match m {
-                                        ActivationMethod::BeamTypeCollisionInducedDissociation => "BeamCID",
-                                        ActivationMethod::CollisionInducedDissociation => "CID",
-                                        ActivationMethod::ElectronActivationDissociation => "EAD",
-                                        ActivationMethod::ElectronCaptureDissociation => "ECD",
-                                        ActivationMethod::ElectronTransferDissociation => "ETD",
-                                        ActivationMethod::HighEnergyCollisionInducedDissociation => "HCD",
-                                        ActivationMethod::InSourceCollisionInducedDissociation => "isCID",
-                                        ActivationMethod::LowEnergyCollisionInducedDissociation => "lowCID",
-                                        ActivationMethod::NegativeElectronTransferDissociation => "nETD",
-                                        ActivationMethod::Other(_) => "other",
-                                        ActivationMethod::Photodissociation => "PD",
-                                        ActivationMethod::SupplementalBeamTypeCollisionInducedDissociation => "sBeamCID",
-                                        ActivationMethod::SupplementalCollisionInducedDissociation => "sCID",
-                                        ActivationMethod::TrapTypeCollisionInducedDissociation => "trapCID",
-                                        ActivationMethod::UltravioletPhotodissociation => "UVPD",
-                                    }),
-                                p.activation.energy,
-                            )
-                        }),
-                        if let Some(param) = spectrum.params().iter().find(|p| p.name == "sequence") {
-                            format!("\nSequence: <span style='user-select:all'>{}</span>", param.value)
-                        } else {
-                            String::new()
-                        },                        
-                    )
-                },
-            )
-        })
-        .unwrap_or("No spectra loaded".to_string())
-}
-
-#[tauri::command]
 fn identified_peptide_details(file: usize, index: usize, state: ModifiableState) -> String {
     state
         .lock()
@@ -237,97 +146,6 @@ fn identified_peptide_details(file: usize, index: usize, state: ModifiableState)
                 )
             },
         )
-}
-
-#[tauri::command]
-fn load_clipboard(data: &str, state: ModifiableState) -> Result<usize, String> {
-    let lines = data.lines().collect_vec();
-    if data.is_empty() {
-        return Err("Empty clipboard".to_string());
-    }
-    let spectrum = match lines[0].trim() {
-        "#	m/z	Res.	S/N	I	I %	FWHM" => load_bruker_clipboard(&lines),
-        "m/z	Charge	Intensity	FragmentType	MassShift	Position" => load_stitch_clipboard(&lines),
-        "Mass/Charge Intensity" => load_sciex_clipboard(&lines),
-        _ => Err("Not a recognised format (Bruker/Stitch/Sciex)".to_string()),
-    }?;
-
-    let mut new_spectrum = RawSpectrum::default();
-    new_spectrum.extend(spectrum);
-    new_spectrum.title = "Clipboard".to_string();
-    new_spectrum.charge = None;
-
-    // state.lock().unwrap().spectra = vec![new_spectrum]; // TODO: figure out how to store clipboard spectra
-    Ok(1)
-}
-
-fn load_bruker_clipboard(lines: &[&str]) -> Result<Vec<RawPeak>, String> {
-    let mut spectrum = Vec::new();
-    for (line_number, line) in lines.iter().enumerate().skip(1) {
-        let line_number = line_number + 1; // Humans like 1 based counting...
-        let cells = line.split('\t').collect_vec();
-        if cells.len() != 8 {
-            return Err(format!("Incorrect number of columns at line {line_number}"));
-        }
-        if let (Ok(mass_over_charge), Ok(intensity)) = (cells[1].parse(), cells[4].parse()) {
-            spectrum.push(RawPeak {
-                mz: MassOverCharge::new::<mz>(mass_over_charge),
-                intensity,
-            })
-        } else {
-            return Err(format!(
-                "Could not read numbers at line {line_number} '{line}' '{}' '{}'",
-                cells[1], cells[4]
-            ));
-        }
-    }
-    Ok(spectrum)
-}
-
-fn load_stitch_clipboard(lines: &[&str]) -> Result<Vec<RawPeak>, String> {
-    let mut spectrum = Vec::new();
-    for (line_number, line) in lines.iter().enumerate().skip(1) {
-        let line_number = line_number + 1; // Humans like 1 based counting...
-        let cells = line.split('\t').collect_vec();
-        if cells.len() != 6 {
-            return Err(format!("Incorrect number of columns at line {line_number}"));
-        }
-        if let (Ok(mass_over_charge), Ok(intensity)) = (cells[0].parse(), cells[2].parse()) {
-            spectrum.push(RawPeak {
-                mz: MassOverCharge::new::<mz>(mass_over_charge),
-                intensity,
-            })
-        } else {
-            return Err(format!(
-                "Could not read numbers at line {line_number} '{line}' '{}' '{}'",
-                cells[0], cells[2]
-            ));
-        }
-    }
-    Ok(spectrum)
-}
-
-fn load_sciex_clipboard(lines: &[&str]) -> Result<Vec<RawPeak>, String> {
-    let mut spectrum = Vec::new();
-    for (line_number, line) in lines.iter().enumerate().skip(1) {
-        let line_number = line_number + 1; // Humans like 1 based counting...
-        let cells = line.split(' ').collect_vec();
-        if cells.len() != 2 {
-            return Err(format!("Incorrect number of columns at line {line_number}"));
-        }
-        if let (Ok(mass_over_charge), Ok(intensity)) = (cells[0].parse(), cells[1].parse()) {
-            spectrum.push(RawPeak {
-                mz: MassOverCharge::new::<mz>(mass_over_charge),
-                intensity,
-            })
-        } else {
-            return Err(format!(
-                "Could not read numbers at line {line_number} '{line}' '{}' '{}'",
-                cells[0], cells[1]
-            ));
-        }
-    }
-    Ok(spectrum)
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
@@ -495,26 +313,47 @@ async fn annotate_spectrum<'a>(
         .flat_map(|p| p.peptides())
         .count()
         == 1;
-    let mut spectrum = state
-        .spectra
-        .as_mut()
-        .ok_or_else(|| {
-            CustomError::error(
-                "Spectra not loaded",
-                "Make sure to load spectra before trying to annotate a spectrum",
-                Context::None,
-            )
-        })?
-        .get_spectrum_by_index(index)
-        .ok_or_else(|| {
-            CustomError::error(
-                "Could not find spectrum",
-                "This spectrum index does not exist",
-                Context::None,
-            )
-        })?
-        .clone();
-    // dbg!(&spectrum);
+
+    let mut spectra = Vec::new();
+    let mut dx = None;
+    for file in state.spectra.iter_mut() {
+        for index in &file.1 {
+            let spectrum = file.0.get_spectrum_by_index(*index).ok_or_else(|| {
+                CustomError::error(
+                    "Could not find spectrum",
+                    "This spectrum index does not exist",
+                    Context::None,
+                )
+            })?;
+            if spectrum.signal_continuity() == SignalContinuity::Profile {
+                let spectrum_dx = spectrum
+                    .raw_arrays()
+                    .map(|r| r.mzs().unwrap())
+                    .and_then(|mzs| {
+                        mzs.last().and_then(|end| {
+                            mzs.first().map(|start| (end - start) / mzs.len() as f64)
+                        })
+                    });
+                if let (Some(prev_dx), Some(this_dx)) = (dx, spectrum_dx) {
+                    if prev_dx != this_dx {
+                        return Err(CustomError::error("Could not merge spectra", "Merged multiple raw spectra with different dx, distance between points on the mz axis", Context::None));
+                    }
+                }
+                if spectrum_dx.is_some() {
+                    dx = spectrum_dx;
+                }
+            }
+            spectra.push(spectrum);
+        }
+    }
+    let data = mzdata::spectrum::average_spectra(&spectra, dx.unwrap_or(0.01));
+    let mut spectrum = MultiLayerSpectrum::<CentroidPeak, DeconvolutedPeak>::new(
+        SpectrumDescription::default(),
+        Some(data.into()),
+        None,
+        None,
+    );
+
     if spectrum.peaks.is_none() {
         spectrum.denoise(0.5).map_err(|err| {
             CustomError::error(
@@ -594,7 +433,7 @@ fn load_custom_mods(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
 fn main() {
     tauri::Builder::default()
         .manage(Mutex::new(State {
-            spectra: None,
+            spectra: Vec::new(),
             identified_peptide_files: std::cell::RefCell::new(Vec::new()),
             database: Vec::new(),
         }))
@@ -612,19 +451,22 @@ fn main() {
             custom_modifications::validate_placement_rule,
             custom_modifications::validate_stub,
             details_formula,
-            find_scan_number,
             identified_peptide_details,
             identified_peptides::close_identified_peptides_file,
             identified_peptides::get_identified_peptides_files,
             identified_peptides::load_identified_peptide,
             identified_peptides::load_identified_peptides_file,
             identified_peptides::search_peptide,
-            load_clipboard,
-            load_mgf,
             refresh,
             render::density_graph,
             search_modification::search_modification,
-            spectrum_details,
+            spectra::find_scan_number,
+            spectra::load_clipboard,
+            spectra::load_raw,
+            spectra::select_spectrum_index,
+            spectra::select_spectrum_scan_number,
+            spectra::get_open_raw_files,
+            spectra::get_selected_spectra,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
