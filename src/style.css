@@ -1123,3 +1123,9 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
     }
   }
 }
+
+.hint {
+  color: var(--color-halfway-fg);
+  padding-left: 1rem;
+  font-style: italic;
+}

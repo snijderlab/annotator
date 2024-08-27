@@ -3,7 +3,7 @@ const { invoke } = window.__TAURI__.tauri;
 
 const { listen } = window.__TAURI__.event
 
-const RAW_EXTENSIONS = ['mgf', 'mgf.gz', "mzML", "mzML.gz", "imzMl", "imzML.gz", "mzMLb", "mzMLb.gz", "raw", "raw.gz"];
+const RAW_EXTENSIONS = ['mgf', 'mgf.gz', "mzml", "mzml.gz", "imzml", "imzml.gz", "mzmlb", "mzmlb.gz", "raw", "raw.gz"];
 const IDENTIFIED_EXTENSIONS = ["csv", "csv.gz", "tsv", "tsv.gz", "txt", "txt.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz"];
 
 import { SetUpSpectrumInterface } from "./stitch-assets/script.js";
@@ -13,19 +13,24 @@ listen('tauri://file-drop', event => {
   document.querySelector("html").classList.remove("file-drop-hover");
   let opens = [];
   let peptides = false;
+  let raw_files = false;
 
   for (let i = 0; i < event.payload.length; i++) {
     let file = event.payload[i];
     let extension = file.toLowerCase().split('.').pop();
     if (extension == "gz") {
-      let extension = file.toLowerCase().split('.').reverse()[1] + ".gz";
+      extension = file.toLowerCase().split('.').reverse()[1] + ".gz";
     }
-    if (RAW_EXTENSIONS.contains(extension)) {
+    if (RAW_EXTENSIONS.includes(extension)) {
+      document.querySelector("#load-raw-path").classList.add("loading")
+      raw_files = true;
       opens.push(load_raw(file));
-    } else {
+    } else if (IDENTIFIED_EXTENSIONS.includes(extension)) {
       document.querySelector("#load-identified-peptides").classList.add("loading")
       peptides = true;
       opens.push(load_identified_peptides(file));
+    } else {
+      console.error("Extension not recognised", extension);
     }
   }
   Promise.all(opens).then(() => {
@@ -33,6 +38,10 @@ listen('tauri://file-drop', event => {
       update_identified_peptide_file_select();
       identified_peptide_details();
       document.querySelector("#load-identified-peptides").classList.remove("loading");
+    }
+    if (raw_files) {
+      update_open_raw_files();
+      document.querySelector("#load-raw-path").classList.remove("loading");
     }
   });
 })
@@ -57,16 +66,23 @@ document.addEventListener("dragend", () => document.querySelector("html").classL
 */
 async function select_raw_file(e) {
   let properties = {
-    //defaultPath: 'C:\\',
     directory: false,
+    multiple: true,
     filters: [{
       extensions: RAW_EXTENSIONS, name: "*"
     }]
   };
   window.__TAURI__.dialog.open(properties).then((result) => {
     if (result != null) {
-      e.dataset.filepath = result;
-      load_raw(e.dataset.filepath);
+      document.querySelector("#load-raw-path").classList.add("loading")
+      let opens = [];
+      for (let file of result) {
+        opens.push(load_raw(file));
+      }
+      Promise.all(opens).then(() => {
+        update_open_raw_files();
+        document.querySelector("#load-raw-path").classList.remove("loading");
+      });
     }
   })
 };
@@ -99,26 +115,19 @@ async function dialog_select_identified_peptides_file(e) {
 };
 
 async function load_raw(path) {
-  document.querySelector("#load-mgf-path").classList.add("loading")
-  invoke("load_raw", { path: path }).then((result) => {
-    update_open_raw_files();
-    document.querySelector("#load-mgf-path").classList.remove("loading")
+  return invoke("load_raw", { path: path }).then(() => {
+    clearError("open-files-error");
   }).catch((error) => {
-    document.querySelector("#loaded-path").classList.add("error");
-    document.querySelector("#loaded-path").innerHTML = showError(error)
-    document.querySelector("#load-mgf-path").classList.remove("loading")
-  })
+    showError("open-files-error", error);
+  });
 }
 
 async function load_identified_peptides(path) {
-  return invoke("load_identified_peptides_file", { path: path }).then((result) => {
-    document.querySelector("#loaded-identified-peptides-path").classList.remove("error");
-    console.log(result);
-    document.querySelector("#loaded-identified-peptides-path").innerText = "";
+  return invoke("load_identified_peptides_file", { path: path }).then(() => {
+    clearError("open-files-error");
     displayed_identified_peptide = undefined;
   }).catch((error) => {
-    document.querySelector("#loaded-identified-peptides-path").classList.add("error");
-    document.querySelector("#loaded-identified-peptides-path").innerHTML = showError(error)
+    showError("open-files-error", error);
   });
 }
 
@@ -159,8 +168,7 @@ async function update_identified_peptide_file_select() {
       document.querySelector("#peptides").style.display = "block";
     }
   }).catch((error) => {
-    document.querySelector("#loaded-identified-peptides-path").classList.add("error");
-    document.querySelector("#loaded-identified-peptides-path").innerHTML = showError(error)
+    showError("open-files-error", error);
     document.querySelector("#load-identified-peptides").classList.remove("loading")
   })
 }
@@ -171,20 +179,17 @@ async function load_clipboard() {
     .readText()
     .then(async (clipText) => {
       invoke("load_clipboard", { data: clipText }).then((result) => {
-        document.querySelector("#loaded-path").classList.remove("error");
-        document.querySelector("#loaded-path").innerText = "Clipboard";
+        clearError("open-files-error");
         document.querySelector("#number-of-scans").innerText = result;
         update_selected_spectra();
         document.querySelector("#load-clipboard").classList.remove("loading")
       }).catch((error) => {
-        document.querySelector("#loaded-path").classList.add("error");
-        document.querySelector("#loaded-path").innerHTML = showError(error);
+        showError("open-files-error", error);
         document.querySelector("#load-clipboard").classList.remove("loading")
       })
     })
     .catch(() => {
-      document.querySelector("#loaded-path").classList.add("error");
-      document.querySelector("#loaded-path").innerHTML = showError("Could not load clipboard, did you give permission to read the clipboard?");
+      showError("open-files-error", "Could not load clipboard, did you give permission to read the clipboard?");
       document.querySelector("#load-clipboard").classList.remove("loading")
     });
 }
@@ -194,85 +199,92 @@ async function update_open_raw_files() {
     let root = document.querySelector("#spectra");
     root.innerHTML = '';
 
-    for (let file of result) {
-      let rawfile = document.createElement("div");
-      rawfile.className = "rawfile";
-      let header = document.createElement("div");
-      rawfile.appendChild(header);
-      header.className = "header";
-      header.id = "rawfile-" + file.id;
-      header.appendChild(createElement("span", { text: "R" + (file.id + 1) + ":" + file.description.split('\\').pop().split('/').pop(), title: file.description }));
-      let spectrum_selection = document.createElement("div");
-      spectrum_selection.className = "spectrum-selection";
-      let label_index = document.createElement("label");
-      label_index.setAttribute("for", "spectrum-" + file.id + "-index")
-      label_index.innerText = "Spectrum index";
-      spectrum_selection.appendChild(label_index)
-      let group_index = document.createElement("div");
-      group_index.className = "combined-input";
-      let input_index = document.createElement("input");
-      input_index.id = "spectrum-" + file.id + "-index";
-      input_index.setAttribute("min", "0");
-      input_index.setAttribute("type", "number");
-      let select_on_index = () => {
-        if (input_index.value.trim() != "") {
-          invoke("select_spectrum_index", { fileIndex: file.id, index: Number(input_index.value) }).catch((error) => {
-            document.querySelector("#spectrum-error").classList.remove("hidden");
-            document.querySelector("#spectrum-error").innerHTML = showError(error);
-            document.querySelector("#spectrum-details").innerText = "ERROR";
-          }).then(
-            () => {
-              input_index.value = "";
-              update_selected_spectra();
-            }
-          )
-        }
-      };
-      input_index.addEventListener("focusout", select_on_index);
-      input_index.addEventListener("keydown", event => { if (event.keyCode == 13) { select_on_index() } else { } });
-      group_index.appendChild(input_index);
-      group_index.appendChild(createElement("span", { text: "/" }))
-      group_index.appendChild(createElement("span", { text: file.spectra, id: "spectrum-" + file.id + "-scans" }))
-      spectrum_selection.appendChild(group_index);
-      let label_scan = document.createElement("label");
-      label_scan.setAttribute("for", "spectrum-" + file.id + "-number")
-      label_scan.innerText = "Scan number";
-      spectrum_selection.appendChild(label_scan)
-      let input_scan = document.createElement("input");
-      input_scan.id = "spectrum-" + file.id + "-number";
-      input_scan.setAttribute("min", "0");
-      let select_on_scan = () => {
-        if (input_scan.value.trim() != "") {
-          invoke("select_spectrum_scan_number", { fileIndex: file.id, scanNumber: input_scan.value }).catch((error) => {
-            document.querySelector("#spectrum-error").classList.remove("hidden");
-            document.querySelector("#spectrum-error").innerHTML = showError(error);
-            document.querySelector("#spectrum-details").innerText = "ERROR";
-          }).then(
-            () => {
-              input_scan.value = "";
-              update_selected_spectra();
-            }
-          )
-        }
-      };
-      input_scan.addEventListener("focusout", select_on_scan);
-      input_scan.addEventListener("keydown", event => { if (event.keyCode == 13) { select_on_scan() } else { } });
-      spectrum_selection.appendChild(input_scan);
-      header.appendChild(spectrum_selection);
-      let close = document.createElement("button");
-      close.innerText = "Close file";
-      close.addEventListener("click", () => invoke("close_raw_file", { fileIndex: file.id }).then(update_open_raw_files()));
-      header.appendChild(close);
+    if (result.length == 0) {
+      root.innerText = "No raw files opened, either drag some in or open files with the buttons above."
+      root.classList.add("hint");
+    } else {
+      root.classList.remove("hint");
 
-      let spectra_list = document.createElement("ul");
-      spectra_list.id = "rawfile-" + file.id + "-spectra";
-      rawfile.appendChild(spectra_list);
+      for (let file of result) {
+        let rawfile = document.createElement("div");
+        rawfile.className = "rawfile";
+        let header = document.createElement("div");
+        rawfile.appendChild(header);
+        header.className = "header";
+        header.id = "rawfile-" + file.id;
+        header.appendChild(createElement("span", { text: "R" + (file.id + 1) + ":" + file.description.split('\\').pop().split('/').pop(), title: file.description }));
+        let spectrum_selection = document.createElement("div");
+        spectrum_selection.className = "spectrum-selection";
+        spectrum_selection.appendChild(createElement("label", {
+          text: "Spectrum index",
+          for: "spectrum-" + file.id + "-index",
+          title: "The index of the spectrum is the 0 based index in the file, so the first spectrum has index 0, the second 1, etc"
+        }))
+        let group_index = document.createElement("div");
+        group_index.className = "combined-input";
+        let input_index = document.createElement("input");
+        input_index.id = "spectrum-" + file.id + "-index";
+        input_index.setAttribute("min", "0");
+        input_index.setAttribute("type", "number");
+        let select_on_index = () => {
+          if (input_index.value.trim() != "") {
+            invoke("select_spectrum_index", { fileIndex: file.id, index: Number(input_index.value) }).then(
+              () => {
+                clearError("open-files-error");
+                input_index.value = "";
+                update_selected_spectra();
+              }
+            ).catch((error) => {
+              showError("open-files-error", error);
+            })
+          }
+        };
+        input_index.addEventListener("focusout", select_on_index);
+        input_index.addEventListener("keydown", event => { if (event.keyCode == 13) { select_on_index() } else { } });
+        group_index.appendChild(input_index);
+        group_index.appendChild(createElement("span", { text: "/" }))
+        group_index.appendChild(createElement("span", { text: file.spectra, id: "spectrum-" + file.id + "-scans" }))
+        spectrum_selection.appendChild(group_index);
+        spectrum_selection.appendChild(createElement("label", {
+          text: "Scan number",
+          for: "spectrum-" + file.id + "-number",
+          title: "The scan number for a spectrum is the 1 based index in order of measuring on the original instrument. This can be used to track the same spectrum through multiple subsequent programs."
+        }))
+        let input_scan = document.createElement("input");
+        input_scan.id = "spectrum-" + file.id + "-number";
+        input_scan.setAttribute("min", "0");
+        let select_on_scan = () => {
+          if (input_scan.value.trim() != "") {
+            invoke("select_spectrum_scan_number", { fileIndex: file.id, scanNumber: input_scan.value }).then(
+              () => {
+                clearError("open-files-error");
+                input_scan.value = "";
+                update_selected_spectra();
+              }
+            ).catch((error) => {
+              showError("open-files-error", error);
+            })
+          }
+        };
+        input_scan.addEventListener("focusout", select_on_scan);
+        input_scan.addEventListener("keydown", event => { if (event.keyCode == 13) { select_on_scan() } else { } });
+        spectrum_selection.appendChild(input_scan);
+        header.appendChild(spectrum_selection);
+        let close = document.createElement("button");
+        close.innerText = "Close file";
+        close.addEventListener("click", () => invoke("close_raw_file", { fileIndex: file.id }).then(update_open_raw_files()));
+        header.appendChild(close);
 
-      root.appendChild(rawfile);
+        let spectra_list = document.createElement("ul");
+        spectra_list.id = "rawfile-" + file.id + "-spectra";
+        rawfile.appendChild(spectra_list);
+
+        root.appendChild(rawfile);
+      }
+
+      // By definition always refresh the selected as well
+      update_selected_spectra();
     }
-
-    // By definition always refresh the selected as well
-    update_selected_spectra();
   });
 }
 
@@ -281,10 +293,11 @@ async function update_selected_spectra() {
   invoke("get_selected_spectra", {}).then(
     (result) => {
       for (let i in result) {
-        let index = Number(i);
+        let index = Number(result[i][0]);
         let spectra = document.getElementById("rawfile-" + index + "-spectra");
         spectra.innerHTML = '';
-        for (let element of result[index]) {
+
+        for (let element of result[i][1]) {
           let li = document.createElement("li");
           let close = document.createElement("button");
           close.innerText = "Unselect";
@@ -314,9 +327,9 @@ async function identified_peptide_details() {
     invoke("identified_peptide_details", { file: file_id, index: index }).then((result) => {
       document.querySelector("#identified-peptide-details").innerHTML = result;
       displayed_identified_peptide = [file_id, index];
+      clearError("spectrum-error");
     }).catch((error) => {
-      document.querySelector("#spectrum-error").classList.remove("hidden");
-      document.querySelector("#spectrum-error").innerHTML = showError(error);
+      showError("spectrum-error", error);
       document.querySelector("#identified-peptide-details").innerText = "ERROR";
     })
   }
@@ -328,11 +341,11 @@ async function search_peptide() {
     invoke("search_peptide", { text: document.querySelector("#search-peptide-input").value, minimalMatchScore: Number(document.querySelector("#search-peptide-minimal-match").value), minimalPeptideScore: Number(document.querySelector("#search-peptide-minimal-peptide").value) }).then((result) => {
       document.querySelector("#resulting-peptides").innerHTML = result;
       document.querySelector("#search-peptide").classList.remove("loading");
+      clearError("spectrum-error");
     }).catch((error) => {
-      document.querySelector("#spectrum-error").classList.remove("hidden");
-      document.querySelector("#spectrum-error").innerHTML = showError(error);
+      showError("spectrum-error", error);
       document.querySelector("#search-peptide").classList.remove("loading");
-      document.querySelector("#resulting-peptides").innerText = "ERROR";
+      document.querySelector("#resulting-peptides").innerText = "ERROR"; // TODO: does this exist?
     })
   } else {
     document.querySelector("#resulting-peptides").innerText = "";
@@ -342,6 +355,7 @@ async function search_peptide() {
 async function close_identified_peptide_file() {
   let select = document.querySelector("#details-identified-peptide-files");
   invoke("close_identified_peptides_file", { file: Number(select.options[select.selectedIndex].value) }).then(() => {
+    clearError("spectrum-error");
     if (select.children.length <= 1) {
       document.querySelector("#peptides").style.display = "none";
     } else {
@@ -349,9 +363,8 @@ async function close_identified_peptide_file() {
       identified_peptide_details();
     }
   }).catch((error) => {
-    document.querySelector("#spectrum-error").classList.remove("hidden");
-    document.querySelector("#spectrum-error").innerHTML = showError(error);
-    document.querySelector("#identified-peptide-details").innerText = "ERROR";
+    showError("spectrum-error", error);
+    document.querySelector("#identified-peptide-details").innerText = "ERROR"; // TODO: does this exist?
   })
 }
 
@@ -368,10 +381,9 @@ async function search_modification() {
     invoke("search_modification", { text: document.querySelector("#search-modification").value, tolerance: Number(document.querySelector("#search-modification-tolerance").value) }).then((result) => {
       document.querySelector("#search-modification-result").innerHTML = result;
       document.querySelector("#search-modification-button").classList.remove("loading");
-      document.querySelector("#search-modification-error").classList.add("hidden");
+      clearError("search-modification-error");
     }).catch((error) => {
-      document.querySelector("#search-modification-error").classList.remove("hidden");
-      document.querySelector("#search-modification-error").innerHTML = showError(error);
+      showError("search-modification-error", error);
       document.querySelector("#search-modification-button").classList.remove("loading");
     })
   } else {
@@ -383,14 +395,13 @@ async function details_formula(event) {
   const formula = document.getElementById("details-formula");
   invoke("details_formula", { text: formula.innerText }).then((result) => {
     document.querySelector("#details-formula-result").innerHTML = result;
-    document.querySelector("#details-formula-error").classList.add("hidden");
     if (formula.querySelector(".error") != null) {
       formula.innerText = formula.innerText;
       moveCursorToEnd(formula);
     }
+    clearError("details-formula-error");
   }).catch((error) => {
-    document.querySelector("#details-formula-error").classList.remove("hidden");
-    document.querySelector("#details-formula-error").innerHTML = showError(error, false);
+    showError("details-formula-error", error, false);
     formula.innerHTML = showContext(error, formula.innerText);
     moveCursorToEnd(formula);
   })
@@ -408,10 +419,10 @@ async function load_identified_peptide() {
       document.querySelector("#spectrum-model").value = result.mode.toLowerCase();
     }
     document.querySelector("#details-spectrum-index").value = result.scan_index;
+    clearError("spectrum-error", error);
   }).catch((error) => {
-    document.querySelector("#spectrum-error").classList.remove("hidden");
-    document.querySelector("#spectrum-error").innerHTML = showError(error);
-    document.querySelector("#identified-peptide-details").innerText = "ERROR";
+    showError("spectrum-error", error);
+    document.querySelector("#identified-peptide-details").innerText = "ERROR"; // TODO: does this exist?
   })
 }
 
@@ -429,22 +440,6 @@ function get_location(id) {
     return obj;
   } else if (t == "TakeN") {
     return { [t]: { "skip": Number(loc.children[1].value), "take": Number(loc.children[2].value) } };
-  } else {
-    return t;
-  }
-}
-
-function get_noise_filter(id) {
-  let loc = document.querySelector(id);
-  let t = loc.children[0].options[Number(loc.children[0].value)].dataset.value;
-  if (["Relative", "Absolute"].includes(t)) {
-    let obj = {};
-    obj[t] = Number(loc.children[1].value);
-    return obj;
-  } else if (t == "TopX") {
-    let obj = {};
-    obj[t] = [Number(loc.children[1].value), Number(loc.children[2].value)];
-    return obj;
   } else {
     return t;
   }
@@ -473,7 +468,7 @@ async function annotate_spectrum() {
   document.querySelector("#annotate-button").classList.add("loading");
   document.querySelector("#peptide").innerText = document.querySelector("#peptide").innerText.trim();
   var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);
-  var noise_threshold = get_noise_filter("#noise-filter");
+  var noise_threshold = Number(document.querySelector("#noise-filter").value);
   var model = {
     a: [get_location("#model-a-location"), get_losses("a"), get_charge_range("a")],
     b: [get_location("#model-b-location"), get_losses("b"), get_charge_range("b")],
@@ -510,7 +505,6 @@ async function annotate_spectrum() {
     document.querySelector("#spectrum-fragment-table").innerHTML = result.fragment_table;
     document.querySelector("#spectrum-error").innerText = "";
     document.querySelector("#spectrum-wrapper").classList.remove("hidden"); // Remove hidden class if this is the first run
-    document.querySelector("#spectrum-error").classList.add("hidden");
     document.querySelector("#spectrum-mz-max").value = result.mz_max;
     document.querySelector("#spectrum-intensity-max").value = result.intensity_max;
     document.querySelector("#spectrum-label").value = 90;
@@ -519,15 +513,15 @@ async function annotate_spectrum() {
     document.querySelector("#spectrum-m-z-value").value = 0;
     SetUpSpectrumInterface();
     document.querySelector("#annotate-button").classList.remove("loading");
+    clearError("spectrum-error");
   }).catch((error) => {
-    document.querySelector("#spectrum-error").classList.remove("hidden");
-    document.querySelector("#spectrum-error").innerHTML = showError(error, false);
+    showError("spectrum-error", error, false);
     document.querySelector("#peptide").innerHTML = showContext(error, document.querySelector("#peptide").innerText);
     document.querySelector("#annotate-button").classList.remove("loading");
   })
 }
 
-function showError(error, showContext = true) {
+function formatError(error, showContext = true) {
   console.error(error);
   if (typeof error == "string") {
     return "<div class='raw'>" + error + "</div>";
@@ -607,7 +601,7 @@ window.addEventListener("DOMContentLoaded", () => {
   document.querySelector(".resize").addEventListener("mousedown", resizeDown);
   document.querySelectorAll(".collapsible>legend").forEach(element => element.addEventListener("click", (e) => document.getElementById(e.target.parentElement.dataset.linkedItem).toggleAttribute("checked")));
   document
-    .querySelector("#load-mgf-path")
+    .querySelector("#load-raw-path")
     .addEventListener("click", (event) => select_raw_file(event.target));
   document
     .querySelector("#load-identified-peptides")
@@ -708,7 +702,7 @@ window.addEventListener("DOMContentLoaded", () => {
         .then(value => e.target.innerHTML = value)
         .catch(error => {
           e.target.parentElement.parentElement.classList.add("error");
-          e.target.parentElement.parentElement.querySelector("output.error").innerHTML = showError(error, false);
+          e.target.parentElement.parentElement.querySelector("output.error").innerHTML = formatError(error, false);
           e.target.innerHTML = showContext(error, text);
         });
     }
@@ -1020,28 +1014,28 @@ async function addValueSeparatedElement(element, value) {
       verified_value = await invoke("validate_molecular_formula", { text: value })
         .catch(error => {
           input.innerHTML = showContext(error, value);
-          outer.querySelector("output.error").innerHTML = showError(error, false);
+          outer.querySelector("output.error").innerHTML = formatError(error, false);
         });
       break;
     case "neutral_loss":
       verified_value = await invoke("validate_neutral_loss", { text: value })
         .catch(error => {
           input.innerHTML = showContext(error, value);
-          outer.querySelector("output.error").innerHTML = showError(error, false);
+          outer.querySelector("output.error").innerHTML = formatError(error, false);
         });
       break;
     case "placement_rule":
       verified_value = await invoke("validate_placement_rule", { text: value })
         .catch(error => {
           input.innerHTML = showContext(error, value);
-          outer.querySelector("output.error").innerHTML = showError(error, false);
+          outer.querySelector("output.error").innerHTML = formatError(error, false);
         });
       break;
     case "stub":
       verified_value = await invoke("validate_stub", { text: value })
         .catch(error => {
           input.innerHTML = showContext(error, value);
-          outer.querySelector("output.error").innerHTML = showError(error, false);
+          outer.querySelector("output.error").innerHTML = formatError(error, false);
         });
       break;
     case "cross_id":
@@ -1113,6 +1107,23 @@ function createElement(element, settings = undefined) {
     if (settings.title != undefined) {
       node.title = settings.title;
     }
+    if (settings.for != undefined) {
+      node.setAttribute("for", settings.for)
+    }
   }
   return node;
+}
+
+function showError(id, error, showContext = true) {
+  let node = document.getElementById(id);
+  node.classList.add("error");
+  node.classList.remove("hidden");
+  node.innerHTML = formatError(error, showContext);
+}
+
+function clearError(id) {
+  let node = document.getElementById(id);
+  node.classList.remove("error");
+  node.classList.add("hidden");
+  node.innerHTML = "";
 }

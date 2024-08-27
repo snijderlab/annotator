@@ -191,13 +191,13 @@ pub fn get_open_raw_files(state: ModifiableState) -> Vec<RawFileDetails> {
 }
 
 #[tauri::command]
-pub fn get_selected_spectra(state: ModifiableState) -> Vec<Vec<SelectedSpectrumDetails>> {
+pub fn get_selected_spectra(state: ModifiableState) -> Vec<(usize, Vec<SelectedSpectrumDetails>)> {
     state
         .lock()
         .unwrap()
         .spectra
         .iter_mut()
-        .map(|file| {
+        .map(|file| (file.id, 
             file.selected_spectra.iter().map(|index| {
                 let spectrum =file.rawfile.get_spectrum_by_index(*index).expect("Spectrum index not valid");
                 let d = spectrum.description();
@@ -250,6 +250,6 @@ pub fn get_selected_spectra(state: ModifiableState) -> Vec<Vec<SelectedSpectrumD
                         },                        
                     )
                 }
-            }).collect_vec()
-        }).collect_vec()
+            }).collect_vec())
+        ).collect_vec()
 }

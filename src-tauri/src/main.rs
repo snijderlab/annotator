@@ -297,7 +297,7 @@ pub struct AnnotationResult {
 async fn annotate_spectrum<'a>(
     tolerance: (f64, &'a str),
     charge: Option<usize>,
-    filter: NoiseFilter,
+    filter: f32,
     model: &'a str,
     peptide: &'a str,
     custom_model: ModelParameters,
@@ -353,31 +353,24 @@ async fn annotate_spectrum<'a>(
         )
     };
     if spectrum.peaks.is_none() {
-        spectrum.denoise(0.5).map_err(|err| {
+        spectrum.denoise(filter).map_err(|err| {
             CustomError::error(
                 "Spectrum could not be denoised",
                 err.to_string(),
                 Context::None,
             )
-        })?; // TODO: Allow control
+        })?;
         spectrum
-            .pick_peaks_with(&PeakPicker::new(100.0, 200.0, 2.0, PeakFitType::Quadratic))
+            .pick_peaks_with(&PeakPicker::default())
             .map_err(|err| {
                 CustomError::error(
                     "Spectrum could not be peak picked",
                     err.to_string(),
                     Context::None,
                 )
-            })?; // TODO: Allow control
+            })?;
     };
-    dbg!(&spectrum);
 
-    // match filter {
-    //     NoiseFilter::None => (),
-    //     NoiseFilter::Relative(i) => spectrum.relative_noise_filter(i),
-    //     NoiseFilter::Absolute(i) => spectrum.absolute_noise_filter(i),
-    //     NoiseFilter::TopX(size, t) => spectrum.top_x_filter(size, t),
-    // } TODO: figure out filtering
     let use_charge = Charge::new::<e>(
         charge
             .or_else(|| {

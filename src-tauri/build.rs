@@ -123,12 +123,11 @@ fn main() {
       <button class="secondary cancel-drop" onclick='document.querySelector("html").classList.remove("file-drop-hover")'>Cancel drop</button>
       <!-- <button class="print" id="abort">Abort</button> -->
       <div class="input-flex">
-        <button type="button" id="load-mgf-path">Load raw data file</button>
+        <button type="button" id="load-raw-path">Load raw data file</button>
         <button type="button" id="load-clipboard">Load Clipboard</button>
         <button type="button" id="load-identified-peptides">Load identified peptides file</button>
       </div>
-      <output class="wrap" id="loaded-path"></output>
-      <output class="wrap" id="loaded-identified-peptides-path"></output>
+      <output class="wrap" id="open-files-error"></output>
       
       <div id="peptides" style="display:none">
         <h2>Peptide details</h2>
@@ -163,7 +162,6 @@ fn main() {
           </div>
         </div>
       </div>
-      <output class="wrap" id="loaded-path"></output>
 
       <div>
         <h2>Spectrum details</h2>
@@ -199,17 +197,8 @@ fn main() {
           <input style='flex-grow:1' type="number" id="model-mz-range-max" min="0" value="" placeholder="Empty imposes no bounds" />
         </div>
         
-        <label for="noise-filter">Noise filter</label>
-        <div id="noise-filter" class="noise-filter select-input">
-          <select onchange="this.className=this.options[Number(this.value)].dataset.cls;">
-            <option value="0" data-cls="arg-0" data-value="None" selected>None</option>
-            <option value="1" data-cls="arg-1" data-value="Relative">Relative intensity</option>
-            <option value="2" data-cls="arg-1" data-value="Absolute">Absolute intensity</option>
-            <option value="3" data-cls="arg-2" data-value="TopX">TopX</option>
-          </select>
-          <input type="number" value="1" min="0">
-          <input type="number" value="1" min="0">
-        </div>
+        <label for="noise-filter" title="Determine the noise level from the spectrum and remove everything below this factor times the noise level">Noise filter</label>
+        <input id="noise-filter" type="number" value="1.0" min="0.0">
     
         <label for="spectrum-model">Model </label>
         <select id="spectrum-model">
