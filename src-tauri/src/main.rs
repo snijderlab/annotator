@@ -177,6 +177,113 @@ pub struct ModelParameters {
     pub glycan: (bool, (usize, usize), Vec<String>, ChargeRange, ChargeRange),
 }
 
+impl ModelParameters {
+    fn create_model(
+        self,
+        name: &str,
+        tolerance: (f64, &str),
+        mz_range: (Option<f64>, Option<f64>),
+    ) -> Result<Model, CustomError> {
+        let get_model_param = |neutral_losses: &[String]| {
+            neutral_losses
+                .iter()
+                .filter(|n| !n.is_empty())
+                .map(|n| n.parse::<NeutralLoss>())
+                .collect::<Result<Vec<_>, _>>()
+        };
+        let mut model = match name {
+            "all" => Model::all(),
+            "ethcd" => Model::ethcd(),
+            "cidhcd" => Model::cid_hcd(),
+            "etd" => Model::etd(),
+            "none" => Model::none(),
+            "custom" => Model::none()
+                .a(PrimaryIonSeries {
+                    location: self.a.0,
+                    neutral_losses: get_model_param(&self.a.1)?,
+                    charge_range: self.a.2,
+                })
+                .b(PrimaryIonSeries {
+                    location: self.b.0,
+                    neutral_losses: get_model_param(&self.b.1)?,
+                    charge_range: self.b.2,
+                })
+                .c(PrimaryIonSeries {
+                    location: self.c.0,
+                    neutral_losses: get_model_param(&self.c.1)?,
+                    charge_range: self.c.2,
+                })
+                .d(PrimaryIonSeries {
+                    location: self.d.0,
+                    neutral_losses: get_model_param(&self.d.1)?,
+                    charge_range: self.d.2,
+                })
+                .v(PrimaryIonSeries {
+                    location: self.v.0,
+                    neutral_losses: get_model_param(&self.v.1)?,
+                    charge_range: self.v.2,
+                })
+                .w(PrimaryIonSeries {
+                    location: self.w.0,
+                    neutral_losses: get_model_param(&self.w.1)?,
+                    charge_range: self.w.2,
+                })
+                .x(PrimaryIonSeries {
+                    location: self.x.0,
+                    neutral_losses: get_model_param(&self.x.1)?,
+                    charge_range: self.x.2,
+                })
+                .y(PrimaryIonSeries {
+                    location: self.y.0,
+                    neutral_losses: get_model_param(&self.y.1)?,
+                    charge_range: self.y.2,
+                })
+                .z(PrimaryIonSeries {
+                    location: self.z.0,
+                    neutral_losses: get_model_param(&self.z.1)?,
+                    charge_range: self.z.2,
+                })
+                .precursor(get_model_param(&self.precursor.0)?, self.precursor.1)
+                .immonium(self.immonium)
+                .m(self.m)
+                .modification_specific_diagnostic_ions(self.modification_diagnostic)
+                .modification_specific_neutral_losses(self.modification_neutral)
+                .allow_cross_link_cleavage(self.cleave_cross_links)
+                .glycan(GlycanModel {
+                    allow_structural: self.glycan.0,
+                    compositional_range: self.glycan.1 .0..=self.glycan.1 .1,
+                    neutral_losses: get_model_param(&self.glycan.2)?,
+                    oxonium_charge_range: self.glycan.3,
+                    other_charge_range: self.glycan.4,
+                }),
+            _ => Model::all(),
+        };
+        if tolerance.1 == "ppm" {
+            model.tolerance = Tolerance::new_ppm(tolerance.0);
+        } else if tolerance.1 == "th" {
+            model.tolerance =
+                Tolerance::new_absolute(MassOverCharge::new::<rustyms::system::mz>(tolerance.0));
+        } else {
+            return Err(CustomError::error(
+                "Invalid tolerance unit",
+                "",
+                Context::None,
+            ));
+        }
+        if let (Some(min), Some(max)) = mz_range {
+            if min > max {
+                return Err(CustomError::error(
+                    "m/z range invalid",
+                    "The minimal value is less then the maximal value",
+                    Context::None,
+                ));
+            }
+            model.mz_range = MassOverCharge::new::<mz>(min)..=MassOverCharge::new::<mz>(max);
+        }
+        Ok(model)
+    }
+}
+
 #[derive(Debug, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
 pub struct AnnotationResult {
     pub spectrum: String,
@@ -188,7 +295,6 @@ pub struct AnnotationResult {
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
 async fn annotate_spectrum<'a>(
-    index: usize,
     tolerance: (f64, &'a str),
     charge: Option<usize>,
     filter: NoiseFilter,
@@ -200,105 +306,7 @@ async fn annotate_spectrum<'a>(
     mz_range: (Option<f64>, Option<f64>),
 ) -> Result<AnnotationResult, CustomError> {
     let mut state = state.lock().unwrap();
-    let get_model_param = |neutral_losses: &[String]| {
-        neutral_losses
-            .iter()
-            .filter(|n| !n.is_empty())
-            .map(|n| n.parse::<NeutralLoss>())
-            .collect::<Result<Vec<_>, _>>()
-    };
-    let mut model = match model {
-        "all" => Model::all(),
-        "ethcd" => Model::ethcd(),
-        "cidhcd" => Model::cid_hcd(),
-        "etd" => Model::etd(),
-        "none" => Model::none(),
-        "custom" => Model::none()
-            .a(PrimaryIonSeries {
-                location: custom_model.a.0,
-                neutral_losses: get_model_param(&custom_model.a.1)?,
-                charge_range: custom_model.a.2,
-            })
-            .b(PrimaryIonSeries {
-                location: custom_model.b.0,
-                neutral_losses: get_model_param(&custom_model.b.1)?,
-                charge_range: custom_model.b.2,
-            })
-            .c(PrimaryIonSeries {
-                location: custom_model.c.0,
-                neutral_losses: get_model_param(&custom_model.c.1)?,
-                charge_range: custom_model.c.2,
-            })
-            .d(PrimaryIonSeries {
-                location: custom_model.d.0,
-                neutral_losses: get_model_param(&custom_model.d.1)?,
-                charge_range: custom_model.d.2,
-            })
-            .v(PrimaryIonSeries {
-                location: custom_model.v.0,
-                neutral_losses: get_model_param(&custom_model.v.1)?,
-                charge_range: custom_model.v.2,
-            })
-            .w(PrimaryIonSeries {
-                location: custom_model.w.0,
-                neutral_losses: get_model_param(&custom_model.w.1)?,
-                charge_range: custom_model.w.2,
-            })
-            .x(PrimaryIonSeries {
-                location: custom_model.x.0,
-                neutral_losses: get_model_param(&custom_model.x.1)?,
-                charge_range: custom_model.x.2,
-            })
-            .y(PrimaryIonSeries {
-                location: custom_model.y.0,
-                neutral_losses: get_model_param(&custom_model.y.1)?,
-                charge_range: custom_model.y.2,
-            })
-            .z(PrimaryIonSeries {
-                location: custom_model.z.0,
-                neutral_losses: get_model_param(&custom_model.z.1)?,
-                charge_range: custom_model.z.2,
-            })
-            .precursor(
-                get_model_param(&custom_model.precursor.0)?,
-                custom_model.precursor.1,
-            )
-            .immonium(custom_model.immonium)
-            .m(custom_model.m)
-            .modification_specific_diagnostic_ions(custom_model.modification_diagnostic)
-            .modification_specific_neutral_losses(custom_model.modification_neutral)
-            .allow_cross_link_cleavage(custom_model.cleave_cross_links)
-            .glycan(GlycanModel {
-                allow_structural: custom_model.glycan.0,
-                compositional_range: custom_model.glycan.1 .0..=custom_model.glycan.1 .1,
-                neutral_losses: get_model_param(&custom_model.glycan.2)?,
-                oxonium_charge_range: custom_model.glycan.3,
-                other_charge_range: custom_model.glycan.4,
-            }),
-        _ => Model::all(),
-    };
-    if tolerance.1 == "ppm" {
-        model.tolerance = Tolerance::new_ppm(tolerance.0);
-    } else if tolerance.1 == "th" {
-        model.tolerance =
-            Tolerance::new_absolute(MassOverCharge::new::<rustyms::system::mz>(tolerance.0));
-    } else {
-        return Err(CustomError::error(
-            "Invalid tolerance unit",
-            "",
-            Context::None,
-        ));
-    }
-    if let (Some(min), Some(max)) = mz_range {
-        if min > max {
-            return Err(CustomError::error(
-                "m/z range invalid",
-                "The minimal value is less then the maximal value",
-                Context::None,
-            ));
-        }
-        model.mz_range = MassOverCharge::new::<mz>(min)..=MassOverCharge::new::<mz>(max);
-    }
+    let model = custom_model.create_model(model, tolerance, mz_range)?;
     let mass_mode = match mass_mode {
         "monoisotopic" => MassMode::Monoisotopic,
         "average_weight" => MassMode::Average,
@@ -315,45 +323,35 @@ async fn annotate_spectrum<'a>(
         == 1;
 
     let mut spectra = Vec::new();
-    let mut dx = None;
     for file in state.spectra.iter_mut() {
-        for index in &file.1 {
-            let spectrum = file.0.get_spectrum_by_index(*index).ok_or_else(|| {
+        for index in &file.selected_spectra {
+            let spectrum = file.rawfile.get_spectrum_by_index(*index).ok_or_else(|| {
                 CustomError::error(
                     "Could not find spectrum",
                     "This spectrum index does not exist",
                     Context::None,
                 )
             })?;
-            if spectrum.signal_continuity() == SignalContinuity::Profile {
-                let spectrum_dx = spectrum
-                    .raw_arrays()
-                    .map(|r| r.mzs().unwrap())
-                    .and_then(|mzs| {
-                        mzs.last().and_then(|end| {
-                            mzs.first().map(|start| (end - start) / mzs.len() as f64)
-                        })
-                    });
-                if let (Some(prev_dx), Some(this_dx)) = (dx, spectrum_dx) {
-                    if prev_dx != this_dx {
-                        return Err(CustomError::error("Could not merge spectra", "Merged multiple raw spectra with different dx, distance between points on the mz axis", Context::None));
-                    }
-                }
-                if spectrum_dx.is_some() {
-                    dx = spectrum_dx;
-                }
-            }
             spectra.push(spectrum);
         }
     }
-    let data = mzdata::spectrum::average_spectra(&spectra, dx.unwrap_or(0.01));
-    let mut spectrum = MultiLayerSpectrum::<CentroidPeak, DeconvolutedPeak>::new(
-        SpectrumDescription::default(),
-        Some(data.into()),
-        None,
-        None,
-    );
-
+    let mut spectrum = if spectra.is_empty() {
+        return Err(CustomError::error(
+            "No selected spectra",
+            "Select a spectrum from an open raw file, or open a raw file if none are opened yet",
+            Context::None,
+        ));
+    } else if spectra.len() == 1 {
+        spectra.pop().unwrap()
+    } else {
+        let data = mzdata::spectrum::average_spectra(&spectra, 0.001);
+        MultiLayerSpectrum::<CentroidPeak, DeconvolutedPeak>::new(
+            SpectrumDescription::default(),
+            Some(data.into()),
+            None,
+            None,
+        )
+    };
     if spectrum.peaks.is_none() {
         spectrum.denoise(0.5).map_err(|err| {
             CustomError::error(
@@ -372,6 +370,7 @@ async fn annotate_spectrum<'a>(
                 )
             })?; // TODO: Allow control
     };
+    dbg!(&spectrum);
 
     // match filter {
     //     NoiseFilter::None => (),
@@ -392,10 +391,9 @@ async fn annotate_spectrum<'a>(
     );
     let fragments = peptide.generate_theoretical_fragments(use_charge, &model);
     let annotated = spectrum.annotate(peptide, &fragments, &model, mass_mode);
-    // dbg!(&spectrum);
-    // dbg!(&annotated);
-    let (spectrum, limits) =
-        render::annotated_spectrum(&annotated, "spectrum", &fragments, &model, mass_mode);
+    let (spectrum, limits) = render::annotated_spectrum(
+        &annotated, &spectrum, "spectrum", &fragments, &model, mass_mode,
+    );
     Ok(AnnotationResult {
         spectrum,
         fragment_table: render::spectrum_table(
@@ -460,13 +458,14 @@ fn main() {
             refresh,
             render::density_graph,
             search_modification::search_modification,
-            spectra::find_scan_number,
+            spectra::close_raw_file,
             spectra::load_clipboard,
             spectra::load_raw,
             spectra::select_spectrum_index,
             spectra::select_spectrum_scan_number,
             spectra::get_open_raw_files,
             spectra::get_selected_spectra,
+            spectra::unselect_spectrum,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

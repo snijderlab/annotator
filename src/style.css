@@ -1088,15 +1088,15 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
     word-break: break-all;
     display: block;
     margin-top: .5rem;
-    margin-left: 2rem;
+    margin-left: 4rem;
     position: relative;
 
     &::before {
       content: attr(data-index);
-      position: absolute;
-      display: block;
-      width: 2rem;
-      left: -2rem;
+      display: inline-block;
+      width: 4rem;
+      margin-left: -4rem;
+      vertical-align: baseline;
     }
 
     button {

@@ -16,81 +16,96 @@ pub trait RenderToHtml {
 impl RenderToHtml for IdentifiedPeptide {
     fn to_html(&self) -> HtmlElement {
         // Render the peptide with its local confidence
-        let mut peptide = HtmlElement::new(HtmlTag::div);
-        peptide.class("original-sequence").style("--max-value:1");
-        let lc = self
-            .local_confidence
-            .clone()
-            .unwrap_or(vec![0.0; self.peptide.len()]);
+        let peptide = if let Some(peptide) = self.metadata.peptide() {
+            let mut html = HtmlElement::new(HtmlTag::div);
+            html.class("original-sequence").style("--max-value:1");
+            let lc = self
+                .local_confidence
+                .clone()
+                .unwrap_or(vec![0.0; peptide.len()]);
 
-        if let Some(n) = self.peptide.n_term.as_ref() {
-            let mut modification = String::new();
-            n.display(&mut modification, false).unwrap();
-            peptide.content(
-                HtmlElement::new(HtmlTag::div)
-                    .style("--value:0")
-                    .children([
-                        HtmlElement::new(HtmlTag::p)
-                            .content("⚬".to_string())
-                            .clone(),
+            if let Some(n) = peptide.n_term.as_ref() {
+                let mut modification = String::new();
+                n.display(&mut modification, false).unwrap();
+                html.content(
+                    HtmlElement::new(HtmlTag::div)
+                        .style("--value:0")
+                        .children([
+                            HtmlElement::new(HtmlTag::p)
+                                .content("⚬".to_string())
+                                .clone(),
+                            HtmlElement::new(HtmlTag::p)
+                                .class("modification")
+                                .content(modification)
+                                .clone(),
+                        ])
+                        .clone(),
+                );
+            }
+
+            for (aa, confidence) in peptide.sequence.iter().zip(lc) {
+                html.content(
+                    HtmlElement::new(HtmlTag::div)
+                        .style(format!("--value:{confidence}"))
+                        .children([
+                            HtmlElement::new(HtmlTag::p).content(aa.aminoacid.char().to_string()),
+                            HtmlElement::new(HtmlTag::p).class("modification").content(
+                                aa.modifications
+                                    .iter()
+                                    .map(|m| {
+                                        let mut s = String::new();
+                                        m.display(&mut s, false).unwrap();
+                                        s
+                                    })
+                                    .join(","),
+                            ),
+                        ]),
+                );
+            }
+
+            if let Some(c) = peptide.c_term.as_ref() {
+                let mut modification = String::new();
+                c.display(&mut modification, false).unwrap();
+                html.content(
+                    HtmlElement::new(HtmlTag::div).style("--value:0").children([
+                        HtmlElement::new(HtmlTag::p).content("⚬".to_string()),
                         HtmlElement::new(HtmlTag::p)
                             .class("modification")
-                            .content(modification)
-                            .clone(),
-                    ])
-                    .clone(),
-            );
-        }
-
-        for (aa, confidence) in self.peptide.sequence.iter().zip(lc) {
-            peptide.content(
-                HtmlElement::new(HtmlTag::div)
-                    .style(format!("--value:{confidence}"))
-                    .children([
-                        HtmlElement::new(HtmlTag::p).content(aa.aminoacid.char().to_string()),
-                        HtmlElement::new(HtmlTag::p).class("modification").content(
-                            aa.modifications
-                                .iter()
-                                .map(|m| {
-                                    let mut s = String::new();
-                                    m.display(&mut s, false).unwrap();
-                                    s
-                                })
-                                .join(","),
-                        ),
+                            .content(modification),
                     ]),
-            );
-        }
+                );
+            }
+            html
+        } else {
+            HtmlTag::p.new().content("No peptide").clone()
+        };
 
-        if let Some(c) = self.peptide.c_term.as_ref() {
-            let mut modification = String::new();
-            c.display(&mut modification, false).unwrap();
-            peptide.content(
-                HtmlElement::new(HtmlTag::div).style("--value:0").children([
-                    HtmlElement::new(HtmlTag::p).content("⚬".to_string()),
-                    HtmlElement::new(HtmlTag::p)
-                        .class("modification")
-                        .content(modification),
-                ]),
-            );
-        }
-
-        let formula = &self.peptide.formulas()[0];
+        let formula = self.metadata.peptide().map(|p| p.formulas()[0].clone());
         HtmlElement::new(HtmlTag::div)
             .children([
                 HtmlElement::new(HtmlTag::p)
                     .content(format!(
                         "Score: {}, Length: {} AA, Mass: {}, Charge: {}, m/z: {} Th, Mode: {}",
                         self.score.map_or(String::from("-"), |s| format!("{s:.3}")),
-                        self.peptide.sequence.len(),
-                        display_masses(formula),
+                        self.metadata
+                            .peptide()
+                            .map(|p| p.len())
+                            .to_optional_string(),
+                        formula
+                            .as_ref()
+                            .map(|f| display_masses(&f))
+                            .to_optional_string(),
                         self.metadata
                             .charge()
                             .map_or("-".to_string(), |c| c.value.to_string()),
-                        self.metadata.charge().map_or("-".to_string(), |c| format!(
-                            "{:.3}",
-                            formula.monoisotopic_mass().value / c.value as f64
-                        )),
+                        self.metadata
+                            .charge()
+                            .and_then(|c| formula.map(|f| (f, c)))
+                            .map(|(f, c)| format!(
+                                "{:.3}",
+                                f.monoisotopic_mass().value / c.value as f64
+                            ))
+                            .to_optional_string(),
                         self.metadata
                             .mode()
                             .map_or("-".to_string(), |c| c.to_string())

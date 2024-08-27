@@ -246,13 +246,17 @@ pub async fn search_peptide<'a>(
                 .enumerate()
                 .map(|(index, p)| (file.id, index, p))
         })
-        .filter(|(_, _, p)| p.score.map_or(true, |score| score >= minimal_peptide_score))
+        .filter(|(_, _, p)| {
+            p.score.map_or(true, |score| {
+                score >= minimal_peptide_score && p.metadata.peptide().is_some()
+            })
+        })
         .par_bridge()
         .map(|(id, index, peptide)| {
             (
                 index,
                 align::<4, VerySimple, Simple>(
-                    &peptide.peptide,
+                    peptide.metadata.peptide().unwrap(),
                     &search,
                     BLOSUM62,
                     Tolerance::new_absolute(da(0.1)),
@@ -271,6 +275,7 @@ pub async fn search_peptide<'a>(
         .map(|(index, alignment, peptide, id)| {
             let start = alignment.start_a();
             let end = alignment.start_a() + alignment.len_a();
+            let sequence = peptide.metadata.peptide().cloned().unwrap_or_default();
             vec![
                 format!(
                     "<a onclick=\"load_peptide({id}, {index})\">F{}:{index}</a>",
@@ -278,9 +283,9 @@ pub async fn search_peptide<'a>(
                 ),
                 format!(
                     "{}<span class='match'>{}</span>{}",
-                    peptide.peptide.sub_peptide(..start).to_string(),
-                    peptide.peptide.sub_peptide(start..end).to_string(),
-                    peptide.peptide.sub_peptide(end..).to_string(),
+                    sequence.sub_peptide(..start).to_string(),
+                    sequence.sub_peptide(start..end).to_string(),
+                    sequence.sub_peptide(end..).to_string(),
                 ),
                 format!("{:.3}", alignment.normalised_score()),
                 peptide
@@ -307,16 +312,15 @@ pub struct Settings {
     peptide: String,
     charge: Option<usize>,
     mode: Option<String>,
-    scan_index: Option<usize>,
+    scan_index: Vec<usize>,
 }
 
 impl Settings {
-    fn from_peptide(peptide: &IdentifiedPeptide, scan: Option<usize>) -> Self {
+    fn from_peptide(peptide: &IdentifiedPeptide, scan: Vec<usize>) -> Self {
         let mut str_peptide = String::new();
-        peptide
-            .peptide
-            .display(&mut str_peptide, true, false)
-            .unwrap();
+        if let Some(peptide) = peptide.metadata.peptide() {
+            peptide.display(&mut str_peptide, true, false).unwrap()
+        }
         Self {
             peptide: str_peptide,
             charge: peptide.metadata.charge().map(|v| v.value),
@@ -352,17 +356,26 @@ pub fn load_identified_peptide(
         peptide.map(|peptide| {
             Settings::from_peptide(
                 &peptide,
-                peptide.metadata.scan_number().and_then(|scan_number| {
-                    state
-                        .spectra
-                        .first_mut()
-                        .and_then(|s| {
-                            s.0.get_spectrum_by_id(&format!(
-                                "controllerType=0 controllerNumber=1 scan={scan_number}"
-                            ))
-                        })
-                        .map(|s| s.index())
-                }),
+                peptide
+                    .metadata
+                    .scan_number()
+                    .and_then(|scan_number| {
+                        scan_number
+                            .iter()
+                            .map(|scan_number| {
+                                state
+                                    .spectra
+                                    .first_mut()
+                                    .and_then(|s| {
+                                        s.rawfile.get_spectrum_by_id(&format!(
+                                        "controllerType=0 controllerNumber=1 scan={scan_number}"
+                                    ))
+                                    })
+                                    .map(|s| s.index())
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default(),
             )
         })
     } else {

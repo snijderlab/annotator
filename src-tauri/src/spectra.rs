@@ -1,16 +1,10 @@
 use itertools::Itertools;
 use mzdata::{io::{MZFileReader, SpectrumSource}, prelude::{IonProperties, PrecursorSelection, SpectrumLike}, spectrum::ActivationMethod};
-use rustyms::{spectrum::RawPeak, system::{mz, MassOverCharge}, RawSpectrum};
+use rustyms::{spectrum::RawPeak, system::{dalton, mz, Mass, MassOverCharge}, RawSpectrum};
 use serde::{Deserialize, Serialize};
 
-use crate::{metadata_render::OptionalString, ModifiableState};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct RawFileDetails {
-    id: usize, 
-    description: String,
-    spectra: usize,
-}
+use crate::{metadata_render::OptionalString, render::display_mass, state::{RawFile, RawFileDetails}, ModifiableState};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SelectedSpectrumDetails {
@@ -19,14 +13,14 @@ pub struct SelectedSpectrumDetails {
     description: String,
 }
 
-
 #[tauri::command]
 pub async fn load_raw<'a>(path: &'a str, state: ModifiableState<'a>) -> Result<RawFileDetails, String> {
     match mzdata::io::MZReaderType::open_path(path) {
         Ok(file) => {
+            let file = RawFile::new(path, file);
             let spectra = &mut state.lock().unwrap().spectra;
-            let details = RawFileDetails{ id:spectra.len(), description:path.to_string(), spectra:file.len()};
-            spectra.push((file, Vec::new(), details.clone()));
+            let details = file.details();
+            spectra.push(file);
             Ok(details)
         }
         Err(err) => Err(err.to_string()),
@@ -126,36 +120,20 @@ fn load_sciex_clipboard(lines: &[&str]) -> Result<Vec<RawPeak>, String> {
 }
 
 #[tauri::command]
-pub fn find_scan_number(scan_number: usize, state: ModifiableState) -> Result<usize, &'static str> {
-    state
-        .lock()
-        .unwrap()
-        .spectra
-        .first_mut()
-        .ok_or("No spectra loaded")
-        .and_then(|(s, _, _)| {
-            s.get_spectrum_by_id(&format!(
-                "controllerType=0 controllerNumber=1 scan={scan_number}"
-            ))
-            .map(|s| s.index())
-            .ok_or("Could not find scan number")
-        })
-}
-
-#[tauri::command]
 pub fn select_spectrum_index(file_index: usize, index: usize, state: ModifiableState) -> Result<(), &'static str> {
     state
     .lock()
     .unwrap()
     .spectra
-    .get_mut(file_index)
+    .iter_mut()
+    .find(|f| f.id == file_index)
     .ok_or("File index not valid")
-    .and_then(|(spectrum, indices, _)| 
-        if index >= spectrum.len() {
+    .and_then(|file| 
+        if index >= file.rawfile.len() {
             Err("Outside of file range")
-        } else if !indices.contains(&index) {
-            indices.push(index); 
-            dbg!(&indices);
+        } else if !file.selected_spectra.contains(&index) {
+            file.selected_spectra.push(index); 
+            file.selected_spectra.sort();
             Ok(())
         } else {
             Ok(())
@@ -168,14 +146,40 @@ pub fn select_spectrum_scan_number(file_index: usize, scan_number: String, state
     .lock()
     .unwrap()
     .spectra
-    .get_mut(file_index)
+    .iter_mut()
+    .find(|f| f.id == file_index)
     .ok_or("File index not valid")
-    .and_then(|(spectrum, indices, _)|  
-        spectrum.get_spectrum_by_id(&scan_number).map(|s| {
-            if !indices.contains(&s.index()) {
-                indices.push(s.index()); 
+    .and_then(|file|  
+        file.rawfile.get_spectrum_by_id(&scan_number).map(|s| {
+            if !file.selected_spectra.contains(&s.index()) {
+                file.selected_spectra.push(s.index()); 
+                file.selected_spectra.sort();
             }
         }).ok_or("Scan number does not exist"))
+}
+
+#[tauri::command]
+pub fn close_raw_file(file_index: usize, state: ModifiableState) {
+    let _ = state
+    .lock()
+    .map(|mut state| 
+        state.spectra.iter_mut()
+        .position(|f| f.id == file_index).map(|index| state.spectra.remove(index))
+    );
+}
+
+#[tauri::command]
+pub fn unselect_spectrum(file_index: usize, index: usize, state: ModifiableState) {
+    let _ = state
+    .lock()
+    .map(|mut state| 
+        state.spectra.iter_mut()
+        .find(|f| f.id == file_index).map(|file| {
+            if let Some(index) = file.selected_spectra.iter().position(|i| *i == index) {
+            file.selected_spectra.remove(index);
+            }
+        })
+    );
 }
 
 #[tauri::command]
@@ -183,7 +187,7 @@ pub fn get_open_raw_files(state: ModifiableState) -> Vec<RawFileDetails> {
     state
     .lock()
     .unwrap()
-    .spectra.iter().map(|(_,_,details)|details.clone()).collect_vec()
+    .spectra.iter().map(|file|file.details()).collect_vec()
 }
 
 #[tauri::command]
@@ -193,9 +197,9 @@ pub fn get_selected_spectra(state: ModifiableState) -> Vec<Vec<SelectedSpectrumD
         .unwrap()
         .spectra
         .iter_mut()
-        .map(|(spectrum, selected, _)| {
-            selected.iter().map(|index| {
-                let spectrum =spectrum.get_spectrum_by_index(*index).expect("Spectrum index not valid");
+        .map(|file| {
+            file.selected_spectra.iter().map(|index| {
+                let spectrum =file.rawfile.get_spectrum_by_index(*index).expect("Spectrum index not valid");
                 let d = spectrum.description();
                 let p = spectrum.precursor();
                 SelectedSpectrumDetails {
@@ -211,8 +215,8 @@ pub fn get_selected_spectra(state: ModifiableState) -> Vec<Vec<SelectedSpectrumD
                         p.map_or("No precursor".to_string(), |p| {
                             let i = p.isolation_window();
                             format!(
-                                "Precursor mass: {:.3} charge: {} target: {} range: {} — {} method: {} energy: {:.1}",
-                                p.neutral_mass(),
+                                "Precursor mass: {} charge: {} target: {} range: {} — {} method: {} energy: {:.1}",
+                                display_mass(Mass::new::<dalton>(p.neutral_mass()), None),
                                 p.charge().map_or("-".to_string(), |v| format!("{v:+.0}")),
                                 i.target,
                                 i.lower_bound,

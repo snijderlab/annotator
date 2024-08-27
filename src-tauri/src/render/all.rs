@@ -1,6 +1,7 @@
 use std::{cmp::Ordering, collections::HashSet, fmt::Write};
 
 use itertools::Itertools;
+use mzdata::{prelude::SpectrumLike, spectrum::MultiLayerSpectrum};
 use rustyms::{
     fragment::*,
     model::Location,
@@ -14,6 +15,7 @@ use rustyms::{
 
 use crate::{
     html_builder::{HtmlContent, HtmlElement, HtmlTag},
+    metadata_render::OptionalString,
     render::label::display_sequence_index,
 };
 
@@ -21,6 +23,7 @@ use super::{classes::get_classes, label::get_label};
 
 pub fn annotated_spectrum(
     spectrum: &AnnotatedSpectrum,
+    raw: &MultiLayerSpectrum,
     _id: &str,
     fragments: &[Fragment],
     model: &Model,
@@ -71,6 +74,7 @@ pub fn annotated_spectrum(
     render_spectrum(
         &mut output,
         spectrum,
+        raw,
         fragments,
         &graph_boundaries,
         &limits,
@@ -611,6 +615,7 @@ fn render_linear_peptide(
 fn render_spectrum(
     output: &mut String,
     spectrum: &AnnotatedSpectrum,
+    raw: &MultiLayerSpectrum,
     fragments: &[Fragment],
     boundaries: &Boundaries,
     limits: &Limits,
@@ -659,6 +664,16 @@ fn render_spectrum(
     .unwrap();
     write!(output, "</div>").unwrap();
     write!(output, "<div class='canvas canvas-spectrum'>").unwrap();
+    // if let Some(raw) = raw.raw_arrays() {
+    //     let points = raw
+    //         .intensities()
+    //         .unwrap()
+    //         .iter()
+    //         .zip(raw.mzs().unwrap().iter())
+    //         .map(|(x, y)| (*x as f64, *y as f64))
+    //         .collect_vec();
+    //     write!(output, "{}", line_graph_xy(&points, 0.0)).unwrap();
+    // }
     write!(
         output,
         "<span class='selection {selection}' hidden='true'></span>"
@@ -1033,7 +1048,7 @@ fn general_stats(
     let mut fdr_intensity_row = String::new();
 
     let (combined_scores, separate_peptide_scores) = spectrum.scores(fragments, model, mass_mode);
-    let (combined_fdr, separate_peptide_fdrs) = spectrum.fdr(fragments, model, mass_mode);
+    let fdr = (spectrum.spectrum().len() != 0).then(|| spectrum.fdr(fragments, model, mass_mode));
 
     for (peptidoform_index, peptidoform_scores) in separate_peptide_scores.iter().enumerate() {
         for (peptide_index, peptide_score) in peptidoform_scores.iter().enumerate() {
@@ -1065,15 +1080,21 @@ fn general_stats(
                     write!(
                         fdr_peaks_row,
                         "<td>{}</td>",
-                        format_fdr_peaks(&separate_peptide_fdrs[peptidoform_index][peptide_index])
+                        fdr.as_ref()
+                            .map(|(_, separate_peptide_fdrs)| format_fdr_peaks(
+                                &separate_peptide_fdrs[peptidoform_index][peptide_index]
+                            ))
+                            .to_optional_string()
                     )
                     .unwrap();
                     write!(
                         fdr_intensity_row,
                         "<td>{}</td>",
-                        format_fdr_intensity(
-                            &separate_peptide_fdrs[peptidoform_index][peptide_index]
-                        )
+                        fdr.as_ref()
+                            .map(|(_, separate_peptide_fdrs)| format_fdr_intensity(
+                                &separate_peptide_fdrs[peptidoform_index][peptide_index]
+                            ))
+                            .to_optional_string()
                     )
                     .unwrap();
                 }
@@ -1095,15 +1116,21 @@ fn general_stats(
                     write!(
                         fdr_peaks_row,
                         "<td>{}</td>",
-                        format_fdr_peaks(&separate_peptide_fdrs[peptidoform_index][peptide_index])
+                        fdr.as_ref()
+                            .map(|(_, separate_peptide_fdrs)| format_fdr_peaks(
+                                &separate_peptide_fdrs[peptidoform_index][peptide_index]
+                            ))
+                            .to_optional_string()
                     )
                     .unwrap();
                     write!(
                         fdr_intensity_row,
                         "<td>{}</td>",
-                        format_fdr_intensity(
-                            &separate_peptide_fdrs[peptidoform_index][peptide_index]
-                        )
+                        fdr.as_ref()
+                            .map(|(_, separate_peptide_fdrs)| format_fdr_intensity(
+                                &separate_peptide_fdrs[peptidoform_index][peptide_index]
+                            ))
+                            .to_optional_string()
                     )
                     .unwrap();
                 }
@@ -1229,13 +1256,17 @@ fn general_stats(
                 write!(
                     fdr_peaks_row,
                     "<td>{}</td>",
-                    format_fdr_peaks(&combined_fdr)
+                    fdr.as_ref()
+                        .map(|(combined_fdr, _)| format_fdr_peaks(&combined_fdr))
+                        .to_optional_string()
                 )
                 .unwrap();
                 write!(
                     fdr_intensity_row,
                     "<td>{}</td>",
-                    format_fdr_intensity(&combined_fdr)
+                    fdr.as_ref()
+                        .map(|(combined_fdr, _)| format_fdr_intensity(&combined_fdr))
+                        .to_optional_string()
                 )
                 .unwrap();
             }
@@ -1257,13 +1288,17 @@ fn general_stats(
                 write!(
                     fdr_peaks_row,
                     "<td>{}</td>",
-                    format_fdr_peaks(&combined_fdr)
+                    fdr.as_ref()
+                        .map(|(combined_fdr, _)| format_fdr_peaks(&combined_fdr))
+                        .to_optional_string()
                 )
                 .unwrap();
                 write!(
                     fdr_intensity_row,
                     "<td>{}</td>",
-                    format_fdr_intensity(&combined_fdr)
+                    fdr.as_ref()
+                        .map(|(combined_fdr, _)| format_fdr_intensity(&combined_fdr))
+                        .to_optional_string()
                 )
                 .unwrap();
             }
@@ -1402,27 +1437,55 @@ fn density_estimation<const STEPS: usize>(mut data: Vec<f64>) -> ([f64; STEPS], 
 pub async fn density_graph(data: Vec<f64>) -> Result<String, ()> {
     const STEPS: usize = 256; // Determines the precision of the density
     let (densities, min, max) = density_estimation::<STEPS>(data);
-    let max_density = densities
-        .iter()
-        .copied()
-        .reduce(f64::max)
-        .unwrap_or(f64::MAX);
+    Ok(line_graph_y(&densities, min, max))
+}
+
+fn line_graph_y(points: &[f64], min_y: f64, max_y: f64) -> String {
+    let max_x = points.iter().copied().reduce(f64::max).unwrap_or(f64::MAX);
     let mut path = String::new();
-    for (i, density) in densities.iter().rev().enumerate() {
+    for (i, point) in points.iter().rev().enumerate() {
         write!(
             &mut path,
             "{}{} {}",
             if i != 0 { " L " } else { "" },
-            (max_density - density) / max_density * 100.0,
+            (max_x - point) / max_x * 100.0,
             i,
         )
         .unwrap();
     }
-    Ok(format!("<svg viewBox='-1 0 100 {}' style='--min:{min};--max:{max};' preserveAspectRatio='none'><g class='density'><path class='line' d='M {}'></path><path class='volume' d='M 100 0 L {} L {} 0 Z'></path></g></svg>",
-        STEPS-1,
+    format!("<svg viewBox='0 {min_y} {max_x} {max_y}' style='--min:{min_y};--max:{max_y};' preserveAspectRatio='none'><g class='density'><path class='line' d='M {path}'></path><path class='volume' d='M 100 0 L {path} L {max_x} 0 Z'></path></g></svg>",
+        )
+}
+
+fn line_graph_xy(points: &[(f64, f64)], min_y: f64) -> String {
+    let max_x = points
+        .iter()
+        .map(|(x, _)| x)
+        .copied()
+        .reduce(f64::max)
+        .unwrap_or(f64::MAX);
+    let max_y = points
+        .iter()
+        .map(|(_, y)| y)
+        .copied()
+        .reduce(f64::max)
+        .unwrap_or(f64::MAX);
+    let mut path = String::new();
+    for (i, point) in points.iter().rev().enumerate() {
+        write!(
+            &mut path,
+            "{}{} {}",
+            if i != 0 { " L " } else { "" },
+            (max_x - point.0) / max_x * 100.0,
+            point.1,
+        )
+        .unwrap();
+    }
+    format!("<svg viewBox='-1 0 100 {}' style='--min:{min_y};--max:{max_y};' preserveAspectRatio='none'><g class='density'><path class='line' d='M {}'></path><path class='volume' d='M 100 0 L {} L {} 0 Z'></path></g></svg>",
+        points.len()-1,
         path,
-        path, STEPS -1
-        ))
+        path, points.len() -1
+        )
 }
 
 pub fn display_masses(value: &MolecularFormula) -> HtmlElement {

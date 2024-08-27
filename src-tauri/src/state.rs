@@ -4,14 +4,12 @@ use std::{
     sync::atomic::AtomicUsize,
 };
 
-use mzdata::io::MZReaderType;
+use mzdata::io::{MZReaderType, SpectrumSource};
 use rustyms::{identification::IdentifiedPeptide, ontologies::CustomDatabase};
-
-use crate::spectra::RawFileDetails;
+use serde::{Deserialize, Serialize};
 
 pub struct State {
-    /// File with all selected indices
-    pub spectra: Vec<(MZReaderType<File>, Vec<usize>, RawFileDetails)>,
+    pub spectra: Vec<RawFile>,
     pub identified_peptide_files: RefCell<Vec<IdentifiedPeptideFile>>,
     pub database: CustomDatabase,
 }
@@ -52,4 +50,38 @@ impl IdentifiedPeptideFile {
     }
 }
 
+pub struct RawFile {
+    pub id: usize,
+    pub rawfile: MZReaderType<File>,
+    pub selected_spectra: Vec<usize>,
+    pub description: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct RawFileDetails {
+    id: usize,
+    description: String,
+    spectra: usize,
+}
+
+impl RawFile {
+    pub fn new(path: &str, file: MZReaderType<File>) -> Self {
+        RawFile {
+            id: RAW_FILE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
+            rawfile: file,
+            selected_spectra: Vec::new(),
+            description: path.to_string(),
+        }
+    }
+
+    pub fn details(&self) -> RawFileDetails {
+        RawFileDetails {
+            id: self.id,
+            description: self.description.clone(),
+            spectra: self.rawfile.len(),
+        }
+    }
+}
+
+static RAW_FILE_COUNTER: AtomicUsize = AtomicUsize::new(0);
 static IDENTIFIED_PEPTIDE_FILE_COUNTER: AtomicUsize = AtomicUsize::new(0);
