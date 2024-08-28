@@ -123,8 +123,12 @@ async function load_raw(path) {
 }
 
 async function load_identified_peptides(path) {
-  return invoke("load_identified_peptides_file", { path: path }).then(() => {
-    clearError("open-files-error");
+  return invoke("load_identified_peptides_file", { path: path }).then((result) => {
+    if (result == null) {
+      clearError("open-files-error");
+    } else {
+      showError("open-files-error", result);
+    }
     displayed_identified_peptide = undefined;
   }).catch((error) => {
     showError("open-files-error", error);
@@ -212,7 +216,7 @@ async function update_open_raw_files() {
         rawfile.appendChild(header);
         header.className = "header";
         header.id = "rawfile-" + file.id;
-        header.appendChild(createElement("span", { text: "R" + (file.id + 1) + ":" + file.description.split('\\').pop().split('/').pop(), title: file.description }));
+        header.appendChild(createElement("span", { text: "R" + (file.id + 1) + ":" + file.path.split('\\').pop().split('/').pop(), title: file.path }));
         let spectrum_selection = document.createElement("div");
         spectrum_selection.className = "spectrum-selection";
         spectrum_selection.appendChild(createElement("label", {
@@ -246,19 +250,18 @@ async function update_open_raw_files() {
         group_index.appendChild(createElement("span", { text: file.spectra, id: "spectrum-" + file.id + "-scans" }))
         spectrum_selection.appendChild(group_index);
         spectrum_selection.appendChild(createElement("label", {
-          text: "Scan number",
-          for: "spectrum-" + file.id + "-number",
-          title: "The scan number for a spectrum is the 1 based index in order of measuring on the original instrument. This can be used to track the same spectrum through multiple subsequent programs."
+          text: "Native ID",
+          for: "spectrum-" + file.id + "-native-id",
+          title: "The native ID is the identifier given to a spectrum in the original raw file, the format for this is different between different manufacturers. This can be used to track the same spectrum through multiple subsequent programs."
         }))
-        let input_scan = document.createElement("input");
-        input_scan.id = "spectrum-" + file.id + "-number";
-        input_scan.setAttribute("min", "0");
+        let input_native_id = document.createElement("input");
+        input_native_id.id = "spectrum-" + file.id + "-native-id";
         let select_on_scan = () => {
-          if (input_scan.value.trim() != "") {
-            invoke("select_spectrum_scan_number", { fileIndex: file.id, scanNumber: input_scan.value }).then(
+          if (input_native_id.value.trim() != "") {
+            invoke("select_spectrum_native_id", { fileIndex: file.id, nativeId: input_native_id.value }).then(
               () => {
                 clearError("open-files-error");
-                input_scan.value = "";
+                input_native_id.value = "";
                 update_selected_spectra();
               }
             ).catch((error) => {
@@ -266,9 +269,9 @@ async function update_open_raw_files() {
             })
           }
         };
-        input_scan.addEventListener("focusout", select_on_scan);
-        input_scan.addEventListener("keydown", event => { if (event.keyCode == 13) { select_on_scan() } else { } });
-        spectrum_selection.appendChild(input_scan);
+        input_native_id.addEventListener("focusout", select_on_scan);
+        input_native_id.addEventListener("keydown", event => { if (event.keyCode == 13) { select_on_scan() } else { } });
+        spectrum_selection.appendChild(input_native_id);
         header.appendChild(spectrum_selection);
         let close = document.createElement("button");
         close.innerText = "Close file";
@@ -345,7 +348,7 @@ async function search_peptide() {
     }).catch((error) => {
       showError("spectrum-error", error);
       document.querySelector("#search-peptide").classList.remove("loading");
-      document.querySelector("#resulting-peptides").innerText = "ERROR"; // TODO: does this exist?
+      document.querySelector("#resulting-peptides").innerText = "ERROR";
     })
   } else {
     document.querySelector("#resulting-peptides").innerText = "";
@@ -364,7 +367,7 @@ async function close_identified_peptide_file() {
     }
   }).catch((error) => {
     showError("spectrum-error", error);
-    document.querySelector("#identified-peptide-details").innerText = "ERROR"; // TODO: does this exist?
+    document.querySelector("#identified-peptide-details").innerText = "ERROR";
   })
 }
 
@@ -418,11 +421,10 @@ async function load_identified_peptide() {
     if (result.mode != null) {
       document.querySelector("#spectrum-model").value = result.mode.toLowerCase();
     }
-    document.querySelector("#details-spectrum-index").value = result.scan_index;
-    clearError("spectrum-error", error);
-  }).catch((error) => {
-    showError("spectrum-error", error);
-    document.querySelector("#identified-peptide-details").innerText = "ERROR"; // TODO: does this exist?
+    clearError("spectrum-error");
+    update_selected_spectra();
+  }).catch(() => {
+    document.querySelector("#identified-peptide-details").innerText = "ERROR";
   })
 }
 
@@ -533,6 +535,9 @@ function formatError(error, showContext = true) {
         msg += "<div class='context'>" + (Line.line_index != null ? ("<span class='line-number'>" + (Line.line_index + 1) + "</span>") : "") + "<pre>" + Line.line + "\n" + " ".repeat(Line.offset) + "^".repeat(Line.length) + "</pre></div>";
       } else if (error.context.hasOwnProperty('Show')) {
         msg += "<div class='error'>" + error.context.Show.line + "</div>";
+      } else if (error.context.hasOwnProperty('FullLine')) {
+        let FullLine = error.context.FullLine;
+        msg += "<div class='error'>" + FullLine.line + "</div>";
       } else {
         msg += "<pre>" + error.context + "</pre>";
       }
@@ -541,6 +546,13 @@ function formatError(error, showContext = true) {
       msg += "<p>Did you mean any of the following?</p><ul>";
       for (let suggestion in error.suggestions) {
         msg += "<li>" + error.suggestions[suggestion] + "</li>";
+      }
+      msg += "</ul>";
+    }
+    if (error.underlying_errors.length > 0) {
+      msg += "<p>The following underlying errors are identified</p><ul>";
+      for (let underlying_error in error.underlying_errors) {
+        msg += "<li>" + formatError(error.underlying_errors[underlying_error], showContext) + "</li>";
       }
       msg += "</ul>";
     }
@@ -577,7 +589,6 @@ function resizeDown(e) {
   document.querySelector(".resize-wrapper").dataset.left_width = document.querySelector(".resize-wrapper").firstElementChild.getBoundingClientRect().width - 16;
   document.addEventListener("mousemove", resizeMove);
   document.addEventListener("mouseup", resizeUp);
-  document.querySelector(".resize-wrapper").style.userSelect = 'none';
 }
 
 /** @param e {MouseEvent}  */
@@ -631,8 +642,6 @@ window.addEventListener("DOMContentLoaded", () => {
     .addEventListener("input", details_formula);
   enter_event("#search-peptide-input", search_peptide)
   enter_event("#search-modification", search_modification)
-  // enter_event("#scan-number", find_scan_number)
-  // add_event("#details-spectrum-index", ["change", "focus"], spectrum_details)
   add_event("#details-identified-peptide-index", ["change", "focus"], identified_peptide_details)
   document
     .querySelector("#annotate-button")
@@ -794,7 +803,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // Refresh interface for hot reload
   invoke("refresh").then((result) => {
-    // document.querySelector("#number-of-scans").innerText = result[0];
     if (result[0] > 0) {
       update_selected_spectra();
     }
@@ -1116,7 +1124,11 @@ function createElement(element, settings = undefined) {
 
 function showError(id, error, showContext = true) {
   let node = document.getElementById(id);
-  node.classList.add("error");
+  if (error.warning) {
+    node.classList.add("warning");
+  } else {
+    node.classList.add("error");
+  }
   node.classList.remove("hidden");
   node.innerHTML = formatError(error, showContext);
 }
@@ -1124,6 +1136,7 @@ function showError(id, error, showContext = true) {
 function clearError(id) {
   let node = document.getElementById(id);
   node.classList.remove("error");
+  node.classList.remove("warning");
   node.classList.add("hidden");
   node.innerHTML = "";
 }

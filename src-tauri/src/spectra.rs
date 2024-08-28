@@ -141,7 +141,7 @@ pub fn select_spectrum_index(file_index: usize, index: usize, state: ModifiableS
 }
 
 #[tauri::command]
-pub fn select_spectrum_scan_number(file_index: usize, scan_number: String, state: ModifiableState) -> Result<(), &'static str> {
+pub fn select_spectrum_native_id(file_index: usize, native_id: String, state: ModifiableState) -> Result<(), &'static str> {
     state
     .lock()
     .unwrap()
@@ -150,7 +150,7 @@ pub fn select_spectrum_scan_number(file_index: usize, scan_number: String, state
     .find(|f| f.id == file_index)
     .ok_or("File index not valid")
     .and_then(|file|  
-        file.rawfile.get_spectrum_by_id(&scan_number).map(|s| {
+        file.rawfile.get_spectrum_by_id(&native_id).map(|s| {
             if !file.selected_spectra.contains(&s.index()) {
                 file.selected_spectra.push(s.index()); 
                 file.selected_spectra.sort();

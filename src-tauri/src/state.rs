@@ -54,13 +54,13 @@ pub struct RawFile {
     pub id: usize,
     pub rawfile: MZReaderType<File>,
     pub selected_spectra: Vec<usize>,
-    pub description: String,
+    pub path: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RawFileDetails {
     id: usize,
-    description: String,
+    path: String,
     spectra: usize,
 }
 
@@ -70,14 +70,14 @@ impl RawFile {
             id: RAW_FILE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
             rawfile: file,
             selected_spectra: Vec::new(),
-            description: path.to_string(),
+            path: path.to_string(),
         }
     }
 
     pub fn details(&self) -> RawFileDetails {
         RawFileDetails {
             id: self.id,
-            description: self.description.clone(),
+            path: self.path.clone(),
             spectra: self.rawfile.len(),
         }
     }

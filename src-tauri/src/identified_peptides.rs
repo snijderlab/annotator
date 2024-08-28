@@ -1,6 +1,6 @@
 use crate::{html_builder, state::IdentifiedPeptideFile, ModifiableState};
 use itertools::Itertools;
-use mzdata::{io::SpectrumSource, prelude::SpectrumLike};
+use mzdata::io::SpectrumSource;
 use rayon::prelude::*;
 use rustyms::{
     align::{align, matrix::BLOSUM62},
@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 pub async fn load_identified_peptides_file<'a>(
     path: &'a str,
     state: ModifiableState<'a>,
-) -> Result<Vec<CustomError>, CustomError> {
+) -> Result<Option<CustomError>, CustomError> {
     let state = state.lock().unwrap();
     let actual_extension = path
         .rsplit('.')
@@ -170,7 +170,21 @@ pub async fn load_identified_peptides_file<'a>(
             Context::show(path),
         )),
     }?;
-    Ok(peptide_errors)
+    if peptide_errors.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(
+            CustomError::warning(
+                "Could not parse all peptides",
+                format!(
+                    "Out of all peptides {} gave rise to errors while parsing",
+                    peptide_errors.len()
+                ),
+                Context::show(path),
+            )
+            .with_underlying_errors(peptide_errors),
+        ))
+    }
 }
 
 #[tauri::command]
@@ -308,15 +322,14 @@ pub async fn search_peptide<'a>(
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct Settings {
+pub struct IdentifiedPeptideSettings {
     peptide: String,
     charge: Option<usize>,
     mode: Option<String>,
-    scan_index: Vec<usize>,
 }
 
-impl Settings {
-    fn from_peptide(peptide: &IdentifiedPeptide, scan: Vec<usize>) -> Self {
+impl IdentifiedPeptideSettings {
+    fn from_peptide(peptide: &IdentifiedPeptide) -> Self {
         let mut str_peptide = String::new();
         if let Some(peptide) = peptide.metadata.peptide() {
             peptide.display(&mut str_peptide, true, false).unwrap()
@@ -335,17 +348,16 @@ impl Settings {
                     }
                 })
                 .map(|mode| mode.to_string()),
-            scan_index: scan,
         }
     }
 }
 
 #[tauri::command]
-pub fn load_identified_peptide(
+pub async fn load_identified_peptide(
     file: usize,
     index: usize,
-    state: ModifiableState,
-) -> Option<Settings> {
+    state: ModifiableState<'_>,
+) -> Result<IdentifiedPeptideSettings, ()> {
     if let Ok(mut state) = state.lock() {
         let peptide = state
             .identified_peptide_files()
@@ -353,32 +365,63 @@ pub fn load_identified_peptide(
             .find(|f| f.id == file)
             .and_then(|file| file.peptides.get(index))
             .cloned();
-        peptide.map(|peptide| {
-            Settings::from_peptide(
-                &peptide,
-                peptide
-                    .metadata
-                    .scan_number()
-                    .and_then(|scan_number| {
-                        scan_number
-                            .iter()
-                            .map(|scan_number| {
-                                state
-                                    .spectra
-                                    .first_mut()
-                                    .and_then(|s| {
-                                        s.rawfile.get_spectrum_by_id(&format!(
-                                        "controllerType=0 controllerNumber=1 scan={scan_number}"
-                                    ))
-                                    })
-                                    .map(|s| s.index())
-                            })
-                            .collect()
-                    })
-                    .unwrap_or_default(),
-            )
-        })
+        peptide
+            .map(|peptide| {
+                let scan_indices = peptide.metadata.scan_number().unwrap_or_default();
+                let raw_file = peptide.metadata.raw_file().map(|p| p.to_owned());
+
+                // If there are scan indices unselect all selected spectra and select all
+                if !scan_indices.is_empty() {
+                    let mut name_matching = None;
+                    let mut stem_matching = None;
+
+                    let name = raw_file
+                        .as_ref()
+                        .and_then(|r| r.file_name())
+                        .map(|n| n.to_string_lossy().to_lowercase())
+                        .unwrap_or_default();
+                    let stem = raw_file
+                        .as_ref()
+                        .and_then(|r| r.file_stem())
+                        .map(|n| n.to_string_lossy().to_lowercase())
+                        .unwrap_or_default();
+
+                    // Search for a rawfile with the same name (stem+ext) or same stem, prefer the one with the same name
+                    for (index, file) in state.spectra.iter_mut().enumerate() {
+                        let path = std::path::Path::new(&file.path);
+                        if name_matching.is_none()
+                            && path
+                                .file_name()
+                                .map(|n| n.to_string_lossy().to_lowercase())
+                                .unwrap_or_default()
+                                == name
+                        {
+                            name_matching = Some(index);
+                        }
+                        if stem_matching.is_none()
+                            && path
+                                .file_stem()
+                                .map(|n| n.to_string_lossy().to_lowercase())
+                                .unwrap_or_default()
+                                == stem
+                        {
+                            stem_matching = Some(index);
+                        }
+                        file.selected_spectra = Vec::new();
+                    }
+                    let index = name_matching.or(stem_matching).unwrap_or_default();
+
+                    state.spectra[index].selected_spectra = scan_indices
+                        .iter()
+                        .copied()
+                        .filter(|i| *i < state.spectra[index].rawfile.len())
+                        .collect();
+                }
+
+                IdentifiedPeptideSettings::from_peptide(&peptide)
+            })
+            .ok_or(())
     } else {
-        None
+        Err(())
     }
 }

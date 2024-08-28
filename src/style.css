@@ -169,10 +169,16 @@ pre {
   margin-left: .5rem;
 }
 
-output.error {
+output.error,
+output.warning {
   margin: .5rem;
   padding-left: .5rem;
   border: 2px solid var(--color-red);
+  color: var(--color-foreground);
+
+  &.warning {
+    border-color: var(--color-yellow);
+  }
 
   &:not(.hidden) {
     display: block;
@@ -183,8 +189,12 @@ output.error {
     font-family: monospace;
   }
 
-  & .title {
+  &.error .title {
     color: var(--color-red);
+  }
+
+  &.warning .title {
+    color: var(--color-yellow);
   }
 
   & .context {

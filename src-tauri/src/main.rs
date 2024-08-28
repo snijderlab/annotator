@@ -3,14 +3,16 @@
     windows_subsystem = "windows"
 )]
 
+use std::sync::Mutex;
+
 use itertools::Itertools;
 use mzdata::{
     io::SpectrumSource,
     prelude::{IonProperties, SpectrumLike},
-    spectrum::{MultiLayerSpectrum, SignalContinuity, SpectrumDescription},
+    spectrum::{MultiLayerSpectrum, SpectrumDescription},
 };
 use mzpeaks::{CentroidPeak, DeconvolutedPeak};
-use mzsignal::{PeakFitType, PeakPicker};
+use mzsignal::PeakPicker;
 use ordered_float::OrderedFloat;
 use render::{display_formula, display_mass};
 use rustyms::{
@@ -21,12 +23,8 @@ use rustyms::{
     system::{e, mz, usize::Charge, MassOverCharge},
     *,
 };
-use state::State;
-use std::sync::Mutex;
-use tauri::Manager;
-
-use crate::metadata_render::RenderToHtml;
 use serde::{Deserialize, Serialize};
+use tauri::Manager;
 
 mod custom_modifications;
 mod html_builder;
@@ -36,6 +34,8 @@ mod render;
 mod search_modification;
 mod spectra;
 mod state;
+
+use crate::{metadata_render::RenderToHtml, state::State};
 
 const CUSTOM_MODIFICATIONS_FILE: &str = "custom_modifications.json";
 type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
@@ -455,7 +455,7 @@ fn main() {
             spectra::load_clipboard,
             spectra::load_raw,
             spectra::select_spectrum_index,
-            spectra::select_spectrum_scan_number,
+            spectra::select_spectrum_native_id,
             spectra::get_open_raw_files,
             spectra::get_selected_spectra,
             spectra::unselect_spectrum,

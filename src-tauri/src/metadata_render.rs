@@ -85,15 +85,15 @@ impl RenderToHtml for IdentifiedPeptide {
             .children([
                 HtmlElement::new(HtmlTag::p)
                     .content(format!(
-                        "Score: {}, Length: {} AA, Mass: {}, Charge: {}, m/z: {} Th, Mode: {}",
+                        "Score:&nbsp;{}, Length:&nbsp;{}, Mass:&nbsp;{}, Charge:&nbsp;{}, m/z:&nbsp;{}, Mode:&nbsp;{}, RT:&nbsp;{}, Raw&nbsp;file:&nbsp;{}",
                         self.score.map_or(String::from("-"), |s| format!("{s:.3}")),
                         self.metadata
                             .peptide()
-                            .map(|p| p.len())
+                            .map(|p| format!("{}&nbsp;AA", p.len()))
                             .to_optional_string(),
                         formula
                             .as_ref()
-                            .map(|f| display_masses(&f))
+                            .map(display_masses)
                             .to_optional_string(),
                         self.metadata
                             .charge()
@@ -102,13 +102,23 @@ impl RenderToHtml for IdentifiedPeptide {
                             .charge()
                             .and_then(|c| formula.map(|f| (f, c)))
                             .map(|(f, c)| format!(
-                                "{:.3}",
+                                "{:.3}&nbsp;Th",
                                 f.monoisotopic_mass().value / c.value as f64
                             ))
                             .to_optional_string(),
                         self.metadata
                             .mode()
-                            .map_or("-".to_string(), |c| c.to_string())
+                            .map_or("-".to_string(), |c| c.to_string()),
+                        self.metadata
+                            .retention_time()
+                            .map_or("-".to_string(), |c| format!("{:.3}&nbsp;min", c.get::<rustyms::system::time::min>())),
+                        self.metadata
+                            .raw_file()
+                            .map_or("-".to_string(), |c| 
+                                HtmlTag::span.new()
+                                .content(c.file_name().map(|s| s.to_string_lossy()).to_optional_string())
+                                .header("title", c.to_string_lossy()).to_string()
+                            ),
                     ))
                     .clone(),
                 peptide,
@@ -148,10 +158,6 @@ impl RenderToHtml for PeaksData {
                     &[
                         &["Fraction".to_string(), self.fraction.to_optional_string()],
                         &[
-                            "Source file".to_string(),
-                            self.source_file.clone().to_optional_string(),
-                        ],
-                        &[
                             "Feature".to_string(),
                             self.feature.as_ref().to_optional_string(),
                         ],
@@ -160,17 +166,12 @@ impl RenderToHtml for PeaksData {
                             self.de_novo_score.to_optional_string(),
                         ],
                         &["ALC".to_string(), self.alc.to_string()],
-                        &["RT".to_string(), self.rt.value.to_string()],
                         &[
                             "Predicted RT".to_string(),
                             self.predicted_rt.map(|v| v.value).to_optional_string(),
                         ],
                         &["Area".to_string(), self.area.to_optional_string()],
                         &["ppm".to_string(), self.ppm.to_string()],
-                        &[
-                            "Post Translational Modifications".to_string(),
-                            self.ptm.to_string(),
-                        ],
                         &[
                             "Accession".to_string(),
                             self.accession.as_ref().to_optional_string(),
@@ -206,10 +207,6 @@ impl RenderToHtml for NovorData {
                             self.spectra_id.to_optional_string(),
                         ],
                         &["Fraction".to_string(), self.fraction.to_optional_string()],
-                        &[
-                            "RT".to_string(),
-                            self.rt.map(|v| v.value).to_optional_string(),
-                        ],
                         &[
                             "Mass error".to_string(),
                             self.mass_err.map(|v| v.value).to_optional_string(),
@@ -250,15 +247,9 @@ impl RenderToHtml for OpairData {
                 HtmlElement::table::<HtmlContent, _>(
                     None,
                     &[
-                        &["File name".to_string(), self.file_name.to_string()],
-                        &["RT".to_string(), self.rt.value.to_string()],
                         &[
                             "Precursor scan number".to_string(),
                             self.precursor_scan_number.to_string(),
-                        ],
-                        &[
-                            "Theoretical Mass".to_string(),
-                            self.theoretical_mass.value.to_string(),
                         ],
                         &[
                             "Glycan Mass".to_string(),
@@ -382,7 +373,6 @@ impl RenderToHtml for MaxQuantData {
                 HtmlElement::table::<HtmlContent, _>(
                     None,
                     &[
-                        &["Raw file".to_string(), self.raw_file.to_string()],
                         &["Scan number".to_string(), self.scan_number.iter().join(";")],
                         &[
                             "Scan index".to_string(),
@@ -390,10 +380,6 @@ impl RenderToHtml for MaxQuantData {
                         ],
                         &["Modifications".to_string(), self.modifications.to_string()],
                         &["Proteins".to_string(), self.proteins.to_string()],
-                        &[
-                            "Fragmentation".to_string(),
-                            self.fragmentation.as_ref().to_optional_string(),
-                        ],
                         &[
                             "Mass analyser".to_string(),
                             self.mass_analyser.as_ref().to_optional_string(),
@@ -436,10 +422,6 @@ impl RenderToHtml for MaxQuantData {
                         &[
                             "Simple mass error [ppm]".to_string(),
                             self.simple_mass_error_ppm.to_optional_string(),
-                        ],
-                        &[
-                            "Retention time".to_string(),
-                            self.retention_time.map(|v| v.value).to_optional_string(),
                         ],
                         &[
                             "Number of matches".to_string(),
@@ -576,7 +558,6 @@ impl RenderToHtml for SageData {
                 HtmlElement::table::<HtmlContent, _>(
                     None,
                     &[
-                        &["Raw file".to_string(), self.filename.to_string()],
                         &[
                             "Scan number".to_string(),
                             format!("{},{},{}", self.scan_nr.0, self.scan_nr.1, self.scan_nr.2),
@@ -613,10 +594,6 @@ impl RenderToHtml for SageData {
                         &[
                             "Hyperscore delta best".to_string(),
                             self.delta_best.to_string(),
-                        ],
-                        &[
-                            "Retention time (min)".to_string(),
-                            self.rt.value.to_string(),
                         ],
                         &[
                             "Retention time aligned".to_string(),
@@ -681,7 +658,6 @@ impl RenderToHtml for MSFraggerData {
                 HtmlElement::table::<HtmlContent, _>(
                     None,
                     &[
-                        &["Raw file".to_string(), self.spectrum.file.to_string()],
                         &["Spectrum file".to_string(), self.spectrum_file.to_string()],
                         &[
                             "Scan number".to_string(),
@@ -713,10 +689,6 @@ impl RenderToHtml for MSFraggerData {
                         &[
                             "Calibrated experimental m/z".to_string(),
                             self.calibrated_experimental_mz.value.to_string(),
-                        ],
-                        &[
-                            "Retention time (min)".to_string(),
-                            self.rt.value.to_string(),
                         ],
                         &["Expectation".to_string(), self.expectation.to_string()],
                         &["Hyperscore".to_string(), self.hyperscore.to_string()],
