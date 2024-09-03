@@ -17,7 +17,7 @@ itertools = "0.13"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.7", features = ["shell-open", "dialog-open"] }
-rustyms = { version = "0.8.3", default-features = false, features = [
+rustyms = { version = "0.9.0-alpha.1", default-features = false, features = [
     "identification",
     "align",
     "isotopes",
@@ -25,9 +25,9 @@ rustyms = { version = "0.8.3", default-features = false, features = [
 ] }
 ordered-float = { version = "4.2", features = ["serde"] }
 rayon = "1.10"
-mzdata = { version = "0.27", features = ["thermo", "mzsignal"] }
-mzpeaks = "0.19"
-mzsignal = "0.20.0"
+mzdata = { version = "0.28.1", features = ["thermo", "mzsignal"] }
+mzpeaks = "0.20"
+mzsignal = "0.22"
 
 [patch.crates-io]
 # rustyms = { git = "https://github.com/snijderlab/rustyms", branch = "main" }

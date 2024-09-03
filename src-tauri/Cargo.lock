@@ -795,9 +795,9 @@ dependencies = [
 
 [[package]]
 name = "dotnetrawfilereader-sys"
-version = "0.2.6"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55e88bdd913cd9e0c1f5a64689c0a7fb54682179e62ceb7807c3c5b4c37204e1"
+checksum = "0145c459c9699b0a9186fe7f75c42f3c3005cfc2b50a79279e8652ed469522da"
 dependencies = [
  "include_dir",
  "netcorehost",
@@ -2014,9 +2014,9 @@ dependencies = [
 
 [[package]]
 name = "mzdata"
-version = "0.27.0"
+version = "0.28.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f18042cb1de2d3cb4361c159a4c94ab3b1d249040c9909bba5cb55a94baa981d"
+checksum = "2c1a0ed2846874170b2b391ba6c40fe9c86aa76d3b45e576a635523bdcc34236"
 dependencies = [
  "base16ct",
  "base64-simd",
@@ -2042,18 +2042,18 @@ dependencies = [
 
 [[package]]
 name = "mzpeaks"
-version = "0.19.0"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34b5e060b5ab408fac14a6271a90b3e8a2ed929ef099ba9f690c556b1edfa8c6"
+checksum = "6a35fa4df5792b70e4c7c24ef67efd10e665ed7c2145ad50a46bd2752e40f53d"
 dependencies = [
  "num-traits",
 ]
 
 [[package]]
 name = "mzsignal"
-version = "0.20.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11609a2a8a6b46a6ff74565c33bdcb8980f35bd2ba5fd73248cd4fc2a488c6d4"
+checksum = "498ef597e4f5916fe31799939c160d4c630e73abf3d5edb9219b626897939a06"
 dependencies = [
  "cfg-if",
  "log",
@@ -3170,7 +3170,7 @@ checksum = "955d28af4278de8121b7ebeb796b6a45735dc01436d898801014aced2773a3d6"
 
 [[package]]
 name = "rustyms"
-version = "0.8.3"
+version = "0.9.0-alpha.1"
 dependencies = [
  "bincode",
  "flate2",
@@ -3982,9 +3982,9 @@ dependencies = [
 
 [[package]]
 name = "thermorawfilereader"
-version = "0.2.6"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "810ee8675e70d5443bcee0f603741b221c5f7f781cf3cf2234ec955259eab330"
+checksum = "9642c96a137dfcbd0321169536fa5dd0c3e8433a42e68781e9f8567af2302ddf"
 dependencies = [
  "bytemuck",
  "dotnetrawfilereader-sys",
