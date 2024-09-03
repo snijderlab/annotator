@@ -3,7 +3,10 @@ use mzdata::{
     io::MZFileReader,
     params::{ParamDescribed, Unit, Value},
     prelude::{IonProperties, PrecursorSelection, SpectrumLike},
-    spectrum::{ActivationMethod, ArrayType, DataArray, MultiLayerSpectrum, SignalContinuity},
+    spectrum::{
+        bindata::BinaryCompressionType, ActivationMethod, ArrayType, BinaryDataArrayType,
+        DataArray, MultiLayerSpectrum, SignalContinuity,
+    },
     Param,
 };
 use mzpeaks::CentroidPeak;
@@ -168,8 +171,12 @@ fn load_thermo_clipboard(lines: &[&str]) -> Result<mzdata::spectrum::RawSpectrum
     spectrum.description.signal_continuity = SignalContinuity::Profile;
     let mut data_mz = DataArray::default();
     data_mz.name = ArrayType::MZArray;
+    data_mz.dtype = BinaryDataArrayType::Float64;
+    data_mz.compression = BinaryCompressionType::Decoded;
     let mut data_intensity = DataArray::default();
     data_intensity.name = ArrayType::IntensityArray;
+    data_intensity.dtype = BinaryDataArrayType::Float32;
+    data_intensity.compression = BinaryCompressionType::Decoded;
 
     for (line_number, line) in lines.iter().enumerate().skip(1) {
         if line.to_lowercase() == "spectrum - ms" || line.to_ascii_lowercase() == "mass	intensity" {
@@ -261,7 +268,7 @@ fn load_thermo_clipboard(lines: &[&str]) -> Result<mzdata::spectrum::RawSpectrum
             return Err(format!("Incorrect number of columns at line {line_number}"));
         }
         if let (Ok(mass_over_charge), Ok(intensity)) =
-            (cells[0].parse::<f64>(), cells[1].parse::<f64>())
+            (cells[0].parse::<f64>(), cells[1].parse::<f32>())
         {
             let _ = data_mz.push(mass_over_charge);
             let _ = data_intensity.push(intensity);
