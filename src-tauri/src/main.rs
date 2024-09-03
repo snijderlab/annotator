@@ -7,7 +7,6 @@ use std::sync::Mutex;
 
 use itertools::Itertools;
 use mzdata::{
-    io::SpectrumSource,
     prelude::{IonProperties, SpectrumLike},
     spectrum::{MultiLayerSpectrum, SpectrumDescription},
 };
@@ -324,16 +323,7 @@ async fn annotate_spectrum<'a>(
 
     let mut spectra = Vec::new();
     for file in state.spectra.iter_mut() {
-        for index in &file.selected_spectra {
-            let spectrum = file.rawfile.get_spectrum_by_index(*index).ok_or_else(|| {
-                CustomError::error(
-                    "Could not find spectrum",
-                    "This spectrum index does not exist",
-                    Context::None,
-                )
-            })?;
-            spectra.push(spectrum);
-        }
+        spectra.extend(file.get_selected_spectra());
     }
     let mut spectrum = if spectra.is_empty() {
         return Err(CustomError::error(

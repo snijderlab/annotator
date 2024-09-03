@@ -20,8 +20,9 @@ impl RenderToHtml for IdentifiedPeptide {
             let mut html = HtmlElement::new(HtmlTag::div);
             html.class("original-sequence").style("--max-value:1");
             let lc = self
-                .local_confidence
-                .clone()
+                .metadata
+                .local_confidence()
+                .map(|lc| lc.to_vec())
                 .unwrap_or(vec![0.0; peptide.len()]);
 
             if let Some(n) = peptide.n_term.as_ref() {
@@ -558,10 +559,7 @@ impl RenderToHtml for SageData {
                 HtmlElement::table::<HtmlContent, _>(
                     None,
                     &[
-                        &[
-                            "Scan number".to_string(),
-                            format!("{},{},{}", self.scan_nr.0, self.scan_nr.1, self.scan_nr.2),
-                        ],
+                        &["Native ID".to_string(), self.native_id.to_string()],
                         &["Proteins".to_string(), self.proteins.join(";")],
                         &["Rank".to_string(), self.rank.to_string()],
                         &["Decoy".to_string(), self.decoy.to_string()],

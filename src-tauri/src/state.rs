@@ -4,7 +4,11 @@ use std::{
     sync::atomic::AtomicUsize,
 };
 
-use mzdata::io::{MZReaderType, SpectrumSource};
+use mzdata::{
+    io::{MZReaderType, SpectrumSource},
+    prelude::SpectrumLike,
+    spectrum::MultiLayerSpectrum,
+};
 use rustyms::{identification::IdentifiedPeptide, ontologies::CustomDatabase};
 use serde::{Deserialize, Serialize};
 
@@ -50,23 +54,118 @@ impl IdentifiedPeptideFile {
     }
 }
 
-pub struct RawFile {
-    pub id: usize,
-    pub rawfile: MZReaderType<File>,
-    pub selected_spectra: Vec<usize>,
-    pub path: String,
+pub enum RawFile {
+    File {
+        id: usize,
+        rawfile: MZReaderType<File>,
+        selected_spectra: Vec<usize>,
+        path: String,
+    },
+    Clipboard {
+        id: usize,
+        spectrum: MultiLayerSpectrum,
+        selected: bool,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RawFileDetails {
-    id: usize,
-    path: String,
-    spectra: usize,
+    pub id: usize,
+    pub path: String,
+    pub spectra: usize,
 }
 
 impl RawFile {
-    pub fn new(path: &str, file: MZReaderType<File>) -> Self {
-        RawFile {
+    pub fn id(&self) -> usize {
+        match self {
+            RawFile::Clipboard { id, .. } | RawFile::File { id, .. } => *id,
+        }
+    }
+
+    pub fn clear_selected(&mut self) {
+        match self {
+            Self::File {
+                selected_spectra, ..
+            } => selected_spectra.clear(),
+            Self::Clipboard { selected, .. } => *selected = false,
+        }
+    }
+
+    pub fn unselect_index(&mut self, index: usize) {
+        match self {
+            Self::File {
+                selected_spectra, ..
+            } => {
+                if let Some(index) = selected_spectra.iter().position(|i| *i == index) {
+                    selected_spectra.remove(index);
+                }
+            }
+            Self::Clipboard { selected, .. } => {
+                if index == 0 {
+                    *selected = false;
+                }
+            }
+        }
+    }
+
+    pub fn select_index(&mut self, index: usize) -> Result<(), &'static str> {
+        match self {
+            Self::File {
+                rawfile,
+                selected_spectra,
+                ..
+            } => {
+                if index >= rawfile.len() {
+                    Err("Outside of file range")
+                } else if !selected_spectra.contains(&index) {
+                    selected_spectra.push(index);
+                    selected_spectra.sort();
+                    Ok(())
+                } else {
+                    Ok(())
+                }
+            }
+            Self::Clipboard { selected, .. } => {
+                if index == 0 {
+                    *selected = true;
+                    Ok(())
+                } else {
+                    Err("Outside of file range")
+                }
+            }
+        }
+    }
+
+    pub fn select_native_id(&mut self, native_id: String) -> Result<(), &'static str> {
+        match self {
+            Self::File {
+                rawfile,
+                selected_spectra,
+                ..
+            } => rawfile
+                .get_spectrum_by_id(&native_id)
+                .map(|s| {
+                    if !selected_spectra.contains(&s.index()) {
+                        selected_spectra.push(s.index());
+                        selected_spectra.sort();
+                    }
+                })
+                .ok_or("Native ID does not exist"),
+            Self::Clipboard {
+                selected, spectrum, ..
+            } => {
+                if spectrum.description.id == native_id {
+                    *selected = true;
+                    Ok(())
+                } else {
+                    Err("Native ID does not exist")
+                }
+            }
+        }
+    }
+
+    pub fn new_file(path: &str, file: MZReaderType<File>) -> Self {
+        RawFile::File {
             id: RAW_FILE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
             rawfile: file,
             selected_spectra: Vec::new(),
@@ -74,11 +173,45 @@ impl RawFile {
         }
     }
 
+    pub fn new_clipboard(spectrum: MultiLayerSpectrum) -> Self {
+        RawFile::Clipboard {
+            id: RAW_FILE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
+            spectrum,
+            selected: false,
+        }
+    }
+
     pub fn details(&self) -> RawFileDetails {
-        RawFileDetails {
-            id: self.id,
-            path: self.path.clone(),
-            spectra: self.rawfile.len(),
+        match self {
+            RawFile::File {
+                id, rawfile, path, ..
+            } => RawFileDetails {
+                id: *id,
+                path: path.clone(),
+                spectra: rawfile.len(),
+            },
+            RawFile::Clipboard { id, .. } => RawFileDetails {
+                id: *id,
+                path: "clipboard".to_string(),
+                spectra: 1,
+            },
+        }
+    }
+
+    pub fn get_selected_spectra(&mut self) -> Box<dyn Iterator<Item = MultiLayerSpectrum> + '_> {
+        match self {
+            Self::File {
+                rawfile,
+                selected_spectra,
+                ..
+            } => Box::new(selected_spectra.iter().map(|index| {
+                rawfile
+                    .get_spectrum_by_index(*index)
+                    .expect("Spectrum index not valid")
+            })),
+            Self::Clipboard {
+                spectrum, selected, ..
+            } => Box::new(std::iter::once(spectrum.clone()).take(usize::from(*selected))),
         }
     }
 }

@@ -179,13 +179,12 @@ async function update_identified_peptide_file_select() {
 
 async function load_clipboard() {
   document.querySelector("#load-clipboard").classList.add("loading");
-  navigator.clipboard
+  return navigator.clipboard
     .readText()
     .then(async (clipText) => {
-      invoke("load_clipboard", { data: clipText }).then((result) => {
+      invoke("load_clipboard", { data: clipText }).then(() => {
         clearError("open-files-error");
-        document.querySelector("#number-of-scans").innerText = result;
-        update_selected_spectra();
+        update_open_raw_files();
         document.querySelector("#load-clipboard").classList.remove("loading")
       }).catch((error) => {
         showError("open-files-error", error);
@@ -421,7 +420,11 @@ async function load_identified_peptide() {
     if (result.mode != null) {
       document.querySelector("#spectrum-model").value = result.mode.toLowerCase();
     }
-    clearError("spectrum-error");
+    if (result.warning != null) {
+      showError("spectrum-error", result.warning);
+    } else {
+      clearError("spectrum-error");
+    }
     update_selected_spectra();
   }).catch(() => {
     document.querySelector("#identified-peptide-details").innerText = "ERROR";

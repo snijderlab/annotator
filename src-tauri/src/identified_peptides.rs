@@ -1,6 +1,5 @@
 use crate::{html_builder, state::IdentifiedPeptideFile, ModifiableState};
 use itertools::Itertools;
-use mzdata::io::SpectrumSource;
 use rayon::prelude::*;
 use rustyms::{
     align::{align, matrix::BLOSUM62},
@@ -326,10 +325,11 @@ pub struct IdentifiedPeptideSettings {
     peptide: String,
     charge: Option<usize>,
     mode: Option<String>,
+    warning: Option<String>,
 }
 
 impl IdentifiedPeptideSettings {
-    fn from_peptide(peptide: &IdentifiedPeptide) -> Self {
+    fn from_peptide(peptide: &IdentifiedPeptide, warning: Option<String>) -> Self {
         let mut str_peptide = String::new();
         if let Some(peptide) = peptide.metadata.peptide() {
             peptide.display(&mut str_peptide, true, false).unwrap()
@@ -348,6 +348,7 @@ impl IdentifiedPeptideSettings {
                     }
                 })
                 .map(|mode| mode.to_string()),
+            warning,
         }
     }
 }
@@ -357,7 +358,7 @@ pub async fn load_identified_peptide(
     file: usize,
     index: usize,
     state: ModifiableState<'_>,
-) -> Result<IdentifiedPeptideSettings, ()> {
+) -> Result<IdentifiedPeptideSettings, &'static str> {
     if let Ok(mut state) = state.lock() {
         let peptide = state
             .identified_peptide_files()
@@ -367,11 +368,13 @@ pub async fn load_identified_peptide(
             .cloned();
         peptide
             .map(|peptide| {
-                let scan_indices = peptide.metadata.scan_number().unwrap_or_default();
+                let scan_indices = peptide.metadata.scan_indices().unwrap_or_default();
+                let native_ids = peptide.metadata.spectrum_native_ids().unwrap_or_default();
                 let raw_file = peptide.metadata.raw_file().map(|p| p.to_owned());
+                let mut message = None;
 
                 // If there are scan indices unselect all selected spectra and select all
-                if !scan_indices.is_empty() {
+                if !scan_indices.is_empty() || !native_ids.is_empty() {
                     let mut name_matching = None;
                     let mut stem_matching = None;
 
@@ -388,7 +391,8 @@ pub async fn load_identified_peptide(
 
                     // Search for a rawfile with the same name (stem+ext) or same stem, prefer the one with the same name
                     for (index, file) in state.spectra.iter_mut().enumerate() {
-                        let path = std::path::Path::new(&file.path);
+                        let path = file.details().path;
+                        let path = std::path::Path::new(&path);
                         if name_matching.is_none()
                             && path
                                 .file_name()
@@ -407,21 +411,28 @@ pub async fn load_identified_peptide(
                         {
                             stem_matching = Some(index);
                         }
-                        file.selected_spectra = Vec::new();
+                        file.clear_selected();
                     }
-                    let index = name_matching.or(stem_matching).unwrap_or_default();
 
-                    state.spectra[index].selected_spectra = scan_indices
-                        .iter()
-                        .copied()
-                        .filter(|i| *i < state.spectra[index].rawfile.len())
-                        .collect();
+                    if let Some(index) = name_matching.or(stem_matching) {
+                        if !scan_indices.is_empty() {
+                            for scan_index in scan_indices {
+                                let _ = state.spectra[index].select_index(scan_index);
+                            }
+                        } else {
+                            for native_id in native_ids {
+                                let _ = state.spectra[index].select_native_id(native_id);
+                            }
+                        }
+                    } else {
+                        message = Some(format!("Could not find a raw file with name '{stem}' either load the correct raw file or manually load the spectra '{}' from the correct raw file", if !scan_indices.is_empty() {scan_indices.iter().join(",")} else {native_ids.iter().join(",")}))
+                    }
                 }
 
-                IdentifiedPeptideSettings::from_peptide(&peptide)
+                IdentifiedPeptideSettings::from_peptide(&peptide, message)
             })
-            .ok_or(())
+            .ok_or("The identified peptide could not be found")
     } else {
-        Err(())
+        Err("Could not lock mutex, are you running too many things at the same time?")
     }
 }
