@@ -269,16 +269,16 @@ impl ModelParameters {
                 Context::None,
             ));
         }
-        if let (Some(min), Some(max)) = mz_range {
-            if min > max {
-                return Err(CustomError::error(
-                    "m/z range invalid",
-                    "The minimal value is less then the maximal value",
-                    Context::None,
-                ));
-            }
-            model.mz_range = MassOverCharge::new::<mz>(min)..=MassOverCharge::new::<mz>(max);
+        let min = mz_range.0.unwrap_or(0.0);
+        let max = mz_range.1.unwrap_or(f64::MAX);
+        if min > max {
+            return Err(CustomError::error(
+                "m/z range invalid",
+                "The minimal value is less then the maximal value",
+                Context::None,
+            ));
         }
+        model.mz_range = MassOverCharge::new::<mz>(min)..=MassOverCharge::new::<mz>(max);
         Ok(model)
     }
 }
