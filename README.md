@@ -34,4 +34,4 @@ To build from source. Clone the repository. And build with cargo. Make sure you 
 
 ## Thermo RAW files
 
-The .NET 8.0 runtime is needed to open Thermo RAW files. [Which can be downloaded here.](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) Additionally on windows you can use `winget install Microsoft.DotNet.SDK.8` for a quick install.
+The .NET 8.0 runtime is needed to open Thermo RAW files. [Which can be downloaded here.](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) Additionally on windows you can use `winget install Microsoft.DotNet.Runtime.8` for a quick install.

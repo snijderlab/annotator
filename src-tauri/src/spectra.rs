@@ -1,3 +1,5 @@
+use std::{any::Any, io::ErrorKind};
+
 use itertools::Itertools;
 use mzdata::{
     io::MZFileReader,
@@ -40,7 +42,17 @@ pub async fn load_raw<'a>(
             spectra.push(file);
             Ok(details)
         }
-        Err(err) => Err(err.to_string()),
+        Err(err) => {
+            let error = err.to_string();
+
+            if err.kind() == ErrorKind::Other
+                && error == "It was not possible to find a compatible framework version."
+            {
+                Err("The .NET 8.0 Runtime is needed to open Thermo RAW files. <a target='_blank' href='https://dotnet.microsoft.com/en-us/download/dotnet/8.0'>Which can be downloaded here.</a> Additionally on windows you can use <code style='user-select:all'>winget install Microsoft.DotNet.Runtime.8</code> for a quick install.".to_string())
+            } else {
+                Err(error)
+            }
+        }
     }
 }
 

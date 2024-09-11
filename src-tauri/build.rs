@@ -650,7 +650,7 @@ fn main() {
       <div class="grow"></div>
       <footer>
         <p>Annotator by Douwe Schulte at the Snijderlab</p>
-        <a href='https://github.com/snijderlab/annotator'>Open source at github (bugs can be reported here)</a>
+        <a target='_blank' href='https://github.com/snijderlab/annotator'>Open source at github (bugs can be reported here)</a>
         <p>Licensed under MIT OR Apache-2.0</p>
         <p>Version {}</p>
       </footer>
