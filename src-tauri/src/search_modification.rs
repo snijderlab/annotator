@@ -66,9 +66,8 @@ pub async fn search_modification(
                         [
                             modification.to_string(),
                             link_modification(*ontology, *id, name),
-                            display_masses(&modification.formula(Default::default(), 0))
-                                .to_string(),
-                            display_formula(&modification.formula(Default::default(), 0), true),
+                            display_masses(&modification.formula()).to_string(),
+                            display_formula(&modification.formula(), true),
                         ]
                     }),
             )
@@ -95,8 +94,8 @@ pub async fn search_modification(
                     .new()
                     .content(format!(
                         "Formula {} Mass {}",
-                        display_formula(&modification.formula(Default::default(), 0), true),
-                        display_masses(&modification.formula(Default::default(), 0)),
+                        display_formula(&modification.formula(), true),
+                        display_masses(&modification.formula()),
                     ))
                     .clone(),
                 html_builder::HtmlElement::table(
@@ -129,8 +128,8 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
 
     output.content(HtmlElement::new(HtmlTag::p).content(format!(
         "Formula {} Mass {}",
-        display_formula(&modification.formula(Default::default(), 0), true),
-        display_masses(&modification.formula(Default::default(), 0)),
+        display_formula(&modification.formula(), true),
+        display_masses(&modification.formula()),
     )));
 
     if let modification::SimpleModification::Database {

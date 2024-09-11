@@ -25,7 +25,7 @@ impl RenderToHtml for IdentifiedPeptide {
                 .map(|lc| lc.to_vec())
                 .unwrap_or(vec![0.0; peptide.len()]);
 
-            if let Some(n) = peptide.n_term.as_ref() {
+            if let Some(n) = peptide.get_n_term().as_ref() {
                 let mut modification = String::new();
                 n.display(&mut modification, false).unwrap();
                 html.content(
@@ -44,7 +44,7 @@ impl RenderToHtml for IdentifiedPeptide {
                 );
             }
 
-            for (aa, confidence) in peptide.sequence.iter().zip(lc) {
+            for (aa, confidence) in peptide.sequence().iter().zip(lc) {
                 html.content(
                     HtmlElement::new(HtmlTag::div)
                         .style(format!("--value:{confidence}"))
@@ -64,7 +64,7 @@ impl RenderToHtml for IdentifiedPeptide {
                 );
             }
 
-            if let Some(c) = peptide.c_term.as_ref() {
+            if let Some(c) = peptide.get_c_term().as_ref() {
                 let mut modification = String::new();
                 c.display(&mut modification, false).unwrap();
                 html.content(

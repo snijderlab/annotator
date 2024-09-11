@@ -25,9 +25,9 @@ rustyms = { version = "0.9.0-alpha.1", default-features = false, features = [
 ] }
 ordered-float = { version = "4.2", features = ["serde"] }
 rayon = "1.10"
-mzdata = { version = "0.28.1", features = ["thermo", "mzsignal"] }
+mzdata = { version = "0.29", features = ["thermo", "mzsignal"] }
 mzpeaks = "0.20"
-mzsignal = "0.22"
+mzsignal = "0.23"
 
 [patch.crates-io]
 # rustyms = { git = "https://github.com/snijderlab/rustyms", branch = "main" }

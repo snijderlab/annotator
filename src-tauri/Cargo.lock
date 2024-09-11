@@ -265,9 +265,9 @@ checksum = "79296716171880943b8470b5f8d03aa55eb2e645a4874bdbb28adb49162e012c"
 
 [[package]]
 name = "bytemuck"
-version = "1.17.0"
+version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fd4c6dcc3b0aea2f5c0b4b82c2b15fe39ddbc76041a310848f4706edf76bb31"
+checksum = "94bbb0ad554ad961ddc5da507a12a29b14e4ae5bda06b19f575a3e6079d2e2ae"
 
 [[package]]
 name = "byteorder"
@@ -795,13 +795,14 @@ dependencies = [
 
 [[package]]
 name = "dotnetrawfilereader-sys"
-version = "0.2.7"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0145c459c9699b0a9186fe7f75c42f3c3005cfc2b50a79279e8652ed469522da"
+checksum = "621a40754766d70130d73c62a61def5847992d08c6c584e57f5f09b008d834c0"
 dependencies = [
  "include_dir",
  "netcorehost",
  "tempfile",
+ "thiserror",
 ]
 
 [[package]]
@@ -2014,9 +2015,9 @@ dependencies = [
 
 [[package]]
 name = "mzdata"
-version = "0.28.1"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c1a0ed2846874170b2b391ba6c40fe9c86aa76d3b45e576a635523bdcc34236"
+checksum = "68d1546da86f952a2aa9a22bed437ccb91a1dc86d857e77d94d715949de605f1"
 dependencies = [
  "base16ct",
  "base64-simd",
@@ -2051,9 +2052,9 @@ dependencies = [
 
 [[package]]
 name = "mzsignal"
-version = "0.22.0"
+version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "498ef597e4f5916fe31799939c160d4c630e73abf3d5edb9219b626897939a06"
+checksum = "2e27acb0c894b994d7424d8f142ed1586ced20299650bcc8ab350d66e6e52faa"
 dependencies = [
  "cfg-if",
  "log",
@@ -3982,9 +3983,9 @@ dependencies = [
 
 [[package]]
 name = "thermorawfilereader"
-version = "0.2.7"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9642c96a137dfcbd0321169536fa5dd0c3e8433a42e68781e9f8567af2302ddf"
+checksum = "3e26aa2fc35a3d1eaeec97f5f420c7fe57c318774455cfc388e0c87218d68e49"
 dependencies = [
  "bytemuck",
  "dotnetrawfilereader-sys",

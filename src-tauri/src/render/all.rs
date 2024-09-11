@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, collections::HashSet, fmt::Write};
 
 use itertools::Itertools;
-use mzdata::{prelude::SpectrumLike, spectrum::MultiLayerSpectrum};
+use mzdata::spectrum::MultiLayerSpectrum;
 use rustyms::{
     fragment::*,
     model::Location,
@@ -45,7 +45,7 @@ pub fn annotated_spectrum(
         .iter()
         .flat_map(|p| p.peptides())
         .any(|p| {
-            p.sequence
+            p.sequence()
                 .iter()
                 .filter(|seq| {
                     seq.modifications.iter().any(|m| {
@@ -417,7 +417,7 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
         .map(|p| {
             p.peptides()
                 .iter()
-                .map(|p| vec![HashSet::new(); p.sequence.len()])
+                .map(|p| vec![HashSet::new(); p.len()])
                 .collect()
         })
         .collect();
@@ -517,10 +517,10 @@ fn render_linear_peptide(
         )
         .unwrap();
     }
-    if peptide.n_term.is_some() {
+    if peptide.get_n_term().is_some() {
         write!(output, "<span class='modification term'></span>").unwrap();
     }
-    for (index, (pos, ions)) in peptide.sequence.iter().zip(overview).enumerate() {
+    for (index, (pos, ions)) in peptide.sequence().iter().zip(overview).enumerate() {
         let mut classes = String::new();
         let mut xl_indices = Vec::new();
         let mut xl_names = Vec::new();
@@ -575,7 +575,7 @@ fn render_linear_peptide(
             output,
             "<span data-pos='{peptidoform_index}-{peptide_index}-{index}' data-cross-links='{cross_links}' data-cross-links-compact='{cross_links_compact}'{classes} tabindex='0' title='N terminal position: {}, C terminal position: {}{}'>{}",
             index + 1,
-            peptide.sequence.len() - index,
+            peptide.len() - index,
             if xl_names.is_empty() {
                 String::new()
             } else {
@@ -587,7 +587,9 @@ fn render_linear_peptide(
         for ion in ions {
             if !matches!(
                 ion,
-                FragmentType::immonium(_, _) | FragmentType::m(_, _) | FragmentType::diagnostic(_)
+                FragmentType::immonium(_, _)
+                    | FragmentType::PrecursorSideChainLoss(_, _)
+                    | FragmentType::diagnostic(_)
             ) {
                 write!(
                     output,
@@ -599,10 +601,10 @@ fn render_linear_peptide(
         }
         write!(output, "</span>").unwrap();
     }
-    if peptide.c_term.is_some() {
+    if peptide.get_c_term().is_some() {
         write!(output, "<span class='modification term'></span>").unwrap();
     }
-    if let Some(charge_carriers) = &peptide.charge_carriers {
+    if let Some(charge_carriers) = &peptide.get_charge_carriers() {
         write!(
             output,
             "<span class='charge-carriers'>/{charge_carriers}</span>",
@@ -1055,7 +1057,7 @@ fn general_stats(
             let precursor = spectrum.peptide.peptidoforms()[peptidoform_index].peptides()
                 [peptide_index]
                 .clone()
-                .linear()
+                .into_linear()
                 .map_or("Part of peptidoform".to_string(), |p| {
                     p.formulas().iter().map(display_masses).join(", ")
                 });
@@ -1257,7 +1259,7 @@ fn general_stats(
                     fdr_peaks_row,
                     "<td>{}</td>",
                     fdr.as_ref()
-                        .map(|(combined_fdr, _)| format_fdr_peaks(&combined_fdr))
+                        .map(|(combined_fdr, _)| format_fdr_peaks(combined_fdr))
                         .to_optional_string()
                 )
                 .unwrap();
@@ -1265,7 +1267,7 @@ fn general_stats(
                     fdr_intensity_row,
                     "<td>{}</td>",
                     fdr.as_ref()
-                        .map(|(combined_fdr, _)| format_fdr_intensity(&combined_fdr))
+                        .map(|(combined_fdr, _)| format_fdr_intensity(combined_fdr))
                         .to_optional_string()
                 )
                 .unwrap();
@@ -1289,7 +1291,7 @@ fn general_stats(
                     fdr_peaks_row,
                     "<td>{}</td>",
                     fdr.as_ref()
-                        .map(|(combined_fdr, _)| format_fdr_peaks(&combined_fdr))
+                        .map(|(combined_fdr, _)| format_fdr_peaks(combined_fdr))
                         .to_optional_string()
                 )
                 .unwrap();
@@ -1297,7 +1299,7 @@ fn general_stats(
                     fdr_intensity_row,
                     "<td>{}</td>",
                     fdr.as_ref()
-                        .map(|(combined_fdr, _)| format_fdr_intensity(&combined_fdr))
+                        .map(|(combined_fdr, _)| format_fdr_intensity(combined_fdr))
                         .to_optional_string()
                 )
                 .unwrap();
