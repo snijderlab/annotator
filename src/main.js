@@ -802,6 +802,9 @@ window.addEventListener("DOMContentLoaded", () => {
       .catch(error => console.error(error))
   });
   document.getElementById("custom-mod-cancel").addEventListener("click", () => document.getElementById("custom-mod-dialog").close());
+  invoke("get_custom_mods_path").then(path =>
+    document.getElementById("custom-modifications-path").innerText = path
+  );
   updateCustomModifications();
 
   // Refresh interface for hot reload

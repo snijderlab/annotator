@@ -411,6 +411,17 @@ fn load_custom_mods(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
     }
 }
 
+#[tauri::command]
+fn get_custom_mods_path(app: tauri::AppHandle) -> String {
+    app.path_resolver()
+        .app_config_dir()
+        .map_or("not loaded".to_string(), |dir| {
+            dir.join(CUSTOM_MODIFICATIONS_FILE)
+                .to_string_lossy()
+                .to_string()
+        })
+}
+
 fn main() {
     tauri::Builder::default()
         .manage(Mutex::new(State {
@@ -438,6 +449,7 @@ fn main() {
             identified_peptides::load_identified_peptide,
             identified_peptides::load_identified_peptides_file,
             identified_peptides::search_peptide,
+            get_custom_mods_path,
             refresh,
             render::density_graph,
             search_modification::search_modification,

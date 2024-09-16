@@ -401,9 +401,9 @@ fn main() {
             </div>
     
           </fieldset>
-    
-          <fieldset class='settings spectrum-settings'>
-            <legend>Spectrum settings</legend>
+
+          <fieldset class='settings peaks-settings'>
+            <legend>Peaks settings</legend>
             
             <label for='theoretical' title='Show the theoretical peptide spectrum on the x axis'><input id='theoretical' class='theoretical' type='checkbox' switch/>Show theoretical spectrum</label>
             
@@ -418,7 +418,12 @@ fn main() {
                 <label for='peak-colour-none' tabindex='0'><input type='radio' name='peak-colour' value='none' id='peak-colour-none'>None</label>
               </div>
             </div>
+
+            <label>Measure distance <button id='peak-distance'>Use ruler</button></label>
+          </fieldset>
     
+          <fieldset class='settings spectrum-settings'>
+            <legend>Label settings</legend>
             <label class='has-slider label row align'>
               <span>Show labels for top:</span>
               <input id='spectrum-label' type='range' min='0' max='100' value='100'/>
@@ -435,7 +440,7 @@ fn main() {
     
             <div class='row'>
               <span class='title'>Manually force show</span>
-              <div class='select-box' id='force-show'>
+              <div class='select-box' id='force-show' style='min-width: fit-content;'>
                 <label tabindex='0'><input type='radio' name='force-show' value='none' id='force-show-none' checked>None</label>
                 <label tabindex='0'><input type='radio' name='force-show' value='label' id='force-show-label'>Label</label>
                 <label tabindex='0'><input type='radio' name='force-show' value='m-z' id='force-show-m-z'>m/z</label>
@@ -461,6 +466,10 @@ fn main() {
             </div>
 
             <label><input id='rotate-label' class='rotate-label' type='checkbox' switch/>Rotate labels</label>
+          </fieldset>
+          
+          <fieldset class='settings spectrum-settings'>
+            <legend>Spectrum settings</legend>
             
             <div>
               <span>Mz</span>
@@ -520,6 +529,7 @@ fn main() {
       <input type="checkbox" id="collapsible-custom-mods">
       <fieldset class="collapsible" data-linked-item="collapsible-custom-mods" id="custom-modifications">
         <legend>Custom modifications</legend>
+        <p>Path to configuration file: <span style='-webkit-user-select:all;user-select:all;' id='custom-modifications-path'>Not loaded</span></p>
         <dialog id="custom-mod-dialog">
           <h1>Custom modification</h1>
 

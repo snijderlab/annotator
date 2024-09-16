@@ -416,7 +416,7 @@ pub fn get_selected_spectra(state: ModifiableState) -> Vec<(usize, Vec<SelectedS
                             )
                         }),
                         if let Some(param) = SpectrumLike::params(&spectrum).iter().find(|p| p.name == "sequence") {
-                            format!("<br>Sequence: <span style='user-select:all'>{}</span>", param.value)
+                            format!("<br>Sequence: <span style='-webkit-user-select:all;user-select:all;'>{}</span>", param.value)
                         } else {
                             String::new()
                         },
