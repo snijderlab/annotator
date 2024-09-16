@@ -127,7 +127,7 @@ pub async fn search_peptide<'a>(
         })
         .filter(|(_, _, p)| {
             p.score.map_or(true, |score| {
-                score >= minimal_peptide_score && p.metadata.peptide().is_some()
+                score >= minimal_peptide_score && p.peptide().is_some()
             })
         })
         .par_bridge()
@@ -135,7 +135,7 @@ pub async fn search_peptide<'a>(
             (
                 index,
                 align::<4, SemiAmbiguous, SimpleLinear>(
-                    peptide.metadata.peptide().unwrap(),
+                    peptide.peptide().unwrap(),
                     &search,
                     BLOSUM62,
                     Tolerance::new_absolute(da(0.1)),
@@ -154,7 +154,7 @@ pub async fn search_peptide<'a>(
         .map(|(index, alignment, peptide, id)| {
             let start = alignment.start_a();
             let end = alignment.start_a() + alignment.len_a();
-            let sequence = peptide.metadata.peptide().cloned().unwrap_or_default();
+            let sequence = peptide.peptide().cloned().unwrap_or_default();
             vec![
                 format!(
                     "<a onclick=\"load_peptide({id}, {index})\">F{}:{index}</a>",
@@ -197,14 +197,13 @@ pub struct IdentifiedPeptideSettings {
 impl IdentifiedPeptideSettings {
     fn from_peptide(peptide: &IdentifiedPeptide, warning: Option<String>) -> Self {
         let mut str_peptide = String::new();
-        if let Some(peptide) = peptide.metadata.peptide() {
+        if let Some(peptide) = peptide.peptide() {
             peptide.display(&mut str_peptide, true, false).unwrap()
         }
         Self {
             peptide: str_peptide,
-            charge: peptide.metadata.charge().map(|v| v.value),
+            charge: peptide.charge().map(|v| v.value),
             mode: peptide
-                .metadata
                 .mode()
                 .map(|mode| {
                     if mode.to_lowercase() == "hcd" || mode.to_lowercase() == "cid" {
@@ -234,9 +233,9 @@ pub async fn load_identified_peptide(
             .cloned();
         peptide
             .map(|peptide| {
-                let scan_indices = peptide.metadata.scan_indices().unwrap_or_default();
-                let native_ids = peptide.metadata.spectrum_native_ids().unwrap_or_default();
-                let raw_file = peptide.metadata.raw_file().map(|p| p.to_owned());
+                let scan_indices = peptide.scan_indices().unwrap_or_default();
+                let native_ids = peptide.spectrum_native_ids().unwrap_or_default();
+                let raw_file = peptide.raw_file().map(|p| p.to_owned());
                 let mut message = None;
 
                 // If there are scan indices unselect all selected spectra and select all

@@ -287,7 +287,41 @@ fn main() {
         </div>
       <output id="spectrum-error" class="hidden error"></output>
       <div id='spectrum-wrapper' class="spectrum show-unassigned legend-ion hidden show-charge show-series show-glycan-id show-peptide-id show-neutral-losses show-cross-links show-ambiguous-amino-acids show-modifications" onload='SpectrumSetUp()'>
-        <div class='all-settings'>
+        <div class='legend'>
+          <span class='title'>Ion legend</span>
+          <div class='ion-series'>
+              <div class='top'>
+                  <span class='ion w' tabindex='0'>w</span>
+                  <span class='ion v' tabindex='0'>v</span>
+                  <span class='ion x' tabindex='0'>x</span>
+                  <span class='ion y' tabindex='0'>y</span>
+                  <span class='ion z' tabindex='0'>z</span>
+                  <span class='ion c-term' tabindex='0'>C-term</span>
+              </div>
+              <div class='bottom'>
+                  <span class='ion n-term' tabindex='0'>N-term</span>
+                  <span class='ion a' tabindex='0'>a</span>
+                  <span class='ion b' tabindex='0'>b</span>
+                  <span class='ion c' tabindex='0'>c</span>
+                  <span class='ion d' tabindex='0'>d</span>
+              </div>
+              <div class='side'>
+                  <span class='ion p' tabindex='0'>Precursor</span>
+                  <span class='ion multi mp mpp' tabindex='0'>Multi</span>
+                  <span class='ion oxonium' tabindex='0'>Oxonium</span>
+                  <span class='ion Y' tabindex='0'>Y</span>
+                  <span class='ion neutral-loss' tabindex='0'>Neutral loss</span>
+                  <span class='ion diagnostic' tabindex='0'>Diagnostic ions</span>
+                  <span class='other'>Other</span>
+              </div>
+          </div>
+        </div>
+        <output class='wrapper show-unassigned' id="spectrum-results-wrapper"></output>
+
+        <input type="checkbox" id="collapsible-settings">
+        <fieldset class="collapsible all-settings" data-linked-item="collapsible-settings" id="settings">
+          <legend>Settings</legend>
+
           <fieldset class='settings graphics-settings'>
             <legend>Graphics settings</legend>
             <label class='row align' for='spectrum-width'><span>Width</span><input id='spectrum-width' class='width' type='text' value='100%'/></label>
@@ -455,44 +489,13 @@ fn main() {
     
             <button id='reset-zoom' class='reset-zoom' title='Reset the zoom to the default' tabindex='0'>Reset zoom</button>
           </fieldset>
-        </div>
-        <div class='legend'>
-          <span class='title'>Ion legend</span>
-          <div class='ion-series'>
-              <div class='top'>
-                  <span class='ion w' tabindex='0'>w</span>
-                  <span class='ion v' tabindex='0'>v</span>
-                  <span class='ion x' tabindex='0'>x</span>
-                  <span class='ion y' tabindex='0'>y</span>
-                  <span class='ion z' tabindex='0'>z</span>
-                  <span class='ion c-term' tabindex='0'>C-term</span>
-              </div>
-              <div class='bottom'>
-                  <span class='ion n-term' tabindex='0'>N-term</span>
-                  <span class='ion a' tabindex='0'>a</span>
-                  <span class='ion b' tabindex='0'>b</span>
-                  <span class='ion c' tabindex='0'>c</span>
-                  <span class='ion d' tabindex='0'>d</span>
-              </div>
-              <div class='side'>
-                  <span class='ion p' tabindex='0'>Precursor</span>
-                  <span class='ion multi mp mpp' tabindex='0'>Multi</span>
-                  <span class='ion oxonium' tabindex='0'>Oxonium</span>
-                  <span class='ion Y' tabindex='0'>Y</span>
-                  <span class='ion neutral-loss' tabindex='0'>Neutral loss</span>
-                  <span class='ion diagnostic' tabindex='0'>Diagnostic ions</span>
-                  <span class='other'>Other</span>
-              </div>
-          </div>
-        </div>
-        <output class='wrapper show-unassigned' id="spectrum-results-wrapper"></output>
-    
+        </fieldset>
+
         <input type="checkbox" id="collapsible-fragment-table">
         <fieldset class="collapsible" data-linked-item="collapsible-fragment-table">
           <legend>Fragment Table</legend>
           <output class="collapsible-content" id="spectrum-fragment-table"></output>
         </fieldset>
-    
       </div>
     
       <input type="checkbox" id="collapsible-tools">

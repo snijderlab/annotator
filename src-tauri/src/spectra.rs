@@ -1,4 +1,4 @@
-use std::{any::Any, io::ErrorKind};
+use std::io::ErrorKind;
 
 use itertools::Itertools;
 use mzdata::{

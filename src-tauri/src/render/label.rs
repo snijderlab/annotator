@@ -1,13 +1,13 @@
 use itertools::Itertools;
 use rustyms::{
-    fragment::{FragmentType, GlycanBreakPos, MatchedIsotopeDistribution},
+    fragment::{FragmentType, GlycanBreakPos},
     AmbiguousLabel, CompoundPeptidoform, Fragment, SequencePosition,
 };
 use std::fmt::Write;
 
 pub fn get_label(
     compound_peptidoform: &CompoundPeptidoform,
-    annotations: &[(Fragment, Vec<MatchedIsotopeDistribution>)],
+    annotations: &[Fragment],
     multiple_peptidoforms: bool,
     multiple_peptides: bool,
     multiple_glycans: bool,
@@ -15,32 +15,26 @@ pub fn get_label(
     if annotations.is_empty() {
         String::new()
     } else {
-        let mut shared_charge = Some(annotations[0].0.charge);
-        let mut shared_ion = Some(annotations[0].0.ion.label());
-        let mut shared_pos = Some(annotations[0].0.ion.position_label());
-        let mut shared_peptidoform = Some(annotations[0].0.peptidoform_index);
-        let mut shared_peptide = Some(annotations[0].0.peptide_index);
-        let mut shared_glycan = Some(
-            annotations[0]
-                .0
-                .ion
-                .glycan_position()
-                .map(|g| g.attachment()),
-        );
-        let mut shared_loss = Some(annotations[0].0.neutral_loss.clone());
-        let mut shared_xl = Some(get_xl(&annotations[0].0));
+        let mut shared_charge = Some(annotations[0].charge);
+        let mut shared_ion = Some(annotations[0].ion.label());
+        let mut shared_pos = Some(annotations[0].ion.position_label());
+        let mut shared_peptidoform = Some(annotations[0].peptidoform_index);
+        let mut shared_peptide = Some(annotations[0].peptide_index);
+        let mut shared_glycan = Some(annotations[0].ion.glycan_position().map(|g| g.attachment()));
+        let mut shared_loss = Some(annotations[0].neutral_loss.clone());
+        let mut shared_xl = Some(get_xl(&annotations[0]));
         let mut shared_ambiguous_amino_acids = Some(get_ambiguous_amino_acids(
-            &annotations[0].0,
+            &annotations[0],
             multiple_peptides,
         ));
         let mut shared_modifications = Some(get_modifications(
-            &annotations[0].0,
+            &annotations[0],
             multiple_peptides,
             compound_peptidoform,
         ));
-        let mut shared_charge_carriers = Some(get_charge_carriers(&annotations[0].0));
+        let mut shared_charge_carriers = Some(get_charge_carriers(&annotations[0]));
 
-        for (a, _) in annotations {
+        for a in annotations {
             if let Some(charge) = shared_charge {
                 if charge != a.charge {
                     shared_charge = None;
@@ -141,7 +135,7 @@ pub fn get_label(
 
             let multi = if annotations.len() > 1 {
                 let mut multi = String::new();
-                for (annotation, _) in annotations {
+                for annotation in annotations {
                     write!(
                         multi,
                         "{}",
@@ -160,11 +154,11 @@ pub fn get_label(
                 String::new()
             };
             let single_internal_glycan =
-                matches!(annotations[0].0.ion, FragmentType::Oxonium(_)) && annotations.len() == 1;
+                matches!(annotations[0].ion, FragmentType::Oxonium(_)) && annotations.len() == 1;
 
             if single_internal_glycan {
                 get_single_label(
-                    &annotations[0].0,
+                    &annotations[0],
                     multiple_peptidoforms,
                     multiple_peptides,
                     multiple_glycans,

@@ -113,7 +113,7 @@ pub fn annotated_spectrum(
 type Boundaries = (f64, f64, f64, f64, f64, f64, f64, f64, f64, f64);
 type SpectrumGraphData = Vec<Point>;
 struct Point {
-    annotation: Vec<(Fragment, Vec<MatchedIsotopeDistribution>)>,
+    annotation: Vec<Fragment>,
     assigned: Option<RelAndAbs<f64>>,
     unassigned: UnassignedData,
     mz: MassOverCharge,
@@ -268,7 +268,7 @@ fn spectrum_graph_boundaries(
                 rel: point
                     .annotation
                     .iter()
-                    .map(|(f, _)| {
+                    .map(|f| {
                         (f.mz(mass_mode).value - point.experimental_mz.value)
                             / f.mz(mass_mode).value
                             * 1e6
@@ -278,7 +278,7 @@ fn spectrum_graph_boundaries(
                 abs: point
                     .annotation
                     .iter()
-                    .map(|(f, _)| (f.mz(mass_mode) - point.experimental_mz).value)
+                    .map(|f| (f.mz(mass_mode) - point.experimental_mz).value)
                     .min_by(|a, b| b.abs().total_cmp(&a.abs()))
                     .unwrap(),
             }),
@@ -429,7 +429,7 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
         max_intensity_unassigned = max_intensity_unassigned.max(peak.intensity.0);
         if !peak.annotation.is_empty() {
             max_intensity = max_intensity.max(peak.intensity.0);
-            peak.annotation.iter().for_each(|(fragment, _)| {
+            peak.annotation.iter().for_each(|fragment| {
                 fragment.ion.position().map(|i| {
                     output[fragment.peptidoform_index][fragment.peptide_index][match i
                         .sequence_index
@@ -713,12 +713,12 @@ fn render_spectrum(
         write!(
             output,
             "<span class='theoretical peak {}' style='--mz:{};' data-label='{}'>{}</span>",
-            get_classes(&[(peak.clone(), Vec::new())], unique_peptide_lookup),
+            get_classes(&[peak.clone()], unique_peptide_lookup),
             peak_mz.value,
             (peak_mz.value * 100.0).round() / 100.0,
             get_label(
                 &spectrum.peptide,
-                &[(peak.clone(), Vec::new())],
+                &[peak.clone()],
                 multiple_peptidoforms,
                 multiple_peptides,
                 multiple_glycans
@@ -765,22 +765,20 @@ pub fn spectrum_table(
     multiple_peptidoforms: bool,
     multiple_peptides: bool,
 ) -> String {
-    fn generate_text(
-        annotation: &(Fragment, Vec<MatchedIsotopeDistribution>),
-    ) -> (String, String, String) {
-        if let Some(pos) = annotation.0.ion.position() {
+    fn generate_text(annotation: &Fragment) -> (String, String, String) {
+        if let Some(pos) = annotation.ion.position() {
             (
                 display_sequence_index(pos.sequence_index),
                 pos.series_number.to_string(),
-                annotation.0.ion.label().to_string(),
+                annotation.ion.label().to_string(),
             )
-        } else if let Some(pos) = annotation.0.ion.glycan_position() {
+        } else if let Some(pos) = annotation.ion.glycan_position() {
             (
                 pos.attachment(),
                 format!("{}{}", pos.series_number, pos.branch_names()),
-                annotation.0.ion.label().to_string(),
+                annotation.ion.label().to_string(),
             )
-        } else if let FragmentType::Oxonium(breakages) = &annotation.0.ion {
+        } else if let FragmentType::Oxonium(breakages) = &annotation.ion {
             (
                 breakages
                     .first()
@@ -793,7 +791,7 @@ pub fn spectrum_table(
                     .join(""),
                 "oxonium".to_string(),
             )
-        } else if let FragmentType::Y(bonds) = &annotation.0.ion {
+        } else if let FragmentType::Y(bonds) = &annotation.ion {
             (
                 bonds
                     .first()
@@ -802,7 +800,7 @@ pub fn spectrum_table(
                 bonds.iter().map(|b| b.label()).join(""),
                 "Y".to_string(),
             )
-        } else if let FragmentType::immonium(pos, aa) = &annotation.0.ion {
+        } else if let FragmentType::immonium(pos, aa) = &annotation.ion {
             (
                 display_sequence_index(pos.sequence_index),
                 pos.series_number.to_string(),
@@ -813,7 +811,7 @@ pub fn spectrum_table(
             (
                 "-".to_string(),
                 "-".to_string(),
-                annotation.0.ion.label().to_string(),
+                annotation.ion.label().to_string(),
             )
         }
     }
@@ -877,8 +875,8 @@ pub fn spectrum_table(
                 ],
             ));
         } else {
-            for full @ (annotation, _) in &peak.annotation {
-                let (sequence_index, series_number, label) = generate_text(full);
+            for annotation in &peak.annotation {
+                let (sequence_index, series_number, label) = generate_text(annotation);
                 data.push((
                     peak.experimental_mz.value,
                     [
@@ -926,10 +924,9 @@ pub fn spectrum_table(
     for fragment in fragments {
         if !spectrum
             .spectrum()
-            .any(|p| p.annotation.iter().any(|a| a.0 == *fragment))
+            .any(|p| p.annotation.iter().any(|a| *a == *fragment))
         {
-            let (sequence_index, series_number, label) =
-                generate_text(&(fragment.clone(), Vec::new()));
+            let (sequence_index, series_number, label) = generate_text(&fragment.clone());
             data.push((
                 fragment.mz(MassMode::Monoisotopic).value,
                 [
@@ -1392,8 +1389,8 @@ fn general_stats(
         <tr class='fragments-detail'><td>Intensity detailed</td>{intensity_details_row}</tr>
         <tr><td>Sequence positions covered</td>{positions_row}</tr>
         <tr class='fragments-detail'><td>Positions detailed</td>{positions_details_row}</tr>
-        <tr><td title='FDR estimation by permutation; Tests how many matches are found when the spectrum is shifted from -25 to +25 Da plus π (to have non integer offsets). The percentage is the number found for the actual matches divided by the average found number for the shifted spectra. The number between brackets denotes the number of standard deviations the actual matches is from the shifted matches.'>FDR</td>{fdr_peaks_row}</tr>
-        <tr><td title='FDR estimation by permutation; Same procedure as Peaks FDR, but this time counts the fraction of intensity annotated instead of the number of peaks. '>FDR (intensity)</td>{fdr_intensity_row}</tr>
+        <tr><td title='FDR estimation by permutation; Tests how many matches are found when the spectrum is shifted from -25 to +25 Da plus π (to have non integer offsets). The percentage is the number found for the actual matches divided by the average found number for the shifted spectra. The number between brackets denotes the number of standard deviations the actual matches is from the shifted matches.'>Peaks false match chance</td>{fdr_peaks_row}</tr>
+        <tr><td title='FDR estimation by permutation; Same procedure as Peaks FDR, but this time counts the fraction of intensity annotated instead of the number of peaks. '>Intensity false match chance</td>{fdr_intensity_row}</tr>
     </table>"
     )
     .unwrap();

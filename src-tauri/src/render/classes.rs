@@ -1,8 +1,5 @@
 use itertools::Itertools;
-use rustyms::{
-    fragment::{FragmentKind, MatchedIsotopeDistribution},
-    Fragment,
-};
+use rustyms::{fragment::FragmentKind, Fragment};
 
 /// Get all applicable classes for a set of annotations.
 /// These are:
@@ -12,15 +9,12 @@ use rustyms::{
 ///   * The position(s) (eg 'p0-2-3', 'p2-1-123')
 ///   * The unique peptide index (eg 'pu1', 'pu12')
 ///   * Other auxiliary classes ('oxonium', 'neutral-loss', & 'diagnostic')
-pub fn get_classes(
-    annotations: &[(Fragment, Vec<MatchedIsotopeDistribution>)],
-    unique_peptide_lookup: &[(usize, usize)],
-) -> String {
+pub fn get_classes(annotations: &[Fragment], unique_peptide_lookup: &[(usize, usize)]) -> String {
     let mut output = Vec::new();
-    let mut shared_ion = annotations.first().map(|a| a.0.ion.kind());
+    let mut shared_ion = annotations.first().map(|a| a.ion.kind());
     let mut first_peptidoform_index = None;
     let mut first_peptide_index = None;
-    for (annotation, _) in annotations {
+    for annotation in annotations {
         output.push(annotation.ion.label().to_string());
         output.push(format!("p{}", annotation.peptidoform_index));
         output.push(format!(

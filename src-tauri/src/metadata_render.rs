@@ -16,11 +16,10 @@ pub trait RenderToHtml {
 impl RenderToHtml for IdentifiedPeptide {
     fn to_html(&self) -> HtmlElement {
         // Render the peptide with its local confidence
-        let peptide = if let Some(peptide) = self.metadata.peptide() {
+        let peptide = if let Some(peptide) = self.peptide() {
             let mut html = HtmlElement::new(HtmlTag::div);
             html.class("original-sequence").style("--max-value:1");
             let lc = self
-                .metadata
                 .local_confidence()
                 .map(|lc| lc.to_vec())
                 .unwrap_or(vec![0.0; peptide.len()]);
@@ -81,40 +80,34 @@ impl RenderToHtml for IdentifiedPeptide {
             HtmlTag::p.new().content("No peptide").clone()
         };
 
-        let formula = self.metadata.peptide().map(|p| p.formulas()[0].clone());
+        let formula = self.peptide().map(|p| p.formulas()[0].clone());
         HtmlElement::new(HtmlTag::div)
             .children([
                 HtmlElement::new(HtmlTag::p)
                     .content(format!(
                         "Score:&nbsp;{}, Length:&nbsp;{}, Mass:&nbsp;{}, Charge:&nbsp;{}, m/z:&nbsp;{}, Mode:&nbsp;{}, RT:&nbsp;{}, Raw&nbsp;file:&nbsp;{}",
                         self.score.map_or(String::from("-"), |s| format!("{s:.3}")),
-                        self.metadata
-                            .peptide()
+                        self.peptide()
                             .map(|p| format!("{}&nbsp;AA", p.len()))
                             .to_optional_string(),
                         formula
                             .as_ref()
                             .map(display_masses)
                             .to_optional_string(),
-                        self.metadata
-                            .charge()
+                        self.charge()
                             .map_or("-".to_string(), |c| c.value.to_string()),
-                        self.metadata
-                            .charge()
+                        self.charge()
                             .and_then(|c| formula.map(|f| (f, c)))
                             .map(|(f, c)| format!(
                                 "{:.3}&nbsp;Th",
                                 f.monoisotopic_mass().value / c.value as f64
                             ))
                             .to_optional_string(),
-                        self.metadata
-                            .mode()
+                        self.mode()
                             .map_or("-".to_string(), |c| c.to_string()),
-                        self.metadata
-                            .retention_time()
+                        self.retention_time()
                             .map_or("-".to_string(), |c| format!("{:.3}&nbsp;min", c.get::<rustyms::system::time::min>())),
-                        self.metadata
-                            .raw_file()
+                        self.raw_file()
                             .map_or("-".to_string(), |c| 
                                 HtmlTag::span.new()
                                 .content(c.file_name().map(|s| s.to_string_lossy()).to_optional_string())
