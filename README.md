@@ -1,8 +1,8 @@
-A simple tool to help you manually discover the depths of your spectra one spectrum at a time. It can load MGF files (only in centroid mode, also do not forget to deconvolute if you have TD data). Once loaded you can select a scan and add you annotation while tweaking the exact settings for generating the annotation. The annotation itself is interactive to help you discover what the spectrum means. Which you can then export as nice images for use in other environments. 
+A simple tool to help you manually discover the depths of your spectra one spectrum at a time. It can load MGF/mzML and thermo raw (see note at the end) files (only in centroid mode, also deconvolution must be done separately if needed). Once loaded you can select a scan and add you annotation while tweaking the exact settings for generating the annotation. The annotation itself is interactive to help you discover what the spectrum means. Which you can then export as nice images for use in other environments. 
 
 ## Peptide sequence
 
-It uses the [ProForma](https://github.com/HUPO-PSI/ProForma) specification to specify the sequence, it does not handle every last detail of this specification yet, for details see [rustyms](https://github.com/snijderlab/rustyms). Here are some examples of valid sequences:
+It uses the [ProForma](https://github.com/HUPO-PSI/ProForma) specification to specify the sequence. Here are some examples of valid sequences:
 
 * `VAEINPSNGGTTFNEKFKGGKATJ` Normal aminoacids
 * `EM[L-methionine sulfoxide]EVEES[UNIMOD:21]PEK` Modifications using [unimod](http://www.unimod.org) and [PSI-MOD](https://www.ebi.ac.uk/ols/ontologies/mod)
@@ -17,6 +17,12 @@ It uses the [ProForma](https://github.com/HUPO-PSI/ProForma) specification to sp
 * `TFNEKF(CKGGCK)[UNIMOD:374#g1]ATJ` (identical to the one above)
 * `VAEINPSNGGTT+FNEKFKGGKATJ` Multimeric spectra, meaning two separate peptides are in your spectrum at the same time
 * `VAEINPSNGGTT/2[1Na+,1H+]` Defined charge and adduct ions
+* `VAEINK[X:DSSO#XL1]SNGGTT//WAK[#XL1]INK` A DSSO cross-link between two lysines on two peptides (note the use of `//` versus `+` to indicate cross-linked peptides)
+* `VAEINK[X:DSSO#XL1]SNGGTT` A hydrolysed DSSO cross-linker
+
+## Note on custom modifications
+
+Custom modifications can be defined, these allow diagnostic ions and neutral losses to be defined. Additionally custom cross-linkers can be defined to have certain cleavage patterns that can then be searched for in the annotator. The custom modifications are stored in a separate json file on your computer. Updating the annotator will not remove any previously defined modifications. Additionally copying this file to another computer will copy the whole database to that computer. This can be used to move all your definitions to a new computer when upgrading or to aid a colleague with your definitions.
 
 ## Installing
 

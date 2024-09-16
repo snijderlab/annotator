@@ -6,18 +6,18 @@ authors = ["Douwe Schulte <d.schulte@uu.nl>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/snijderlab/annotator"
 edition = "2021"
-rust-version = "1.70.0"
+rust-version = "1.75.0"
 
 [build-dependencies]
 tauri-build = { version = "1.5", features = [] }
-tauri = { version = "1.7", features = ["dialog-open", "updater"] }
+tauri = { version = "1.8", features = ["dialog-open", "updater"] }
 
 [dependencies]
 itertools = "0.13"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.7", features = ["shell-open", "dialog-open"] }
-rustyms = { version = "0.9.0-alpha.1", default-features = false, features = [
+tauri = { version = "1.8", features = ["shell-open", "dialog-open"] }
+rustyms = { version = "0.9.0-alpha.2", default-features = false, features = [
     "identification",
     "align",
     "isotopes",
