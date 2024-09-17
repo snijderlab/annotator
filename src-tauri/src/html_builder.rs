@@ -9,44 +9,90 @@ pub struct HtmlElement {
 }
 
 impl HtmlElement {
-    pub fn new(tag: HtmlTag) -> Self {
-        HtmlElement {
-            tag,
-            header: Vec::new(),
-            content: Vec::new(),
-        }
-    }
-
     pub fn table<H: Into<HtmlContent> + Clone, D: Into<HtmlContent> + Clone>(
         header: Option<&[H]>,
         data: impl IntoIterator<Item = impl AsRef<[D]>>,
     ) -> Self {
-        let mut base = HtmlElement::new(HtmlTag::table);
+        let mut base = HtmlTag::table.new();
         if let Some(header) = header {
             base.content(
-                HtmlElement::new(HtmlTag::thead)
+                HtmlTag::thead
+                    .new()
                     .content(
-                        HtmlElement::new(HtmlTag::tr)
-                            .children(header.iter().map(|cell| {
-                                HtmlElement::new(HtmlTag::th).content(cell.clone()).clone()
-                            }))
+                        HtmlTag::tr
+                            .new()
+                            .children(
+                                header
+                                    .iter()
+                                    .map(|cell| HtmlTag::th.new().content(cell.clone()).clone()),
+                            )
                             .clone(),
                     )
                     .clone(),
             );
         }
         base.content(
-            HtmlElement::new(HtmlTag::tbody)
+            HtmlTag::tbody
+                .new()
                 .children(data.into_iter().map(|row| {
-                    HtmlElement::new(HtmlTag::tr)
-                        .children(row.as_ref().iter().map(|cell| {
-                            HtmlElement::new(HtmlTag::td).content(cell.clone()).clone()
-                        }))
+                    HtmlTag::tr
+                        .new()
+                        .children(
+                            row.as_ref()
+                                .iter()
+                                .map(|cell| HtmlTag::td.new().content(cell.clone()).clone()),
+                        )
                         .clone()
                 }))
                 .clone(),
         );
         base
+    }
+
+    pub fn input_list(
+        name: impl Into<String> + Clone,
+        input_type: impl Into<String> + Clone,
+        additional_classes: impl Into<String> + Clone,
+        inputs: impl IntoIterator<Item = (impl Into<String>, impl Into<HtmlContent>)>,
+    ) -> Vec<Self> {
+        inputs
+            .into_iter()
+            .map(|(value, text)| {
+                HtmlTag::label
+                    .new()
+                    .class(additional_classes.clone())
+                    .children([HtmlTag::input
+                        .new()
+                        .header("type", input_type.clone())
+                        .header("name", name.clone())
+                        .value(value)])
+                    .content(text)
+                    .clone()
+            })
+            .collect()
+    }
+
+    pub fn separated_input(
+        id: impl Into<String>,
+        placeholder: impl Into<String>,
+        data_type: impl Into<String>,
+    ) -> Self {
+        HtmlTag::div
+            .new()
+            .class("separated-input")
+            .children([
+                HtmlTag::div.new().class("values").id(id).children([
+                    HtmlTag::div
+                        .new()
+                        .class("input context")
+                        .header("placeholder", placeholder)
+                        .header("data-type", data_type)
+                        .header("contentEditable", "plaintext-only"),
+                    HtmlTag::button.new().class("clear").content("Clear"),
+                ]),
+                HtmlTag::output.new().class("error"),
+            ])
+            .clone()
     }
 
     pub fn class(&mut self, classes: impl Into<String>) -> &mut Self {
@@ -57,6 +103,16 @@ impl HtmlElement {
 
     pub fn id(&mut self, id: impl Into<String>) -> &mut Self {
         self.header.push(("id".to_string(), Some(id.into())));
+        self
+    }
+
+    pub fn value(&mut self, id: impl Into<String>) -> &mut Self {
+        self.header.push(("value".to_string(), Some(id.into())));
+        self
+    }
+
+    pub fn title(&mut self, id: impl Into<String>) -> &mut Self {
+        self.header.push(("title".to_string(), Some(id.into())));
         self
     }
 
@@ -492,8 +548,22 @@ pub enum HtmlTag {
 
 impl HtmlTag {
     /// Convenience method to create a new empty element
-    pub fn new(self) -> HtmlElement {
-        HtmlElement::new(self)
+    pub const fn new(self) -> HtmlElement {
+        HtmlElement {
+            tag: self,
+            header: Vec::new(),
+            content: Vec::new(),
+        }
+    }
+}
+
+impl From<HtmlTag> for HtmlElement {
+    fn from(value: HtmlTag) -> Self {
+        HtmlElement {
+            tag: value,
+            header: Vec::new(),
+            content: Vec::new(),
+        }
     }
 }
 

@@ -126,7 +126,7 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
     let mut output = HtmlTag::div.new();
     output.class("modification");
 
-    output.content(HtmlElement::new(HtmlTag::p).content(format!(
+    output.content(HtmlTag::p.new().content(format!(
         "Formula {} Mass {}",
         display_formula(&modification.formula(), true),
         display_masses(&modification.formula()),
@@ -137,8 +137,8 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
     } = &modification
     {
         output.content(render_modification_id(id));
-        output.content(HtmlElement::new(HtmlTag::p).content("Placement rules"));
-        let mut ul = HtmlElement::new(HtmlTag::ul);
+        output.content(HtmlTag::p.new().content("Placement rules"));
+        let mut ul = HtmlTag::ul.new();
 
         for rule in specificities {
             ul.content(HtmlTag::li.new().content(format!(
@@ -161,10 +161,12 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
         output.content(ul);
     } else if let SimpleModification::Gno(composition, name) = &modification {
         output.content(
-            HtmlElement::new(HtmlTag::p)
+            HtmlTag::p
+                .new()
                 .content(format!("Ontology: Gnome, name: {name}, "))
                 .maybe_content(modification.ontology_url().map(|url| {
-                    HtmlElement::new(HtmlTag::a)
+                    HtmlTag::a
+                        .new()
                         .content("view online")
                         .header("href", url)
                         .header("target", "_blank")
@@ -173,18 +175,18 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
         );
         match composition {
             GnoComposition::Mass(_) => {
-                output.content(HtmlElement::new(HtmlTag::p).content("Only mass known"));
+                output.content(HtmlTag::p.new().content("Only mass known"));
             }
             GnoComposition::Structure(structure) => {
                 output.extend([
-                    HtmlElement::new(HtmlTag::p).content(format!(
+                    HtmlTag::p.new().content(format!(
                         "Composition: {}",
                         structure
                             .composition()
                             .iter()
                             .fold(String::new(), |acc, m| acc + &format!("{}{}", m.0, m.1))
                     )),
-                    HtmlElement::new(HtmlTag::p).content(format!("Structure: {structure}")),
+                    HtmlTag::p.new().content(format!("Structure: {structure}")),
                 ]);
             }
         }
@@ -196,11 +198,11 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
     } = &modification
     {
         output.content(render_modification_id(id));
-        output.content(HtmlElement::new(HtmlTag::p).content(format!(
+        output.content(HtmlTag::p.new().content(format!(
             "Length: {}",
             length.map_or("-".to_string(), |l| l.to_string()),
         )));
-        output.content(HtmlElement::new(HtmlTag::p).content("Placement rules"));
+        output.content(HtmlTag::p.new().content("Placement rules"));
         let mut ul = HtmlTag::ul.new();
         ul.class("placement-rules");
 
@@ -234,7 +236,8 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
                     diagnostic_ions,
                 ) => {
                     ul.content(
-                        HtmlElement::new(HtmlTag::li)
+                        HtmlTag::li
+                            .new()
                             .content(format!(
                                 "First positions: {}, Second positions: {}",
                                 render_places(left_places),
@@ -271,7 +274,7 @@ fn render_modification_id(id: &ModificationId) -> HtmlElement {
         .content(HtmlTag::p.new().content(format!(
             "Ontology: <span class='ontology'>{}</span>, name: <span class='name'>{}</span>, index: <span class='index'>{}</span>{}",
             id.ontology, id.name, id.id, if let Some(url) = id.url() {
-                format!(", {}", HtmlElement::new(HtmlTag::a)
+                format!(", {}", HtmlTag::a.new()
                 .content("view online")
                 .header("href", url)
                 .header("target", "_blank"))

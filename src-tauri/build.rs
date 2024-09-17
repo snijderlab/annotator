@@ -1,43 +1,44 @@
 use std::io::Write;
 use std::{fs::File, io::BufWriter};
 
-fn create_loss_modal(id: &str) -> String {
-    format!(
-        r##"<div>
-            <button onclick='document.getElementById("model-{id}-loss-selection-dialog").showModal();'>Select</button>
-            <output id='model-{id}-loss-selection-output' class='selected-neutral-loss'>0 selected</output>
-            <dialog class="neutral-loss" id="model-{id}-loss-selection-dialog" onclose='var num = 0; document.getElementsByName("model-{id}-loss-selection").forEach(e=>num += e.checked); num += document.querySelectorAll("#model-{id}-loss-selection-dialog .element").length;document.getElementById("model-{id}-loss-selection-output").innerText = num + " selected";'>
-              <p>Losses</p>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H1O1"/>OH</label>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H2O1"/>Water</label>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H4O2"/>Double water</label>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H6O3"/>Triple water</label>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H1"/>Hydrogen</label>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H2"/>Double hydrogen</label>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H3"/>Triple hydrogen</label>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-H3N1"/>Ammonia</label>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-C1O1"/>Carbon monoxide</label>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-C1H1O2"/>COOH (seen with ETD on Asp)</label>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="-C2H3O2"/>C<sub>2</sub>H<sub>3</sub>O<sub>2</sub> (seen with ETD on Glu)</label>
-              <p>Gains</p>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H2O1"/>Water</label>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H4O2"/>Double water</label>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H6O3"/>Triple water</label>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H1"/>Hydrogen</label>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H2"/>Double hydrogen</label>
-              <label class='block'><input type="checkbox" name="model-{id}-loss-selection" value="+H3"/>Triple hydrogen</label>
-              <p>Custom</p>
-              <div class="separated-input">
-                <div class="values" id="model-{id}-loss">
-                  <div class="input context" placeholder="Add molecular formula or mass preceded by '+' or '-'" data-type="neutral_loss" contentEditable="plaintext-only"></div>
-                  <button class="clear">Clear</button>
-                </div>
-                <output class="error"></output>
-              </div>
-              <button autofocus onclick='this.parentElement.close()'>Close</button>
-            </dialog>
-          </div>"##
+#[path = "src/html_builder.rs"]
+mod html_builder;
+
+use html_builder::*;
+
+fn create_loss_modal(id: &str) -> HtmlElement {
+    HtmlTag::div.new().children([
+    HtmlTag::button.new().header("onclick", format!("document.getElementById('model-{id}-loss-selection-dialog').showModal();")).content("Select"),
+    HtmlTag::output.new().id(format!("model-{id}-loss-selection-output")).class("selected-neutral-loss").content("0 selected"),
+    HtmlTag::dialog.new().class("neutral-loss").id(format!("model-{id}-loss-selection-dialog")).header("onclose", format!(r##"var num = 0; document.getElementsByName("model-{id}-loss-selection").forEach(e=>num += e.checked); num += document.querySelectorAll("#model-{id}-loss-selection-dialog .element").length;document.getElementById("model-{id}-loss-selection-output").innerText = num + " selected";"##)).children(
+      std::iter::once(HtmlTag::p.new().content("Losses").clone()).chain(
+      HtmlElement::input_list(format!("model-{id}-loss-selection"), "checkbox", "block", [
+        ("-H1O1", "OH"),
+        ("-H2O1", "Water"),
+        ("-H4O2", "Double water"),
+        ("-H6O3", "Triple water"),
+        ("-H1", "Hydrogen"),
+        ("-H2", "Double hydrogen"),
+        ("-H3", "Triple hydrogen"),
+        ("-H3N1", "Ammonia"),
+        ("-C1O1", "Carbon monoxide"),
+        ("-C1H1O2", "COOH (seen with ETD on Asp)"),
+        ("-C2H3O2", "C<sub>2</sub>H<sub>3</sub>O<sub>2</sub> (seen with ETD on Glu)"),
+      ])).chain(std::iter::once(
+      HtmlTag::p.new().content("Gains").clone())).chain(
+      HtmlElement::input_list(format!("model-{id}-loss-selection"), "checkbox", "block", [
+        ("+H2O1", "Water"),
+        ("+H4O2", "Double water"),
+        ("+H6O3", "Triple water"),
+        ("+H1", "Hydrogen"),
+        ("+H2", "Double hydrogen"),
+        ("+H3", "Triple hydrogen"),
+      ])).chain([
+        HtmlTag::p.new().content("Custom").clone(),
+        HtmlElement::separated_input(format!("model-{id}-loss"), "Add molecular formula or mass preceded by '+' or '-'", "neutral_loss"),
+        HtmlTag::button.new().header2("autofocus").header("onclick", "this.parentElement.close()").content("Close").clone()])
     )
+  ]).clone()
 }
 
 #[derive(Copy, Clone)]
@@ -59,42 +60,72 @@ impl ChargeRange {
         usize,
     ) {
         match self {
-            Self::One => (" selected", "", 1, " selected", "", 1),
-            Self::OneToPrecursor => (" selected", "", 1, "", " selected", 0),
-            Self::Precursor => ("", " selected", 0, "", " selected", 0),
+            Self::One => ("selected", "", 1, "selected", "", 1),
+            Self::OneToPrecursor => ("selected", "", 1, "", "selected", 0),
+            Self::Precursor => ("", "selected", 0, "", "selected", 0),
         }
     }
 }
 
-fn create_charge_range_fields(id: &str, default: ChargeRange, comment: &str) -> String {
+fn create_charge_range_fields(id: &str, default: ChargeRange, comment: &str) -> HtmlElement {
     let settings = default.settings();
-    format!(
-        r##"<div class="charge-range">
-          <select id="model-{id}-charge-start-type">
-            <option value="Absolute" title="An absolute charge"{}>Absolute</option>
-            <option value="Relative" title="Relative to the precursor charge"{}>Precursor</option>
-          </select>
-          <input id="model-{id}-charge-start-value" type="number" value="{}">
-          <span>—</span>
-          <select id="model-{id}-charge-end-type">
-            <option value="Absolute" title="An absolute charge"{}>Absolute</option>
-            <option value="Relative" title="Relative to the precursor charge"{}>Precursor</option>
-          </select>
-          <input id="model-{id}-charge-end-value" type="number" value="{}">
-          {}
-        </div>"##,
-        settings.0,
-        settings.1,
-        settings.2,
-        settings.3,
-        settings.4,
-        settings.5,
-        if comment.is_empty() {
-            String::new()
-        } else {
-            format!("<span> ({comment})</span>")
-        },
-    )
+    let mut outer = HtmlTag::div
+        .new()
+        .class("charge-range")
+        .children([
+            HtmlTag::select
+                .new()
+                .id(format!("model-{id}-charge-start-type"))
+                .children([
+                    HtmlTag::option
+                        .new()
+                        .value("Absolute")
+                        .title("An absolute charge")
+                        .header2(settings.0)
+                        .content("Absolute"),
+                    HtmlTag::option
+                        .new()
+                        .value("Relative")
+                        .title("Relative to the precursor charge")
+                        .header2(settings.1)
+                        .content("Precursor"),
+                ]),
+            HtmlTag::input
+                .new()
+                .id(format!("model-{id}-charge-start-value"))
+                .header("type", "number")
+                .value(settings.2.to_string()),
+            HtmlTag::span.new().content("-"),
+            HtmlTag::select
+                .new()
+                .id(format!("model-{id}-charge-end-type"))
+                .children([
+                    HtmlTag::option
+                        .new()
+                        .value("Absolute")
+                        .title("An absolute charge")
+                        .header2(settings.3)
+                        .content("Absolute"),
+                    HtmlTag::option
+                        .new()
+                        .value("Relative")
+                        .title("Relative to the precursor charge")
+                        .header2(settings.4)
+                        .content("Precursor"),
+                ]),
+            HtmlTag::input
+                .new()
+                .id(format!("model-{id}-charge-end-value"))
+                .header("type", "number")
+                .value(settings.5.to_string()),
+        ])
+        .clone();
+
+    if !comment.is_empty() {
+        outer.children([HtmlTag::span.new().content(format!(" ({comment})"))]);
+    }
+
+    outer
 }
 
 fn main() {

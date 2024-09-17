@@ -17,7 +17,7 @@ impl RenderToHtml for IdentifiedPeptide {
     fn to_html(&self) -> HtmlElement {
         // Render the peptide with its local confidence
         let peptide = if let Some(peptide) = self.peptide() {
-            let mut html = HtmlElement::new(HtmlTag::div);
+            let mut html = HtmlTag::div.new();
             html.class("original-sequence").style("--max-value:1");
             let lc = self
                 .local_confidence()
@@ -28,13 +28,13 @@ impl RenderToHtml for IdentifiedPeptide {
                 let mut modification = String::new();
                 n.display(&mut modification, false).unwrap();
                 html.content(
-                    HtmlElement::new(HtmlTag::div)
+                    HtmlTag::div
+                        .new()
                         .style("--value:0")
                         .children([
-                            HtmlElement::new(HtmlTag::p)
-                                .content("⚬".to_string())
-                                .clone(),
-                            HtmlElement::new(HtmlTag::p)
+                            HtmlTag::p.new().content("⚬".to_string()).clone(),
+                            HtmlTag::p
+                                .new()
                                 .class("modification")
                                 .content(modification)
                                 .clone(),
@@ -45,11 +45,12 @@ impl RenderToHtml for IdentifiedPeptide {
 
             for (aa, confidence) in peptide.sequence().iter().zip(lc) {
                 html.content(
-                    HtmlElement::new(HtmlTag::div)
+                    HtmlTag::div
+                        .new()
                         .style(format!("--value:{confidence}"))
                         .children([
-                            HtmlElement::new(HtmlTag::p).content(aa.aminoacid.char().to_string()),
-                            HtmlElement::new(HtmlTag::p).class("modification").content(
+                            HtmlTag::p.new().content(aa.aminoacid.char().to_string()),
+                            HtmlTag::p.new().class("modification").content(
                                 aa.modifications
                                     .iter()
                                     .map(|m| {
@@ -66,14 +67,10 @@ impl RenderToHtml for IdentifiedPeptide {
             if let Some(c) = peptide.get_c_term().as_ref() {
                 let mut modification = String::new();
                 c.display(&mut modification, false).unwrap();
-                html.content(
-                    HtmlElement::new(HtmlTag::div).style("--value:0").children([
-                        HtmlElement::new(HtmlTag::p).content("⚬".to_string()),
-                        HtmlElement::new(HtmlTag::p)
-                            .class("modification")
-                            .content(modification),
-                    ]),
-                );
+                html.content(HtmlTag::div.new().style("--value:0").children([
+                    HtmlTag::p.new().content("⚬".to_string()),
+                    HtmlTag::p.new().class("modification").content(modification),
+                ]));
             }
             html
         } else {
@@ -81,9 +78,9 @@ impl RenderToHtml for IdentifiedPeptide {
         };
 
         let formula = self.peptide().map(|p| p.formulas()[0].clone());
-        HtmlElement::new(HtmlTag::div)
+        HtmlTag::div.new()
             .children([
-                HtmlElement::new(HtmlTag::p)
+                HtmlTag::p.new()
                     .content(format!(
                         "Score:&nbsp;{}, Length:&nbsp;{}, Mass:&nbsp;{}, Charge:&nbsp;{}, m/z:&nbsp;{}, Mode:&nbsp;{}, RT:&nbsp;{}, Raw&nbsp;file:&nbsp;{}",
                         self.score.map_or(String::from("-"), |s| format!("{s:.3}")),
@@ -132,16 +129,18 @@ impl RenderToHtml for MetaData {
             MetaData::MaxQuant(m) => m.to_html(),
             MetaData::MSFragger(m) => m.to_html(),
             MetaData::Sage(s) => s.to_html(),
-            MetaData::None => HtmlElement::new(HtmlTag::i).content("No metadata").clone(),
+            MetaData::None => HtmlTag::i.new().content("No metadata").clone(),
         }
     }
 }
 
 impl RenderToHtml for PeaksData {
     fn to_html(&self) -> HtmlElement {
-        HtmlElement::new(HtmlTag::div)
+        HtmlTag::div
+            .new()
             .children([
-                HtmlElement::new(HtmlTag::p)
+                HtmlTag::p
+                    .new()
                     .content(format!(
                         "Additional MetaData Peaks {}",
                         self.scan.iter().map(|i| i.to_string()).join(";")
@@ -181,9 +180,11 @@ impl RenderToHtml for PeaksData {
 
 impl RenderToHtml for NovorData {
     fn to_html(&self) -> HtmlElement {
-        HtmlElement::new(HtmlTag::div)
+        HtmlTag::div
+            .new()
             .children([
-                HtmlElement::new(HtmlTag::p)
+                HtmlTag::p
+                    .new()
                     .content(format!(
                         "Additional MetaData Novor {}",
                         self.id.unwrap_or(self.scan)
@@ -233,9 +234,11 @@ impl RenderToHtml for NovorData {
 
 impl RenderToHtml for OpairData {
     fn to_html(&self) -> HtmlElement {
-        HtmlElement::new(HtmlTag::div)
+        HtmlTag::div
+            .new()
             .children([
-                HtmlElement::new(HtmlTag::p)
+                HtmlTag::p
+                    .new()
                     .content(format!("Additional MetaData Opair {}", self.scan))
                     .clone(),
                 HtmlElement::table::<HtmlContent, _>(
@@ -355,9 +358,11 @@ impl RenderToHtml for OpairData {
 
 impl RenderToHtml for MaxQuantData {
     fn to_html(&self) -> HtmlElement {
-        HtmlElement::new(HtmlTag::div)
+        HtmlTag::div
+            .new()
             .children([
-                HtmlElement::new(HtmlTag::p)
+                HtmlTag::p
+                    .new()
                     .content(format!(
                         "Additional MetaData MaxQuant {}",
                         self.id
@@ -544,9 +549,11 @@ impl RenderToHtml for MaxQuantData {
 
 impl RenderToHtml for SageData {
     fn to_html(&self) -> HtmlElement {
-        HtmlElement::new(HtmlTag::div)
+        HtmlTag::div
+            .new()
             .children([
-                HtmlElement::new(HtmlTag::p)
+                HtmlTag::p
+                    .new()
                     .content(format!("Additional MetaData Sage {}", self.psm_id))
                     .clone(),
                 HtmlElement::table::<HtmlContent, _>(
@@ -641,9 +648,11 @@ impl RenderToHtml for SageData {
 
 impl RenderToHtml for MSFraggerData {
     fn to_html(&self) -> HtmlElement {
-        HtmlElement::new(HtmlTag::div)
+        HtmlTag::div
+            .new()
             .children([
-                HtmlElement::new(HtmlTag::p)
+                HtmlTag::p
+                    .new()
                     .content(format!("Additional MetaData MSFragger {}", self.spectrum))
                     .clone(),
                 HtmlElement::table::<HtmlContent, _>(
@@ -732,9 +741,11 @@ impl RenderToHtml for MSFraggerData {
 
 impl RenderToHtml for FastaData {
     fn to_html(&self) -> HtmlElement {
-        HtmlElement::new(HtmlTag::div)
+        HtmlTag::div
+            .new()
             .children([
-                HtmlElement::new(HtmlTag::p)
+                HtmlTag::p
+                    .new()
                     .content(format!("Additional MetaData Fasta {}", self.id))
                     .clone(),
                 HtmlElement::table::<HtmlContent, _>(
