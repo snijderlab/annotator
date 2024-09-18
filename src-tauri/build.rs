@@ -450,7 +450,7 @@ fn main() {
               </div>
             </div>
 
-            <label>Measure distance <button id='peak-distance'>Use ruler</button></label>
+            <label title='Create distance labels by dragging from one peak to another, delete them by clicking on them, delete all with the button here.'>Distance labels <button id='distance-labels-clear'>Clear</button></label>
           </fieldset>
     
           <fieldset class='settings spectrum-settings'>

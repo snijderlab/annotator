@@ -6,8 +6,7 @@ const { listen } = window.__TAURI__.event
 const RAW_EXTENSIONS = ['mgf', 'mgf.gz', "mzml", "mzml.gz", "imzml", "imzml.gz", "mzmlb", "mzmlb.gz", "raw", "raw.gz"];
 const IDENTIFIED_EXTENSIONS = ["csv", "csv.gz", "tsv", "tsv.gz", "txt", "txt.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz"];
 
-import { SetUpSpectrumInterface } from "./stitch-assets/script.js";
-// const controller = new AbortController();
+import { SetUpSpectrumInterface, spectrumClearDistanceLabels } from "./stitch-assets/script.js";
 
 listen('tauri://file-drop', event => {
   document.querySelector("html").classList.remove("file-drop-hover");
@@ -649,6 +648,9 @@ window.addEventListener("DOMContentLoaded", () => {
   document
     .querySelector("#annotate-button")
     .addEventListener("click", () => annotate_spectrum());
+  document
+    .querySelector("#distance-labels-clear")
+    .addEventListener("click", () => spectrumClearDistanceLabels());
   document
     .querySelector("#peptide")
     .addEventListener("focus", (event) => {
