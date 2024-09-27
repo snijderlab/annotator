@@ -399,7 +399,8 @@ fn load_custom_mods(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
     if let Some(path) = path {
         let state = app.state::<Mutex<State>>();
         if let Ok(data) = std::fs::read(path) {
-            let mods: Vec<(usize, String, SimpleModification)> = serde_json::from_slice(&data)?;
+            let mods: Vec<(Option<usize>, String, SimpleModification)> =
+                serde_json::from_slice(&data)?;
             state
                 .lock()
                 .expect("Poisoned mutex at setup of custom mods")

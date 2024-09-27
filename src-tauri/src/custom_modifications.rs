@@ -185,7 +185,7 @@ pub fn get_custom_modifications(
         .iter()
         .map(|(index, _, modification)| {
             (
-                *index,
+                index.unwrap_or_default(),
                 crate::search_modification::render_modification(modification).to_string(),
             )
         })
@@ -195,7 +195,11 @@ pub fn get_custom_modifications(
 #[tauri::command]
 pub fn delete_custom_modification(id: usize, state: ModifiableState) -> Result<(), &'static str> {
     let mut state = state.lock().map_err(|_| "Could not lock mutex")?;
-    if let Some(index) = state.database.iter().position(|p| p.0 == id) {
+    if let Some(index) = state
+        .database
+        .iter()
+        .position(|p| p.0.is_some_and(|i| i == id))
+    {
         state.database.remove(index);
         Ok(())
     } else {
@@ -209,14 +213,18 @@ pub fn get_custom_modification(
     state: ModifiableState,
 ) -> Result<CustomModification, &'static str> {
     let state = state.lock().map_err(|_| "Could not lock mutex")?;
-    if let Some(index) = state.database.iter().position(|p| p.0 == id) {
+    if let Some(index) = state
+        .database
+        .iter()
+        .position(|p| p.0.is_some_and(|i| i == id))
+    {
         match &state.database[index].2 {
             SimpleModification::Database {
                 specificities,
                 formula,
                 id,
             } => Ok(CustomModification {
-                id: id.id,
+                id: id.id.unwrap_or_default(),
                 name: id.name.clone(),
                 formula: formula.to_string(),
                 description: id.description.clone(),
@@ -252,7 +260,7 @@ pub fn get_custom_modification(
                 id,
                 length,
             } => Ok(CustomModification {
-                id: id.id,
+                id: id.id.unwrap_or_default(),
                 name: id.name.clone(),
                 formula: formula.to_string(),
                 description: id.description.clone(),
@@ -342,7 +350,7 @@ pub async fn update_modification(
     let id = ModificationId {
         ontology: Ontology::Custom,
         name: custom_modification.name.clone(),
-        id: custom_modification.id,
+        id: Some(custom_modification.id),
         description: custom_modification.description,
         synonyms: custom_modification.synonyms,
         cross_ids: custom_modification
@@ -353,7 +361,7 @@ pub async fn update_modification(
             .collect(),
     };
     let modification = (
-        custom_modification.id,
+        Some(custom_modification.id),
         custom_modification.name.to_lowercase(),
         if custom_modification.linker {
             SimpleModification::Linker {

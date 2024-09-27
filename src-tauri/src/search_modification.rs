@@ -1,15 +1,14 @@
 use crate::{
     html_builder,
-    render::{display_formula, display_masses, display_placement_rule},
+    metadata_render::OptionalString,
+    render::{display_formula, display_mass, display_masses, display_placement_rule},
     ModifiableState,
 };
 use itertools::Itertools;
 use modification::ModificationId;
 use rustyms::{
     error::*,
-    modification::{
-        GnoComposition, LinkerSpecificity, ModificationSearchResult, SimpleModification,
-    },
+    modification::{GnoComposition, LinkerSpecificity, SimpleModification},
     placement_rule::PlacementRule,
     system::{dalton, Mass},
     ReturnModification, *,
@@ -51,15 +50,25 @@ pub async fn search_modification(
         })
     }??;
     let tolerance = Tolerance::new_absolute(Mass::new::<dalton>(tolerance));
-    let result = SimpleModification::search(&modification, tolerance, Some(&state.database));
+    let result = SimpleModification::search(
+        &modification,
+        tolerance,
+        MassMode::Monoisotopic,
+        Some(&state.database),
+    );
 
     match result {
         ModificationSearchResult::Single(modification) => {
             Ok(render_modification(&modification).to_string())
         }
-        ModificationSearchResult::Mass(_, _, modifications) => {
+        ModificationSearchResult::Mass(_, _, mode, modifications) => {
             Ok(html_builder::HtmlElement::table(
-                Some(&["Name", "Id", "Monoisotopic mass", "Formula"]),
+                Some(&[
+                    "Name".to_string(),
+                    "Id".to_string(),
+                    mode.to_string(),
+                    "Formula".to_string(),
+                ]),
                 modifications
                     .iter()
                     .map(|(ontology, id, name, modification)| {
@@ -89,35 +98,26 @@ pub async fn search_modification(
         }
         ModificationSearchResult::Glycan(_, modifications) => Ok(HtmlTag::div
             .new()
-            .children(&[
-                HtmlTag::p
-                    .new()
-                    .content(format!(
-                        "Formula {} Mass {}",
-                        display_formula(&modification.formula(), true),
-                        display_masses(&modification.formula()),
-                    ))
-                    .clone(),
-                html_builder::HtmlElement::table(
-                    Some(&["Name", "Structure"]),
-                    modifications
-                        .iter()
-                        .map(|(ontology, id, name, modification)| {
-                            [
-                                link_modification(*ontology, *id, name),
-                                if let SimpleModification::Gno(
-                                    GnoComposition::Structure(structure),
-                                    _,
-                                ) = modification
-                                {
-                                    structure.to_string()
-                                } else {
-                                    "-".to_string()
-                                },
-                            ]
-                        }),
-                ),
-            ])
+            .content(render_modification(&modification))
+            .content(html_builder::HtmlElement::table(
+                Some(&["Name", "Structure"]),
+                modifications
+                    .iter()
+                    .map(|(ontology, id, name, modification)| {
+                        [
+                            link_modification(*ontology, *id, name),
+                            if let SimpleModification::Gno {
+                                composition: GnoComposition::Topology(structure),
+                                ..
+                            } = modification
+                            {
+                                structure.to_string()
+                            } else {
+                                "-".to_string()
+                            },
+                        ]
+                    }),
+            ))
             .to_string()),
     }
 }
@@ -159,26 +159,98 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
             )));
         }
         output.content(ul);
-    } else if let SimpleModification::Gno(composition, name) = &modification {
+    } else if let SimpleModification::Gno {
+        composition,
+        id,
+        structure_score,
+        subsumption_level,
+        motif,
+        taxonomy,
+        glycomeatlas,
+    } = &modification
+    {
+        output.content(render_modification_id(id));
         output.content(
             HtmlTag::p
                 .new()
-                .content(format!("Ontology: Gnome, name: {name}, "))
-                .maybe_content(modification.ontology_url().map(|url| {
-                    HtmlTag::a
-                        .new()
-                        .content("view online")
-                        .header("href", url)
-                        .header("target", "_blank")
-                        .clone()
-                })),
+                .content(format!("Subsumption level: {subsumption_level}")),
         );
+        output.maybe_content(structure_score.map(|score| {
+            HtmlTag::p
+                .new()
+                .content(format!("Structure score: {score}"))
+                .clone()
+        }));
+        output.maybe_content(motif.as_ref().map(|(name, id)| {
+            HtmlTag::p
+                .new()
+                .content(format!(
+                    "Motif: {name} {}",
+                    link_modification(modification::Ontology::Gnome, None, id)
+                ))
+                .clone()
+        }));
+        output.content(HtmlTag::p.new().content(format!(
+                "Taxonomy: {}",
+                taxonomy
+                    .iter()
+                    .map(|(name, id)| format!("<span title='ID: {id}'>{name}</span>"))
+                    .join(", ")
+            )));
+
+        output.content(HtmlTag::p.new().content("Glycomeatlas"));
+        output.content(
+            HtmlTag::ul
+                .new()
+                .children(glycomeatlas.iter().map(|(species, places)| {
+                    HtmlTag::li
+                        .new()
+                        .content(format!("{species}: "))
+                        .children(places.iter().map(|(name, id)| {
+                            HtmlTag::span
+                                .new()
+                                .title(format!("ID: {id}"))
+                                .content(name)
+                                .clone()
+                        }))
+                        .clone()
+                }))
+                .clone(),
+        );
+
         match composition {
-            GnoComposition::Mass(_) => {
-                output.content(HtmlTag::p.new().content("Only mass known"));
+            GnoComposition::Weight(weight) => {
+                output.content(HtmlTag::p.new().content(format!(
+                    "Weight: {}",
+                    display_mass(**weight, Some(MassMode::Average))
+                )));
             }
-            GnoComposition::Structure(structure) => {
+            GnoComposition::Composition(composition) => {
+                let formula = composition
+                    .iter()
+                    .map(|(sug, n)| sug.formula() * (*n as i32))
+                    .sum::<MolecularFormula>();
                 output.extend([
+                    HtmlTag::p.new().content(format!(
+                        "Formula {} Mass {}",
+                        display_formula(&formula, true),
+                        display_masses(&formula),
+                    )),
+                    HtmlTag::p.new().content(format!(
+                        "Composition: {}",
+                        composition
+                            .iter()
+                            .fold(String::new(), |acc, m| acc + &format!("{}{}", m.0, m.1))
+                    )),
+                ]);
+            }
+            GnoComposition::Topology(structure) => {
+                output.extend([
+                    HtmlTag::p.new().content(format!(
+                        "Formula {} Mass {}",
+                        display_formula(&structure.formula(), true),
+                        display_masses(&structure.formula()),
+                    )),
                     HtmlTag::p.new().content(format!(
                         "Composition: {}",
                         structure
@@ -273,7 +345,7 @@ fn render_modification_id(id: &ModificationId) -> HtmlElement {
     text
         .content(HtmlTag::p.new().content(format!(
             "Ontology: <span class='ontology'>{}</span>, name: <span class='name'>{}</span>, index: <span class='index'>{}</span>{}",
-            id.ontology, id.name, id.id, if let Some(url) = id.url() {
+            id.ontology, id.name, id.id.to_optional_string(), if let Some(url) = id.url() {
                 format!(", {}", HtmlTag::a.new()
                 .content("view online")
                 .header("href", url)

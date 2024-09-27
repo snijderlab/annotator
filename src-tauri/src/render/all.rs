@@ -54,7 +54,7 @@ pub fn annotated_spectrum(
                             Modification::Simple(
                                 SimpleModification::GlycanStructure(_)
                                     | SimpleModification::Glycan(_)
-                                    | SimpleModification::Gno(_, _)
+                                    | SimpleModification::Gno { .. }
                             )
                         )
                     })
@@ -1637,10 +1637,12 @@ pub fn display_placement_rule(rule: &PlacementRule, formatted: bool) -> String {
     }
 }
 
-pub fn link_modification(ontology: Ontology, id: usize, name: &str) -> String {
+pub fn link_modification(ontology: Ontology, id: Option<usize>, name: &str) -> String {
     if ontology == Ontology::Gnome {
         format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'>{0}:{1}</a>", ontology.char(), name)
-    } else {
+    } else if let Some(id) = id {
         format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'>{0}:{1}</a>", ontology.name(), id)
+    } else {
+        String::new()
     }
 }
