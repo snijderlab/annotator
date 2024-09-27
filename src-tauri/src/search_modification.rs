@@ -219,38 +219,19 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
         );
 
         match composition {
-            GnoComposition::Weight(weight) => {
-                output.content(HtmlTag::p.new().content(format!(
-                    "Weight: {}",
-                    display_mass(**weight, Some(MassMode::Average))
-                )));
+            GnoComposition::Weight(_) => {
+                output.content(HtmlTag::p.new().content("Only weight known"));
             }
             GnoComposition::Composition(composition) => {
-                let formula = composition
-                    .iter()
-                    .map(|(sug, n)| sug.formula() * (*n as i32))
-                    .sum::<MolecularFormula>();
-                output.extend([
-                    HtmlTag::p.new().content(format!(
-                        "Formula {} Mass {}",
-                        display_formula(&formula, true),
-                        display_masses(&formula),
-                    )),
-                    HtmlTag::p.new().content(format!(
+                output.content(HtmlTag::p.new().content(format!(
                         "Composition: {}",
                         composition
                             .iter()
                             .fold(String::new(), |acc, m| acc + &format!("{}{}", m.0, m.1))
-                    )),
-                ]);
+                    )));
             }
             GnoComposition::Topology(structure) => {
                 output.extend([
-                    HtmlTag::p.new().content(format!(
-                        "Formula {} Mass {}",
-                        display_formula(&structure.formula(), true),
-                        display_masses(&structure.formula()),
-                    )),
                     HtmlTag::p.new().content(format!(
                         "Composition: {}",
                         structure
