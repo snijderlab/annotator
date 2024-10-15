@@ -1,13 +1,8 @@
 use crate::{html_builder, state::IdentifiedPeptideFile, ModifiableState};
+use align::AlignScoring;
 use itertools::Itertools;
 use rayon::prelude::*;
-use rustyms::{
-    align::{align, matrix::BLOSUM62},
-    error::*,
-    identification::*,
-    system::da,
-    *,
-};
+use rustyms::{align::align, error::*, identification::*, *};
 use serde::{Deserialize, Serialize};
 
 /// Open a file and get all individual peptide errors.
@@ -137,8 +132,7 @@ pub async fn search_peptide<'a>(
                 align::<4, SemiAmbiguous, SimpleLinear>(
                     peptide.peptide().unwrap(),
                     &search,
-                    BLOSUM62,
-                    Tolerance::new_absolute(da(0.1)),
+                    AlignScoring::default(),
                     align::AlignType::GLOBAL_B,
                 ),
                 peptide,

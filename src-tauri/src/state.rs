@@ -115,12 +115,14 @@ impl RawFile {
                 selected_spectra,
                 ..
             } => {
-                if index >= rawfile.len() {
-                    Err("Outside of file range")
-                } else if !selected_spectra.contains(&index) {
-                    selected_spectra.push(index);
-                    selected_spectra.sort();
-                    Ok(())
+                if !selected_spectra.contains(&index) {
+                    if rawfile.get_spectrum_by_index(index).is_some() {
+                        selected_spectra.push(index);
+                        selected_spectra.sort();
+                        Ok(())
+                    } else {
+                        Err("Spectrum index does not exist")
+                    }
                 } else {
                     Ok(())
                 }
@@ -205,9 +207,12 @@ impl RawFile {
                 selected_spectra,
                 ..
             } => Box::new(selected_spectra.iter().map(|index| {
-                rawfile
-                    .get_spectrum_by_index(*index)
-                    .expect("Spectrum index not valid")
+                dbg!(rawfile.get_index());
+                dbg!(rawfile.len());
+                dbg!(rawfile.reset());
+                dbg!(rawfile.get_index());
+                dbg!(rawfile.get_spectrum_by_index(dbg!(*index)))
+                    .expect("Spectrum index does not exist")
             })),
             Self::Clipboard {
                 spectrum, selected, ..

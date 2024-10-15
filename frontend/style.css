@@ -17,12 +17,12 @@
 
 @font-face {
   font-family: 'Roboto';
-  src: url('stitch-assets/RobotoFlex-VariableFont.ttf');
+  src: url('assets/RobotoFlex-VariableFont.ttf');
 }
 
 @font-face {
   font-family: 'Roboto Mono';
-  src: url('stitch-assets/RobotoMono-VariableFont.ttf');
+  src: url('assets/RobotoMono-VariableFont.ttf');
 }
 
 html {

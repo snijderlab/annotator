@@ -1,12 +1,15 @@
 "use strict";
-const { invoke } = window.__TAURI__.tauri;
 
-const { listen } = window.__TAURI__.event
+const { invoke } = window.__TAURI__.core;
+
+const { listen } = window.__TAURI__.event;
+
+const { open } = window.__TAURI__.dialog;
 
 const RAW_EXTENSIONS = ['mgf', 'mgf.gz', "mzml", "mzml.gz", "imzml", "imzml.gz", "mzmlb", "mzmlb.gz", "raw", "raw.gz"];
 const IDENTIFIED_EXTENSIONS = ["csv", "csv.gz", "tsv", "tsv.gz", "txt", "txt.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz"];
 
-import { SetUpSpectrumInterface, spectrumClearDistanceLabels } from "./stitch-assets/script.js";
+import { SetUpSpectrumInterface, spectrumClearDistanceLabels } from "./script.js";
 
 listen('tauri://file-drop', event => {
   document.querySelector("html").classList.remove("file-drop-hover");
@@ -71,7 +74,7 @@ async function select_raw_file(e) {
       extensions: RAW_EXTENSIONS, name: "*"
     }]
   };
-  window.__TAURI__.dialog.open(properties).then((result) => {
+  open(properties).then((result) => {
     if (result != null) {
       document.querySelector("#load-raw-path").classList.add("loading")
       let opens = [];
@@ -97,7 +100,7 @@ async function dialog_select_identified_peptides_file(e) {
       extensions: IDENTIFIED_EXTENSIONS, name: "*"
     }]
   };
-  window.__TAURI__.dialog.open(properties).then((result) => {
+  open(properties).then((result) => {
     if (result != null) {
       document.querySelector("#load-identified-peptides").classList.add("loading")
       let opens = [];
@@ -467,7 +470,6 @@ function get_charge_range(ion) {
   return { start: { [start_type]: start_value }, end: { [end_type]: end_value } };
 }
 
-//import { SpectrumSetUp } from "./stitch-assets/script.js";
 async function annotate_spectrum() {
   document.querySelector("#annotate-button").classList.add("loading");
   document.querySelector("#peptide").innerText = document.querySelector("#peptide").innerText.trim();

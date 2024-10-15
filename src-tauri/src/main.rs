@@ -392,11 +392,10 @@ async fn annotate_spectrum<'a>(
 
 fn load_custom_mods(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let path = app
-        .handle()
-        .path_resolver()
+        .path()
         .app_config_dir()
         .map(|dir| dir.join(CUSTOM_MODIFICATIONS_FILE));
-    if let Some(path) = path {
+    if let Ok(path) = path {
         let state = app.state::<Mutex<State>>();
         if let Ok(data) = std::fs::read(path) {
             let mods: Vec<(Option<usize>, String, SimpleModification)> =
@@ -414,7 +413,7 @@ fn load_custom_mods(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
 
 #[tauri::command]
 fn get_custom_mods_path(app: tauri::AppHandle) -> String {
-    app.path_resolver()
+    app.path()
         .app_config_dir()
         .map_or("not loaded".to_string(), |dir| {
             dir.join(CUSTOM_MODIFICATIONS_FILE)
@@ -425,6 +424,7 @@ fn get_custom_mods_path(app: tauri::AppHandle) -> String {
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .manage(Mutex::new(State {
             spectra: Vec::new(),
             identified_peptide_files: std::cell::RefCell::new(Vec::new()),

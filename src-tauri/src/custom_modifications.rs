@@ -468,14 +468,16 @@ pub async fn update_modification(
 
         // Store mods config file
         let path = app
-            .path_resolver()
+            .path()
             .app_config_dir()
             .map(|dir| dir.join(crate::CUSTOM_MODIFICATIONS_FILE))
-            .ok_or(CustomError::error(
-                "Cannot find app data directory",
-                "",
-                Context::None,
-            ))?;
+            .map_err(|e| {
+                CustomError::error(
+                    "Cannot find app data directory",
+                    e.to_string(),
+                    Context::None,
+                )
+            })?;
         let parent = path.parent().ok_or_else(|| {
             CustomError::error(
                 "Custom modifications configuration does not have a valid directory",

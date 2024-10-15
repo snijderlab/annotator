@@ -1,7 +1,7 @@
 use crate::{
     html_builder,
     metadata_render::OptionalString,
-    render::{display_formula, display_mass, display_masses, display_placement_rule},
+    render::{display_formula, display_masses, display_placement_rule},
     ModifiableState,
 };
 use itertools::Itertools;
@@ -50,75 +50,74 @@ pub async fn search_modification(
         })
     }??;
     let tolerance = Tolerance::new_absolute(Mass::new::<dalton>(tolerance));
-    let result = SimpleModification::search(
-        &modification,
-        tolerance,
-        MassMode::Monoisotopic,
-        Some(&state.database),
-    );
 
-    match result {
-        ModificationSearchResult::Single(modification) => {
-            Ok(render_modification(&modification).to_string())
-        }
-        ModificationSearchResult::Mass(_, _, mode, modifications) => {
-            Ok(html_builder::HtmlElement::table(
-                Some(&[
-                    "Name".to_string(),
-                    "Id".to_string(),
-                    mode.to_string(),
-                    "Formula".to_string(),
-                ]),
-                modifications
-                    .iter()
-                    .map(|(ontology, id, name, modification)| {
-                        [
-                            modification.to_string(),
-                            link_modification(*ontology, *id, name),
-                            display_masses(&modification.formula()).to_string(),
-                            display_formula(&modification.formula(), true),
-                        ]
-                    }),
+    match modification {
+        SimpleModification::Mass(m)
+        | SimpleModification::Gno {
+            composition: GnoComposition::Weight(m),
+            ..
+        } => Ok(html_builder::HtmlElement::table(
+            Some(&[
+                "Name".to_string(),
+                "Id".to_string(),
+                MassMode::Monoisotopic.to_string(),
+                "Formula".to_string(),
+            ]),
+            modification_search_mass(
+                m.into_inner(),
+                tolerance,
+                None,
+                MassMode::Monoisotopic,
+                Some(&state.database),
             )
-            .to_string())
-        }
-        ModificationSearchResult::Formula(_, modifications) => {
-            Ok(html_builder::HtmlElement::table(
-                Some(&["Name", "Id"]),
-                modifications
-                    .iter()
-                    .map(|(ontology, id, name, modification)| {
-                        [
-                            modification.to_string(),
-                            link_modification(*ontology, *id, name),
-                        ]
-                    }),
-            )
-            .to_string())
-        }
-        ModificationSearchResult::Glycan(_, modifications) => Ok(HtmlTag::div
+            .map(|(ontology, id, name, modification)| {
+                [
+                    modification.to_string(),
+                    link_modification(ontology, id, &name),
+                    display_masses(&modification.formula()).to_string(),
+                    display_formula(&modification.formula(), true),
+                ]
+            }),
+        )
+        .to_string()),
+        SimpleModification::Formula(f) => Ok(html_builder::HtmlElement::table(
+            Some(&["Name", "Id"]),
+            modification_search_formula(&f, Some(&state.database)).map(
+                |(ontology, id, name, modification)| {
+                    [
+                        modification.to_string(),
+                        link_modification(ontology, id, &name),
+                    ]
+                },
+            ),
+        )
+        .to_string()),
+        SimpleModification::Glycan(ref g)
+        | SimpleModification::Gno {
+            composition: GnoComposition::Composition(ref g),
+            ..
+        } => Ok(HtmlTag::div
             .new()
             .content(render_modification(&modification))
             .content(html_builder::HtmlElement::table(
                 Some(&["Name", "Structure"]),
-                modifications
-                    .iter()
-                    .map(|(ontology, id, name, modification)| {
-                        [
-                            link_modification(*ontology, *id, name),
-                            if let SimpleModification::Gno {
-                                composition: GnoComposition::Topology(structure),
-                                ..
-                            } = modification
-                            {
-                                structure.to_string()
-                            } else {
-                                "-".to_string()
-                            },
-                        ]
-                    }),
+                modification_search_glycan(g, true).map(|(ontology, id, name, modification)| {
+                    [
+                        link_modification(ontology, id, &name),
+                        if let SimpleModification::Gno {
+                            composition: GnoComposition::Topology(structure),
+                            ..
+                        } = modification
+                        {
+                            structure.to_string()
+                        } else {
+                            "-".to_string()
+                        },
+                    ]
+                }),
             ))
             .to_string()),
+        modification => Ok(render_modification(&modification).to_string()),
     }
 }
 

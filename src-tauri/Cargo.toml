@@ -9,14 +9,14 @@ edition = "2021"
 rust-version = "1.75.0"
 
 [build-dependencies]
-tauri-build = { version = "1.5", features = [] }
-tauri = { version = "1.8", features = ["dialog-open", "updater"] }
+tauri-build = { version = "2.0", features = [] }
+tauri = { version = "2.0" }
 
 [dependencies]
 itertools = "0.13"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.8", features = ["shell-open", "dialog-open"] }
+tauri = { version = "2.0", features = ["protocol-asset"] }
 rustyms = { version = "0.9.0-alpha.2", default-features = false, features = [
     "identification",
     "align",
@@ -25,9 +25,10 @@ rustyms = { version = "0.9.0-alpha.2", default-features = false, features = [
 ] }
 ordered-float = { version = "4.2", features = ["serde"] }
 rayon = "1.10"
-mzdata = { version = "0.29", features = ["thermo", "mzsignal"] }
-mzpeaks = "0.20"
-mzsignal = "0.23"
+mzdata = { version = "0.32", features = ["thermo", "mzsignal"] }
+mzpeaks = "0.22"
+mzsignal = "0.25"
+tauri-plugin-dialog = "2"
 
 [patch.crates-io]
 # rustyms = { git = "https://github.com/snijderlab/rustyms", branch = "main" }

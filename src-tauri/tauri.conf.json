@@ -1,73 +1,46 @@
 {
+  "productName": "Annotator",
+  "identifier": "com.snijderlab.annotator",
   "build": {
     "beforeDevCommand": "",
     "beforeBuildCommand": "",
-    "devPath": "../src",
-    "distDir": "../src",
-    "withGlobalTauri": true
+    "frontendDist": "../frontend"
   },
-  "package": {
-    "productName": "Annotator"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "dialog": {
-        "open": true
-      },
-      "shell": {
-        "all": false,
-        "execute": false,
-        "open": true,
-        "scope": [],
-        "sidecar": false
-      }
-    },
-    "bundle": {
-      "active": true,
-      "category": "DeveloperTool",
-      "copyright": "",
-      "deb": {
-        "depends": []
-      },
-      "externalBin": [],
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "identifier": "com.snijderlab.annotator",
-      "longDescription": "",
-      "macOS": {
-        "entitlements": null,
-        "exceptionDomain": "",
-        "frameworks": [],
-        "providerShortName": null,
-        "signingIdentity": null
-      },
-      "resources": [
-        "../src/stitch-assets/*"
-      ],
-      "shortDescription": "",
-      "targets": "all",
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": ""
-      }
-    },
+  "app": {
+    "withGlobalTauri": true,
     "security": {
-      "csp": null
-    },
-    "updater": {
-      "active": false,
-      "endpoints": [
-        "https://gist.github.com/douweschulte/4afc3cac1a8f12473b281ac4e255e636"
+      "csp": null,
+      "capabilities": [
+        {
+          "identifier": "main-capabilities",
+          "windows": [
+            "main"
+          ],
+          "permissions": [
+            "core:path:default",
+            "core:event:default",
+            "core:window:default",
+            "core:app:default",
+            "core:resources:default",
+            "core:menu:default",
+            "core:tray:default",
+            "core:window:allow-set-title",
+            "core:webview:default",
+            "dialog:allow-open"
+          ]
+        }
       ],
-      "dialog": true,
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJGQTVFRjQwREVERjBBRjkKUldUNUN0L2VRTytsdjhrSjRDY1ZWVlNCOFNYV292anozRXZyZDR0eC95c3FMRWtjdWM1MHpIczIK"
+      "assetProtocol": {
+        "enable": true,
+        "scope": {
+          "allow": [
+            "../frontend"
+          ],
+          "deny": [
+            ""
+          ]
+        }
+      }
     },
     "windows": [
       {
@@ -79,5 +52,36 @@
         "width": 800
       }
     ]
+  },
+  "bundle": {
+    "active": true,
+    "category": "DeveloperTool",
+    "copyright": "",
+    "externalBin": [],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "longDescription": "",
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "",
+      "frameworks": [],
+      "providerShortName": null,
+      "signingIdentity": null
+    },
+    "resources": [
+      "../frontend/assets/*"
+    ],
+    "shortDescription": "",
+    "targets": "all",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    }
   }
 }

@@ -130,7 +130,7 @@ fn create_charge_range_fields(id: &str, default: ChargeRange, comment: &str) -> 
 
 fn main() {
     let version = option_env!("CARGO_PKG_VERSION").unwrap_or("undefined");
-    let file = File::create("../src/index.html").unwrap();
+    let file = File::create("../frontend/index.html").unwrap();
     println!("{:?}", file.metadata());
     let mut writer = BufWriter::new(file);
     write!(
@@ -140,12 +140,12 @@ fn main() {
     
     <head>
       <meta charset="UTF-8" />
-      <link rel="stylesheet" href="stitch-assets/styles.css" />
+      <link rel="stylesheet" href="styles.css" />
       <link rel="stylesheet" href="style.css" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Annotator</title>
       <script type="module" src="/main.js" defer></script>
-      <script src="stitch-assets/script.js"></script>
+      <script src="script.js"></script>
     </head>
     
     <body>
