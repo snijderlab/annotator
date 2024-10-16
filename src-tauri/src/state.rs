@@ -206,14 +206,11 @@ impl RawFile {
                 rawfile,
                 selected_spectra,
                 ..
-            } => Box::new(selected_spectra.iter().map(|index| {
-                dbg!(rawfile.get_index());
-                dbg!(rawfile.len());
-                dbg!(rawfile.reset());
-                dbg!(rawfile.get_index());
-                dbg!(rawfile.get_spectrum_by_index(dbg!(*index)))
-                    .expect("Spectrum index does not exist")
-            })),
+            } => Box::new(
+                selected_spectra
+                    .iter()
+                    .filter_map(|index| rawfile.get_spectrum_by_index(*index)),
+            ),
             Self::Clipboard {
                 spectrum, selected, ..
             } => Box::new(std::iter::once(spectrum.clone()).take(usize::from(*selected))),
