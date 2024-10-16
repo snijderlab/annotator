@@ -28,3 +28,4 @@ dist-ssr
 
 # Auto generated files
 /src/index.html
+*.pdf
