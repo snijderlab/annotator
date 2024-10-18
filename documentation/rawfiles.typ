@@ -7,6 +7,7 @@ The annotator supports mgf, mzML, IndexedMzML, and Thermo raw files (see later s
 Files in profile mode can be loaded and centroided in the annotator. For top and middle down data it is recommended to deconvolute the data before loading it in the annotator.
 
 == Other formats
+
 Other raw file formats can be converted using available converters. For convenience common converters are listed below.
 
 #table(
@@ -36,4 +37,4 @@ The .NET 8.0 runtime is needed to open Thermo raw files. #link("https://dotnet.m
 
 Some programs allow copying a spectrum into the clipboard, use the #button[Load Clipboard] button to load such a spectrum from the clipboard. Currently spectra from selected Bruker, Stitch, Sciex, and Thermo programs are supported. 
 
-#aside[If you find another program that allows this behaviour please open an issue on github for the annotater, with the name and version of the program in question along with an example of the format.]
+#aside[If you find another program that allows this behaviour please open an issue on gitHub for the annotater, with the name and version of the program in question along with an example of the format.]

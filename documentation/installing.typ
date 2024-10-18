@@ -1,3 +1,5 @@
+#import "functions.typ": crate
+
 = Installing
 
 == Using winget
@@ -6,7 +8,7 @@ On windows use `winget install --id Snijderlab.Annotator`.
 
 == From binary 
 
-See #link("https://github.com/snijderlab/annotator/releases")[GitHub releases] for prebuilt binaries for your architecture as well as information on the releases.
+See #link(crate.package.repository + "/releases")[GitHub releases] for prebuilt binaries for your architecture as well as information on the releases.
 
 == From source
 

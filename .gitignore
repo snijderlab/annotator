@@ -27,5 +27,5 @@ dist-ssr
 /*/target
 
 # Auto generated files
-/src/index.html
+/frontend/index.html
 *.pdf

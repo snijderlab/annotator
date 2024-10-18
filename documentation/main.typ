@@ -1,20 +1,37 @@
+#import "functions.typ": crate, version
+
 #set document(
-    title: [Annotator documentation],
-    author: ("Douwe Schulte"),
+    title: [Annotator documentation - #version],
+    author: crate.package.authors,
     date: auto,
 )
 #set par(
     justify: true,
 )
+#set page(
+  header: align(
+    right + horizon,
+    [#box(image("../src-tauri/icons/annotator_icon_export_grey.svg", height: 0.7em))nnotator documentation - #version - #link(crate.package.repository)[Open source at GitHub]]
+  ),
+  numbering: "1"
+)
 
 #import "functions.typ": aside, button
 
-= Introduction
+#grid(
+    columns: (auto, auto),
+    image("../src-tauri/icons/annotator_icon_export.svg"),
+    [= Annotator
 
-A simple tool to help you manually discover the depths of your spectra one spectrum at a time. It can load MGF/mzML and thermo raw files. Once loaded you can select a scan and add you annotation while tweaking the exact settings for generating the annotation. The annotation itself is interactive to help you discover what the spectrum means. Which you can then export as nice images for use in other environments. 
+    A simple tool to help you manually discover the depths of your spectra, one spectrum at a time. Once your rawfiles are loaded you can select a scan and add you annotation with full control over theoretical fragment genration. The interactive spectrum will help you discover what the spectrum means, with full control to export gorgeous images.
 
+    GitHub: #link(crate.package.repository)[#crate.package.repository] \
+    License: #crate.package.license \
+    Version: #version 
+    ],
+)
 
-#outline()
+#outline(indent: auto)
 
 = Formatting guide
 
@@ -26,10 +43,9 @@ Buttons present in the annotator are displayed as #button[Button].
 
 #pagebreak()
 #include "installing.typ"
-#pagebreak()
 #include "rawfiles.typ"
-#pagebreak()
 #include "identified_peptide_files.typ"
-#pagebreak()
 #include "annotate.typ"
+#include "spectrum.typ"
+#include "tools.typ"
 

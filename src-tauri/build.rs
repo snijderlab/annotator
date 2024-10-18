@@ -599,7 +599,7 @@ fn main() {
             <span class='title'>Modification type</span>
             <div class='select-box' id='custom-mod-type'>
               <label for='custom-mod-type-single' tabindex='0'><input type='radio' name='custom-mod-type' value='single' id='custom-mod-type-single' checked>Modification</label>
-              <label for='custom-mod-type-linker' tabindex='0'><input type='radio' name='custom-mod-type' value='linker' id='custom-mod-type-linker'>Cross Linker</label>
+              <label for='custom-mod-type-linker' tabindex='0'><input type='radio' name='custom-mod-type' value='linker' id='custom-mod-type-linker'>Cross-linker</label>
             </div>
           </div>
 
