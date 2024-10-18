@@ -23,9 +23,9 @@ For precursors the neutral losses/gain and charge range are available.
 
 For glycans the neutral losses/gains can be set for all glycan fragment types. The charge range can be set specifically for Y and Oxonium ions. Additionally the fragmentation of structures from GNO can be turned on/off as well as the generation of fragmentation from compositional glycans (e.g. Hex1HexNac2) can be controlled.
 
-Some modifications generate specific diagnostic ions, these can be turned on or off. Additionally some modifications generate specific neutral losses, which can alse be turned on or off.
+Some modifications generate specific diagnostic ions, these can be turned on or off. Additionally some modifications generate specific neutral losses, which can also be turned on or off.
 
-Immonium ions are internal fragments that break on both sides of a single amino acid. These can be turned on/off. Turning these on also allowes common immonium related ions, which are common neutral losses/gains often seen for immonium ions.
+Immonium ions are internal fragments that break on both sides of a single amino acid. These can be turned on/off. Turning these on also allows common immonium related ions, which are common neutral losses/gains often seen for immonium ions.
 
 In some fragmentation techniques sidechains of amino acids can be lost as neutral loss. This can be turned on for precursors.
 
@@ -37,7 +37,7 @@ If there are cross-links in the peptidoform it can be controlled if these are al
 
 It uses the #link("https://github.com/HUPO-PSI/ProForma")[ProForma] specification to specify the sequence. Here are some examples of valid sequences:
 
-+ `VAEINPSNGGTTFNEKFKGGKATJ` Normal aminoacids
++ `VAEINPSNGGTTFNEKFKGGKATJ` Normal amino acids
 + `EM[L-methionine sulfoxide]EVEES[UNIMOD:21]PEK` Modifications using #link("http://www.unimod.org")[UNIMOD], #link("https://www.ebi.ac.uk/ols/ontologies/mod")[PSI-MOD], RESID, XL-MOD, and GNO
 + `TFNEKF[+15.9949]KGGKATJ` Modifications using raw masses
 + `TFNEKF[Formula:O]KGGKATJ` Modifications using elemental formula

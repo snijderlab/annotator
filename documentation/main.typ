@@ -1,4 +1,4 @@
-#import "functions.typ": crate, version
+#import "functions.typ": crate, version, key, button, aside
 
 #set document(
     title: [Annotator documentation - #version],
@@ -15,8 +15,7 @@
   ),
   numbering: "1"
 )
-
-#import "functions.typ": aside, button
+#set heading(outlined: false)
 
 #grid(
     columns: (auto, auto),
@@ -31,15 +30,15 @@
     ],
 )
 
-#outline(indent: auto)
+#outline(indent: auto, depth: 2)
 
 = Formatting guide
 
-Buttons present in the annotator are displayed as #button[Button].
+Buttons present in the annotator are displayed as #button[Button]. Keys used in key combinations as #key[Key].
 
-#aside[Any sidenote will be show like this.]
+#aside[Any side note will be show like this.]
 
-#set heading(numbering: "1.1")
+#set heading(numbering: "1.1", outlined: true)
 
 #pagebreak()
 #include "installing.typ"
@@ -48,4 +47,4 @@ Buttons present in the annotator are displayed as #button[Button].
 #include "annotate.typ"
 #include "spectrum.typ"
 #include "tools.typ"
-
+#include "exporting.typ"
