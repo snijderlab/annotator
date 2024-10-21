@@ -1212,7 +1212,7 @@ fn general_stats(
         }
     }
 
-    write!(output, "<label><input type='checkbox' switch id='general-stats-show-details'>Show detailed fragment breakdown</label><table class='general-stats'>").unwrap();
+    write!(output, "<label><input type='checkbox' switch id='general-stats-show-details'>Show statistics per ion series</label><table class='general-stats'>").unwrap();
     if multiple_peptidoforms || multiple_peptides {
         write!(output, "<tr><td>General Statistics</td>").unwrap();
         for (peptidoform_index, peptidoform) in spectrum.peptide.peptidoforms().iter().enumerate() {

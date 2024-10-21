@@ -33,7 +33,6 @@ tauri-plugin-dialog = "2"
 [patch.crates-io]
 # rustyms = { git = "https://github.com/snijderlab/rustyms", branch = "main" }
 rustyms = { path = "../../rustyms/rustyms" }
-mzdata = { path = "../../mzdata" }
 
 [features]
 # by default Tauri runs in production mode
