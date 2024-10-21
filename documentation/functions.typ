@@ -36,5 +36,17 @@
   h(3pt)
 }
 
-#let crate = toml("../src-tauri/Cargo.toml")
+#let peptide(it) = {
+  h(3pt)
+  box(
+    fill: color.linear-rgb(lightgrey, lightgrey, lightgrey, 255),
+    inset: 0pt,
+    radius: 0pt,
+    outset: 3pt,
+    raw(it)
+  )
+  h(3pt)
+}
+
+#let crate = toml("../backend/Cargo.toml")
 #let version = [v#crate.package.version]

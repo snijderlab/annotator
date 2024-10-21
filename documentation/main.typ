@@ -11,7 +11,7 @@
 #set page(
   header: align(
     right + horizon,
-    [#box(image("../src-tauri/icons/annotator_icon_export_grey.svg", height: 0.7em))nnotator documentation - #version - #link(crate.package.repository)[Open source at GitHub]]
+    [#box(image("../backend/icons/annotator_icon_export_grey.svg", height: 0.7em))nnotator documentation - #version - #link(crate.package.repository)[Open source at GitHub]]
   ),
   numbering: "1"
 )
@@ -19,7 +19,7 @@
 
 #grid(
     columns: (auto, auto),
-    image("../src-tauri/icons/annotator_icon_export.svg"),
+    image("../backend/icons/annotator_icon_export.svg"),
     [= Annotator
 
     A simple tool to help you manually discover the depths of your spectra, one spectrum at a time. Once your rawfiles are loaded you can select a scan and add you annotation with full control over theoretical fragment genration. The interactive spectrum will help you discover what the spectrum means, with full control to export gorgeous images.

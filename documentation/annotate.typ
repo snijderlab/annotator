@@ -1,4 +1,4 @@
-#import "functions.typ": aside, button
+#import "functions.typ": aside, button, peptide
 
 = Annotate
 
@@ -37,22 +37,22 @@ If there are cross-links in the peptidoform it can be controlled if these are al
 
 It uses the #link("https://github.com/HUPO-PSI/ProForma")[ProForma] specification to specify the sequence. Here are some examples of valid sequences:
 
-+ `VAEINPSNGGTTFNEKFKGGKATJ` Normal amino acids
-+ `EM[L-methionine sulfoxide]EVEES[UNIMOD:21]PEK` Modifications using #link("http://www.unimod.org")[UNIMOD], #link("https://www.ebi.ac.uk/ols/ontologies/mod")[PSI-MOD], RESID, XL-MOD, and GNO
-+ `TFNEKF[+15.9949]KGGKATJ` Modifications using raw masses
-+ `TFNEKF[Formula:O]KGGKATJ` Modifications using elemental formula
-+ `TFNEKF[Glycan:HexNAc1Hex2]KGGKATJ` Modifications glycan compositions
-+ `[+16]-TFNEKFKGGKATJ-[Methyl]` Terminal modifications
-+ `<15N>TFNEKFKGGKATJ` Global isotope modifications (all Nitrogen is 15N)
-+ `<[S-carboxamidomethyl-L-cysteine]@C>AVYYCSRWGGDGFYAMDYWGQG` Global modifications (all C are carboxamidomethylated)
-+ `[UNIMOD:374]?TFNEKFCKGGCKATJ` Modifications where the location is unknown
-+ `TFNEKFC[UNIMOD:374#g1]KGGC[#g1]KATJ` (identical to the one above)
-+ `TFNEKF(CKGGCK)[UNIMOD:374#g1]ATJ` (identical to the one above)
-+ `VAEINPSNGGTT+FNEKFKGGKATJ` Chimeric spectra, meaning two separate peptides are in your spectrum at the same time
-+ `VAEINPSNGGTT/2` Defined charge, especially good for chimeric cases that have different charges
-+ `VAEINPSNGGTT/2[1Na+,1H+]` Defined charge and adduct ions
-+ `VAEINK[X:DSSO#XL1]SNGGTT//WAK[#XL1]INK` A DSSO cross-link between two lysines on two peptides (note the use of `//` versus `+` to indicate cross-linked peptides)
-+ `VAEINK[X:DSSO#XL1]SNGGTT` A hydrolysed DSSO cross-linker
++ Normal amino acids \ #peptide("VAEINPSNGGTTFNEKFKGGKATJ")
++ Modifications using #link("http://www.unimod.org")[UNIMOD], #link("https://www.ebi.ac.uk/ols/ontologies/mod")[PSI-MOD], RESID, XL-MOD, and GNO \ #peptide("EM[L-methionine sulfoxide]EVEES[UNIMOD:21]PEK")
++ Modifications using raw masses \ #peptide("TFNEKF[+15.9949]KGGKATJ") 
++ Modifications using elemental formula \ #peptide("TFNEKF[Formula:O]KGGKATJ")
++ Modifications glycan compositions \ #peptide("TFNEKF[Glycan:HexNAc1Hex2]KGGKATJ") 
++ Terminal modifications \ #peptide("[+16]-TFNEKFKGGKATJ-[Methyl]")
++ Global isotope modifications (all Nitrogen is 15N) \ #peptide("<15N>TFNEKFKGGKATJ")
++ Global modifications (all C are carboxamidomethylated) \ #peptide("<[S-carboxamidomethyl-L-cysteine]@C>AVYYCSRWGGDGFYAMDYWGQG")
++ Modifications where the location is unknown \ #peptide("[UNIMOD:374]?TFNEKFCKGGCKATJ")
++ Modification of unknown position specified on two positions \ #peptide("TFNEKFC[UNIMOD:374#g1]KGGC[#g1]KATJ")
++ Modification of unknown position specified on a subset of the peptide \ #peptide("TFNEKF(CKGGCK)[UNIMOD:374#g1]ATJ")
++ Chimeric spectra, meaning two separate peptides are in your spectrum at the same time \ #peptide("VAEINPSNGGTT+FNEKFKGGKATJ")
++ Defined charge, especially good for chimeric cases that have different charges \ #peptide("VAEINPSNGGTT/2")
++ Defined charge and adduct ions \ #peptide("VAEINPSNGGTT/2[1Na+,1H+]")
++ A DSSO cross-link between two lysines on two peptides (note the use of `//` versus `+` to indicate cross-linked peptides) \ #peptide("VAEINK[X:DSSO#XL1]SNGGTT//WAK[#XL1]INK")
++ A hydrolysed DSSO cross-linker \ #peptide("VAEINK[X:DSSO#XL1]SNGGTT")
 
 == Custom modifications <custom-modifications>
 
