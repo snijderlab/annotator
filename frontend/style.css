@@ -53,6 +53,18 @@ body {
   justify-content: center;
 }
 
+.header {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 1rem;
+  --color-primary: var(--color-primary-s2);
+  color: var(--color-halfway-fg);
+
+  .theme div {
+    display: inline-block
+  }
+}
+
 #export-sequence {
   margin: 0;
   padding: 0;

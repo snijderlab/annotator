@@ -1,6 +1,6 @@
 @layer base, base1;
 
-:root {
+body {
     --color-red: oklch(66% 0.125 34);
     --color-red-light: oklch(85% 0.125 34);
     --color-red-dark: oklch(50% 0.125 34);
@@ -53,8 +53,20 @@
     --color-label: var(--color-primary);
 }
 
+body.theme-dark {
+    --color-primary-s1: var(--color-blue-light);
+    --color-primary-s2: var(--color-blue-dark);
+    --color-primary-o: rgba(86, 156, 214, 30%);
+    --color-primary-shade-o: rgba(156, 220, 254, 20%);
+    --color-secondary-o: rgba(244, 135, 113, 20%);
+    --color-tertiary-o: rgba(220, 208, 143, 20%);
+    --color-foreground: #D4D4D4;
+    --color-halfway: #7E7E7E;
+    --color-background: #1E1E1E;
+}
+
 @media screen and (prefers-color-scheme: dark) {
-    :root {
+    body:not(.theme-light) {
         --color-primary-s1: var(--color-blue-light);
         --color-primary-s2: var(--color-blue-dark);
         --color-primary-o: rgba(86, 156, 214, 30%);
@@ -68,7 +80,7 @@
 }
 
 @media (forced-colors: active) {
-    :root {
+    body {
         --color-primary: Highlight;
         --color-primary-s1: #9CDCFE;
         --color-primary-s2: #1d4f78;

@@ -343,13 +343,15 @@ async fn annotate_spectrum<'a>(
         )
     };
     if spectrum.peaks.is_none() {
-        spectrum.denoise(filter).map_err(|err| {
-            CustomError::error(
-                "Spectrum could not be denoised",
-                err.to_string(),
-                Context::None,
-            )
-        })?;
+        if filter != 0.0 {
+            spectrum.denoise(filter).map_err(|err| {
+                CustomError::error(
+                    "Spectrum could not be denoised",
+                    err.to_string(),
+                    Context::None,
+                )
+            })?;
+        }
         spectrum
             .pick_peaks_with(&PeakPicker::default())
             .map_err(|err| {

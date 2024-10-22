@@ -148,11 +148,19 @@ fn main() {
       <script src="script.js"></script>
     </head>
     
-    <body>
-      <button class="secondary print" onclick="window.print()">Export</button>
-      <!-- <button class="secondary capture" id="capture">Export bitmap</button> -->
-      <button class="secondary cancel-drop" onclick='document.querySelector("html").classList.remove("file-drop-hover")'>Cancel drop</button>
-      <!-- <button class="print" id="abort">Abort</button> -->
+    <body class="theme-auto">
+      <div class='header'>
+        <button print" onclick="window.print()">Export</button>
+        <button class="cancel-drop" onclick='document.querySelector("html").classList.remove("file-drop-hover")'>Cancel drop</button>
+        <div class="theme">
+          <span>Theme</span>
+          <div class='select-box' id='theme'>
+            <label tabindex='0'><input type='radio' name='theme' value='theme-light' id='theme-light'>Light</label>
+            <label tabindex='0'><input type='radio' name='theme' value='theme-auto' id='theme-auto' checked>Auto</label>
+            <label tabindex='0'><input type='radio' name='theme' value='theme-dark' id='theme-dark'>Dark</label>
+          </div>
+        </div>
+      </div>
       <div class="input-flex">
         <button type="button" id="load-raw-path">Load raw data file</button>
         <button type="button" id="load-clipboard">Load Clipboard</button>

@@ -376,7 +376,7 @@ pub fn get_selected_spectra(state: ModifiableState) -> Vec<(usize, Vec<SelectedS
                 let d = spectrum.description();
                 let p = spectrum.precursor();
                 SelectedSpectrumDetails {
-                    id,
+                    id: spectrum.index(),
                     short: d.id.to_string(),
                     description: format!(
                         "{}<br>time: {} signal mode: {:?} ms level: {} ion mobility: {}<br>{}{}",

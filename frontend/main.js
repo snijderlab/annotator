@@ -651,6 +651,12 @@ window.addEventListener("DOMContentLoaded", () => {
     .querySelector("#annotate-button")
     .addEventListener("click", () => annotate_spectrum());
   document
+    .querySelector("#theme")
+    .addEventListener("change", (e) => {
+      document.body.classList.remove("theme-light", "theme-dark", "theme-auto");
+      document.body.classList.add(e.target.value);
+    });
+  document
     .querySelector("#distance-labels-clear")
     .addEventListener("click", () => spectrumClearDistanceLabels());
   document
