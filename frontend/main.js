@@ -11,14 +11,14 @@ const IDENTIFIED_EXTENSIONS = ["csv", "csv.gz", "tsv", "tsv.gz", "txt", "txt.gz"
 
 import { SetUpSpectrumInterface, spectrumClearDistanceLabels } from "./script.js";
 
-listen('tauri://file-drop', event => {
+listen('tauri://drag-drop', event => {
   document.querySelector("html").classList.remove("file-drop-hover");
   let opens = [];
   let peptides = false;
   let raw_files = false;
 
-  for (let i = 0; i < event.payload.length; i++) {
-    let file = event.payload[i];
+  for (let i = 0; i < event.payload.paths.length; i++) {
+    let file = event.payload.paths[i];
     let extension = file.toLowerCase().split('.').pop();
     if (extension == "gz") {
       extension = file.toLowerCase().split('.').reverse()[1] + ".gz";
@@ -48,11 +48,11 @@ listen('tauri://file-drop', event => {
   });
 })
 
-listen('tauri://file-drop-hover', event => {
+listen('tauri://drag-enter', event => {
   document.querySelector("html").classList.add("file-drop-hover");
 })
 
-listen('tauri://file-drop-cancelled', event => {
+listen('tauri://drag-leave', event => {
   document.querySelector("html").classList.remove("file-drop-hover");
 })
 

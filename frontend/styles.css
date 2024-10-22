@@ -95,7 +95,6 @@ body.theme-dark {
         --color-foreground: CanvasText;
         --color-halfway: GrayText;
         --color-background: Canvas;
-        -ms-high-contrast-adjust: none;
         forced-color-adjust: none;
     }
 }
