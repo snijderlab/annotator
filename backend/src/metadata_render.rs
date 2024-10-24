@@ -112,6 +112,25 @@ impl RenderToHtml for IdentifiedPeptide {
                             ),
                     ))
                     .clone(),
+                HtmlTag::p.new()
+                    .content(format!(
+                        "Experimental&nbsp;mass:&nbsp;{}, Experimental&nbsp;m/z:&nbsp;{}, Error&nbsp;[ppm]:&nbsp;{}, Error&nbsp;[Abs]:&nbsp;{}",
+                        self.experimental_mass()
+                            .map(|m| display_mass(m, None))
+                            .to_optional_string(),
+                        self.experimental_mz().map(|mz| format!(
+                            "{:.3}&nbsp;Th",
+                            mz.value
+                        )).to_optional_string(),
+                        self.ppm_error().map(|ppm| format!(
+                            "{:.2}",
+                            ppm.value * 10e6
+                        )).to_optional_string(),
+                        self.mass_error()
+                            .map(|m| display_mass(m, None))
+                            .to_optional_string(),                   
+                    ))
+                    .clone(),
                 peptide,
                 self.metadata.to_html(),
             ])
@@ -165,7 +184,6 @@ impl RenderToHtml for PeaksData {
                             self.predicted_rt.map(|v| v.value).to_optional_string(),
                         ],
                         &["Area".to_string(), self.area.to_optional_string()],
-                        &["ppm".to_string(), self.ppm.to_string()],
                         &[
                             "Accession".to_string(),
                             self.accession.as_ref().to_optional_string(),
@@ -195,7 +213,6 @@ impl RenderToHtml for NovorData {
                     None,
                     &[
                         &["Scan".to_string(), self.scan.to_string()],
-                        &["ppm".to_string(), self.ppm.value.to_string()],
                         &["Score".to_string(), self.score.to_string()],
                         &["ID".to_string(), self.id.to_optional_string()],
                         &[
@@ -203,10 +220,6 @@ impl RenderToHtml for NovorData {
                             self.spectra_id.to_optional_string(),
                         ],
                         &["Fraction".to_string(), self.fraction.to_optional_string()],
-                        &[
-                            "Mass error".to_string(),
-                            self.mass_err.map(|v| v.value).to_optional_string(),
-                        ],
                         &["Protein".to_string(), self.protein.to_optional_string()],
                         &[
                             "Protein Start".to_string(),
@@ -565,10 +578,6 @@ impl RenderToHtml for SageData {
                         &["Rank".to_string(), self.rank.to_string()],
                         &["Decoy".to_string(), self.decoy.to_string()],
                         &[
-                            "Experimental mass".to_string(),
-                            display_mass(self.experimental_mass, None).to_string(),
-                        ],
-                        &[
                             "Missed cleavages".to_string(),
                             self.missed_cleavages.to_string(),
                         ],
@@ -578,12 +587,8 @@ impl RenderToHtml for SageData {
                         ],
                         &["Isotope error".to_string(), self.isotope_error.to_string()],
                         &[
-                            "Precursor error (ppm)".to_string(),
-                            self.precursor_ppm.value.to_string(),
-                        ],
-                        &[
                             "Fragment error (average ppm)".to_string(),
-                            self.precursor_ppm.value.to_string(),
+                            self.fragment_ppm.value.to_string(),
                         ],
                         &["Hyperscore".to_string(), self.hyperscore.to_string()],
                         &[
@@ -676,16 +681,8 @@ impl RenderToHtml for MSFraggerData {
                             self.assigned_modifications.to_string(),
                         ],
                         &[
-                            "Experimental mass".to_string(),
-                            display_mass(self.experimental_mass, None).to_string(),
-                        ],
-                        &[
                             "Calibrated experimental mass".to_string(),
                             display_mass(self.calibrated_experimental_mass, None).to_string(),
-                        ],
-                        &[
-                            "Experimental m/z".to_string(),
-                            self.experimental_mz.value.to_string(),
                         ],
                         &[
                             "Calibrated experimental m/z".to_string(),
@@ -807,10 +804,6 @@ impl RenderToHtml for MZTabData {
                             self.reliability.as_ref().to_optional_string(),
                         ],
                         &["Uri".to_string(), self.uri.as_ref().to_optional_string()],
-                        &[
-                            "Experimental m/z".to_string(),
-                            self.exp_mz.map(|e| e.value).to_optional_string(),
-                        ],
                         &[
                             "Protein location".to_string(),
                             format!(
