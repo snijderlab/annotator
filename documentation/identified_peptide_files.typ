@@ -9,6 +9,8 @@ There are quite some programs that export peptides with metadata based on spectr
   table.header([*Software*], [*Versions/Formats*]),
   [Fasta],
   [common version],
+  [mzTab],
+  [v1.0 & Casanovo],
   [MaxQuant],
   [msms, msms scans, novo msms scans, & silac],
   [MSFragger],

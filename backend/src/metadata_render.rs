@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use rustyms::identification::{
-    FastaData, IdentifiedPeptide, MSFraggerData, MaxQuantData, MetaData, NovorData, OpairData,
-    PeaksData, SageData,
+    CVTerm, FastaData, IdentifiedPeptide, MSFraggerData, MZTabData, MaxQuantData, MetaData,
+    NovorData, OpairData, PeaksData, SageData,
 };
 
 use crate::{
@@ -129,6 +129,7 @@ impl RenderToHtml for MetaData {
             MetaData::MaxQuant(m) => m.to_html(),
             MetaData::MSFragger(m) => m.to_html(),
             MetaData::Sage(s) => s.to_html(),
+            MetaData::MZTab(m) => m.to_html(),
             MetaData::None => HtmlTag::i.new().content("No metadata").clone(),
         }
     }
@@ -739,6 +740,108 @@ impl RenderToHtml for MSFraggerData {
     }
 }
 
+impl RenderToHtml for MZTabData {
+    fn to_html(&self) -> HtmlElement {
+        HtmlTag::div
+            .new()
+            .children([
+                HtmlTag::p
+                    .new()
+                    .content(format!("Additional MetaData mzTab {}", self.psm_id))
+                    .clone(),
+                HtmlElement::table::<HtmlContent, _>(
+                    None,
+                    &[
+                        &[
+                            "Spectra reference".to_string(),
+                            self.spectra_ref
+                                .iter()
+                                .map(|(file, ftype, id, id_type)| {
+                                    format!(
+                                        "<span title='{}'>{}</span>{} {id}{}",
+                                        file.to_string_lossy(),
+                                        file.file_name()
+                                            .map(|n| n.to_string_lossy())
+                                            .to_optional_string(),
+                                        ftype.as_ref().map_or(String::new(), |f| format!(
+                                            " ({})",
+                                            f.to_html()
+                                        )),
+                                        id_type.as_ref().map_or(String::new(), |f| format!(
+                                            " ({})",
+                                            f.to_html()
+                                        )),
+                                    )
+                                })
+                                .join("|"),
+                        ],
+                        &[
+                            "Accession".to_string(),
+                            self.accession.as_ref().to_optional_string(),
+                        ],
+                        &["Unique".to_string(), self.unique.to_optional_string()],
+                        &[
+                            "Database".to_string(),
+                            format!(
+                                "db: {}, version: {}",
+                                self.database.as_ref().to_optional_string(),
+                                self.database_version.as_ref().to_optional_string()
+                            ),
+                        ],
+                        &[
+                            "Search engine".to_string(),
+                            self.search_engine
+                                .iter()
+                                .map(|(engine, score, score_type)| {
+                                    format!(
+                                        "{} score: {} ({})",
+                                        engine.to_html(),
+                                        score.to_optional_string(),
+                                        score_type.to_html(),
+                                    )
+                                })
+                                .join("|"),
+                        ],
+                        &[
+                            "Reliability".to_string(),
+                            self.reliability.as_ref().to_optional_string(),
+                        ],
+                        &["Uri".to_string(), self.uri.as_ref().to_optional_string()],
+                        &[
+                            "Experimental m/z".to_string(),
+                            self.exp_mz.map(|e| e.value).to_optional_string(),
+                        ],
+                        &[
+                            "Protein location".to_string(),
+                            format!(
+                                "{} to {}",
+                                self.start.to_optional_string(),
+                                self.end.to_optional_string()
+                            ),
+                        ],
+                        &[
+                            "Flanking residues".to_string(),
+                            format!("{}_(seq)_{}", self.preceding_aa, self.following_aa),
+                        ],
+                        &[
+                            "Other columns".to_string(),
+                            (!self.additional.is_empty())
+                                .then(|| {
+                                    HtmlElement::table(
+                                        Some(&["Column", "Value"]),
+                                        self.additional.iter().map(|(k, v)| [k, v]),
+                                    )
+                                })
+                                .to_optional_string(),
+                        ],
+                    ],
+                )
+                .clone(),
+            ])
+            .clone()
+    }
+}
+
 impl RenderToHtml for FastaData {
     fn to_html(&self) -> HtmlElement {
         HtmlTag::div
@@ -765,5 +868,18 @@ pub trait OptionalString {
 impl<T: ToString> OptionalString for Option<T> {
     fn to_optional_string(self) -> String {
         self.map_or("-".to_string(), |v| v.to_string())
+    }
+}
+
+impl RenderToHtml for CVTerm {
+    fn to_html(&self) -> HtmlElement {
+        HtmlTag::span
+            .new()
+            .content(self.term.clone())
+            .title(format!(
+                "[{}, {}, {}, {}]",
+                self.ontology, self.id, self.term, self.comment
+            ))
+            .clone()
     }
 }

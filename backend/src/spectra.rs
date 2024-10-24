@@ -47,7 +47,9 @@ pub async fn load_raw<'a>(
             let error = err.to_string();
 
             if err.kind() == ErrorKind::Other
-                && (error == "It was not possible to find a compatible framework version." || error == "Feature which requires certain version of the hosting layer binaries was used on a version which doesn't support it.")
+                && (error == "It was not possible to find a compatible framework version." 
+                    || error == "Feature which requires certain version of the hosting layer binaries was used on a version which doesn't support it." 
+                    || error == "One of the dependent libraries is missing.")
             {
                 Err("The .NET 8.0 Runtime is needed to open Thermo RAW files. <a target='_blank' href='https://dotnet.microsoft.com/en-us/download/dotnet/8.0'>Which can be downloaded here.</a> Additionally on windows you can use <code style='user-select:all'>winget install Microsoft.DotNet.Runtime.8</code> for a quick install.".to_string())
             } else {
