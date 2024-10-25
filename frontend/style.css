@@ -1151,3 +1151,9 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
   padding-left: 1rem;
   font-style: italic;
 }
+
+#identified-peptide-details {
+  table {
+    table-layout: fixed;
+  }
+}

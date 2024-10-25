@@ -227,65 +227,66 @@ pub async fn load_identified_peptide(
             .cloned();
         peptide
             .map(|peptide| {
-                let scan_indices = peptide.scan_indices().unwrap_or_default();
-                let native_ids = peptide.spectrum_native_ids().unwrap_or_default();
-                let raw_file = peptide.raw_file().map(|p| p.to_owned());
                 let mut message = None;
-
-                // If there are scan indices unselect all selected spectra and select all
-                if !scan_indices.is_empty() || !native_ids.is_empty() {
-                    let mut name_matching = None;
-                    let mut stem_matching = None;
-
-                    let name = raw_file
-                        .as_ref()
-                        .and_then(|r| r.file_name())
-                        .map(|n| n.to_string_lossy().to_lowercase())
-                        .unwrap_or_default();
-                    let stem = raw_file
-                        .as_ref()
-                        .and_then(|r| r.file_stem())
-                        .map(|n| n.to_string_lossy().to_lowercase())
-                        .unwrap_or_default();
-
-                    // Search for a rawfile with the same name (stem+ext) or same stem, prefer the one with the same name
-                    for (index, file) in state.spectra.iter_mut().enumerate() {
-                        let path = file.details().path;
-                        let path = std::path::Path::new(&path);
-                        if name_matching.is_none()
-                            && path
-                                .file_name()
-                                .map(|n| n.to_string_lossy().to_lowercase())
-                                .unwrap_or_default()
-                                == name
-                        {
-                            name_matching = Some(index);
-                        }
-                        if stem_matching.is_none()
-                            && path
-                                .file_stem()
-                                .map(|n| n.to_string_lossy().to_lowercase())
-                                .unwrap_or_default()
-                                == stem
-                        {
-                            stem_matching = Some(index);
-                        }
-                        file.clear_selected();
-                    }
-
-                    if let Some(index) = name_matching.or(stem_matching) {
-                        if !scan_indices.is_empty() {
-                            for scan_index in scan_indices {
-                                let _ = state.spectra[index].select_index(scan_index);
+                match peptide.scans() {
+                    SpectrumIds::None => (),
+                    SpectrumIds::FileNotKnown(scans) => {
+                        if let Some(index) = state.spectra.first().map(|r| r.id()) {
+                            for scan in scans {
+                                let _ = match scan {
+                                    SpectrumId::Index(i) => state.spectra[index].select_index(i),
+                                    SpectrumId::Native(n) => state.spectra[index].select_native_id(n),
+                                };
                             }
                         } else {
-                            for native_id in native_ids {
-                                let _ = state.spectra[index].select_native_id(native_id);
+                            message = Some("No raw files are loaded".to_string());
+                        }
+                    },
+                    SpectrumIds::FileKnown(scans) => {
+                        for (raw_file, scans) in scans {
+                            let mut name_matching = None;
+                            let mut stem_matching = None;
+
+                            let name = raw_file.file_name().unwrap_or_default().to_string_lossy().to_lowercase();
+                            let stem = raw_file.file_stem().unwrap_or_default().to_string_lossy().to_lowercase();
+
+                             // Search for a rawfile with the same name (stem+ext) or same stem, prefer the one with the same name
+                            for (index, file) in state.spectra.iter_mut().enumerate() {
+                                let path = file.details().path;
+                                let path = std::path::Path::new(&path);
+                                if name_matching.is_none()
+                                    && path
+                                        .file_name()
+                                        .map(|n| n.to_string_lossy().to_lowercase())
+                                        .unwrap_or_default()
+                                        == name
+                                {
+                                    name_matching = Some(index);
+                                }
+                                if stem_matching.is_none()
+                                    && path
+                                        .file_stem()
+                                        .map(|n| n.to_string_lossy().to_lowercase())
+                                        .unwrap_or_default()
+                                        == stem
+                                {
+                                    stem_matching = Some(index);
+                                }
+                                file.clear_selected();
+                            }
+
+                            if let Some(index) = name_matching.or(stem_matching) {
+                                for scan in scans {
+                                    let _ = match scan {
+                                        SpectrumId::Index(i) => state.spectra[index].select_index(i),
+                                        SpectrumId::Native(n) => state.spectra[index].select_native_id(n),
+                                    };
+                                }
+                            } else {
+                                message = Some(format!("Could not find a raw file with name '{stem}' either load the correct raw file or manually load the spectra '{}' from the correct raw file", scans.iter().join(";")))
                             }
                         }
-                    } else {
-                        message = Some(format!("Could not find a raw file with name '{stem}' either load the correct raw file or manually load the spectra '{}' from the correct raw file", if !scan_indices.is_empty() {scan_indices.iter().join(",")} else {native_ids.iter().join(",")}))
-                    }
+                    },
                 }
 
                 IdentifiedPeptideSettings::from_peptide(&peptide, message)

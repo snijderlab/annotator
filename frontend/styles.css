@@ -1352,34 +1352,49 @@ summary {
 
 .original-sequence {
     display: flex;
-}
 
-.original-sequence>div {
-    width: 1ch;
-    position: relative;
-}
+    &>div {
+        width: 1ch;
+        position: relative;
 
-.original-sequence>div::after {
-    position: absolute;
-    content: "";
-    left: 1px;
-    right: 1px;
-    background-color: var(--color-primary);
-    height: calc(var(--value) / var(--max-value) * 1.1em);
-    top: calc((1 - var(--value) / var(--max-value)) * 1.1em)
-}
+        &::after {
+            position: absolute;
+            content: "";
+            left: 1px;
+            right: 1px;
+            background-color: var(--color-primary);
+            height: calc(var(--value) / var(--max-value) * 1.1em);
+            top: calc((1 - var(--value) / var(--max-value)) * 1.1em)
+        }
+    }
 
-.original-sequence .modification {
-    font-size: .5em;
-    margin: 0 -.5rem;
-    margin-top: -2em;
-    padding: 0;
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-}
+    & p {
+        font-family: "Roboto Mono", monospace;
+        margin-bottom: 0;
+    }
 
-.original-sequence p {
-    font-family: "Roboto Mono", monospace;
+    & .modification {
+        position: relative;
+        color: var(--color-primary);
+
+        &::before {
+            content: "";
+            display: block;
+            position: absolute;
+            top: 3px;
+            left: calc(50% - 0.5 * 3px);
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background-color: currentColor;
+            background-clip: content-box;
+        }
+
+        &.term::before {
+            padding: 0.5em;
+            left: calc(50% - 0.5 * 3px - 0.5em)
+        }
+    }
 }
 
 /* Changed sequence */

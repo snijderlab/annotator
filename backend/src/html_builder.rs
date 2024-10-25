@@ -101,6 +101,21 @@ impl HtmlElement {
         self
     }
 
+    pub fn maybe_class(&mut self, classes: Option<impl Display>) -> &mut Self {
+        let classes = classes.map(|c| c.to_string());
+        if let Some((_, class)) = self.header.iter_mut().find(|(name, _)| name == "class") {
+            *class = class.clone().map_or(classes.clone(), |c| {
+                Some(format!(
+                    "{c}{}",
+                    classes.map_or(String::new(), |c| format!(" {c}"))
+                ))
+            });
+        } else {
+            self.header.push(("class".to_string(), classes));
+        }
+        self
+    }
+
     pub fn id(&mut self, id: impl Into<String>) -> &mut Self {
         self.header.push(("id".to_string(), Some(id.into())));
         self
