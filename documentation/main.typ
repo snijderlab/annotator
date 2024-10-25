@@ -22,7 +22,7 @@
     image("../backend/icons/annotator_icon_export.svg"),
     [= Annotator
 
-    A simple tool to help you manually discover the depths of your spectra, one spectrum at a time. Once your rawfiles are loaded you can select a scan and add you annotation with full control over theoretical fragment genration. The interactive spectrum will help you discover what the spectrum means, with full control to export gorgeous images.
+    A simple tool to help you manually discover the depths of your spectra, one spectrum at a time. Once your rawfiles are loaded you can select a scan and add you annotation with full control over theoretical fragment generation. The interactive spectrum will help you discover what the spectrum means, with full control to export gorgeous images.
 
     GitHub: #link(crate.package.repository)[#crate.package.repository] \
     License: #crate.package.license \
@@ -36,7 +36,7 @@
 
 Buttons present in the annotator are displayed as #button[Button]. Keys used in key combinations as #key[Key].
 
-#aside[Any side note will be show like this.]
+#aside[Any side note will be shown like this.]
 
 #set heading(numbering: "1.1", outlined: true)
 

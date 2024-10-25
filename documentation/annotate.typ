@@ -4,7 +4,7 @@
 
 The annotate sections allow control over the annotation of theoretical spectra on the selected spectrum. The following sections are present:
 + The tolerance for matching theoretical peaks to experimental peaks can controlled and set to ppm or Thompson (mz). 
-+ The maximum charge for precursors in the theoretical spectrum can be set. If this is not set it takes the charge from the spectrum. If this is not set it takes +1.
++ The maximum charge for precursors in the theoretical spectrum can be set. If this is not set it takes the charge from the spectrum. If this too is not set it takes +1.
 + The noise filter can be controlled, the noise floor is automatically determined and the noise filter disregards any peak below the factor times the noise floor. Setting this to 0.0 fully removes noise filtering.
 + The match mode indicates the method of determining the mz for theoretical peaks. Set to mono isotopic, average weight, or most abundant isotope.
 + A mz range for the theoretical peaks can be imposed. Setting only one side sets no bounds on the other side.
@@ -31,11 +31,11 @@ In some fragmentation techniques sidechains of amino acids can be lost as neutra
 
 If there are cross-links in the peptidoform it can be controlled if these are allowed to cleave in theoretical fragmentation. This only work for cross-link modifications that have defined cleavage rules, see @custom-modifications.
 
-#aside[There are some reference sheets available to help keep on overview of all these fragmentation chemistry. #link("https://github.com/douweschulte/reference-sheets")[See douweschulte/reference-sheets on GitHub.]]
+#aside[There are some reference sheets available to help keep on overview of all fragmentation chemistry. #link("https://github.com/douweschulte/reference-sheets")[See douweschulte/reference-sheets on GitHub.]]
 
 == ProForma <proforma>
 
-It uses the #link("https://github.com/HUPO-PSI/ProForma")[ProForma] specification to specify the sequence. Here are some examples of valid sequences:
+The annotator uses the #link("https://github.com/HUPO-PSI/ProForma")[ProForma] specification to specify the sequence. Here are some examples of valid sequences:
 
 + Normal amino acids \ #peptide("VAEINPSNGGTTFNEKFKGGKATJ")
 + Modifications using #link("http://www.unimod.org")[UNIMOD], #link("https://www.ebi.ac.uk/ols/ontologies/mod")[PSI-MOD], RESID, XL-MOD, and GNO \ #peptide("EM[L-methionine sulfoxide]EVEES[UNIMOD:21]PEK")
@@ -56,9 +56,9 @@ It uses the #link("https://github.com/HUPO-PSI/ProForma")[ProForma] specificatio
 
 == Custom modifications <custom-modifications>
 
-Custom modifications can be defined, open the custom modifications section and hit #button[Create new]. Add the chemical formula, if only the monoisotopic mass is known that can also be defined. The numerical Id is preset but the name must be set. For a custom modification metadata can be set, with description, synonyms, and identifiers for other identification systems (cross IDs).
+Custom modifications can be defined by opening the custom modifications section and hitting #button[Create new]. Add the chemical formula, if only the monoisotopic mass is known that can also be defined. The numerical ID is preset but the name must be set. For a custom modification metadata can be set, with description, synonyms, and identifiers for other identification systems (cross IDs).
 
-Modifications can be defined as 'Modification' or 'Cross-linker'. For the first category placement rules can be defined that list the positions where this modification can be placed together with place specific neutral losses and diagnostic ions.
+Modifications can be defined as 'Modification' or 'Cross-linker'. For the first category placement rules can be defined that list the positions where this modification can be placed together with place-specific neutral losses and diagnostic ions.
 
 For cross-linkers the length of the cross-linker can be defined as additional metadata item. Cross-linker placement rules can be defined as a symmetric cross-linker, which binds two identical positions on both sides of the cross-linker, or assymetrical, where both sides bind different sides. For custom cross-linkers MS cleavage patterns can be defined. These are defined as two molecular formulas separated by `:`. If the theoretical fragmentation model allows MS cleavable cross-linkers these are allowed as breakage patterns. Additionally diagnostic ions can be added.
 
