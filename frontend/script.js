@@ -330,7 +330,9 @@ function SpectrumSetUp() {
         elements[i].addEventListener("mouseleave", e => { ToggleHighlight(e.target, false, false) });
         elements[i].addEventListener("focusin", e => { ToggleHighlight(e.target, false, true) });
         elements[i].addEventListener("focusout", e => { ToggleHighlight(e.target, false, false) });
-        elements[i].addEventListener("mouseup", e => { ToggleHighlight(e.target, true) });
+        elements[i].addEventListener("mouseup", e => {
+            ToggleHighlight(e.target, true, !e.target.classList.contains("permanent"), null)
+        });
         elements[i].addEventListener("keyup", e => { if (e.key == "Enter") e.target.click() });
     }
     var elements = document.querySelectorAll("#spectrum-wrapper .legend .unassigned");
@@ -448,12 +450,12 @@ function SequenceElementEvent(e, permanent, turn_on = null) {
         let state = sequence_element_start.classList.contains(selected_colour);
         let start = sequence_element_start.dataset.pos.split("-");
         let end = e.target.dataset.pos.split("-");
-        if (start[0] == end[0]) {
-            let range = [Math.min(Number(start[1]), Number(end[1])), Math.max(Number(start[1]), Number(end[1]))];
+        if (start[0] == end[0] && start[1] == end[1]) {
+            let range = [Math.min(Number(start[2]), Number(end[2])), Math.max(Number(start[2]), Number(end[2]))];
             document.querySelectorAll(".spectrum .peptide>span[title]").forEach(element => {
                 let pos = element.dataset.pos.split("-");
                 element.classList.remove("select");
-                if (pos[0] == start[0] && Number(pos[1]) >= range[0] && Number(pos[1]) <= range[1]) {
+                if (pos[0] == start[0] && pos[1] == start[1] && Number(pos[2]) >= range[0] && Number(pos[2]) <= range[1]) {
                     element.classList.remove("red", "green", "blue", "yellow", "purple", "default", "highlight");
                     ToggleHighlight(element, true, (selected_colour == "remove" ? false : !state), selected_colour);//, ".p" + pos[0] + "-" + pos[1]);
                     if (selected_colour != "remove") {
@@ -478,11 +480,11 @@ function SequenceElementEvent(e, permanent, turn_on = null) {
     } else if (e.type == "mouseenter" && sequence_element_start != undefined) {
         let start = sequence_element_start.dataset.pos.split("-");
         let end = e.target.dataset.pos.split("-");
-        if (start[0] == end[0]) {
-            let range = [Math.min(Number(start[1]), Number(end[1])), Math.max(Number(start[1]), Number(end[1]))];
+        if (start[0] == end[0] && start[1] == end[1]) {
+            let range = [Math.min(Number(start[2]), Number(end[2])), Math.max(Number(start[2]), Number(end[2]))];
             document.querySelectorAll(".spectrum .peptide>span[title]").forEach(element => {
                 let pos = element.dataset.pos.split("-");
-                if (pos[0] == start[0] && Number(pos[1]) >= range[0] && Number(pos[1]) <= range[1]) {
+                if (pos[0] == start[0] && pos[1] == start[1] && Number(pos[2]) >= range[0] && Number(pos[2]) <= range[1]) {
                     element.classList.add("select");
                 } else {
                     element.classList.remove("select");
@@ -511,7 +513,7 @@ var highlight;
  * @param {Element} t The target
  * @param {boolean} permanent If it will be applied permanently (true if clicked, false if hovered)
  * @param {boolean?} state If this is the apply (true) or clear (false) operation
- * @param {string} selected_colour For peptide highlights the colour selected or "default"
+ * @param {string?} selected_colour For peptide highlights the colour selected or "default"
  */
 function ToggleHighlight(t, permanent, state, selected_colour) {
     let current_state = t.classList.contains("permanent");
@@ -528,7 +530,8 @@ function ToggleHighlight(t, permanent, state, selected_colour) {
         if (element.dataset.n < 0) element.dataset.n = 0;
 
         // Clear any colour set for this peak
-        element.classList.remove("red", "green", "blue", "yellow", "purple", "default");
+        if (selected_colour != null && permanent)
+            element.classList.remove("red", "green", "blue", "yellow", "purple", "default");
 
         if (permanent) {
             // A permanent highlight, where this position or ion type is clicked
@@ -538,14 +541,14 @@ function ToggleHighlight(t, permanent, state, selected_colour) {
 
                 // Set up the classes
                 if (element.dataset.n == 1) element.classList.add("highlight");
-                element.classList.add(selected_colour);
+                if (selected_colour != null) element.classList.add(selected_colour);
             }
             else if (state === false) {
                 if (current_state != state) element.dataset.n = Number(element.dataset.n) - 1;
 
                 // Set up the classes
                 if (element.dataset.n <= 0) element.classList.remove("highlight");
-                element.classList.remove(selected_colour);
+                if (selected_colour != null) element.classList.remove(selected_colour);
             } else {
                 console.error("When using 'permanent' the state should be set");
             }
@@ -553,11 +556,14 @@ function ToggleHighlight(t, permanent, state, selected_colour) {
             // A temporary highlight, while hovering over this position or ion type
             if (element.dataset.n == undefined || element.dataset.n == 0) {
                 if (state === true) {
-                    element.classList.add("highlight", selected_colour);
+                    element.classList.add("highlight");
+                    if (selected_colour != null) element.classList.add(selected_colour);
                 } else if (state === null) {
-                    element.classList.toggle("highlight", selected_colour);
+                    element.classList.toggle("highlight");
+                    if (selected_colour != null) element.classList.toggle(selected_colour);
                 } else {
-                    element.classList.remove("highlight", selected_colour);
+                    element.classList.remove("highlight");
+                    if (selected_colour != null) element.classList.remove(selected_colour);
                 }
             }
         }
