@@ -532,31 +532,31 @@ function formatError(error, showContext = true) {
   if (typeof error == "string") {
     return "<div class='raw'>" + error + "</div>";
   } else {
-    let msg = "<p class='title'>" + error.short_description + "</p><p class='description'>" + error.long_description + "</p>";
+    let msg = "<p class='title'>" + error.content.short_description + "</p><p class='description'>" + error.content.long_description + "</p>";
     if (showContext) {
-      if (error.context.hasOwnProperty('Line')) {
-        let Line = error.context.Line;
+      if (error.content.context.hasOwnProperty('Line')) {
+        let Line = error.content.context.Line;
         msg += "<div class='context'>" + (Line.line_index != null ? ("<span class='line-number'>" + (Line.line_index + 1) + "</span>") : "") + "<pre>" + Line.line + "\n" + " ".repeat(Line.offset) + "^".repeat(Line.length) + "</pre></div>";
-      } else if (error.context.hasOwnProperty('Show')) {
-        msg += "<div class='error'>" + error.context.Show.line + "</div>";
-      } else if (error.context.hasOwnProperty('FullLine')) {
-        let FullLine = error.context.FullLine;
+      } else if (error.content.context.hasOwnProperty('Show')) {
+        msg += "<div class='error'>" + error.content.context.Show.line + "</div>";
+      } else if (error.content.context.hasOwnProperty('FullLine')) {
+        let FullLine = error.content.context.FullLine;
         msg += "<div class='error'>" + FullLine.line + "</div>";
       } else {
-        msg += "<pre>" + error.context + "</pre>";
+        msg += "<pre>" + error.content.context + "</pre>";
       }
     }
-    if (error.suggestions.length > 0) {
+    if (error.content.suggestions.length > 0) {
       msg += "<p>Did you mean any of the following?</p><ul>";
-      for (let suggestion in error.suggestions) {
-        msg += "<li>" + error.suggestions[suggestion] + "</li>";
+      for (let suggestion in error.content.suggestions) {
+        msg += "<li>" + error.content.suggestions[suggestion] + "</li>";
       }
       msg += "</ul>";
     }
-    if (error.underlying_errors.length > 0) {
+    if (error.content.underlying_errors.length > 0) {
       msg += "<p>The following underlying errors are identified</p><ul>";
-      for (let underlying_error in error.underlying_errors) {
-        msg += "<li>" + formatError(error.underlying_errors[underlying_error], showContext) + "</li>";
+      for (let underlying_error in error.content.underlying_errors) {
+        msg += "<li>" + formatError(error.content.underlying_errors[underlying_error], showContext) + "</li>";
       }
       msg += "</ul>";
     }
@@ -570,15 +570,15 @@ function formatError(error, showContext = true) {
  * @returns {String} String representation of HTML for use in `element.innerHTML = result;`
  */
 function showContext(error, fallback) {
-  if (error.context.hasOwnProperty('Line')) {
-    let Line = error.context.Line;
+  if (error.content.context.hasOwnProperty('Line')) {
+    let Line = error.content.context.Line;
     return Line.line.slice(0, Line.offset) + "<span class='error'>" + Line.line.slice(Line.offset, Line.offset + Line.length) + "</span>" + Line.line.slice(Line.offset + Line.length, Line.line.length);
-  } else if (error.context.hasOwnProperty('FullLine')) {
-    let FullLine = error.context.FullLine;
+  } else if (error.content.context.hasOwnProperty('FullLine')) {
+    let FullLine = error.content.context.FullLine;
     return "<span class='error'>" + FullLine.line + "</span>";
-  } else if (error.context.hasOwnProperty('Show')) {
-    return "<span class='error'>" + error.context.Show.line + "</span>";
-  } else if (error.context = "None") {
+  } else if (error.content.context.hasOwnProperty('Show')) {
+    return "<span class='error'>" + error.content.context.Show.line + "</span>";
+  } else if (error.content.context = "None") {
     return fallback;
   } else {
     console.error("Error type not handled", error);

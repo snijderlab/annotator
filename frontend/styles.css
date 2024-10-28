@@ -335,6 +335,7 @@ dialog {
         background: var(--color-background);
         font-size: 1rem;
         font-family: inherit;
+        color: currentColor;
 
         &:not(:disabled):hover {
             border-color: var(--color-halfway-fg);

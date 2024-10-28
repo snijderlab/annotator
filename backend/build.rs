@@ -441,7 +441,7 @@ fn main() {
     
           </fieldset>
 
-          <fieldset class='settings peaks-settings'>
+          <fieldset class='settings spectrum-settings peaks-settings'>
             <legend>Peaks settings</legend>
             
             <label for='theoretical' title='Show the theoretical peptide spectrum on the x axis'><input id='theoretical' class='theoretical' type='checkbox' switch/>Show theoretical spectrum</label>
