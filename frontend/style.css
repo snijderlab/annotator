@@ -261,6 +261,7 @@ dialog.neutral-loss {
   grid-template-columns: repeat(4, auto);
   gap: inherit;
   align-items: baseline;
+  border: 2px solid var(--color-halfway);
 
   & .col-2 {
     grid-column: span 2;

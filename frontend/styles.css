@@ -971,6 +971,7 @@ input:not(:checked)+.collapsible {
 .collapsible {
     margin-top: 1rem;
     position: relative;
+    border: 2px solid var(--color-halfway);
 
     &>legend {
         cursor: pointer;
