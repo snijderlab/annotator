@@ -438,13 +438,11 @@ function get_location(id) {
   let loc = document.querySelector(id);
   let t = loc.children[0].options[Number(loc.children[0].value)].dataset.value;
   if (["SkipN", "SkipC", "TakeC"].includes(t)) {
-    let obj = {};
-    obj[t] = Number(loc.children[1].value);
-    return obj;
+    return { [t]: Number(loc.children[1].value) };
+  } else if (t == "TakeN1") {
+    return { ["TakeN"]: { "skip": 0, "take": Number(loc.children[1].value) } };
   } else if (t == "SkipNC") {
-    let obj = {};
-    obj[t] = [Number(loc.children[1].value), Number(loc.children[2].value)];
-    return obj;
+    return { [t]: [Number(loc.children[1].value), Number(loc.children[2].value)] };
   } else if (t == "TakeN") {
     return { [t]: { "skip": Number(loc.children[1].value), "take": Number(loc.children[2].value) } };
   } else {

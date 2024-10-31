@@ -264,9 +264,10 @@ fn main() {
                 <option value="1" data-cls="arg-0" data-value="None" selected title="No fragments are generated">None</option>
                 <option value="2" data-cls="arg-1" data-value="SkipN" title="Select a number of amino acids from the N terminal that do not produce a fragment, the rest does produce fragments.">Disallow x from N terminal</option>
                 <option value="3" data-cls="arg-1" data-value="SkipC" title="Select a number of amino acids from the C terminal that do not produce a fragment, the rest does produce fragments.">Disallow x from C terminal</option>
-                <option value="4" data-cls="arg-1" data-value="TakeN" title="Select a number of amino acids from the N terminal that do produce a fragment, the rest does not produce fragments.">Allow x from N terminal</option>
+                <option value="4" data-cls="arg-1" data-value="TakeN1" title="Select a number of amino acids from the N terminal that do produce a fragment, the rest does not produce fragments.">Allow x from N terminal</option>
                 <option value="5" data-cls="arg-1" data-value="TakeC" title="Select a number of amino acids from the C terminal that do produce a fragment, the rest does not produce fragments.">Allow x from C terminal</option>
-                <option value="6" data-cls="arg-2" data-value="SkipNC" title="Select an offset from the N terminal that do not produce fragments, then select a number of amino acids that do.">Disallow x from N and allow y</option>
+                <option value="6" data-cls="arg-2" data-value="TakeN" title="Select an offset from the N terminal that do not produce fragments, then select a number of amino acids that do.">Disallow x from N and allow y</option>
+                <option value="7" data-cls="arg-2" data-value="SkipNC" title="Select an offset from the N terminal that do not produce fragments, and select an offset from the C terminal that does not produce fragments, the middle left over section does">Disallow x from N and disallow y from C</option>
               </select>
               <input type="number" value="1" min="1">
               <input type="number" value="1" min="1">

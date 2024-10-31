@@ -119,7 +119,7 @@ impl RenderToHtml for IdentifiedPeptide {
                 HtmlTag::ul.new().children(match self.scans() {
                     SpectrumIds::None => vec![HtmlTag::p.new().content("No spectrum reference").clone()],
                     SpectrumIds::FileNotKnown(scans) => vec![HtmlTag::li.new().content(scans.iter().join(";")).clone()],
-                    SpectrumIds::FileKnown(scans) => scans.iter().map(|(file, scans)| HtmlTag::li.new().content(HtmlTag::span.new().title(file.to_string_lossy()).content(file.file_name().map_or(String::new(), |s| s.to_string_lossy().to_string())).content(scans.iter().join(";"))).clone()).collect(),
+                    SpectrumIds::FileKnown(scans) => scans.iter().map(|(file, scans)| HtmlTag::li.new().content(HtmlTag::span.new().title(file.to_string_lossy()).content(file.file_name().map_or(String::new(), |s| s.to_string_lossy().to_string())).content(" ").content(scans.iter().join(";"))).clone()).collect(),
                 }).clone(),
                 peptide,
                 HtmlTag::p.new().content(format!("Additional MetaData {} {}", self.format_name(), self.id())).clone(),
