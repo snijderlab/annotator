@@ -182,10 +182,10 @@ pub async fn search_peptide<'a>(
 
 #[derive(Serialize, Deserialize)]
 pub struct IdentifiedPeptideSettings {
-    peptide: String,
-    charge: Option<usize>,
-    mode: Option<String>,
-    warning: Option<String>,
+    pub peptide: String,
+    pub charge: Option<usize>,
+    pub mode: Option<String>,
+    pub warning: Option<String>,
 }
 
 impl IdentifiedPeptideSettings {

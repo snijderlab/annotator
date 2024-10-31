@@ -1,8 +1,8 @@
-use std::io::ErrorKind;
+use std::{io::ErrorKind, str::FromStr};
 
 use itertools::Itertools;
 use mzdata::{
-    io::MZFileReader,
+    io::{proxi::PROXIError, usi::USIParseError, MZFileReader},
     meta::DissociationMethodTerm,
     params::{ParamDescribed, Unit, Value},
     prelude::{IonProperties, PrecursorSelection, SpectrumLike},
@@ -13,10 +13,14 @@ use mzdata::{
     Param,
 };
 use mzpeaks::CentroidPeak;
-use rustyms::system::{dalton, Mass};
+use rustyms::{
+    error::{Context, CustomError},
+    system::{dalton, Mass},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    identified_peptides::IdentifiedPeptideSettings,
     metadata_render::OptionalString,
     render::display_mass,
     state::{RawFile, RawFileDetails},
@@ -28,6 +32,114 @@ pub struct SelectedSpectrumDetails {
     id: usize,
     short: String,
     description: String,
+}
+
+#[tauri::command]
+pub async fn load_usi<'a>(
+    usi: &'a str,
+    state: ModifiableState<'a>,
+) -> Result<IdentifiedPeptideSettings, CustomError> {
+    let usi = mzdata::io::usi::USI::from_str(usi).map_err(|e| match e {
+        USIParseError::MalformedIndex(index, e, full) => CustomError::error(
+            "Invalid USI: Invalid index",
+            format!("The index is not valid: {e}"),
+            Context::line(
+                None,
+                &full,
+                full.find(&index).unwrap_or_default(),
+                index.len(),
+            ),
+        ),
+        USIParseError::MissingDataset(full) => CustomError::error(
+            "Invalid USI: Missing dataset",
+            "The dataset section of the USI is missing",
+            Context::show(full),
+        ),
+        USIParseError::MissingRun(full) => CustomError::error(
+            "Invalid USI: Missing run",
+            "The run section of the USI is missing",
+            Context::show(full),
+        ),
+        USIParseError::UnknownIndexType(index, full) => CustomError::error(
+            "Invalid USI: Unknown index type",
+            "The index has to be one of 'index', 'scan', or 'nativeId'",
+            Context::line(
+                None,
+                &full,
+                full.find(&index).unwrap_or_default(),
+                index.len(),
+            ),
+        ),
+        USIParseError::UnknownProtocol(protocol, full) => CustomError::error(
+            "Invalid USI: Unknown protocol",
+            "The protocol has to be 'mzspec'",
+            Context::line(
+                None,
+                &full,
+                full.find(&protocol).unwrap_or_default(),
+                protocol.len(),
+            ),
+        ),
+    })?;
+
+    let (backend, spectra) = usi
+        .get_spectrum_async(None, None)
+        .await
+        .map_err(|e| match e {
+            PROXIError::IO(backend, error) => CustomError::error(
+                format!("Error while retrieving USI from {backend}"),
+                error,
+                Context::None,
+            ),
+            PROXIError::Error {
+                backend,
+                title,
+                detail,
+                ..
+            } => CustomError::error(
+                format!("Error while retrieving USI from {backend}: {title}"),
+                detail,
+                Context::None,
+            ),
+            PROXIError::PeakUnavailable(backend, _) => CustomError::error(
+                format!("Error while retrieving USI from {backend}"),
+                "The peak data is not available for this dataset",
+                Context::None,
+            ),
+            PROXIError::NotFound => CustomError::error(
+                "Error while retrieving USI",
+                "No PROXI server responded to the request",
+                Context::None,
+            ),
+        })?;
+
+    let spectrum = spectra
+        .into_iter()
+        .find(|s| {
+            s.status
+                .is_none_or(|s| s == mzdata::io::proxi::Status::Readable)
+        })
+        .unwrap();
+
+    if let Ok(mut state) = state.lock() {
+        state.spectra.push(RawFile::new_clipboard(
+            spectrum.into(),
+            format!("{backend} {} {}", usi.dataset, usi.run_name),
+        ));
+
+        Ok(IdentifiedPeptideSettings {
+            peptide: usi.interpretation.unwrap_or_default(),
+            charge: None,
+            mode: None,
+            warning: None,
+        })
+    } else {
+        Err(CustomError::error(
+            "Could not lock mutext",
+            "Are you doing too many things at once?",
+            Context::None,
+        ))
+    }
 }
 
 #[tauri::command]
@@ -65,27 +177,30 @@ pub async fn load_clipboard<'a>(data: &'a str, state: ModifiableState<'a>) -> Re
     if data.is_empty() {
         return Err("Empty clipboard".to_string());
     }
-    let spectrum = match lines[0].trim() {
-        "#	m/z	Res.	S/N	I	I %	FWHM" => {
-            load_bruker_clipboard(&lines).map(MultiLayerSpectrum::from_spectrum_like)
-        }
-        "m/z	Charge	Intensity	FragmentType	MassShift	Position" => {
-            load_stitch_clipboard(&lines).map(MultiLayerSpectrum::from_spectrum_like)
-        }
-        "Mass/Charge Intensity" => {
-            load_sciex_clipboard(&lines).map(MultiLayerSpectrum::from_spectrum_like)
-        }
-        "SPECTRUM - MS" => {
-            load_thermo_clipboard(&lines).map(MultiLayerSpectrum::from_spectrum_like)
-        }
+    let (title, spectrum) = match lines[0].trim() {
+        "#	m/z	Res.	S/N	I	I %	FWHM" => load_bruker_clipboard(&lines)
+            .map(MultiLayerSpectrum::from_spectrum_like)
+            .map(|s| ("Bruker", s)),
+
+        "m/z	Charge	Intensity	FragmentType	MassShift	Position" => load_stitch_clipboard(&lines)
+            .map(MultiLayerSpectrum::from_spectrum_like)
+            .map(|s| ("Stitch", s)),
+
+        "Mass/Charge Intensity" => load_sciex_clipboard(&lines)
+            .map(MultiLayerSpectrum::from_spectrum_like)
+            .map(|s| ("Sciex", s)),
+
+        "SPECTRUM - MS" => load_thermo_clipboard(&lines)
+            .map(MultiLayerSpectrum::from_spectrum_like)
+            .map(|s| ("Thermo", s)),
+
         _ => Err("Not a recognised format (Bruker/Stitch/Sciex/Thermo)".to_string()),
     }?;
 
-    state
-        .lock()
-        .unwrap()
-        .spectra
-        .push(RawFile::new_clipboard(spectrum));
+    state.lock().unwrap().spectra.push(RawFile::new_clipboard(
+        spectrum,
+        format!("Clipboard {title}"),
+    ));
 
     Ok(())
 }

@@ -459,6 +459,7 @@ fn main() {
             spectra::close_raw_file,
             spectra::load_clipboard,
             spectra::load_raw,
+            spectra::load_usi,
             spectra::select_spectrum_index,
             spectra::select_spectrum_native_id,
             spectra::get_open_raw_files,

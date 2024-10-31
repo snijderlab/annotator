@@ -61,10 +61,11 @@ pub enum RawFile {
         selected_spectra: Vec<usize>,
         path: String,
     },
-    Clipboard {
+    Single {
         id: usize,
         spectrum: MultiLayerSpectrum,
         selected: bool,
+        title: String,
     },
 }
 
@@ -78,7 +79,7 @@ pub struct RawFileDetails {
 impl RawFile {
     pub fn id(&self) -> usize {
         match self {
-            RawFile::Clipboard { id, .. } | RawFile::File { id, .. } => *id,
+            RawFile::Single { id, .. } | RawFile::File { id, .. } => *id,
         }
     }
 
@@ -87,7 +88,7 @@ impl RawFile {
             Self::File {
                 selected_spectra, ..
             } => selected_spectra.clear(),
-            Self::Clipboard { selected, .. } => *selected = false,
+            Self::Single { selected, .. } => *selected = false,
         }
     }
 
@@ -100,7 +101,7 @@ impl RawFile {
                     selected_spectra.remove(index);
                 }
             }
-            Self::Clipboard { selected, .. } => {
+            Self::Single { selected, .. } => {
                 if index == 0 {
                     *selected = false;
                 }
@@ -127,7 +128,7 @@ impl RawFile {
                     Ok(())
                 }
             }
-            Self::Clipboard { selected, .. } => {
+            Self::Single { selected, .. } => {
                 if index == 0 {
                     *selected = true;
                     Ok(())
@@ -153,7 +154,7 @@ impl RawFile {
                     }
                 })
                 .ok_or("Native ID does not exist"),
-            Self::Clipboard {
+            Self::Single {
                 selected, spectrum, ..
             } => {
                 if spectrum.description.id == native_id {
@@ -175,11 +176,12 @@ impl RawFile {
         }
     }
 
-    pub fn new_clipboard(spectrum: MultiLayerSpectrum) -> Self {
-        RawFile::Clipboard {
+    pub fn new_clipboard(spectrum: MultiLayerSpectrum, title: String) -> Self {
+        RawFile::Single {
             id: RAW_FILE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
             spectrum,
-            selected: false,
+            selected: true,
+            title,
         }
     }
 
@@ -192,9 +194,9 @@ impl RawFile {
                 path: path.clone(),
                 spectra: rawfile.len(),
             },
-            RawFile::Clipboard { id, .. } => RawFileDetails {
+            RawFile::Single { id, title, .. } => RawFileDetails {
                 id: *id,
-                path: "clipboard".to_string(),
+                path: title.clone(),
                 spectra: 1,
             },
         }
@@ -211,7 +213,7 @@ impl RawFile {
                     .iter()
                     .filter_map(|index| rawfile.get_spectrum_by_index(*index)),
             ),
-            Self::Clipboard {
+            Self::Single {
                 spectrum, selected, ..
             } => Box::new(std::iter::once(spectrum.clone()).take(usize::from(*selected))),
         }

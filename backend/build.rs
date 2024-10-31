@@ -166,6 +166,13 @@ fn main() {
         <button type="button" id="load-clipboard">Load Clipboard</button>
         <button type="button" id="load-identified-peptides">Load identified peptides file</button>
       </div>
+      <div class="input-flex">
+        <div class="usi">
+          <a href="https://www.psidev.info/usi" title="Universal Spectrum Identifier, a standard to reference any publicly available spectrum">USI:</a>
+          <input id="usi" type="text" placeholder="mzspec:ID:FILE:scan:SCAN"></input>
+          <button type="button" id="load-usi">Load</button>
+        </div>
+      </div>
       <output class="wrap" id="open-files-error"></output>
       
       <div id="peptides" style="display:none">

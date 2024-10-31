@@ -122,10 +122,41 @@ button {
   display: flex;
   flex-direction: row;
   gap: .5rem;
-  padding: 1rem 0;
+  margin: 1rem 0;
   align-items: baseline;
   justify-content: space-evenly;
   flex-wrap: wrap;
+
+  & .usi {
+    background: var(--color-secondary);
+    border-radius: 100000px;
+
+    & a {
+      color: var(--color-background);
+      text-decoration: none;
+      padding: 0 0 0 1rem;
+    }
+
+    & input {
+      width: clamp(10ch, 50vw, 100ch);
+      border-color: var(--color-secondary);
+
+      &:hover {
+        border-color: var(--color-green-light);
+      }
+
+      &:active {
+        border-color: var(--color-foreground);
+      }
+    }
+
+    & button {
+      --_clr-main: var(--color-secondary);
+      --_clr-hover: var(--color-green-light);
+      border-radius: 0 1000000px 1000000px 0;
+      margin: 0
+    }
+  }
 }
 
 :is(.input-settings, .input-flex) option {

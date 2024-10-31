@@ -124,6 +124,29 @@ async function load_raw(path) {
   });
 }
 
+async function load_usi() {
+  document.querySelector("#load-usi").classList.add("loading")
+  return invoke("load_usi", { usi: document.getElementById("usi").value }).then((result) => {
+    clearError("open-files-error");
+    document.getElementById("usi").value = "";
+    document.querySelector("#peptide").innerText = result.peptide;
+    document.querySelector("#spectrum-charge").value = result.charge;
+    if (result.mode != null) {
+      document.querySelector("#spectrum-model").value = result.mode.toLowerCase();
+    }
+    if (result.warning != null) {
+      showError("spectrum-error", result.warning);
+    } else {
+      clearError("spectrum-error");
+    }
+    document.querySelector("#load-usi").classList.remove("loading")
+    update_open_raw_files();
+  }).catch((error) => {
+    showError("open-files-error", error);
+    document.querySelector("#load-usi").classList.remove("loading")
+  })
+}
+
 async function load_identified_peptides(path) {
   return invoke("load_identified_peptides_file", { path: path }).then((result) => {
     if (result == null) {
@@ -540,6 +563,8 @@ function formatError(error, showContext = true) {
       } else if (error.content.context.hasOwnProperty('FullLine')) {
         let FullLine = error.content.context.FullLine;
         msg += "<div class='error'>" + FullLine.line + "</div>";
+      } else if (error.content.context == "None") {
+        // Empty
       } else {
         msg += "<pre>" + error.content.context + "</pre>";
       }
@@ -616,6 +641,10 @@ window.addEventListener("DOMContentLoaded", () => {
   document
     .querySelector("#load-raw-path")
     .addEventListener("click", (event) => select_raw_file(event.target));
+  document
+    .querySelector("#load-usi")
+    .addEventListener("click", () => load_usi());
+  enter_event("#usi", load_usi)
   document
     .querySelector("#load-identified-peptides")
     .addEventListener("click", (event) => dialog_select_identified_peptides_file(event.target));
