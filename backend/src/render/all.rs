@@ -864,8 +864,11 @@ pub fn spectrum_table(
                     "-".to_string(),
                     "-".to_string(),
                     "-".to_string(),
-                    format!("{:.2}", peak.intensity),
-                    format!("{:.2}", peak.experimental_mz.value),
+                    format!("<span title='{0}'>{0:.2}</span>", peak.intensity),
+                    format!(
+                        "<span title='{0}'>{0:.2}</span>",
+                        peak.experimental_mz.value
+                    ),
                     "-".to_string(),
                     "-".to_string(),
                     "-".to_string(),
@@ -897,8 +900,11 @@ pub fn spectrum_table(
                             .neutral_loss
                             .as_ref()
                             .map_or(String::new(), display_neutral_loss),
-                        format!("{:.2}", peak.intensity),
-                        format!("{:.2}", peak.experimental_mz.value),
+                        format!("<span title='{0}'>{0:.2}</span>", peak.intensity),
+                        format!(
+                            "<span title='{0}'>{0:.2}</span>",
+                            peak.experimental_mz.value
+                        ),
                         display_formula(&annotation.formula, true),
                         format!(
                             "{:.5}",
@@ -948,7 +954,10 @@ pub fn spectrum_table(
                         .as_ref()
                         .map_or(String::new(), display_neutral_loss),
                     "-".to_string(),
-                    format!("{:.2}", fragment.mz(MassMode::Monoisotopic).value),
+                    format!(
+                        "<span title='{0}'>{0:.2}</span>",
+                        fragment.mz(MassMode::Monoisotopic).value
+                    ),
                     display_formula(&fragment.formula, true),
                     "-".to_string(),
                     "-".to_string(),
@@ -962,7 +971,16 @@ pub fn spectrum_table(
     data.sort_unstable_by(|a, b| a.0.total_cmp(&b.0));
     for row in data {
         write!(output, "<tr class='{}'>", row.1[0]).unwrap();
-        for cell in &row.1[if multiple_peptides { 1 } else { 2 }..] {
+        for cell in &row.1[if multiple_peptides {
+            if multiple_peptidoforms {
+                1
+            } else {
+                2
+            }
+        } else {
+            3
+        }..]
+        {
             write!(output, "<td>{}</td>", cell).unwrap();
         }
         write!(output, "</tr>").unwrap();

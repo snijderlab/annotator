@@ -82,36 +82,36 @@ pub async fn load_usi<'a>(
         ),
     })?;
 
-    let (backend, spectra) = usi
-        .get_spectrum_async(None, None)
-        .await
-        .map_err(|e| match e {
-            PROXIError::IO(backend, error) => CustomError::error(
-                format!("Error while retrieving USI from {backend}"),
-                error,
-                Context::None,
-            ),
-            PROXIError::Error {
-                backend,
-                title,
-                detail,
-                ..
-            } => CustomError::error(
-                format!("Error while retrieving USI from {backend}: {title}"),
-                detail,
-                Context::None,
-            ),
-            PROXIError::PeakUnavailable(backend, _) => CustomError::error(
-                format!("Error while retrieving USI from {backend}"),
-                "The peak data is not available for this dataset",
-                Context::None,
-            ),
-            PROXIError::NotFound => CustomError::error(
-                "Error while retrieving USI",
-                "No PROXI server responded to the request",
-                Context::None,
-            ),
-        })?;
+    let (backend, spectra) =
+        usi.download_spectrum_async(None, None)
+            .await
+            .map_err(|e| match e {
+                PROXIError::IO(backend, error) => CustomError::error(
+                    format!("Error while retrieving USI from {backend}"),
+                    error,
+                    Context::None,
+                ),
+                PROXIError::Error {
+                    backend,
+                    title,
+                    detail,
+                    ..
+                } => CustomError::error(
+                    format!("Error while retrieving USI from {backend}: {title}"),
+                    detail,
+                    Context::None,
+                ),
+                PROXIError::PeakUnavailable(backend, _) => CustomError::error(
+                    format!("Error while retrieving USI from {backend}"),
+                    "The peak data is not available for this dataset",
+                    Context::None,
+                ),
+                PROXIError::NotFound => CustomError::error(
+                    "Error while retrieving USI",
+                    "No PROXI server responded to the request",
+                    Context::None,
+                ),
+            })?;
 
     let spectrum = spectra
         .into_iter()
@@ -122,7 +122,7 @@ pub async fn load_usi<'a>(
         .unwrap();
 
     if let Ok(mut state) = state.lock() {
-        state.spectra.push(RawFile::new_clipboard(
+        state.spectra.push(RawFile::new_single(
             spectrum.into(),
             format!("{backend} {} {}", usi.dataset, usi.run_name),
         ));
@@ -197,10 +197,11 @@ pub async fn load_clipboard<'a>(data: &'a str, state: ModifiableState<'a>) -> Re
         _ => Err("Not a recognised format (Bruker/Stitch/Sciex/Thermo)".to_string()),
     }?;
 
-    state.lock().unwrap().spectra.push(RawFile::new_clipboard(
-        spectrum,
-        format!("Clipboard {title}"),
-    ));
+    state
+        .lock()
+        .unwrap()
+        .spectra
+        .push(RawFile::new_single(spectrum, format!("Clipboard {title}")));
 
     Ok(())
 }

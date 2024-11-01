@@ -241,62 +241,93 @@ async function update_open_raw_files() {
         header.className = "header";
         header.id = "rawfile-" + file.id;
         header.appendChild(createElement("span", { text: "R" + (file.id + 1) + ":" + file.path.split('\\').pop().split('/').pop(), title: file.path }));
-        let spectrum_selection = document.createElement("div");
-        spectrum_selection.className = "spectrum-selection";
-        spectrum_selection.appendChild(createElement("label", {
-          text: "Spectrum index",
-          for: "spectrum-" + file.id + "-index",
-          title: "The index of the spectrum is the 0 based index in the file, so the first spectrum has index 0, the second 1, etc"
-        }))
-        let group_index = document.createElement("div");
-        group_index.className = "combined-input";
-        let input_index = document.createElement("input");
-        input_index.id = "spectrum-" + file.id + "-index";
-        input_index.setAttribute("min", "0");
-        input_index.setAttribute("type", "number");
-        let select_on_index = () => {
-          if (input_index.value.trim() != "") {
-            invoke("select_spectrum_index", { fileIndex: file.id, index: Number(input_index.value) }).then(
-              () => {
+
+        if (file.single) {
+          let select = document.createElement("button");
+          select.innerText = file.selected ? "Unselect" : "Select";
+          select.addEventListener("click", e => {
+            let r = e.target.parentElement.parentElement;
+            if (r.dataset.selected == "true") {
+              console.log("unselect")
+              invoke("unselect_spectrum", { fileIndex: file.id, index: 0 }).then(() => {
+                r.dataset.selected = false;
+                select.innerText = "Select";
+                update_selected_spectra()
+              });
+            } else {
+              console.log("select")
+              invoke("select_spectrum_index", { fileIndex: file.id, index: 0 }).then(() => {
+                r.dataset.selected = true;
+                select.innerText = "Unselect";
                 clearError("open-files-error");
-                input_index.value = "";
                 update_selected_spectra();
-              }
-            ).catch((error) => {
-              showError("open-files-error", error);
-            })
-          }
-        };
-        input_index.addEventListener("focusout", select_on_index);
-        input_index.addEventListener("keydown", event => { if (event.keyCode == 13) { select_on_index() } else { } });
-        group_index.appendChild(input_index);
-        group_index.appendChild(createElement("span", { text: "/" }))
-        group_index.appendChild(createElement("span", { text: file.spectra, id: "spectrum-" + file.id + "-scans" }))
-        spectrum_selection.appendChild(group_index);
-        spectrum_selection.appendChild(createElement("label", {
-          text: "Native ID",
-          for: "spectrum-" + file.id + "-native-id",
-          title: "The native ID is the identifier given to a spectrum in the original raw file, the format for this is different between different manufacturers. This can be used to track the same spectrum through multiple subsequent programs."
-        }))
-        let input_native_id = document.createElement("input");
-        input_native_id.id = "spectrum-" + file.id + "-native-id";
-        let select_on_scan = () => {
-          if (input_native_id.value.trim() != "") {
-            invoke("select_spectrum_native_id", { fileIndex: file.id, nativeId: input_native_id.value }).then(
-              () => {
-                clearError("open-files-error");
-                input_native_id.value = "";
-                update_selected_spectra();
-              }
-            ).catch((error) => {
-              showError("open-files-error", error);
-            })
-          }
-        };
-        input_native_id.addEventListener("focusout", select_on_scan);
-        input_native_id.addEventListener("keydown", event => { if (event.keyCode == 13) { select_on_scan() } else { } });
-        spectrum_selection.appendChild(input_native_id);
-        header.appendChild(spectrum_selection);
+              }).catch((error) => {
+                showError("open-files-error", error);
+              });
+            }
+          });
+          header.appendChild(select);
+          rawfile.dataset.single = true;
+          rawfile.dataset.selected = file.selected;
+        } else {
+          let spectrum_selection = document.createElement("div");
+          spectrum_selection.className = "spectrum-selection";
+          spectrum_selection.appendChild(createElement("label", {
+            text: "Spectrum index",
+            for: "spectrum-" + file.id + "-index",
+            title: "The index of the spectrum is the 0 based index in the file, so the first spectrum has index 0, the second 1, etc"
+          }))
+          let group_index = document.createElement("div");
+          group_index.className = "combined-input";
+          let input_index = document.createElement("input");
+          input_index.id = "spectrum-" + file.id + "-index";
+          input_index.setAttribute("min", "0");
+          input_index.setAttribute("type", "number");
+          let select_on_index = () => {
+            if (input_index.value.trim() != "") {
+              invoke("select_spectrum_index", { fileIndex: file.id, index: Number(input_index.value) }).then(
+                () => {
+                  clearError("open-files-error");
+                  input_index.value = "";
+                  update_selected_spectra();
+                }
+              ).catch((error) => {
+                showError("open-files-error", error);
+              })
+            }
+          };
+          input_index.addEventListener("focusout", select_on_index);
+          input_index.addEventListener("keydown", event => { if (event.keyCode == 13) { select_on_index() } else { } });
+          group_index.appendChild(input_index);
+          group_index.appendChild(createElement("span", { text: "/" }))
+          group_index.appendChild(createElement("span", { text: file.spectra, id: "spectrum-" + file.id + "-scans" }))
+          spectrum_selection.appendChild(group_index);
+          spectrum_selection.appendChild(createElement("label", {
+            text: "Native ID",
+            for: "spectrum-" + file.id + "-native-id",
+            title: "The native ID is the identifier given to a spectrum in the original raw file, the format for this is different between different manufacturers. This can be used to track the same spectrum through multiple subsequent programs."
+          }))
+          let input_native_id = document.createElement("input");
+          input_native_id.id = "spectrum-" + file.id + "-native-id";
+          let select_on_scan = () => {
+            if (input_native_id.value.trim() != "") {
+              invoke("select_spectrum_native_id", { fileIndex: file.id, nativeId: input_native_id.value }).then(
+                () => {
+                  clearError("open-files-error");
+                  input_native_id.value = "";
+                  update_selected_spectra();
+                }
+              ).catch((error) => {
+                showError("open-files-error", error);
+              })
+            }
+          };
+          input_native_id.addEventListener("focusout", select_on_scan);
+          input_native_id.addEventListener("keydown", event => { if (event.keyCode == 13) { select_on_scan() } else { } });
+          spectrum_selection.appendChild(input_native_id);
+          header.appendChild(spectrum_selection);
+          rawfile.dataset.single = false;
+        }
         let close = document.createElement("button");
         close.innerText = "Close file";
         close.addEventListener("click", () => invoke("close_raw_file", { fileIndex: file.id }).then(update_open_raw_files()));
@@ -321,15 +352,20 @@ async function update_selected_spectra() {
     (result) => {
       for (let i in result) {
         let index = Number(result[i][0]);
-        let spectra = document.getElementById("rawfile-" + index + "-spectra");
-        spectra.innerHTML = '';
+        let rawfile = document.getElementById("rawfile-" + index + "-spectra");
+        rawfile.innerHTML = '';
 
         for (let element of result[i][1]) {
           let li = document.createElement("li");
-          let close = document.createElement("button");
-          close.innerText = "Unselect";
-          close.addEventListener("click", () => invoke("unselect_spectrum", { fileIndex: index, index: element.id }).then(update_selected_spectra()));
-          li.appendChild(close);
+
+          if (!rawfile.parentElement.dataset.single) {
+            let close = document.createElement("button");
+            close.innerText = "Unselect";
+            close.addEventListener("click", () => {
+              invoke("unselect_spectrum", { fileIndex: index, index: rawfile.parentElement.dataset.single ? 0 : element.id }).then(update_selected_spectra())
+            });
+            li.appendChild(close);
+          }
           li.appendChild(createElement("span", { text: element.short }));
           let tooltip = document.createElement("div");
           tooltip.className = "tooltip";
@@ -337,7 +373,7 @@ async function update_selected_spectra() {
           li.appendChild(tooltip);
           li.setAttribute("data-index", String(element.id));
 
-          spectra.appendChild(li);
+          rawfile.appendChild(li);
         }
       }
     }

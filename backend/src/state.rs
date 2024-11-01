@@ -74,6 +74,8 @@ pub struct RawFileDetails {
     pub id: usize,
     pub path: String,
     pub spectra: usize,
+    pub single: bool,
+    pub selected: bool,
 }
 
 impl RawFile {
@@ -176,7 +178,7 @@ impl RawFile {
         }
     }
 
-    pub fn new_clipboard(spectrum: MultiLayerSpectrum, title: String) -> Self {
+    pub fn new_single(spectrum: MultiLayerSpectrum, title: String) -> Self {
         RawFile::Single {
             id: RAW_FILE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
             spectrum,
@@ -193,11 +195,20 @@ impl RawFile {
                 id: *id,
                 path: path.clone(),
                 spectra: rawfile.len(),
+                single: false,
+                selected: false,
             },
-            RawFile::Single { id, title, .. } => RawFileDetails {
+            RawFile::Single {
+                id,
+                title,
+                selected,
+                ..
+            } => RawFileDetails {
                 id: *id,
                 path: title.clone(),
                 spectra: 1,
+                single: true,
+                selected: *selected,
             },
         }
     }
