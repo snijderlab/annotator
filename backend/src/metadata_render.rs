@@ -591,7 +591,9 @@ impl RenderToHtml for MSFraggerData {
             &[
                 &[
                     "Extended Peptide".to_string(),
-                    self.extended_peptide.to_string(),
+                    format!("{}_(seq)_{}", 
+                        self.extended_peptide[0].as_ref().map_or("Terminal".to_string(), |p| p.to_string()), 
+                        self.extended_peptide[2].as_ref().map_or("Terminal".to_string(), |p| p.to_string())),
                 ],
                 &[
                     "Assigned modifications".to_string(),
