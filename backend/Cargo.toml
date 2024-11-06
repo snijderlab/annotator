@@ -23,7 +23,7 @@ rustyms = { version = "0.9.0-alpha.2", default-features = false, features = [
     "isotopes",
     "mzdata",
 ] }
-ordered-float = { version = "4.2", features = ["serde"] }
+ordered-float = { version = "4.5", features = ["serde"] }
 rayon = "1.10"
 mzdata = { version = "0.35", features = ["thermo", "mzsignal", "proxi-async"] }
 mzpeaks = "0.22"
@@ -31,16 +31,15 @@ mzsignal = "0.25"
 tauri-plugin-dialog = "2"
 
 [patch.crates-io]
-# rustyms = { git = "https://github.com/snijderlab/rustyms", branch = "main" }
 rustyms = { path = "../../rustyms/rustyms" }
+# hdf5 rs=ust crate needs a new version
+hdf5 = { git = "https://github.com/aldanor/hdf5-rust.git" }
+hdf5-sys = { git = "https://github.com/aldanor/hdf5-rust.git" }
 
 [features]
-# by default Tauri runs in production mode
-# when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL
 default = ["custom-protocol"]
-# this feature is used used for production builds where `devPath` points to the filesystem
-# DO NOT remove this
 custom-protocol = ["tauri/custom-protocol"]
+mzmlb = ["mzdata/mzmlb"]
 
 [profile.release]
 debug = true

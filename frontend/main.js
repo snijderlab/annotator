@@ -357,12 +357,13 @@ async function update_selected_spectra() {
 
         for (let element of result[i][1]) {
           let li = document.createElement("li");
+          let single = rawfile.parentElement.dataset.single === "single";
 
-          if (!rawfile.parentElement.dataset.single) {
+          if (!single) {
             let close = document.createElement("button");
             close.innerText = "Unselect";
             close.addEventListener("click", () => {
-              invoke("unselect_spectrum", { fileIndex: index, index: rawfile.parentElement.dataset.single ? 0 : element.id }).then(update_selected_spectra())
+              invoke("unselect_spectrum", { fileIndex: index, index: single ? 0 : element.id }).then(update_selected_spectra())
             });
             li.appendChild(close);
           }
