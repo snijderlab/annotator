@@ -168,7 +168,7 @@ fn main() {
       </div>
       <div class="input-flex">
         <div class="usi">
-          <a href="https://www.psidev.info/usi" title="Universal Spectrum Identifier, a standard to reference any publicly available spectrum">USI:</a>
+          <a target='_blank' href="https://www.psidev.info/usi" title="Universal Spectrum Identifier, a standard to reference any publicly available spectrum">USI:</a>
           <input id="usi" type="text" placeholder="mzspec:ID:FILE:scan:SCAN"></input>
           <button type="button" id="load-usi">Load</button>
         </div>
