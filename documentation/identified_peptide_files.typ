@@ -6,15 +6,20 @@ There are quite some programs that export peptides with metadata based on spectr
 
 #table(
   columns: (auto, auto),
-  table.header([*Software*], [*Versions/Formats*]),
+  table.header([*Open format*], [*Comment*]),
   [Fasta],
-  [common version],
+  [No header requirements],
+  [mzTab],
+  [v1.0 & Casanovo],
+)
+
+#table(
+  columns: (auto, auto),
+  table.header([*Software*], [*Versions/Formats*]),
   [MaxQuant],
   [msms, msms scans, novo msms scans, & silac],
   [MSFragger],
   [21 and 22],
-  [mzTab],
-  [v1.0 & Casanovo],
   [Novor],
   [Denovo and PSM],
   [OPair],

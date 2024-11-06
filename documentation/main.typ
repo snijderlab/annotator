@@ -15,6 +15,11 @@
   ),
   numbering: "1"
 )
+#set text(1em, weight: "regular", font: "Roboto", hyphenate: true)
+#show heading: it => [
+  #set text(1em, weight: "regular", font: "Roboto Slab")
+  #block(it.body)
+]
 #set heading(outlined: false)
 
 #grid(
@@ -22,7 +27,7 @@
     image("../backend/icons/annotator_icon_export.svg"),
     [= Annotator
 
-    A simple tool to help you manually discover the depths of your spectra, one spectrum at a time. Once your rawfiles are loaded you can select a scan and add you annotation with full control over theoretical fragment generation. The interactive spectrum will help you discover what the spectrum means, with full control to export gorgeous images.
+    A simple tool to help you manually discover the depths of your (complex) spectra, one spectrum at a time. Load your rawfiles, select a spectrum and add you annotation with full control over theoretical fragments. Use the interactive spectrum to discover what your spectrum means and to export gorgeous images.
 
     GitHub: #link(crate.package.repository)[#crate.package.repository] \
     License: #crate.package.license \
@@ -34,7 +39,7 @@
 
 = Formatting guide
 
-Buttons present in the annotator are displayed as #button[Button]. Keys used in key combinations as #key[Key].
+Buttons are displayed as #button[Button]. Keys used in key combinations as #key[Key].
 
 #aside[Any side note will be shown like this.]
 

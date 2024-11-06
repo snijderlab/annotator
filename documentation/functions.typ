@@ -19,7 +19,7 @@
     inset: 0pt,
     radius: 8pt,
     outset: 4pt,
-    text,
+    text
   )
   h(4pt)
 }
@@ -31,7 +31,7 @@
     inset: 0pt,
     radius: 2pt,
     outset: 3pt,
-    [#text(fill: color.linear-rgb(darkgrey, darkgrey, darkgrey, 255), it)]
+    [#text(font: "Roboto Mono", size: 0.9em, fill: color.linear-rgb(darkgrey, darkgrey, darkgrey, 255), it)]
   )
   h(3pt)
 }
@@ -43,7 +43,7 @@
     inset: 0pt,
     radius: 0pt,
     outset: 3pt,
-    raw(it)
+    text(font: "Roboto Mono", size: 0.9em)[#it]
   )
   h(3pt)
 }

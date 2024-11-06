@@ -557,6 +557,8 @@ fn main() {
       <input type="checkbox" id="collapsible-tools">
       <fieldset class="collapsible" data-linked-item="collapsible-tools" id="tools">
         <legend>Tools</legend>
+        <h2>Search for modifications</h2>
+        <p>Search by mass with a given tolerance, by formula (use <code>Formula:O-1</code>), or by glycan composition to search for matching modification. Additionally searching for a name or index for an existing modification will show all details of that modification.</p>
         <div class="flex-input collapsible-content">
           <label for="search-modification">Search modification</label>
           <input id="search-modification" type="text" title="Search for a ProForma modification, it will display its details. If you give a mass, formula, or glycan composition modification it instead will return all modifications with that composition."></input>
@@ -566,12 +568,17 @@ fn main() {
         </div>
         <output class="error collapsible-content hidden" id="search-modification-error"></output>
         <output class="collapsible-content" id="search-modification-result"></output>
+
+        <h2>Isotopic distribution</h2>
         <div class="flex-input collapsible-content">
           <label for="details-formula">Isotopic distribution for formula</label>
           <span class="input context" id="details-formula" type="text" placeholder="Molecular formula" contentEditable="plaintext-only"></span>
         </div>
         <output class="error collapsible-content hidden" id="details-formula-error"></output>
         <output class="collapsible-content" id="details-formula-result"></output>
+
+        <h2>Browse GNOme structures using the GNOme structure browser</h2>
+        <iframe title="GNOme Structure Browser" src="https://pages.glycosmos.org/gnome/public/index.html"></iframe>
       </fieldset>
       <input type="checkbox" id="collapsible-custom-mods">
       <fieldset class="collapsible" data-linked-item="collapsible-custom-mods" id="custom-modifications">
