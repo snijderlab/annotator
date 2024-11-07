@@ -25,21 +25,29 @@ rustyms = { version = "0.9.0-alpha.2", default-features = false, features = [
 ] }
 ordered-float = { version = "4.5", features = ["serde"] }
 rayon = "1.10"
-mzdata = { version = "0.35", features = ["thermo", "mzsignal", "proxi-async"] }
+mzdata = { version = "0.35", default-features = false, features = [
+    "thermo",
+    "mzsignal",
+    "proxi-async",
+    "zlib",
+] }
 mzpeaks = "0.22"
 mzsignal = "0.25"
 tauri-plugin-dialog = "2"
 
 [patch.crates-io]
-rustyms = { path = "../../rustyms/rustyms" }
-# hdf5 rs=ust crate needs a new version
+rustyms = { git = "https://github.com/snijderlab/rustyms", branch = "main" }
+# hdf5 rust crate needs a new version
 hdf5 = { git = "https://github.com/aldanor/hdf5-rust.git" }
 hdf5-sys = { git = "https://github.com/aldanor/hdf5-rust.git" }
 
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+# To complile with mzmlb support, needs HDF5 installed on your system
 mzmlb = ["mzdata/mzmlb"]
+# Use static HDF5 libraries
+hdf5-static = ["mzdata/hdf5_static"]
 
 [profile.release]
 debug = true

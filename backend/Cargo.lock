@@ -1854,12 +1854,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "hdf5-src"
+version = "0.8.1"
+source = "git+https://github.com/aldanor/hdf5-rust.git#43015ddaa87e62b63dc1b1ae7fed49a430e1b53a"
+dependencies = [
+ "cmake",
+ "libz-sys",
+]
+
+[[package]]
 name = "hdf5-sys"
 version = "0.8.1"
 source = "git+https://github.com/aldanor/hdf5-rust.git#43015ddaa87e62b63dc1b1ae7fed49a430e1b53a"
 dependencies = [
+ "hdf5-src",
  "libc",
  "libloading 0.8.5",
+ "libz-sys",
  "pkg-config",
  "regex",
  "serde",
@@ -2607,6 +2618,7 @@ dependencies = [
  "identity-hash",
  "indexmap 2.6.0",
  "lazy_static",
+ "libz-sys",
  "log",
  "md5",
  "mzpeaks",
@@ -4015,6 +4027,7 @@ dependencies = [
 [[package]]
 name = "rustyms"
 version = "0.9.0-alpha.2"
+source = "git+https://github.com/snijderlab/rustyms?branch=main#9c43b262c1ba5febbc6fe7c89c3c9952377b3420"
 dependencies = [
  "bincode",
  "flate2",
