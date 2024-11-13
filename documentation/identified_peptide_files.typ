@@ -16,6 +16,8 @@ There are quite some programs that export peptides with metadata based on spectr
 #table(
   columns: (auto, auto),
   table.header([*Software*], [*Versions/Formats*]),
+  [DeepNovoFamily],
+  [DeepNovo, PointNovo, BiatNovo, PGPointNovo],
   [MaxQuant],
   [msms, msms scans, novo msms scans, & silac],
   [MSFragger],
@@ -26,6 +28,8 @@ There are quite some programs that export peptides with metadata based on spectr
   [common version],
   [Peaks],
   [X, X+, 11, 12, & Ab],
+  [pLink],
+  [2.3],
   [Sage],
   [0.14],
 )

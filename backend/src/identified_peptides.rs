@@ -126,11 +126,12 @@ pub async fn search_peptide<'a>(
             })
         })
         .par_bridge()
+        .filter(|p| p.2.peptide().and_then(|p| p.peptide()).is_some())
         .map(|(id, index, peptide)| {
             (
                 index,
                 align::<4, SemiAmbiguous, SimpleLinear>(
-                    peptide.peptide().unwrap(),
+                    peptide.peptide().unwrap().peptide().unwrap(),
                     &search,
                     AlignScoring::default(),
                     align::AlignType::GLOBAL_B,
@@ -148,7 +149,7 @@ pub async fn search_peptide<'a>(
         .map(|(index, alignment, peptide, id)| {
             let start = alignment.start_a();
             let end = alignment.start_a() + alignment.len_a();
-            let sequence = peptide.peptide().cloned().unwrap_or_default();
+            let sequence = peptide.peptide().unwrap().peptide().unwrap().clone();
             vec![
                 format!(
                     "<a onclick=\"load_peptide({id}, {index})\">F{}:{index}</a>",

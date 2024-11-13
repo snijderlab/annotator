@@ -1,7 +1,11 @@
 use itertools::Itertools;
-use rustyms::identification::{
-    CVTerm, FastaData, IdentifiedPeptide, MSFraggerData, MZTabData, MaxQuantData, MetaData,
-    NovorData, OpairData, PeaksData, SageData,SpectrumIds,
+use rustyms::{
+    identification::{
+        CVTerm, DeepNovoFamilyData, FastaData, IdentifiedPeptide, MSFraggerData, MZTabData,
+        MaxQuantData, MetaData, NovorData, OpairData, PLinkData, PeaksData, ReturnedPeptide,
+        SageData, SpectrumIds,
+    },
+    MultiChemical,
 };
 
 use crate::{
@@ -19,49 +23,67 @@ impl RenderToHtml for IdentifiedPeptide {
         let peptide = if let Some(peptide) = self.peptide() {
             let mut html = HtmlTag::div.new();
             html.class("original-sequence").style("--max-value:1");
-            let lc = self
-                .local_confidence()
-                .map(|lc| lc.to_vec())
-                .unwrap_or(vec![0.0; peptide.len()]);
 
-            if let Some(n) = peptide.get_n_term().as_ref() {
-                let mut modification = String::new();
-                n.display(&mut modification, false).unwrap();
-                html.content(
-                    HtmlTag::div
-                        .new()
-                        .style("--value:0")
-                        .content(
-                            HtmlTag::p.new().class("modification term").title(modification),
-                        )
-                        .clone(),
-                );
-            }
+            for peptide in peptide.peptidoform().peptides() {
+                if let Some(n) = peptide.get_n_term().as_ref() {
+                    let mut modification = String::new();
+                    n.display(&mut modification, false).unwrap();
+                    html.content(
+                        HtmlTag::div
+                            .new()
+                            .style("--value:0")
+                            .content(
+                                HtmlTag::p
+                                    .new()
+                                    .class("modification term")
+                                    .title(modification),
+                            )
+                            .clone(),
+                    );
+                }
 
-            for (aa, confidence) in peptide.sequence().iter().zip(lc) {
-                html.content(
-                    HtmlTag::div
-                        .new()
-                        .style(format!("--value:{confidence}"))
-                        .content(
-                            HtmlTag::p.new().content(aa.aminoacid.char().to_string()).maybe_class((!aa.modifications.is_empty()).then_some("modification")).title( aa.modifications
-                                .iter()
-                                .map(|m| {
-                                    let mut s = String::new();
-                                    m.display(&mut s, false).unwrap();
-                                    s
-                                })
-                                .join(",")),
+                for (aa, confidence) in peptide.sequence().iter().zip(
+                    self.local_confidence()
+                        .map(|lc| lc.to_vec())
+                        .unwrap_or(vec![0.0; peptide.len()]),
+                ) {
+                    html.content(
+                        HtmlTag::div
+                            .new()
+                            .style(format!("--value:{confidence}"))
+                            .content(
+                                HtmlTag::p
+                                    .new()
+                                    .content(aa.aminoacid.char().to_string())
+                                    .maybe_class(
+                                        (!aa.modifications.is_empty()).then_some("modification"),
+                                    )
+                                    .title(
+                                        aa.modifications
+                                            .iter()
+                                            .map(|m| {
+                                                let mut s = String::new();
+                                                m.display(&mut s, false).unwrap();
+                                                s
+                                            })
+                                            .join(","),
+                                    ),
+                            ),
+                    );
+                }
+
+                if let Some(c) = peptide.get_c_term().as_ref() {
+                    let mut modification = String::new();
+                    c.display(&mut modification, false).unwrap();
+                    html.content(
+                        HtmlTag::div.new().style("--value:0").content(
+                            HtmlTag::p
+                                .new()
+                                .class("modification term")
+                                .title(modification),
                         ),
-                );
-            }
-
-            if let Some(c) = peptide.get_c_term().as_ref() {
-                let mut modification = String::new();
-                c.display(&mut modification, false).unwrap();
-                html.content(HtmlTag::div.new().style("--value:0").content(
-                    HtmlTag::p.new().class("modification term").title(modification),
-                ));
+                    );
+                }
             }
             html
         } else {
@@ -76,7 +98,10 @@ impl RenderToHtml for IdentifiedPeptide {
                         "Score:&nbsp;{}, Length:&nbsp;{}, Mass:&nbsp;{}, Charge:&nbsp;{}, m/z:&nbsp;{}, Mode:&nbsp;{}, RT:&nbsp;{}",
                         self.score.map_or(String::from("-"), |s| format!("{s:.3}")),
                         self.peptide()
-                            .map(|p| format!("{}&nbsp;AA", p.len()))
+                            .map(|p| format!("{}&nbsp;AA", match p {
+                                ReturnedPeptide::Linear(p) => p.len().to_string(),
+                                ReturnedPeptide::Peptidoform(p) => p.peptides().iter().map(|p| p.len()).join("&nbsp;+&nbsp;")
+                            }))
                             .to_optional_string(),
                         formula
                             .as_ref()
@@ -113,7 +138,7 @@ impl RenderToHtml for IdentifiedPeptide {
                         )).to_optional_string(),
                         self.mass_error()
                             .map(|m| display_mass(m, None))
-                            .to_optional_string(),                   
+                            .to_optional_string(),
                     ))
                     .clone(),
                 HtmlTag::ul.new().children(match self.scans() {
@@ -140,6 +165,8 @@ impl RenderToHtml for MetaData {
             MetaData::MSFragger(m) => m.to_html(),
             MetaData::Sage(s) => s.to_html(),
             MetaData::MZTab(m) => m.to_html(),
+            MetaData::PLink(p) => p.to_html(),
+            MetaData::DeepNovoFamily(d) => d.to_html(),
         }
     }
 }
@@ -163,7 +190,10 @@ impl RenderToHtml for PeaksData {
                     "Predicted RT".to_string(),
                     self.predicted_rt.map(|v| v.value).to_optional_string(),
                 ],
-                &["Area".to_string(), self.area.map(|a| format!("{a:e}")).to_optional_string()],
+                &[
+                    "Area".to_string(),
+                    self.area.map(|a| format!("{a:e}")).to_optional_string(),
+                ],
                 &[
                     "Accession".to_string(),
                     self.accession.as_ref().to_optional_string(),
@@ -591,9 +621,15 @@ impl RenderToHtml for MSFraggerData {
             &[
                 &[
                     "Extended Peptide".to_string(),
-                    format!("{}_(seq)_{}", 
-                        self.extended_peptide[0].as_ref().map_or("Terminal".to_string(), |p| p.to_string()), 
-                        self.extended_peptide[2].as_ref().map_or("Terminal".to_string(), |p| p.to_string())),
+                    format!(
+                        "{}_(seq)_{}",
+                        self.extended_peptide[0]
+                            .as_ref()
+                            .map_or("Terminal".to_string(), |p| p.to_string()),
+                        self.extended_peptide[2]
+                            .as_ref()
+                            .map_or("Terminal".to_string(), |p| p.to_string())
+                    ),
                 ],
                 &[
                     "Assigned modifications".to_string(),
@@ -720,11 +756,74 @@ impl RenderToHtml for MZTabData {
     }
 }
 
+impl RenderToHtml for PLinkData {
+    fn to_html(&self) -> HtmlElement {
+        HtmlElement::table::<HtmlContent, _>(
+            None,
+            &[
+                &["Peptide type".to_string(), self.peptide_type.to_string()],
+                &["Refined score".to_string(), self.refined_score.to_string()],
+                &["SVM score".to_string(), self.svm_score.to_string()],
+                &["E-value".to_string(), self.e_value.to_string()],
+                &["Q-value".to_string(), self.q_value.to_string()],
+                &["Decoy".to_string(), self.is_decoy.to_string()],
+                &[
+                    "Proteins".to_string(),
+                    self.proteins
+                        .iter()
+                        .map(|(p1, pos1, p2, pos2)| {
+                            format!(
+                                "{p1}{}{}{}",
+                                pos1.map_or(String::new(), |p| format!("({})", p)),
+                                p2.as_ref().map_or(String::new(), |p| format!("-{}", p)),
+                                pos2.map_or(String::new(), |p| format!("({})", p))
+                            )
+                        })
+                        .join("/"),
+                ],
+                &["Raw file ID".to_string(), self.raw_file_id.to_string()],
+                &[
+                    "Complex satisfied".to_string(),
+                    self.is_complex_satisfied.to_string(),
+                ],
+                &["In filter".to_string(), self.is_filter_in.to_string()],
+                &["Title".to_string(), self.title.clone()],
+                &["Version".to_string(), self.version.to_string()],
+            ],
+        )
+        .clone()
+    }
+}
+
+impl RenderToHtml for DeepNovoFamilyData {
+    fn to_html(&self) -> HtmlElement {
+        HtmlElement::table::<HtmlContent, _>(
+            None,
+            &[&["Version".to_string(), self.version.to_string()]],
+        )
+        .clone()
+    }
+}
+
 impl RenderToHtml for FastaData {
     fn to_html(&self) -> HtmlElement {
         HtmlElement::table::<HtmlContent, _>(
             None,
-            &[&["Header".to_string(), self.full_header.to_string()]],
+            &[
+                &["Description".to_string(), self.description().to_string()],
+                &[
+                    "Tags".to_string(),
+                    (self.tags().next().is_some())
+                        .then(|| {
+                            HtmlElement::table(
+                                Some(&["Tag", "Value"]),
+                                self.tags().map(|(k, v)| [k, v]),
+                            )
+                        })
+                        .to_optional_string(),
+                ],
+                &["Full header".to_string(), self.header().to_string()],
+            ],
         )
         .clone()
     }
