@@ -22,20 +22,25 @@ impl RenderToHtml for IdentifiedPeptide {
         // Render the peptide with its local confidence
         let peptide = if let Some(peptide) = self.peptide() {
             let mut html = HtmlTag::div.new();
-            html.class("original-sequence").style("--max-value:1");
+            html.class("original-sequence-wrapper");
 
             for peptide in peptide.peptidoform().peptides() {
+                let mut pep_html = HtmlTag::div.new();
+                pep_html.class("original-sequence").style("--max-value:1");
                 if let Some(n) = peptide.get_n_term().as_ref() {
                     let mut modification = String::new();
                     n.display(&mut modification, false).unwrap();
-                    html.content(
+                    pep_html.content(
                         HtmlTag::div
                             .new()
                             .style("--value:0")
                             .content(
                                 HtmlTag::p
                                     .new()
-                                    .class("modification term")
+                                    .class(
+                                        n.simple()
+                                            .map_or("cross-link term", |_| "modification term"),
+                                    )
                                     .title(modification),
                             )
                             .clone(),
@@ -47,7 +52,7 @@ impl RenderToHtml for IdentifiedPeptide {
                         .map(|lc| lc.to_vec())
                         .unwrap_or(vec![0.0; peptide.len()]),
                 ) {
-                    html.content(
+                    pep_html.content(
                         HtmlTag::div
                             .new()
                             .style(format!("--value:{confidence}"))
@@ -56,7 +61,12 @@ impl RenderToHtml for IdentifiedPeptide {
                                     .new()
                                     .content(aa.aminoacid.char().to_string())
                                     .maybe_class(
-                                        (!aa.modifications.is_empty()).then_some("modification"),
+                                        (aa.modifications.iter().any(|m| m.simple().is_some()))
+                                            .then_some("modification"),
+                                    )
+                                    .maybe_class(
+                                        (aa.modifications.iter().any(|m| m.simple().is_none()))
+                                            .then_some("cross-link"),
                                     )
                                     .title(
                                         aa.modifications
@@ -75,15 +85,19 @@ impl RenderToHtml for IdentifiedPeptide {
                 if let Some(c) = peptide.get_c_term().as_ref() {
                     let mut modification = String::new();
                     c.display(&mut modification, false).unwrap();
-                    html.content(
+                    pep_html.content(
                         HtmlTag::div.new().style("--value:0").content(
                             HtmlTag::p
                                 .new()
-                                .class("modification term")
+                                .class(
+                                    c.simple()
+                                        .map_or("cross-link term", |_| "modification term"),
+                                )
                                 .title(modification),
                         ),
                     );
                 }
+                html.content(pep_html);
             }
             html
         } else {
@@ -762,6 +776,7 @@ impl RenderToHtml for PLinkData {
             None,
             &[
                 &["Peptide type".to_string(), self.peptide_type.to_string()],
+                &["Score".to_string(), format!("{:e}", self.score)],
                 &["Refined score".to_string(), self.refined_score.to_string()],
                 &["SVM score".to_string(), self.svm_score.to_string()],
                 &["E-value".to_string(), self.e_value.to_string()],
@@ -780,6 +795,10 @@ impl RenderToHtml for PLinkData {
                             )
                         })
                         .join("/"),
+                ],
+                &[
+                    "Between different proteins".to_string(),
+                    self.is_different_protein.to_string(),
                 ],
                 &["Raw file ID".to_string(), self.raw_file_id.to_string()],
                 &[

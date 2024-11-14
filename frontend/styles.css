@@ -1359,8 +1359,13 @@ summary {
 
 /* Original sequence  */
 
-.original-sequence {
+.original-sequence-wrapper {
     display: flex;
+    gap: 1rem;
+}
+
+.original-sequence {
+    display: inline-flex;
 
     &>div {
         width: 1ch;
@@ -1402,6 +1407,28 @@ summary {
         &.term::before {
             padding: 0.5em;
             left: calc(50% - 0.5 * 3px - 0.5em)
+        }
+    }
+
+    & .cross-link {
+        position: relative;
+        color: var(--color-primary);
+
+        &::before {
+            content: "x1";
+            display: block;
+            position: absolute;
+            top: -1.4em;
+            font-size: .5em;
+            text-align: center;
+            width: 100%;
+            transform: rotate(-90deg);
+        }
+
+        &.term::before {
+            top: 0;
+            left: -.4em;
+            transform: none;
         }
     }
 }
