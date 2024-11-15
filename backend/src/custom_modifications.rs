@@ -1,10 +1,13 @@
-use std::{io::BufWriter, sync::Mutex};
+use std::{
+    io::BufWriter,
+    sync::{Arc, Mutex},
+};
 
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
 use rustyms::{
     error::{Context, CustomError},
-    modification::{LinkerSpecificity, ModificationId, Ontology, SimpleModification},
+    modification::{LinkerSpecificity, ModificationId, Ontology, SimpleModificationInner},
     placement_rule::PlacementRule,
     DiagnosticIon, MolecularFormula, NeutralLoss,
 };
@@ -218,8 +221,8 @@ pub fn get_custom_modification(
         .iter()
         .position(|p| p.0.is_some_and(|i| i == id))
     {
-        match &state.database[index].2 {
-            SimpleModification::Database {
+        match &*state.database[index].2 {
+            SimpleModificationInner::Database {
                 specificities,
                 formula,
                 id,
@@ -254,7 +257,7 @@ pub fn get_custom_modification(
                 linker_specificities: Vec::new(),
                 linker_length: None,
             }),
-            SimpleModification::Linker {
+            SimpleModificationInner::Linker {
                 specificities,
                 formula,
                 id,
@@ -363,8 +366,8 @@ pub async fn update_modification(
     let modification = (
         Some(custom_modification.id),
         custom_modification.name.to_lowercase(),
-        if custom_modification.linker {
-            SimpleModification::Linker {
+        Arc::new(if custom_modification.linker {
+            SimpleModificationInner::Linker {
                 specificities: custom_modification
                     .linker_specificities
                     .iter()
@@ -424,7 +427,7 @@ pub async fn update_modification(
                 length: custom_modification.linker_length.map(OrderedFloat::from),
             }
         } else {
-            SimpleModification::Database {
+            SimpleModificationInner::Database {
                 specificities: custom_modification
                     .single_specificities
                     .iter()
@@ -455,7 +458,7 @@ pub async fn update_modification(
                 formula,
                 id,
             }
-        },
+        }),
     );
 
     if let Ok(mut state) = app.state::<Mutex<State>>().lock() {

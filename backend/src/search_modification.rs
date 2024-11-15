@@ -8,7 +8,7 @@ use itertools::Itertools;
 use modification::ModificationId;
 use rustyms::{
     error::*,
-    modification::{GnoComposition, LinkerSpecificity, SimpleModification},
+    modification::{GnoComposition, LinkerSpecificity, SimpleModificationInner},
     placement_rule::PlacementRule,
     system::{dalton, Mass},
     ReturnModification, *,
@@ -33,7 +33,7 @@ pub async fn search_modification(
             Context::None,
         ))
     } else {
-        SimpleModification::try_from(
+        SimpleModificationInner::try_from(
             text,
             0..text.len(),
             &mut Vec::new(),
@@ -51,9 +51,9 @@ pub async fn search_modification(
     }??;
     let tolerance = Tolerance::new_absolute(Mass::new::<dalton>(tolerance));
 
-    match modification {
-        SimpleModification::Mass(m)
-        | SimpleModification::Gno {
+    match &*modification {
+        SimpleModificationInner::Mass(m)
+        | SimpleModificationInner::Gno {
             composition: GnoComposition::Weight(m),
             ..
         } => Ok(html_builder::HtmlElement::table(
@@ -80,9 +80,9 @@ pub async fn search_modification(
             }),
         )
         .to_string()),
-        SimpleModification::Formula(f) => Ok(html_builder::HtmlElement::table(
+        SimpleModificationInner::Formula(f) => Ok(html_builder::HtmlElement::table(
             Some(&["Name", "Id"]),
-            modification_search_formula(&f, Some(&state.database)).map(
+            modification_search_formula(f, Some(&state.database)).map(
                 |(ontology, id, name, modification)| {
                     [
                         modification.to_string(),
@@ -92,8 +92,8 @@ pub async fn search_modification(
             ),
         )
         .to_string()),
-        SimpleModification::Glycan(ref g)
-        | SimpleModification::Gno {
+        SimpleModificationInner::Glycan(ref g)
+        | SimpleModificationInner::Gno {
             composition: GnoComposition::Composition(ref g),
             ..
         } => Ok(HtmlTag::div
@@ -104,10 +104,10 @@ pub async fn search_modification(
                 modification_search_glycan(g, true).map(|(ontology, id, name, modification)| {
                     [
                         link_modification(ontology, id, &name),
-                        if let SimpleModification::Gno {
+                        if let SimpleModificationInner::Gno {
                             composition: GnoComposition::Topology(structure),
                             ..
-                        } = modification
+                        } = &*modification
                         {
                             structure.to_string()
                         } else {
@@ -117,11 +117,11 @@ pub async fn search_modification(
                 }),
             ))
             .to_string()),
-        modification => Ok(render_modification(&modification).to_string()),
+        modification => Ok(render_modification(modification).to_string()),
     }
 }
 
-pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
+pub fn render_modification(modification: &SimpleModificationInner) -> HtmlElement {
     let mut output = HtmlTag::div.new();
     output.class("modification");
 
@@ -131,7 +131,7 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
         display_masses(&modification.formula()),
     )));
 
-    if let modification::SimpleModification::Database {
+    if let modification::SimpleModificationInner::Database {
         specificities, id, ..
     } = &modification
     {
@@ -158,7 +158,7 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
             )));
         }
         output.content(ul);
-    } else if let SimpleModification::Gno {
+    } else if let SimpleModificationInner::Gno {
         composition,
         id,
         structure_score,
@@ -242,7 +242,7 @@ pub fn render_modification(modification: &SimpleModification) -> HtmlElement {
                 ]);
             }
         }
-    } else if let SimpleModification::Linker {
+    } else if let SimpleModificationInner::Linker {
         specificities,
         id,
         length,

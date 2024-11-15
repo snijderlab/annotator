@@ -1,9 +1,9 @@
 use itertools::Itertools;
 use rustyms::{
     identification::{
-        CVTerm, DeepNovoFamilyData, FastaData, IdentifiedPeptide, MSFraggerData, MZTabData,
-        MaxQuantData, MetaData, NovorData, OpairData, PLinkData, PeaksData, ReturnedPeptide,
-        SageData, SpectrumIds,
+        CVTerm, DeepNovoFamilyData, FastaData, IdentifiedPeptide, InstaNovoData, MSFraggerData,
+        MZTabData, MaxQuantData, MetaData, NovorData, OpairData, PLinkData, PeaksData,
+        ReturnedPeptide, SageData, SpectrumIds,
     },
     MultiChemical,
 };
@@ -181,6 +181,7 @@ impl RenderToHtml for MetaData {
             MetaData::MZTab(m) => m.to_html(),
             MetaData::PLink(p) => p.to_html(),
             MetaData::DeepNovoFamily(d) => d.to_html(),
+            MetaData::InstaNovo(i) => i.to_html(),
         }
     }
 }
@@ -815,6 +816,16 @@ impl RenderToHtml for PLinkData {
 }
 
 impl RenderToHtml for DeepNovoFamilyData {
+    fn to_html(&self) -> HtmlElement {
+        HtmlElement::table::<HtmlContent, _>(
+            None,
+            &[&["Version".to_string(), self.version.to_string()]],
+        )
+        .clone()
+    }
+}
+
+impl RenderToHtml for InstaNovoData {
     fn to_html(&self) -> HtmlElement {
         HtmlElement::table::<HtmlContent, _>(
             None,

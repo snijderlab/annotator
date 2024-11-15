@@ -5,7 +5,7 @@ use mzdata::spectrum::MultiLayerSpectrum;
 use rustyms::{
     fragment::*,
     model::Location,
-    modification::{CrossLinkName, Ontology, SimpleModification},
+    modification::{CrossLinkName, Ontology, SimpleModificationInner},
     placement_rule::PlacementRule,
     spectrum::{AnnotatedPeak, Fdr, PeakSpectrum, Recovered, Score},
     system::{da, mz, Mass, MassOverCharge},
@@ -49,14 +49,14 @@ pub fn annotated_spectrum(
                 .iter()
                 .filter(|seq| {
                     seq.modifications.iter().any(|m| {
-                        matches!(
-                            m,
-                            Modification::Simple(
-                                SimpleModification::GlycanStructure(_)
-                                    | SimpleModification::Glycan(_)
-                                    | SimpleModification::Gno { .. }
+                        m.simple().is_some_and(|m| {
+                            matches!(
+                                &**m,
+                                SimpleModificationInner::GlycanStructure(_)
+                                    | SimpleModificationInner::Glycan(_)
+                                    | SimpleModificationInner::Gno { .. }
                             )
-                        )
+                        })
                     })
                 })
                 .count()
