@@ -33,6 +33,7 @@ mzdata = { version = "0.36", default-features = false, features = [
 mzpeaks = "0.23"
 mzsignal = "0.27"
 tauri-plugin-dialog = "2"
+thin-vec = { version = "0.2", features = ["serde"] }
 
 [patch.crates-io]
 rustyms = { path = "../../rustyms/rustyms" }

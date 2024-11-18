@@ -231,7 +231,7 @@ pub fn get_custom_modification(
                 name: id.name.clone(),
                 formula: formula.to_string(),
                 description: id.description.clone(),
-                synonyms: id.synonyms.clone(),
+                synonyms: id.synonyms.to_vec(),
                 cross_ids: id
                     .cross_ids
                     .iter()
@@ -267,7 +267,7 @@ pub fn get_custom_modification(
                 name: id.name.clone(),
                 formula: formula.to_string(),
                 description: id.description.clone(),
-                synonyms: id.synonyms.clone(),
+                synonyms: id.synonyms.to_vec(),
                 cross_ids: id
                     .cross_ids
                     .iter()
@@ -355,7 +355,7 @@ pub async fn update_modification(
         name: custom_modification.name.clone(),
         id: Some(custom_modification.id),
         description: custom_modification.description,
-        synonyms: custom_modification.synonyms,
+        synonyms: custom_modification.synonyms.into(),
         cross_ids: custom_modification
             .cross_ids
             .iter()
