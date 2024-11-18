@@ -194,24 +194,97 @@ impl RenderToHtml for PeaksData {
                 &["Fraction".to_string(), self.fraction.to_optional_string()],
                 &[
                     "Feature".to_string(),
-                    self.feature.as_ref().to_optional_string(),
+                    self.feature_tryp_cid
+                        .and_then(|f_cid| self.feature_tryp_ead.map(|f_ead| (f_cid, f_ead)))
+                        .map_or(
+                            self.feature.as_ref().to_optional_string(),
+                            |(f_cid, f_ead)| {
+                                self.feature
+                                    .as_ref()
+                                    .map(|f| format!("{f} Tryp CID: {f_cid} Tryp EAD: {f_ead}"))
+                                    .to_optional_string()
+                            },
+                        ),
                 ],
                 &[
                     "De novo score".to_string(),
                     self.de_novo_score.to_optional_string(),
                 ],
-                &["ALC".to_string(), self.alc.to_string()],
+                &["ALC".to_string(), self.alc.to_optional_string()],
+                &["-10logP".to_string(), self.logp.to_optional_string()],
                 &[
                     "Predicted RT".to_string(),
                     self.predicted_rt.map(|v| v.value).to_optional_string(),
                 ],
                 &[
                     "Area".to_string(),
-                    self.area.map(|a| format!("{a:e}")).to_optional_string(),
+                    self.area_tryp_ead.map_or(
+                        self.area.map(|a| format!("{a:e}")).to_optional_string(),
+                        |a_ead| {
+                            self.area
+                                .map(|a| format!("Tryp CID: {a:e} Tryp EAD: {a_ead:e}"))
+                                .to_optional_string()
+                        },
+                    ),
+                ],
+                &[
+                    "Ascore".to_string(),
+                    self.ascore.as_ref().to_optional_string(),
+                ],
+                &[
+                    "Found by".to_string(),
+                    self.found_by.as_ref().to_optional_string(),
                 ],
                 &[
                     "Accession".to_string(),
                     self.accession.as_ref().to_optional_string(),
+                ],
+                &[
+                    "From Chimera".to_string(),
+                    self.from_chimera.to_optional_string(),
+                ],
+                &["ID".to_string(), self.id.to_optional_string()],
+                &[
+                    "Protein".to_string(),
+                    self.protein_accession
+                        .as_ref()
+                        .and_then(|a| {
+                            self.protein_group.and_then(|g| {
+                                self.protein_id
+                                    .and_then(|i| self.unique.map(|u| (a, g, i, u)))
+                            })
+                        })
+                        .map(|(a, g, i, u)| {
+                            format!("accession: {a}, group: {g}, ID: {i}, unique: {u}")
+                        })
+                        .to_optional_string(),
+                ],
+                &[
+                    "Protein range".to_string(),
+                    self.start
+                        .and_then(|s| self.end.map(|e| (s, e)))
+                        .map(|(s, e)| format!("{s}..{e}"))
+                        .to_optional_string(),
+                ],
+                &[
+                    "Flanking residues".to_string(),
+                    self.peptide
+                        .0
+                        .or(self.peptide.2)
+                        .map(|_| {
+                            format!(
+                                "{}_(seq)_{}",
+                                self.peptide
+                                    .0
+                                    .as_ref()
+                                    .map_or("Terminal".to_string(), |p| p.to_string()),
+                                self.peptide
+                                    .2
+                                    .as_ref()
+                                    .map_or("Terminal".to_string(), |p| p.to_string())
+                            )
+                        })
+                        .to_optional_string(),
                 ],
                 &["Version".to_string(), self.version.to_string()],
             ],
