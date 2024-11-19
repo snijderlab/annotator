@@ -3,7 +3,7 @@ use rustyms::{
     identification::{
         CVTerm, DeepNovoFamilyData, FastaData, IdentifiedPeptide, InstaNovoData, MSFraggerData,
         MZTabData, MaxQuantData, MetaData, NovorData, OpairData, PLinkData, PeaksData,
-        ReturnedPeptide, SageData, SpectrumIds,
+        PowerNovoData, ReturnedPeptide, SageData, SpectrumIds,
     },
     MultiChemical,
 };
@@ -48,7 +48,8 @@ impl RenderToHtml for IdentifiedPeptide {
                 }
 
                 for (aa, confidence) in peptide.sequence().iter().zip(
-                    self.local_confidence()
+                    self.local_confidence
+                        .as_ref()
                         .map(|lc| lc.to_vec())
                         .unwrap_or(vec![0.0; peptide.len()]),
                 ) {
@@ -182,6 +183,7 @@ impl RenderToHtml for MetaData {
             MetaData::PLink(p) => p.to_html(),
             MetaData::DeepNovoFamily(d) => d.to_html(),
             MetaData::InstaNovo(i) => i.to_html(),
+            MetaData::PowerNovo(p) => p.to_html(),
         }
     }
 }
@@ -899,6 +901,16 @@ impl RenderToHtml for DeepNovoFamilyData {
 }
 
 impl RenderToHtml for InstaNovoData {
+    fn to_html(&self) -> HtmlElement {
+        HtmlElement::table::<HtmlContent, _>(
+            None,
+            &[&["Version".to_string(), self.version.to_string()]],
+        )
+        .clone()
+    }
+}
+
+impl RenderToHtml for PowerNovoData {
     fn to_html(&self) -> HtmlElement {
         HtmlElement::table::<HtmlContent, _>(
             None,
