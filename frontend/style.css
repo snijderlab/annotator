@@ -235,11 +235,30 @@ output.warning {
 
   & .raw {
     white-space: pre;
-    font-family: monospace;
+    font-family: 'Roboto Mono', monospace;
   }
 
-  &.error .title {
-    color: var(--color-red);
+  &.error {
+    line-height: 1;
+
+    .title {
+      color: var(--color-red);
+    }
+
+    .version {
+      margin-top: 0;
+      color: var(--color-halfway-fg);
+    }
+
+    .error {
+      overflow-x: auto;
+      overflow-y: visible;
+      border: 2px solid var(--color-halfway-bg);
+      font-family: 'Roboto Mono', monospace;
+      padding: 4px;
+      margin: -2px;
+      width: fit-content;
+    }
   }
 
   &.warning .title {
@@ -250,7 +269,12 @@ output.warning {
     display: flex;
     flex-direction: row;
     gap: 1rem;
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: visible;
+    border: 2px solid var(--color-halfway-bg);
+    padding: 4px;
+    margin: -2px;
+    width: fit-content;
 
     & .line-number {
       color: var(--color-halfway-fg);
@@ -264,6 +288,26 @@ output.warning {
       word-wrap: normal;
       word-break: keep-all;
       overflow: visible;
+    }
+  }
+
+  & label {
+    display: block;
+    margin: 1em 0;
+
+    &:not(:has(:checked))+ul {
+      display: none;
+    }
+  }
+
+  & ul {
+    list-style: none;
+    padding: .5em;
+
+    & .underlying-error {
+      border: 2px solid var(--color-red-o);
+      margin: 2px;
+      padding: 2px 0 2px .5rem;
     }
   }
 }

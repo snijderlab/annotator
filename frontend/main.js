@@ -591,6 +591,9 @@ function formatError(error, showContext = true) {
     return "<div class='raw'>" + error + "</div>";
   } else {
     let msg = "<p class='title'>" + error.content.short_description + "</p><p class='description'>" + error.content.long_description + "</p>";
+    if (error.content.version != "") {
+      msg += "<p class='version'>Version: " + error.content.version + "</p>";
+    }
     if (showContext) {
       if (error.content.context.hasOwnProperty('Line')) {
         let Line = error.content.context.Line;
@@ -614,9 +617,9 @@ function formatError(error, showContext = true) {
       msg += "</ul>";
     }
     if (error.content.underlying_errors.length > 0) {
-      msg += "<p>The following underlying errors are identified</p><ul>";
+      msg += "<label><input type='checkbox'></input>Show " + String(error.content.underlying_errors.length) + " underlying errors</label><ul>";
       for (let underlying_error in error.content.underlying_errors) {
-        msg += "<li>" + formatError(error.content.underlying_errors[underlying_error], showContext) + "</li>";
+        msg += "<li class='underlying-error'>" + formatError(error.content.underlying_errors[underlying_error], showContext) + "</li>";
       }
       msg += "</ul>";
     }
