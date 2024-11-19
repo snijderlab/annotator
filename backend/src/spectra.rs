@@ -493,16 +493,23 @@ pub fn get_selected_spectra(state: ModifiableState) -> Vec<(usize, Vec<SelectedS
             file.get_selected_spectra().map(|spectrum | {
                 let d = spectrum.description();
                 let p = spectrum.precursor();
+                let summary = spectrum.peaks().fetch_summaries();
                 SelectedSpectrumDetails {
                     id: spectrum.index(),
                     short: d.id.to_string(),
                     description: format!(
-                        "{}<br>time: {} signal mode: {:?} ms level: {} ion mobility: {}<br>{}{}",
+                        "index: {} id: {}<br>time: {:.3} signal mode: {:?} ms level: {} ion mobility: {}<br>mz range: {:.1} — {:.1} peak count: {} tic: {:.3e} base peak intensity: {:.3e}<br>{}{}",
+                        spectrum.index(),
                         d.id,
                         spectrum.start_time(),
                         spectrum.signal_continuity(),
                         spectrum.ms_level(),
                         spectrum.ion_mobility().to_optional_string(),
+                        summary.mz_range.0,
+                        summary.mz_range.1,
+                        summary.count,
+                        summary.tic,
+                        summary.base_peak.intensity,
                         p.map_or("No precursor".to_string(), |p| {
                             let i = p.isolation_window();
                             format!(

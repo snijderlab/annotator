@@ -110,8 +110,9 @@ impl RenderToHtml for IdentifiedPeptide {
             .children([
                 HtmlTag::p.new()
                     .content(format!(
-                        "Score:&nbsp;{}, Length:&nbsp;{}, Mass:&nbsp;{}, Charge:&nbsp;{}, m/z:&nbsp;{}, Mode:&nbsp;{}, RT:&nbsp;{}",
+                        "Score:&nbsp;{}, ALC:&nbsp;{}, Length:&nbsp;{}, Mass:&nbsp;{}, Charge:&nbsp;{}, m/z:&nbsp;{}, Mode:&nbsp;{}, RT:&nbsp;{}",
                         self.score.map_or(String::from("-"), |s| format!("{s:.3}")),
+                        self.local_confidence.as_ref().map_or(String::from("-"), |lc| format!("{:.3}", lc.iter().sum::<f64>() / lc.len() as f64)),
                         self.peptide()
                             .map(|p| format!("{}&nbsp;AA", match p {
                                 ReturnedPeptide::Linear(p) => p.len().to_string(),
@@ -158,15 +159,15 @@ impl RenderToHtml for IdentifiedPeptide {
                     .clone(),
                 HtmlTag::ul.new().children(match self.scans() {
                     SpectrumIds::None => vec![HtmlTag::p.new().content("No spectrum reference").clone()],
-                    SpectrumIds::FileNotKnown(scans) => vec![HtmlTag::li.new().content(scans.iter().join(";")).clone()],
-                    SpectrumIds::FileKnown(scans) => scans.iter().map(|(file, scans)| HtmlTag::li.new().content(HtmlTag::span.new().title(file.to_string_lossy()).content(file.file_name().map_or(String::new(), |s| s.to_string_lossy().to_string())).content(" ").content(scans.iter().join(";"))).clone()).collect(),
+                    SpectrumIds::FileNotKnown(scans) => vec![HtmlTag::li.new().content("Scans: ").content(scans.iter().join(";")).clone()],
+                    SpectrumIds::FileKnown(scans) => scans.iter().map(|(file, scans)| HtmlTag::li.new().content("File: ").content(HtmlTag::span.new().title(file.to_string_lossy()).content(file.file_name().map_or(String::new(), |s| s.to_string_lossy().to_string())).content(" Scans: ").content(scans.iter().join(";"))).clone()).collect(),
                 }).clone(),
                 peptide,
-                HtmlTag::p.new().content(format!("Additional MetaData {} {}", self.format_name(), self.id())).clone(),
+                HtmlTag::p.new().content(format!("Additional MetaData {} {} ID: {}", self.format_name(), self.format_version(), self.id())).clone(),
                 {
                     HtmlElement::table::<HtmlContent, String>(
                         None,
-                        self.metadata.to_table().into_iter().map(|(h,v)| [h.to_string(), v]).chain([["Version".to_string(), self.format_version()]]),
+                        self.metadata.to_table().into_iter().map(|(h,v)| [h.to_string(), v]),
                     )
                 }
             ])
@@ -193,9 +194,28 @@ impl RenderToTable for MetaData {
                             },
                         ),
                 ),
-                ("De novo score", data.de_novo_score.to_optional_string()),
-                ("ALC", data.alc.to_optional_string()),
-                ("-10logP", data.logp.to_optional_string()),
+                ("Scores", {
+                    let mut output = String::new();
+                    if let Some(s) = data.de_novo_score {
+                        output += &format!("de novo: {s}");
+                    }
+                    if let Some(s) = data.alc {
+                        if !output.is_empty() {
+                            output.push(' ');
+                        }
+                        output += &format!("alc: {s}");
+                    }
+                    if let Some(s) = data.logp {
+                        if !output.is_empty() {
+                            output.push(' ');
+                        }
+                        output += &format!("-10logP: {s}");
+                    }
+                    if output.is_empty() {
+                        output.push('-')
+                    }
+                    output
+                }),
                 (
                     "Predicted RT",
                     data.predicted_rt.map(|v| v.value).to_optional_string(),
@@ -211,7 +231,10 @@ impl RenderToTable for MetaData {
                         },
                     ),
                 ),
-                ("Ascore", data.ascore.as_ref().to_optional_string()),
+                (
+                    "Modification scores",
+                    data.ascore.as_ref().to_optional_string(),
+                ),
                 ("Found by", data.found_by.as_ref().to_optional_string()),
                 ("Accession", data.accession.as_ref().to_optional_string()),
                 ("From Chimera", data.from_chimera.to_optional_string()),
@@ -232,10 +255,10 @@ impl RenderToTable for MetaData {
                         .to_optional_string(),
                 ),
                 (
-                    "Protein range",
+                    "Protein location",
                     data.start
                         .and_then(|s| data.end.map(|e| (s, e)))
-                        .map(|(s, e)| format!("{s}..{e}"))
+                        .map(|(s, e)| format!("{s} — {e}"))
                         .to_optional_string(),
                 ),
                 (
@@ -290,7 +313,7 @@ impl RenderToTable for MetaData {
                 ("Protein name", data.protein_name.to_string()),
                 (
                     "Protein location",
-                    format!("{} to {}", data.protein_location.0, data.protein_location.1),
+                    format!("{} — {}", data.protein_location.0, data.protein_location.1),
                 ),
                 (
                     "Flanking residues",
@@ -648,7 +671,7 @@ impl RenderToTable for MetaData {
                 (
                     "Protein location",
                     format!(
-                        "{} to {}",
+                        "{} — {}",
                         data.start.to_optional_string(),
                         data.end.to_optional_string()
                     ),
