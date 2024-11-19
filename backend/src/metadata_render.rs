@@ -1,10 +1,6 @@
 use itertools::Itertools;
 use rustyms::{
-    identification::{
-        CVTerm, DeepNovoFamilyData, FastaData, IdentifiedPeptide, InstaNovoData, MSFraggerData,
-        MZTabData, MaxQuantData, MetaData, NovorData, OpairData, PLinkData, PeaksData,
-        PowerNovoData, ReturnedPeptide, SageData, SpectrumIds,
-    },
+    identification::{CVTerm, IdentifiedPeptide, MetaData, ReturnedPeptide, SpectrumIds},
     MultiChemical,
 };
 
@@ -15,6 +11,10 @@ use crate::{
 
 pub trait RenderToHtml {
     fn to_html(&self) -> HtmlElement;
+}
+
+pub trait RenderToTable {
+    fn to_table(&self) -> Vec<(&'static str, String)>;
 }
 
 impl RenderToHtml for IdentifiedPeptide {
@@ -163,644 +163,472 @@ impl RenderToHtml for IdentifiedPeptide {
                 }).clone(),
                 peptide,
                 HtmlTag::p.new().content(format!("Additional MetaData {} {}", self.format_name(), self.id())).clone(),
-                self.metadata.to_html(),
+                {
+                    HtmlElement::table::<HtmlContent, String>(
+                        None,
+                        self.metadata.to_table().into_iter().map(|(h,v)| [h.to_string(), v]).chain([["Version".to_string(), self.format_version()]]),
+                    )
+                }
             ])
             .clone()
     }
 }
 
-impl RenderToHtml for MetaData {
-    fn to_html(&self) -> HtmlElement {
+impl RenderToTable for MetaData {
+    fn to_table(&self) -> Vec<(&'static str, String)> {
         match self {
-            MetaData::Novor(n) => n.to_html(),
-            MetaData::Peaks(p) => p.to_html(),
-            MetaData::Opair(o) => o.to_html(),
-            MetaData::Fasta(f) => f.to_html(),
-            MetaData::MaxQuant(m) => m.to_html(),
-            MetaData::MSFragger(m) => m.to_html(),
-            MetaData::Sage(s) => s.to_html(),
-            MetaData::MZTab(m) => m.to_html(),
-            MetaData::PLink(p) => p.to_html(),
-            MetaData::DeepNovoFamily(d) => d.to_html(),
-            MetaData::InstaNovo(i) => i.to_html(),
-            MetaData::PowerNovo(p) => p.to_html(),
-        }
-    }
-}
-
-impl RenderToHtml for PeaksData {
-    fn to_html(&self) -> HtmlElement {
-        HtmlElement::table::<HtmlContent, _>(
-            None,
-            &[
-                &["Fraction".to_string(), self.fraction.to_optional_string()],
-                &[
-                    "Feature".to_string(),
-                    self.feature_tryp_cid
-                        .and_then(|f_cid| self.feature_tryp_ead.map(|f_ead| (f_cid, f_ead)))
+            MetaData::Peaks(data) => vec![
+                ("Fraction", data.fraction.to_optional_string()),
+                (
+                    "Feature",
+                    data.feature_tryp_cid
+                        .and_then(|f_cid| data.feature_tryp_ead.map(|f_ead| (f_cid, f_ead)))
                         .map_or(
-                            self.feature.as_ref().to_optional_string(),
+                            data.feature.as_ref().to_optional_string(),
                             |(f_cid, f_ead)| {
-                                self.feature
+                                data.feature
                                     .as_ref()
                                     .map(|f| format!("{f} Tryp CID: {f_cid} Tryp EAD: {f_ead}"))
                                     .to_optional_string()
                             },
                         ),
-                ],
-                &[
-                    "De novo score".to_string(),
-                    self.de_novo_score.to_optional_string(),
-                ],
-                &["ALC".to_string(), self.alc.to_optional_string()],
-                &["-10logP".to_string(), self.logp.to_optional_string()],
-                &[
-                    "Predicted RT".to_string(),
-                    self.predicted_rt.map(|v| v.value).to_optional_string(),
-                ],
-                &[
-                    "Area".to_string(),
-                    self.area_tryp_ead.map_or(
-                        self.area.map(|a| format!("{a:e}")).to_optional_string(),
+                ),
+                ("De novo score", data.de_novo_score.to_optional_string()),
+                ("ALC", data.alc.to_optional_string()),
+                ("-10logP", data.logp.to_optional_string()),
+                (
+                    "Predicted RT",
+                    data.predicted_rt.map(|v| v.value).to_optional_string(),
+                ),
+                (
+                    "Area",
+                    data.area_tryp_ead.map_or(
+                        data.area.map(|a| format!("{a:e}")).to_optional_string(),
                         |a_ead| {
-                            self.area
+                            data.area
                                 .map(|a| format!("Tryp CID: {a:e} Tryp EAD: {a_ead:e}"))
                                 .to_optional_string()
                         },
                     ),
-                ],
-                &[
-                    "Ascore".to_string(),
-                    self.ascore.as_ref().to_optional_string(),
-                ],
-                &[
-                    "Found by".to_string(),
-                    self.found_by.as_ref().to_optional_string(),
-                ],
-                &[
-                    "Accession".to_string(),
-                    self.accession.as_ref().to_optional_string(),
-                ],
-                &[
-                    "From Chimera".to_string(),
-                    self.from_chimera.to_optional_string(),
-                ],
-                &["ID".to_string(), self.id.to_optional_string()],
-                &[
-                    "Protein".to_string(),
-                    self.protein_accession
+                ),
+                ("Ascore", data.ascore.as_ref().to_optional_string()),
+                ("Found by", data.found_by.as_ref().to_optional_string()),
+                ("Accession", data.accession.as_ref().to_optional_string()),
+                ("From Chimera", data.from_chimera.to_optional_string()),
+                ("ID", data.id.to_optional_string()),
+                (
+                    "Protein",
+                    data.protein_accession
                         .as_ref()
                         .and_then(|a| {
-                            self.protein_group.and_then(|g| {
-                                self.protein_id
-                                    .and_then(|i| self.unique.map(|u| (a, g, i, u)))
+                            data.protein_group.and_then(|g| {
+                                data.protein_id
+                                    .and_then(|i| data.unique.map(|u| (a, g, i, u)))
                             })
                         })
                         .map(|(a, g, i, u)| {
                             format!("accession: {a}, group: {g}, ID: {i}, unique: {u}")
                         })
                         .to_optional_string(),
-                ],
-                &[
-                    "Protein range".to_string(),
-                    self.start
-                        .and_then(|s| self.end.map(|e| (s, e)))
+                ),
+                (
+                    "Protein range",
+                    data.start
+                        .and_then(|s| data.end.map(|e| (s, e)))
                         .map(|(s, e)| format!("{s}..{e}"))
                         .to_optional_string(),
-                ],
-                &[
-                    "Flanking residues".to_string(),
-                    self.peptide
+                ),
+                (
+                    "Flanking residues",
+                    data.peptide
                         .0
-                        .or(self.peptide.2)
+                        .or(data.peptide.2)
                         .map(|_| {
                             format!(
                                 "{}_(seq)_{}",
-                                self.peptide
+                                data.peptide
                                     .0
                                     .as_ref()
                                     .map_or("Terminal".to_string(), |p| p.to_string()),
-                                self.peptide
+                                data.peptide
                                     .2
                                     .as_ref()
                                     .map_or("Terminal".to_string(), |p| p.to_string())
                             )
                         })
                         .to_optional_string(),
-                ],
-                &["Version".to_string(), self.version.to_string()],
+                ),
             ],
-        )
-        .clone()
-    }
-}
-
-impl RenderToHtml for NovorData {
-    fn to_html(&self) -> HtmlElement {
-        HtmlElement::table::<HtmlContent, _>(
-            None,
-            &[
-                &["Score".to_string(), self.score.to_string()],
-                &["ID".to_string(), self.id.to_optional_string()],
-                &[
-                    "Spectra ID".to_string(),
-                    self.spectra_id.to_optional_string(),
-                ],
-                &["Fraction".to_string(), self.fraction.to_optional_string()],
-                &["Protein".to_string(), self.protein.to_optional_string()],
-                &[
-                    "Protein Start".to_string(),
-                    self.protein_start.to_optional_string(),
-                ],
-                &[
-                    "Protein Origin".to_string(),
-                    self.protein_origin.as_ref().to_optional_string(),
-                ],
-                &[
-                    "Protein All".to_string(),
-                    self.protein_all.as_ref().to_optional_string(),
-                ],
-                &[
-                    "Database Sequence".to_string(),
-                    self.database_sequence.as_ref().to_optional_string(),
-                ],
-                &["Version".to_string(), self.version.to_string()],
+            MetaData::Novor(data) => vec![
+                ("Score", data.score.to_string()),
+                ("ID", data.id.to_optional_string()),
+                ("Spectra ID", data.spectra_id.to_optional_string()),
+                ("Fraction", data.fraction.to_optional_string()),
+                ("Protein", data.protein.to_optional_string()),
+                ("Protein Start", data.protein_start.to_optional_string()),
+                (
+                    "Protein Origin",
+                    data.protein_origin.as_ref().to_optional_string(),
+                ),
+                (
+                    "Protein All",
+                    data.protein_all.as_ref().to_optional_string(),
+                ),
+                (
+                    "Database Sequence",
+                    data.database_sequence.as_ref().to_optional_string(),
+                ),
             ],
-        )
-        .clone()
-    }
-}
-
-impl RenderToHtml for OpairData {
-    fn to_html(&self) -> HtmlElement {
-        HtmlElement::table::<HtmlContent, _>(
-            None,
-            &[
-                &[
-                    "Precursor scan number".to_string(),
-                    self.precursor_scan_number.to_string(),
-                ],
-                &[
-                    "Glycan Mass".to_string(),
-                    self.glycan_mass.value.to_string(),
-                ],
-                &["Accession".to_string(), self.accession.to_string()],
-                &["Organism".to_string(), self.organism.to_string()],
-                &["Protein name".to_string(), self.protein_name.to_string()],
-                &[
-                    "Protein location".to_string(),
-                    format!("{} to {}", self.protein_location.0, self.protein_location.1),
-                ],
-                &[
-                    "Flanking residues".to_string(),
+            MetaData::Opair(data) => vec![
+                (
+                    "Precursor scan number",
+                    data.precursor_scan_number.to_string(),
+                ),
+                ("Glycan Mass", data.glycan_mass.value.to_string()),
+                ("Accession", data.accession.to_string()),
+                ("Organism", data.organism.to_string()),
+                ("Protein name", data.protein_name.to_string()),
+                (
+                    "Protein location",
+                    format!("{} to {}", data.protein_location.0, data.protein_location.1),
+                ),
+                (
+                    "Flanking residues",
                     format!(
                         "{}_(seq)_{}",
-                        self.flanking_residues.0.char(),
-                        self.flanking_residues.1.char()
+                        data.flanking_residues.0.char(),
+                        data.flanking_residues.1.char()
                     ),
-                ],
-                &["Rank".to_string(), self.rank.to_string()],
-                &[
-                    "Matched ion series".to_string(),
-                    self.matched_ion_series.to_string(),
-                ],
-                &[
-                    "Matched ion mz ratios".to_string(),
-                    self.matched_ion_mz_ratios.to_string(),
-                ],
-                &[
-                    "Matched ion mass error".to_string(),
-                    self.matched_ion_mass_error.to_string(),
-                ],
-                &[
-                    "Matched ion mass error (ppm)".to_string(),
-                    self.matched_ion_ppm.to_string(),
-                ],
-                &[
-                    "Matched ion intensities".to_string(),
-                    self.matched_ion_intensities.to_string(),
-                ],
-                &[
-                    "Matched ion counts".to_string(),
-                    self.matched_ion_counts.to_string(),
-                ],
-                &["Kind".to_string(), self.kind.to_string()],
-                &["Q value".to_string(), self.q_value.to_string()],
-                &["PEP".to_string(), self.pep.to_string()],
-                &["PEP Q value".to_string(), self.pep_q_value.to_string()],
-                &[
-                    "Localisation score".to_string(),
-                    self.localisation_score.to_string(),
-                ],
-                &["Yion score".to_string(), self.yion_score.to_string()],
-                &[
-                    "Diagnostic ion score".to_string(),
-                    self.diagnostic_ion_score.to_string(),
-                ],
-                &[
-                    "Plausible glycan number".to_string(),
-                    self.plausible_glycan_number.to_string(),
-                ],
-                &[
-                    "Total glycosylation sites".to_string(),
-                    self.total_glycosylation_sites.to_string(),
-                ],
-                &[
-                    "Plausible glycan composition".to_string(),
-                    self.plausible_glycan_composition.to_string(),
-                ],
-                &[
-                    "Plausible glycan structure".to_string(),
-                    self.plausible_glycan_structure.to_string(),
-                ],
-                &[
-                    "N glycan motif check passed".to_string(),
-                    self.n_glycan_motif.to_string(),
-                ],
-                &["R138/144".to_string(), self.r138_144.to_string()],
-                &[
-                    "Glycan localisation level".to_string(),
-                    self.glycan_localisation_level.to_string(),
-                ],
-                &[
-                    "Glycan peptide site specificity".to_string(),
-                    self.glycan_peptide_site_specificity.to_string(),
-                ],
-                &[
-                    "Glycan protein site specificity".to_string(),
-                    self.glycan_protein_site_specificity.to_string(),
-                ],
-                &[
-                    "All potential glycan localisations".to_string(),
-                    self.all_potential_glycan_localisations.to_string(),
-                ],
-                &[
-                    "All site specific localisation probabilities".to_string(),
-                    self.all_site_specific_localisation_probabilities
+                ),
+                ("Rank", data.rank.to_string()),
+                ("Matched ion series", data.matched_ion_series.to_string()),
+                (
+                    "Matched ion mz ratios",
+                    data.matched_ion_mz_ratios.to_string(),
+                ),
+                (
+                    "Matched ion mass error",
+                    data.matched_ion_mass_error.to_string(),
+                ),
+                (
+                    "Matched ion mass error (ppm)",
+                    data.matched_ion_ppm.to_string(),
+                ),
+                (
+                    "Matched ion intensities",
+                    data.matched_ion_intensities.to_string(),
+                ),
+                ("Matched ion counts", data.matched_ion_counts.to_string()),
+                ("Kind", data.kind.to_string()),
+                ("Q value", data.q_value.to_string()),
+                ("PEP", data.pep.to_string()),
+                ("PEP Q value", data.pep_q_value.to_string()),
+                ("Localisation score", data.localisation_score.to_string()),
+                ("Yion score", data.yion_score.to_string()),
+                (
+                    "Diagnostic ion score",
+                    data.diagnostic_ion_score.to_string(),
+                ),
+                (
+                    "Plausible glycan number",
+                    data.plausible_glycan_number.to_string(),
+                ),
+                (
+                    "Total glycosylation sites",
+                    data.total_glycosylation_sites.to_string(),
+                ),
+                (
+                    "Plausible glycan composition",
+                    data.plausible_glycan_composition.to_string(),
+                ),
+                (
+                    "Plausible glycan structure",
+                    data.plausible_glycan_structure.to_string(),
+                ),
+                (
+                    "N glycan motif check passed",
+                    data.n_glycan_motif.to_string(),
+                ),
+                ("R138/144", data.r138_144.to_string()),
+                (
+                    "Glycan localisation level",
+                    data.glycan_localisation_level.to_string(),
+                ),
+                (
+                    "Glycan peptide site specificity",
+                    data.glycan_peptide_site_specificity.to_string(),
+                ),
+                (
+                    "Glycan protein site specificity",
+                    data.glycan_protein_site_specificity.to_string(),
+                ),
+                (
+                    "All potential glycan localisations",
+                    data.all_potential_glycan_localisations.to_string(),
+                ),
+                (
+                    "All site specific localisation probabilities",
+                    data.all_site_specific_localisation_probabilities
                         .to_string(),
-                ],
-                &["Version".to_string(), self.version.to_string()],
+                ),
             ],
-        )
-        .clone()
-    }
-}
-
-impl RenderToHtml for MaxQuantData {
-    fn to_html(&self) -> HtmlElement {
-        HtmlElement::table::<HtmlContent, _>(
-            None,
-            &[
-                &[
-                    "Scan index".to_string(),
-                    self.scan_index.to_optional_string(),
-                ],
-                &["Modifications".to_string(), self.modifications.to_string()],
-                &["Proteins".to_string(), self.proteins.to_string()],
-                &[
-                    "Mass analyser".to_string(),
-                    self.mass_analyser.as_ref().to_optional_string(),
-                ],
-                &["Type".to_string(), self.ty.to_string()],
-                &[
-                    "Scan event number".to_string(),
-                    self.scan_event_number.to_optional_string(),
-                ],
-                &["Pep".to_string(), self.pep.to_string()],
-                &["Score".to_string(), self.score.to_string()],
-                &[
-                    "Precursor full scan number".to_string(),
-                    self.precursor.to_optional_string(),
-                ],
-                &[
-                    "Precursor intensity".to_string(),
-                    self.precursor_intensity.to_optional_string(),
-                ],
-                &[
-                    "Precursor apex".to_string(),
-                    self.precursor_apex_function
+            MetaData::MaxQuant(data) => vec![
+                ("Scan index", data.scan_index.to_optional_string()),
+                ("Modifications", data.modifications.to_string()),
+                ("Proteins", data.proteins.to_string()),
+                (
+                    "Mass analyser",
+                    data.mass_analyser.as_ref().to_optional_string(),
+                ),
+                ("Type", data.ty.to_string()),
+                (
+                    "Scan event number",
+                    data.scan_event_number.to_optional_string(),
+                ),
+                ("Pep", data.pep.to_string()),
+                ("Score", data.score.to_string()),
+                (
+                    "Precursor full scan number",
+                    data.precursor.to_optional_string(),
+                ),
+                (
+                    "Precursor intensity",
+                    data.precursor_intensity.to_optional_string(),
+                ),
+                (
+                    "Precursor apex",
+                    data.precursor_apex_function
                         .map(|function| {
                             format!(
                                 "function: {function} offset: {} offset time: {}",
-                                self.precursor_apex_offset.to_optional_string(),
-                                self.precursor_apex_offset_time.to_optional_string(),
+                                data.precursor_apex_offset.to_optional_string(),
+                                data.precursor_apex_offset_time.to_optional_string(),
                             )
                         })
                         .to_optional_string(),
-                ],
-                &[
-                    "Missed cleavages".to_string(),
-                    self.missed_cleavages.to_optional_string(),
-                ],
-                &[
-                    "Isotope index".to_string(),
-                    self.isotope_index.to_optional_string(),
-                ],
-                &[
-                    "Simple mass error [ppm]".to_string(),
-                    self.simple_mass_error_ppm.to_optional_string(),
-                ],
-                &[
-                    "Number of matches".to_string(),
-                    self.number_of_matches.to_optional_string(),
-                ],
-                &[
-                    "Intensity coverage".to_string(),
-                    self.intensity_coverage.to_optional_string(),
-                ],
-                &[
-                    "Peak coverage".to_string(),
-                    self.peak_coverage.to_optional_string(),
-                ],
-                &[
-                    "Delta score".to_string(),
-                    self.delta_score.to_optional_string(),
-                ],
-                &[
-                    "Score diff".to_string(),
-                    self.score_diff.to_optional_string(),
-                ],
-                &[
-                    "Localization probability".to_string(),
-                    self.localisation_probability.to_optional_string(),
-                ],
-                &[
-                    "All modified sequences".to_string(),
-                    self.all_modified_sequences
+                ),
+                (
+                    "Missed cleavages",
+                    data.missed_cleavages.to_optional_string(),
+                ),
+                ("Isotope index", data.isotope_index.to_optional_string()),
+                (
+                    "Simple mass error [ppm]",
+                    data.simple_mass_error_ppm.to_optional_string(),
+                ),
+                (
+                    "Number of matches",
+                    data.number_of_matches.to_optional_string(),
+                ),
+                (
+                    "Intensity coverage",
+                    data.intensity_coverage.to_optional_string(),
+                ),
+                ("Peak coverage", data.peak_coverage.to_optional_string()),
+                ("Delta score", data.delta_score.to_optional_string()),
+                ("Score diff", data.score_diff.to_optional_string()),
+                (
+                    "Localization probability",
+                    data.localisation_probability.to_optional_string(),
+                ),
+                (
+                    "All modified sequences",
+                    data.all_modified_sequences
                         .as_ref()
                         .map(|v| v.iter().map(ToString::to_string).join(","))
                         .to_optional_string(),
-                ],
-                &[
-                    "Protein group ids".to_string(),
-                    self.protein_group_ids
+                ),
+                (
+                    "Protein group ids",
+                    data.protein_group_ids
                         .as_ref()
                         .map(|v| v.iter().map(ToString::to_string).join(","))
                         .to_optional_string(),
-                ],
-                &[
-                    "IDs".to_string(),
+                ),
+                (
+                    "IDs",
                     format!(
                         "id: {} peptide: {} mod. peptide: {} evidence: {}",
-                        self.id.to_optional_string(),
-                        self.peptide_id.to_optional_string(),
-                        self.modified_peptide_id.to_optional_string(),
-                        self.evidence_id.to_optional_string()
+                        data.id.to_optional_string(),
+                        data.peptide_id.to_optional_string(),
+                        data.modified_peptide_id.to_optional_string(),
+                        data.evidence_id.to_optional_string()
                     ),
-                ],
-                &[
-                    "Base peak intensity".to_string(),
-                    self.base_peak_intensity.to_optional_string(),
-                ],
-                &[
-                    "Total ion current".to_string(),
-                    self.total_ion_current.to_optional_string(),
-                ],
-                &[
-                    "Collision energy".to_string(),
-                    self.collision_energy.to_optional_string(),
-                ],
-                &[
-                    "DN sequence".to_string(),
-                    self.dn_sequence.as_ref().to_optional_string(),
-                ],
-                &[
-                    "DN combined score".to_string(),
-                    self.dn_combined_score.to_optional_string(),
-                ],
-                &[
-                    "DN mass left".to_string(),
-                    self.dn_missing_mass
+                ),
+                (
+                    "Base peak intensity",
+                    data.base_peak_intensity.to_optional_string(),
+                ),
+                (
+                    "Total ion current",
+                    data.total_ion_current.to_optional_string(),
+                ),
+                (
+                    "Collision energy",
+                    data.collision_energy.to_optional_string(),
+                ),
+                (
+                    "DN sequence",
+                    data.dn_sequence.as_ref().to_optional_string(),
+                ),
+                (
+                    "DN combined score",
+                    data.dn_combined_score.to_optional_string(),
+                ),
+                (
+                    "DN mass left",
+                    data.dn_missing_mass
                         .map(|v| {
                             format!(
                                 "N: {} other: {} C: {}",
-                                self.dn_n_mass
+                                data.dn_n_mass
                                     .map(|v| display_mass(v, None),)
                                     .to_optional_string(),
                                 display_mass(v, None),
-                                self.dn_c_mass
+                                data.dn_c_mass
                                     .map(|v| display_mass(v, None),)
                                     .to_optional_string(),
                             )
                         })
                         .to_optional_string(),
-                ],
-                &[
-                    "Ratio H/L".to_string(),
-                    self.ration_h_l
+                ),
+                (
+                    "Ratio H/L",
+                    data.ration_h_l
                         .map(|v| {
                             format!(
                                 "{v} normalised: {}",
-                                self.ration_h_l_normalised.to_optional_string()
+                                data.ration_h_l_normalised.to_optional_string()
                             )
                         })
                         .to_optional_string(),
-                ],
-                &[
-                    "Intensity".to_string(),
-                    self.intensity
+                ),
+                (
+                    "Intensity",
+                    data.intensity
                         .map(|i| {
                             format!(
                                 "{i} H: {} L: {}",
-                                self.intensity_h.to_optional_string(),
-                                self.intensity_l.to_optional_string()
+                                data.intensity_h.to_optional_string(),
+                                data.intensity_l.to_optional_string()
                             )
                         })
                         .to_optional_string(),
-                ],
-                &[
-                    "Experiment".to_string(),
-                    self.experiment.as_ref().to_optional_string(),
-                ],
-                &[
-                    "Labeling state".to_string(),
-                    self.labeling_state.to_optional_string(),
-                ],
-                &["Version".to_string(), self.version.to_string()],
+                ),
+                ("Experiment", data.experiment.as_ref().to_optional_string()),
+                ("Labeling state", data.labeling_state.to_optional_string()),
             ],
-        )
-        .clone()
-    }
-}
-
-impl RenderToHtml for SageData {
-    fn to_html(&self) -> HtmlElement {
-        HtmlElement::table::<HtmlContent, _>(
-            None,
-            &[
-                &["Proteins".to_string(), self.proteins.join(";")],
-                &["Rank".to_string(), self.rank.to_string()],
-                &["Decoy".to_string(), self.decoy.to_string()],
-                &[
-                    "Missed cleavages".to_string(),
-                    self.missed_cleavages.to_string(),
-                ],
-                &[
-                    "Semi enzymatic".to_string(),
-                    self.semi_enzymatic.to_string(),
-                ],
-                &["Isotope error".to_string(), self.isotope_error.to_string()],
-                &[
-                    "Fragment error (average ppm)".to_string(),
-                    self.fragment_ppm.value.to_string(),
-                ],
-                &["Hyperscore".to_string(), self.hyperscore.to_string()],
-                &[
-                    "Hyperscore delta next".to_string(),
-                    self.delta_next.to_string(),
-                ],
-                &[
-                    "Hyperscore delta best".to_string(),
-                    self.delta_best.to_string(),
-                ],
-                &[
-                    "Retention time aligned".to_string(),
-                    self.aligned_rt.value.to_string(),
-                ],
-                &[
-                    "Retention time predicted".to_string(),
-                    self.predicted_rt.value.to_string(),
-                ],
-                &[
-                    "Retention time delta".to_string(),
-                    self.delta_rt_model.to_string(),
-                ],
-                &["Ion mobility".to_string(), self.ion_mobility.to_string()],
-                &[
-                    "Ion mobility predicted".to_string(),
-                    self.predicted_mobility.to_string(),
-                ],
-                &[
-                    "Ion mobility delta".to_string(),
-                    self.delta_mobility.to_string(),
-                ],
-                &["Matched peaks".to_string(), self.matched_peaks.to_string()],
-                &["Longest b".to_string(), self.longest_b.to_string()],
-                &["Longest y".to_string(), self.longest_y.to_string()],
-                &[
-                    "Matched intensity".to_string(),
-                    self.matched_intensity_pct.value.to_string(),
-                ],
-                &[
-                    "Scored candidates".to_string(),
-                    self.scored_candidates.to_string(),
-                ],
-                &["Poisson".to_string(), self.poisson.to_string()],
-                &[
-                    "Sage discriminant score".to_string(),
-                    self.sage_discriminant_score.to_string(),
-                ],
-                &[
-                    "Posterior error".to_string(),
-                    self.posterior_error.to_string(),
-                ],
-                &["Spectrum q".to_string(), self.spectrum_q.to_string()],
-                &["Peptide q".to_string(), self.peptide_q.to_string()],
-                &["Protein q".to_string(), self.protein_q.to_string()],
-                &["MS2 intensity".to_string(), self.ms2_intensity.to_string()],
+            MetaData::Sage(data) => vec![
+                ("Proteins", data.proteins.join(";")),
+                ("Rank", data.rank.to_string()),
+                ("Decoy", data.decoy.to_string()),
+                ("Missed cleavages", data.missed_cleavages.to_string()),
+                ("Semi enzymatic", data.semi_enzymatic.to_string()),
+                ("Isotope error", data.isotope_error.to_string()),
+                (
+                    "Fragment error (average ppm)",
+                    data.fragment_ppm.value.to_string(),
+                ),
+                ("Hyperscore", data.hyperscore.to_string()),
+                ("Hyperscore delta next", data.delta_next.to_string()),
+                ("Hyperscore delta best", data.delta_best.to_string()),
+                ("Retention time aligned", data.aligned_rt.value.to_string()),
+                (
+                    "Retention time predicted",
+                    data.predicted_rt.value.to_string(),
+                ),
+                ("Retention time delta", data.delta_rt_model.to_string()),
+                ("Ion mobility", data.ion_mobility.to_string()),
+                (
+                    "Ion mobility predicted",
+                    data.predicted_mobility.to_string(),
+                ),
+                ("Ion mobility delta", data.delta_mobility.to_string()),
+                ("Matched peaks", data.matched_peaks.to_string()),
+                ("Longest b", data.longest_b.to_string()),
+                ("Longest y", data.longest_y.to_string()),
+                (
+                    "Matched intensity",
+                    data.matched_intensity_pct.value.to_string(),
+                ),
+                ("Scored candidates", data.scored_candidates.to_string()),
+                ("Poisson", data.poisson.to_string()),
+                (
+                    "Sage discriminant score",
+                    data.sage_discriminant_score.to_string(),
+                ),
+                ("Posterior error", data.posterior_error.to_string()),
+                ("Spectrum q", data.spectrum_q.to_string()),
+                ("Peptide q", data.peptide_q.to_string()),
+                ("Protein q", data.protein_q.to_string()),
+                ("MS2 intensity", data.ms2_intensity.to_string()),
             ],
-        )
-        .clone()
-    }
-}
-
-impl RenderToHtml for MSFraggerData {
-    fn to_html(&self) -> HtmlElement {
-        HtmlElement::table::<HtmlContent, _>(
-            None,
-            &[
-                &[
-                    "Extended Peptide".to_string(),
+            MetaData::MSFragger(data) => vec![
+                (
+                    "Extended Peptide",
                     format!(
                         "{}_(seq)_{}",
-                        self.extended_peptide[0]
+                        data.extended_peptide[0]
                             .as_ref()
                             .map_or("Terminal".to_string(), |p| p.to_string()),
-                        self.extended_peptide[2]
+                        data.extended_peptide[2]
                             .as_ref()
                             .map_or("Terminal".to_string(), |p| p.to_string())
                     ),
-                ],
-                &[
-                    "Assigned modifications".to_string(),
-                    self.assigned_modifications.to_string(),
-                ],
-                &[
-                    "Calibrated experimental mass".to_string(),
-                    display_mass(self.calibrated_experimental_mass, None).to_string(),
-                ],
-                &[
-                    "Calibrated experimental m/z".to_string(),
-                    self.calibrated_experimental_mz.value.to_string(),
-                ],
-                &["Expectation".to_string(), self.expectation.to_string()],
-                &["Hyperscore".to_string(), self.hyperscore.to_string()],
-                &["Next score".to_string(), self.next_score.to_string()],
-                &[
-                    "Peptide Prophet probability".to_string(),
-                    self.peptide_prophet_probability.to_string(),
-                ],
-                &[
-                    "Missed cleavages".to_string(),
-                    self.missed_cleavages.to_string(),
-                ],
-                &[
-                    "Number of enzymatic termini".to_string(),
-                    self.enzymatic_termini.to_string(),
-                ],
-                &["Protein start".to_string(), self.protein_start.to_string()],
-                &["Protein end".to_string(), self.protein_end.to_string()],
-                &["Intensity".to_string(), format!("{:e}", self.intensity)],
-                &["Purity".to_string(), self.purity.to_string()],
-                &["Is unique".to_string(), self.is_unique.to_string()],
-                &["Protein".to_string(), self.protein.to_string()],
-                &["Protein ID".to_string(), self.protein_id.to_string()],
-                &["Entry name".to_string(), self.entry_name.to_string()],
-                &["Gene".to_string(), self.gene.to_string()],
-                &[
-                    "Protein description".to_string(),
-                    self.protein_description.to_string(),
-                ],
-                &["Mapped genes".to_string(), self.mapped_genes.join(",")],
-                &[
-                    "Mapped proteins".to_string(),
-                    self.mapped_proteins.join(","),
-                ],
-                &[
-                    "Condition".to_string(),
-                    self.condition.as_ref().to_optional_string(),
-                ],
-                &[
-                    "Group".to_string(),
-                    self.group.as_ref().to_optional_string(),
-                ],
+                ),
+                (
+                    "Assigned modifications",
+                    data.assigned_modifications.to_string(),
+                ),
+                (
+                    "Calibrated experimental mass",
+                    display_mass(data.calibrated_experimental_mass, None).to_string(),
+                ),
+                (
+                    "Calibrated experimental m/z",
+                    data.calibrated_experimental_mz.value.to_string(),
+                ),
+                ("Expectation", data.expectation.to_string()),
+                ("Hyperscore", data.hyperscore.to_string()),
+                ("Next score", data.next_score.to_string()),
+                (
+                    "Peptide Prophet probability",
+                    data.peptide_prophet_probability.to_string(),
+                ),
+                ("Missed cleavages", data.missed_cleavages.to_string()),
+                (
+                    "Number of enzymatic termini",
+                    data.enzymatic_termini.to_string(),
+                ),
+                ("Protein start", data.protein_start.to_string()),
+                ("Protein end", data.protein_end.to_string()),
+                ("Intensity", format!("{:e}", data.intensity)),
+                ("Purity", data.purity.to_string()),
+                ("Is unique", data.is_unique.to_string()),
+                ("Protein", data.protein.to_string()),
+                ("Protein ID", data.protein_id.to_string()),
+                ("Entry name", data.entry_name.to_string()),
+                ("Gene", data.gene.to_string()),
+                ("Protein description", data.protein_description.to_string()),
+                ("Mapped genes", data.mapped_genes.join(",")),
+                ("Mapped proteins", data.mapped_proteins.join(",")),
+                ("Condition", data.condition.as_ref().to_optional_string()),
+                ("Group", data.group.as_ref().to_optional_string()),
             ],
-        )
-        .clone()
-    }
-}
-
-impl RenderToHtml for MZTabData {
-    fn to_html(&self) -> HtmlElement {
-        HtmlElement::table::<HtmlContent, _>(
-            None,
-            &[
-                &[
-                    "Accession".to_string(),
-                    self.accession.as_ref().to_optional_string(),
-                ],
-                &["Unique".to_string(), self.unique.to_optional_string()],
-                &[
-                    "Database".to_string(),
+            MetaData::MZTab(data) => vec![
+                ("Accession", data.accession.as_ref().to_optional_string()),
+                ("Unique", data.unique.to_optional_string()),
+                (
+                    "Database",
                     format!(
                         "db: {}, version: {}",
-                        self.database.as_ref().to_optional_string(),
-                        self.database_version.as_ref().to_optional_string()
+                        data.database.as_ref().to_optional_string(),
+                        data.database_version.as_ref().to_optional_string()
                     ),
-                ],
-                &[
-                    "Search engine".to_string(),
-                    self.search_engine
+                ),
+                (
+                    "Search engine",
+                    data.search_engine
                         .iter()
                         .map(|(engine, score, score_type)| {
                             format!(
@@ -811,56 +639,47 @@ impl RenderToHtml for MZTabData {
                             )
                         })
                         .join("|"),
-                ],
-                &[
-                    "Reliability".to_string(),
-                    self.reliability.as_ref().to_optional_string(),
-                ],
-                &["Uri".to_string(), self.uri.as_ref().to_optional_string()],
-                &[
-                    "Protein location".to_string(),
+                ),
+                (
+                    "Reliability",
+                    data.reliability.as_ref().to_optional_string(),
+                ),
+                ("Uri", data.uri.as_ref().to_optional_string()),
+                (
+                    "Protein location",
                     format!(
                         "{} to {}",
-                        self.start.to_optional_string(),
-                        self.end.to_optional_string()
+                        data.start.to_optional_string(),
+                        data.end.to_optional_string()
                     ),
-                ],
-                &[
-                    "Flanking residues".to_string(),
-                    format!("{}_(seq)_{}", self.preceding_aa, self.following_aa),
-                ],
-                &[
-                    "Other columns".to_string(),
-                    (!self.additional.is_empty())
+                ),
+                (
+                    "Flanking residues",
+                    format!("{}_(seq)_{}", data.preceding_aa, data.following_aa),
+                ),
+                (
+                    "Other columns",
+                    (!data.additional.is_empty())
                         .then(|| {
                             HtmlElement::table(
                                 Some(&["Column", "Value"]),
-                                self.additional.iter().map(|(k, v)| [k, v]),
+                                data.additional.iter().map(|(k, v)| [k, v]),
                             )
                         })
                         .to_optional_string(),
-                ],
+                ),
             ],
-        )
-        .clone()
-    }
-}
-
-impl RenderToHtml for PLinkData {
-    fn to_html(&self) -> HtmlElement {
-        HtmlElement::table::<HtmlContent, _>(
-            None,
-            &[
-                &["Peptide type".to_string(), self.peptide_type.to_string()],
-                &["Score".to_string(), format!("{:e}", self.score)],
-                &["Refined score".to_string(), self.refined_score.to_string()],
-                &["SVM score".to_string(), self.svm_score.to_string()],
-                &["E-value".to_string(), self.e_value.to_string()],
-                &["Q-value".to_string(), self.q_value.to_string()],
-                &["Decoy".to_string(), self.is_decoy.to_string()],
-                &[
-                    "Proteins".to_string(),
-                    self.proteins
+            MetaData::PLink(data) => vec![
+                ("Peptide type", data.peptide_type.to_string()),
+                ("Score", format!("{:e}", data.score)),
+                ("Refined score", data.refined_score.to_string()),
+                ("SVM score", data.svm_score.to_string()),
+                ("E-value", data.e_value.to_string()),
+                ("Q-value", data.q_value.to_string()),
+                ("Decoy", data.is_decoy.to_string()),
+                (
+                    "Proteins",
+                    data.proteins
                         .iter()
                         .map(|(p1, pos1, p2, pos2)| {
                             format!(
@@ -871,76 +690,36 @@ impl RenderToHtml for PLinkData {
                             )
                         })
                         .join("/"),
-                ],
-                &[
-                    "Between different proteins".to_string(),
-                    self.is_different_protein.to_string(),
-                ],
-                &["Raw file ID".to_string(), self.raw_file_id.to_string()],
-                &[
-                    "Complex satisfied".to_string(),
-                    self.is_complex_satisfied.to_string(),
-                ],
-                &["In filter".to_string(), self.is_filter_in.to_string()],
-                &["Title".to_string(), self.title.clone()],
-                &["Version".to_string(), self.version.to_string()],
+                ),
+                (
+                    "Between different proteins",
+                    data.is_different_protein.to_string(),
+                ),
+                ("Raw file ID", data.raw_file_id.to_string()),
+                ("Complex satisfied", data.is_complex_satisfied.to_string()),
+                ("In filter", data.is_filter_in.to_string()),
+                ("Title", data.title.clone()),
             ],
-        )
-        .clone()
-    }
-}
-
-impl RenderToHtml for DeepNovoFamilyData {
-    fn to_html(&self) -> HtmlElement {
-        HtmlElement::table::<HtmlContent, _>(
-            None,
-            &[&["Version".to_string(), self.version.to_string()]],
-        )
-        .clone()
-    }
-}
-
-impl RenderToHtml for InstaNovoData {
-    fn to_html(&self) -> HtmlElement {
-        HtmlElement::table::<HtmlContent, _>(
-            None,
-            &[&["Version".to_string(), self.version.to_string()]],
-        )
-        .clone()
-    }
-}
-
-impl RenderToHtml for PowerNovoData {
-    fn to_html(&self) -> HtmlElement {
-        HtmlElement::table::<HtmlContent, _>(
-            None,
-            &[&["Version".to_string(), self.version.to_string()]],
-        )
-        .clone()
-    }
-}
-
-impl RenderToHtml for FastaData {
-    fn to_html(&self) -> HtmlElement {
-        HtmlElement::table::<HtmlContent, _>(
-            None,
-            &[
-                &["Description".to_string(), self.description().to_string()],
-                &[
-                    "Tags".to_string(),
-                    (self.tags().next().is_some())
+            MetaData::Fasta(data) => vec![
+                ("Description", data.description().to_string()),
+                (
+                    "Tags",
+                    (data.tags().next().is_some())
                         .then(|| {
                             HtmlElement::table(
                                 Some(&["Tag", "Value"]),
-                                self.tags().map(|(k, v)| [k, v]),
+                                data.tags().map(|(k, v)| [k, v]),
                             )
                         })
                         .to_optional_string(),
-                ],
-                &["Full header".to_string(), self.header().to_string()],
+                ),
+                ("Full header", data.header().to_string()),
             ],
-        )
-        .clone()
+            MetaData::DeepNovoFamily(_)
+            | MetaData::InstaNovo(_)
+            | MetaData::PowerNovo(_)
+            | MetaData::PepNet(_) => Vec::new(),
+        }
     }
 }
 

@@ -30,6 +30,8 @@ There are quite some programs that export peptides with metadata based on spectr
   [common version],
   [Peaks],
   [X, X+, 11, 12, Ab, DB peptides, DB PSM, & DB protein-peptide],
+  [PepNet],
+  [1.0],
   [PowerNovo],
   [1.0.1],
   [pLink],
