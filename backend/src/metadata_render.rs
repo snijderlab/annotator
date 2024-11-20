@@ -24,7 +24,7 @@ impl RenderToHtml for IdentifiedPeptide {
             let mut html = HtmlTag::div.new();
             html.class("original-sequence-wrapper");
 
-            for peptide in peptide.peptidoform().peptides() {
+            for peptide in peptide.compound_peptidoform().peptides() {
                 let mut pep_html = HtmlTag::div.new();
                 pep_html.class("original-sequence").style("--max-value:1");
                 if let Some(n) = peptide.get_n_term().as_ref() {
@@ -116,7 +116,8 @@ impl RenderToHtml for IdentifiedPeptide {
                         self.peptide()
                             .map(|p| format!("{}&nbsp;AA", match p {
                                 ReturnedPeptide::Linear(p) => p.len().to_string(),
-                                ReturnedPeptide::Peptidoform(p) => p.peptides().iter().map(|p| p.len()).join("&nbsp;+&nbsp;")
+                                ReturnedPeptide::Peptidoform(p) => p.peptides().iter().map(|p| p.len()).join("&nbsp;+&nbsp;"),
+                                ReturnedPeptide::CompoundPeptidoform(p) => p.peptides().map(|p| p.len()).join("&nbsp;+&nbsp;"),
                             }))
                             .to_optional_string(),
                         formula
@@ -211,6 +212,12 @@ impl RenderToTable for MetaData {
                         }
                         output += &format!("-10logP: {s}");
                     }
+                    if let Some(s) = data.quality {
+                        if !output.is_empty() {
+                            output.push(' ');
+                        }
+                        output += &format!("quality: {s}");
+                    }
                     if output.is_empty() {
                         output.push('-')
                     }
@@ -219,6 +226,13 @@ impl RenderToTable for MetaData {
                 (
                     "Predicted RT",
                     data.predicted_rt.map(|v| v.value).to_optional_string(),
+                ),
+                (
+                    "RT range",
+                    data.rt_begin
+                        .and_then(|b| data.rt_end.map(|e| (b, e)))
+                        .map(|(b, e)| format!("begin: {:.3} min end: {:.3} min", b.value, e.value))
+                        .to_optional_string(),
                 ),
                 (
                     "Area",
