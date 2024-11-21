@@ -752,6 +752,25 @@ impl RenderToTable for MetaData {
                 ),
                 ("Full header", data.header().to_string()),
             ],
+            MetaData::NovoB(data) => vec![
+                (
+                    "Score",
+                    format!(
+                        "forward: {:.3} reverse: {:.3}",
+                        data.score_forward, data.score_reverse
+                    ),
+                ),
+                (
+                    "PPM dif",
+                    format!(
+                        "forward: {:.3} reverse: {:.3}",
+                        data.ppm_diff_forward.value * 1e6,
+                        data.ppm_diff_reverse.value * 1e6
+                    ),
+                ),
+                ("Sequence forward", data.peptide_forward.to_string()),
+                ("Sequence reverse", data.peptide_reverse.to_string()),
+            ],
             MetaData::DeepNovoFamily(_)
             | MetaData::InstaNovo(_)
             | MetaData::PowerNovo(_)

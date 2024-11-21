@@ -24,6 +24,8 @@ There are quite some programs that export peptides with metadata based on spectr
   [msms, msms scans, novo msms scans, & silac],
   [MSFragger],
   [21 and 22],
+  [NovoB],
+  [0.0.1],
   [Novor],
   [Denovo and PSM],
   [OPair],
