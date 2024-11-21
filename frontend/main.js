@@ -7,7 +7,7 @@ const { listen } = window.__TAURI__.event;
 const { open } = window.__TAURI__.dialog;
 
 const RAW_EXTENSIONS = ['mgf', 'mgf.gz', "mzml", "mzml.gz", "imzml", "imzml.gz", "mzmlb", "mzmlb.gz", "raw", "raw.gz"];
-const IDENTIFIED_EXTENSIONS = ["csv", "csv.gz", "tsv", "tsv.gz", "txt", "txt.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz", "mztab", "mztab.gz"];
+const IDENTIFIED_EXTENSIONS = ["csv", "csv.gz", "tsv", "tsv.gz", "txt", "txt.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz", "mztab", "mztab.gz", "deepnovo_denovo", "deepnovo_denovo.gz"];
 
 import { SetUpSpectrumInterface, spectrumClearDistanceLabels } from "./script.js";
 
