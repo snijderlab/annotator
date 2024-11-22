@@ -28,6 +28,7 @@ rayon = "1.10"
 mzdata = { version = "0.36", default-features = false, features = [
     "mzsignal",
     "proxi-async",
+    "thermo",
     "zlib",
 ] }
 mzpeaks = "0.23"
