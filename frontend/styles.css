@@ -2382,6 +2382,7 @@ summary {
     display: flex;
     flex-wrap: wrap;
     grid-column: 1/3;
+    row-gap: .5em;
     --spacing: calc(var(--stroke-peptide) * 1.5);
     --side-spacing: calc(var(--stroke-peptide) * 0.5);
     --width: .8em;
@@ -2533,7 +2534,7 @@ summary {
             content: attr(data-cross-links);
             display: block;
             position: absolute;
-            top: calc(-3 * var(--spacing));
+            top: calc(-6 * var(--spacing));
             left: calc(-1 * var(--spacing));
             height: 1rem;
             font-size: calc(0.5 * var(--fs-peptide));
@@ -2562,7 +2563,7 @@ summary {
     &>.cross-link {
         &::before {
             content: attr(data-cross-links-compact);
-            top: calc(2 * var(--pad));
+            top: calc(-1 * var(--pad));
             left: calc(0.5* var(--pad));
             transform: rotate(-90deg);
             transform-origin: left center;
