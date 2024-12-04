@@ -5,12 +5,11 @@ use mzdata::spectrum::MultiLayerSpectrum;
 use rustyms::{
     fragment::*,
     model::Location,
-    modification::{CrossLinkName, Ontology, SimpleModificationInner},
+    modification::{Ontology, SimpleModificationInner},
     placement_rule::PlacementRule,
     spectrum::{AnnotatedPeak, Fdr, PeakSpectrum, Recovered, Score},
     system::{da, mz, Mass, MassOverCharge},
-    AnnotatedSpectrum, LinearPeptide, Linked, MassMode, Model, Modification, MolecularFormula,
-    NeutralLoss,
+    AnnotatedSpectrum, MassMode, Model, MolecularFormula, NeutralLoss,
 };
 
 use crate::{
@@ -62,15 +61,8 @@ pub fn annotated_spectrum(
                 .count()
                 > 1
         });
-    let mut unique_peptide_lookup = Vec::new();
-    render_peptide(
-        &mut output,
-        spectrum,
-        overview,
-        multiple_peptidoforms,
-        multiple_peptides,
-        &mut unique_peptide_lookup,
-    );
+    let unique_peptide_lookup =
+        super::render_peptide(&mut output, &spectrum.peptide, Some(overview), None);
     render_spectrum(
         &mut output,
         spectrum,
@@ -401,7 +393,7 @@ fn render_error_graph(
     write!(output, "</div>").unwrap();
 }
 
-type PositionCoverage = Vec<Vec<Vec<HashSet<FragmentType>>>>;
+pub type PositionCoverage = Vec<Vec<Vec<HashSet<FragmentType>>>>;
 
 pub struct Limits {
     pub mz: MassOverCharge,
@@ -450,168 +442,6 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
         },
         output,
     )
-}
-
-fn render_peptide(
-    output: &mut String,
-    spectrum: &AnnotatedSpectrum,
-    overview: PositionCoverage,
-    multiple_peptidoforms: bool,
-    multiple_peptides: bool,
-    unique_peptide_lookup: &mut Vec<(usize, usize)>,
-) {
-    write!(output, "<div class='complex-peptide'>").unwrap();
-    let mut cross_link_lookup = Vec::new();
-    for (peptidoform_index, peptidoform) in spectrum.peptide.peptidoforms().iter().enumerate() {
-        for (peptide_index, peptide) in peptidoform.peptides().iter().enumerate() {
-            render_linear_peptide(
-                output,
-                peptide,
-                &overview[peptidoform_index][peptide_index],
-                peptidoform_index,
-                peptide_index,
-                unique_peptide_lookup.len(),
-                multiple_peptidoforms,
-                multiple_peptides,
-                &mut cross_link_lookup,
-            );
-            unique_peptide_lookup.push((peptidoform_index, peptide_index));
-        }
-    }
-    write!(output, "</div>").unwrap();
-}
-
-fn render_linear_peptide(
-    output: &mut String,
-    peptide: &LinearPeptide<Linked>,
-    overview: &[HashSet<FragmentType>],
-    peptidoform_index: usize,
-    peptide_index: usize,
-    unique_peptide_index: usize,
-    multiple_peptidoforms: bool,
-    multiple_peptides: bool,
-    cross_link_lookup: &mut Vec<CrossLinkName>,
-) {
-    write!(
-        output,
-        "<div class='peptide pu{unique_peptide_index} p{peptidoform_index}'>"
-    )
-    .unwrap();
-    if multiple_peptides || multiple_peptidoforms {
-        write!(
-            output,
-            "{}",
-            HtmlTag::span
-                .new()
-                .class("name")
-                .data([("pos", format!("{peptidoform_index}-{peptide_index}"))])
-                .content(if multiple_peptidoforms && multiple_peptides {
-                    format!("{}.{}", peptidoform_index + 1, peptide_index + 1)
-                } else if multiple_peptidoforms {
-                    (peptidoform_index + 1).to_string()
-                } else if multiple_peptides {
-                    (peptide_index + 1).to_string()
-                } else {
-                    String::new()
-                })
-        )
-        .unwrap();
-    }
-    if peptide.get_n_term().is_some() {
-        write!(output, "<span class='modification term'></span>").unwrap();
-    }
-    for (index, (pos, ions)) in peptide.sequence().iter().zip(overview).enumerate() {
-        let mut classes = String::new();
-        let mut xl_indices = Vec::new();
-        let mut xl_names = Vec::new();
-        let mut xl_peptides = Vec::new();
-        for m in &pos.modifications {
-            if let Modification::CrossLink { peptide, name, .. } = m {
-                let xl_index = cross_link_lookup
-                    .iter()
-                    .position(|xl| *xl == *name)
-                    .unwrap_or_else(|| {
-                        cross_link_lookup.push(name.clone());
-                        cross_link_lookup.len() - 1
-                    });
-                write!(classes, " c{xl_index}").unwrap();
-                xl_indices.push(xl_index + 1);
-                xl_names.push(name);
-                if *peptide != peptide_index {
-                    xl_peptides.push(*peptide + 1);
-                }
-            }
-        }
-
-        let cross_links = format!(
-            "xl.{}{}",
-            xl_indices.iter().join(","),
-            if xl_peptides.is_empty() {
-                String::new()
-            } else {
-                format!("p{}", xl_peptides.iter().join(","))
-            }
-        );
-
-        let cross_links_compact = format!("x{}", xl_indices.iter().join(","),);
-
-        if pos
-            .modifications
-            .iter()
-            .any(|m| matches!(m, Modification::Simple(_)))
-        {
-            write!(classes, " modification").unwrap();
-        }
-        if !xl_indices.is_empty() {
-            write!(classes, " cross-link").unwrap();
-        }
-        if !pos.possible_modifications.is_empty() {
-            write!(classes, " possible-modification").unwrap();
-        }
-        if !classes.is_empty() {
-            classes = format!(" class='{}'", classes.trim());
-        }
-        write!(
-            output,
-            "<span data-pos='{peptidoform_index}-{peptide_index}-{index}' data-cross-links='{cross_links}' data-cross-links-compact='{cross_links_compact}'{classes} tabindex='0' title='N terminal position: {}, C terminal position: {}{}'>{}",
-            index + 1,
-            peptide.len() - index,
-            if xl_names.is_empty() {
-                String::new()
-            } else {
-                format!(", Cross-link{}: {}", if xl_names.len() == 1{""} else {"s"}, xl_names.iter().join(", "))
-            },
-            pos.aminoacid.char(),
-        )
-        .unwrap();
-        for ion in ions {
-            if !matches!(
-                ion,
-                FragmentType::immonium(_, _)
-                    | FragmentType::PrecursorSideChainLoss(_, _)
-                    | FragmentType::diagnostic(_)
-            ) {
-                write!(
-                    output,
-                    "<span class='corner {}'></span>",
-                    ion.label().trim_end_matches('·')
-                )
-                .unwrap();
-            }
-        }
-        write!(output, "</span>").unwrap();
-    }
-    if peptide.get_c_term().is_some() {
-        write!(output, "<span class='modification term'></span>").unwrap();
-    }
-    if let Some(charge_carriers) = &peptide.get_charge_carriers() {
-        write!(
-            output,
-            "<span class='charge-carriers'>/{charge_carriers}</span>",
-        )
-        .unwrap();
-    }
-    write!(output, "</div>").unwrap();
 }
 
 fn render_spectrum(

@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use rustyms::{
     fragment::{FragmentType, GlycanBreakPos},
-    AmbiguousLabel, CompoundPeptidoform, Fragment, SequencePosition,
+    AmbiguousLabel, CompoundPeptidoform, Fragment, Modification, SequencePosition,
 };
 use std::fmt::Write;
 
@@ -340,11 +340,16 @@ fn get_modifications(
                     "{}<sub>{}</sub>{}",
                     compound_peptidoform.peptidoforms()[annotation.peptidoform_index].peptides()
                         [annotation.peptide_index][*sequence_index]
-                        .possible_modifications
+                        .modifications
                         .iter()
-                        .find(|m| m.id == *id)
-                        .unwrap()
-                        .group,
+                        .find_map(
+                            |m| if let Modification::Ambiguous { id: mid, group, .. } = m {
+                                (*mid == *id).then_some(group)
+                            } else {
+                                None
+                            }
+                        )
+                        .unwrap(),
                     display_sequence_index(*sequence_index),
                     if multiple_peptides {
                         format!("<sub class='peptide-id'>p{}</sub>", peptide_index + 1)

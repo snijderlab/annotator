@@ -1230,7 +1230,7 @@ function spectrumZoomOut(event) {
 
 function fancyRound(max, min, value, additional = 0) {
     const diff = max - min;
-    const digits = Math.max(Math.ceil(-Math.log10(diff) + 2 + additional), 0);
+    const digits = Math.min(Math.max(Math.ceil(-Math.log10(diff) + 2 + additional), 0), 100);
     return value.toFixed(digits + additional);
 }
 
@@ -1238,7 +1238,7 @@ function distanceLabel(max, min, value) {
     const diff = max - min;
     const zoom_digits = Math.max(Math.ceil(-Math.log10(diff) + 2), 0);
     const number_digits = Math.max(Math.ceil(-Math.log10(value) + 3), 0);
-    return value.toFixed(Math.max(zoom_digits, number_digits));
+    return value.toFixed(Math.min(Math.max(zoom_digits, number_digits), 100));
 }
 
 // Give the canvas element
@@ -1264,7 +1264,7 @@ function UpdateSpectrumAxes(canvas_wrapper) {
     const min_mz = Number(canvas_wrapper.dataset.minMz);
     const max_mz = Number(canvas_wrapper.dataset.maxMz);
     const diff_mz = max_mz - min_mz;
-    const digits_mz = Math.max(Math.ceil(-Math.log10(diff_mz) + 2), 0)
+    const digits_mz = Math.min(Math.max(Math.ceil(-Math.log10(diff_mz) + 2), 0), 100);
     for (let i = 0; i < x_ticks.length; i++) {
         x_ticks[i].innerText = (min_mz + i / (x_ticks.length - 1) * (diff_mz)).toFixed(digits_mz);
     }

@@ -333,6 +333,26 @@ dialog.neutral-loss {
   align-self: center;
 }
 
+.colour-dot {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background-color: var(--color-halfway);
+  display: inline-block;
+
+  &.Green {
+    background-color: var(--color-green);
+  }
+
+  &.Yellow {
+    background-color: var(--color-yellow);
+  }
+
+  &.Red {
+    background-color: var(--color-red);
+  }
+}
+
 .input-settings:has(option[value="custom"]:checked) .custom-model {
   display: grid;
 }

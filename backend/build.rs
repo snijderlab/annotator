@@ -685,7 +685,7 @@ fn main() {
                   </div>
                   <output class="error"></output>
                 </div>
-                <label for="custom-mod-linker-stubs">Breakage</label>
+                <label for="custom-mod-linker-stubs" title="Define the ways in which this crosslinker can break apart. These formulas are used as the full formula when breakage is allowed, so the original cross-linker definition is not used in this case. For example a crosslinker of formula 'Ca+bHa+bOa+b' which can break into 'CaHaOa' and 'CbHbOb' has to be defined as 'CaHaOa:CbHbOb'. Commonly the summation of the two halves after breaking will result in the same formual as the full cross-linker, but does not have to be the case.">Breakage</label>
                 <div class="separated-input">
                   <div class="values" id="custom-mod-linker-stubs">
                     <div class="input context" placeholder="Add breakage with a mass or molecular formula as 'formula1:formula2'." data-type="stub" contentEditable="plaintext-only"></div>

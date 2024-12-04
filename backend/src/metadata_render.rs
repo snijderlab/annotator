@@ -1,12 +1,12 @@
 use itertools::Itertools;
 use rustyms::{
     identification::{CVTerm, IdentifiedPeptide, MetaData, ReturnedPeptide, SpectrumIds},
-    MultiChemical,
+    MolecularFormula, MultiChemical,
 };
 
 use crate::{
     html_builder::{HtmlContent, HtmlElement, HtmlTag},
-    render::{display_mass, display_masses},
+    render::{display_mass, display_masses, render_peptide},
 };
 
 pub trait RenderToHtml {
@@ -21,88 +21,98 @@ impl RenderToHtml for IdentifiedPeptide {
     fn to_html(&self) -> HtmlElement {
         // Render the peptide with its local confidence
         let peptide = if let Some(peptide) = self.peptide() {
-            let mut html = HtmlTag::div.new();
-            html.class("original-sequence-wrapper");
+            let mut buffer = String::new();
+            render_peptide(
+                &mut buffer,
+                &peptide.compound_peptidoform(),
+                None,
+                self.local_confidence
+                    .as_ref()
+                    .map(|lc| vec![vec![lc.clone()]]),
+            );
 
-            for peptide in peptide.compound_peptidoform().peptides() {
-                let mut pep_html = HtmlTag::div.new();
-                pep_html.class("original-sequence").style("--max-value:1");
-                if let Some(n) = peptide.get_n_term().as_ref() {
-                    let mut modification = String::new();
-                    n.display(&mut modification, false).unwrap();
-                    pep_html.content(
-                        HtmlTag::div
-                            .new()
-                            .style("--value:0")
-                            .content(
-                                HtmlTag::p
-                                    .new()
-                                    .class(
-                                        n.simple()
-                                            .map_or("cross-link term", |_| "modification term"),
-                                    )
-                                    .title(modification),
-                            )
-                            .clone(),
-                    );
-                }
+            HtmlContent::Text(buffer)
 
-                for (aa, confidence) in peptide.sequence().iter().zip(
-                    self.local_confidence
-                        .as_ref()
-                        .map(|lc| lc.to_vec())
-                        .unwrap_or(vec![0.0; peptide.len()]),
-                ) {
-                    pep_html.content(
-                        HtmlTag::div
-                            .new()
-                            .style(format!("--value:{confidence}"))
-                            .content(
-                                HtmlTag::p
-                                    .new()
-                                    .content(aa.aminoacid.char().to_string())
-                                    .maybe_class(
-                                        (aa.modifications.iter().any(|m| m.simple().is_some()))
-                                            .then_some("modification"),
-                                    )
-                                    .maybe_class(
-                                        (aa.modifications.iter().any(|m| m.simple().is_none()))
-                                            .then_some("cross-link"),
-                                    )
-                                    .title(
-                                        aa.modifications
-                                            .iter()
-                                            .map(|m| {
-                                                let mut s = String::new();
-                                                m.display(&mut s, false).unwrap();
-                                                s
-                                            })
-                                            .join(","),
-                                    ),
-                            ),
-                    );
-                }
+            // for peptide in peptide.compound_peptidoform().peptides() {
+            //     let mut pep_html = HtmlTag::div.new();
+            //     pep_html.class("original-sequence").style("--max-value:1");
 
-                if let Some(c) = peptide.get_c_term().as_ref() {
-                    let mut modification = String::new();
-                    c.display(&mut modification, false).unwrap();
-                    pep_html.content(
-                        HtmlTag::div.new().style("--value:0").content(
-                            HtmlTag::p
-                                .new()
-                                .class(
-                                    c.simple()
-                                        .map_or("cross-link term", |_| "modification term"),
-                                )
-                                .title(modification),
-                        ),
-                    );
-                }
-                html.content(pep_html);
-            }
-            html
+            //     if let Some(n) = peptide.get_n_term().as_ref() {
+            //         let mut modification = String::new();
+            //         n.display(&mut modification, false, true).unwrap();
+            //         pep_html.content(
+            //             HtmlTag::div
+            //                 .new()
+            //                 .style("--value:0")
+            //                 .content(
+            //                     HtmlTag::p
+            //                         .new()
+            //                         .class(
+            //                             n.simple()
+            //                                 .map_or("cross-link term", |_| "modification term"),
+            //                         )
+            //                         .title(modification),
+            //                 )
+            //                 .clone(),
+            //         );
+            //     }
+
+            //     for (aa, confidence) in peptide.sequence().iter().zip(
+            //         self.local_confidence
+            //             .as_ref()
+            //             .map(|lc| lc.to_vec())
+            //             .unwrap_or(vec![0.0; peptide.len()]),
+            //     ) {
+            //         pep_html.content(
+            //             HtmlTag::div
+            //                 .new()
+            //                 .style(format!("--value:{confidence}"))
+            //                 .content(
+            //                     HtmlTag::p
+            //                         .new()
+            //                         .content(aa.aminoacid.char().to_string())
+            //                         .maybe_class(
+            //                             (aa.modifications.iter().any(|m| m.simple().is_some()))
+            //                                 .then_some("modification"),
+            //                         )
+            //                         .maybe_class(
+            //                             (aa.modifications.iter().any(|m| m.simple().is_none()))
+            //                                 .then_some("cross-link"),
+            //                         )
+            //                         .title(
+            //                             aa.modifications
+            //                                 .iter()
+            //                                 .map(|m| {
+            //                                     let mut s = String::new();
+            //                                     m.display(&mut s, false, true).unwrap();
+            //                                     s
+            //                                 })
+            //                                 .join(","),
+            //                         ),
+            //                 ),
+            //         );
+            //     }
+
+            //     if let Some(c) = peptide.get_c_term().as_ref() {
+            //         let mut modification = String::new();
+            //         c.display(&mut modification, false, true).unwrap();
+            //         pep_html.content(
+            //             HtmlTag::div.new().style("--value:0").content(
+            //                 HtmlTag::p
+            //                     .new()
+            //                     .class(
+            //                         c.simple()
+            //                             .map_or("cross-link term", |_| "modification term"),
+            //                     )
+            //                     .title(modification),
+            //             ),
+            //         );
+            //     }
+            //     html.content(pep_html);
+            // }
+            // html
         } else {
-            HtmlTag::p.new().content("No peptide").clone()
+            HtmlContent::Html(HtmlTag::p.new().content("No peptide").clone())
         };
 
         let formula = self.peptide().map(|p| p.formulas()[0].clone());
@@ -115,7 +125,8 @@ impl RenderToHtml for IdentifiedPeptide {
                         self.local_confidence.as_ref().map_or(String::from("-"), |lc| format!("{:.3}", lc.iter().sum::<f64>() / lc.len() as f64)),
                         self.peptide()
                             .map(|p| format!("{}&nbsp;AA", match p {
-                                ReturnedPeptide::Linear(p) => p.len().to_string(),
+                                ReturnedPeptide::LinearSemiAmbiguous(p) => p.len().to_string(),
+                                ReturnedPeptide::LinearSimpleLinear(p) => p.len().to_string(),
                                 ReturnedPeptide::Peptidoform(p) => p.peptides().iter().map(|p| p.len()).join("&nbsp;+&nbsp;"),
                                 ReturnedPeptide::CompoundPeptidoform(p) => p.peptides().map(|p| p.len()).join("&nbsp;+&nbsp;"),
                             }))
@@ -162,8 +173,8 @@ impl RenderToHtml for IdentifiedPeptide {
                     SpectrumIds::None => vec![HtmlTag::p.new().content("No spectrum reference").clone()],
                     SpectrumIds::FileNotKnown(scans) => vec![HtmlTag::li.new().content("Scans: ").content(scans.iter().join(";")).clone()],
                     SpectrumIds::FileKnown(scans) => scans.iter().map(|(file, scans)| HtmlTag::li.new().content("File: ").content(HtmlTag::span.new().title(file.to_string_lossy()).content(file.file_name().map_or(String::new(), |s| s.to_string_lossy().to_string())).content(" Scans: ").content(scans.iter().join(";"))).clone()).collect(),
-                }).clone(),
-                peptide,
+                }).clone(),]
+            ).content(peptide).children([
                 HtmlTag::p.new().content(format!("Additional MetaData {} {} ID: {}", self.format_name(), self.format_version(), self.id())).clone(),
                 {
                     HtmlElement::table::<HtmlContent, String>(
@@ -302,7 +313,7 @@ impl RenderToTable for MetaData {
                 ("Spectra ID", data.spectra_id.to_optional_string()),
                 ("Fraction", data.fraction.to_optional_string()),
                 ("Protein", data.protein.to_optional_string()),
-                ("Protein Start", data.protein_start.to_optional_string()),
+                ("Protein location", data.protein_start.map(|s| format!("{s} — {}", s + data.peptide.len())).to_optional_string()),
                 (
                     "Protein Origin",
                     data.protein_origin.as_ref().to_optional_string(),
@@ -637,8 +648,7 @@ impl RenderToTable for MetaData {
                     "Number of enzymatic termini",
                     data.enzymatic_termini.to_string(),
                 ),
-                ("Protein start", data.protein_start.to_string()),
-                ("Protein end", data.protein_end.to_string()),
+                ("Protein location", format!("{} — {}", data.protein_start, data.protein_end)),
                 ("Intensity", format!("{:e}", data.intensity)),
                 ("Purity", data.purity.to_string()),
                 ("Is unique", data.is_unique.to_string()),
@@ -768,8 +778,152 @@ impl RenderToTable for MetaData {
                         data.ppm_diff_reverse.value * 1e6
                     ),
                 ),
-                ("Sequence forward", data.peptide_forward.to_string()),
-                ("Sequence reverse", data.peptide_reverse.to_string()),
+                (
+                    "Sequence forward",
+                    data.peptide_forward.as_ref().to_optional_string(),
+                ),
+                (
+                    "Sequence reverse",
+                    data.peptide_reverse.as_ref().to_optional_string(),
+                ),
+            ],
+            MetaData::PLGS(data) => vec![
+                (
+                    "Protein",
+                    format!(
+                        "id: {} description: {}",
+                        data.protein_id, data.protein_description
+                    ),
+                ),
+                (
+                    "Protein score",
+                    format!(
+                        "<span class='colour-dot {curate}' title='{curate}'></span> score: {} fpr: {} coverage: {}%",
+                        data.protein_score,
+                        data.protein_fpr,
+                        data.protein_sequence_coverage,
+                        curate=data.protein_auto_curate,
+                    ),
+                ),
+                (
+                    "Protein matched peptides",
+                    format!(
+                        "{} (∑I: {:.3e}) (top3: {:.3e})",
+                        data.protein_matched_peptides,
+                        data.protein_matched_peptide_intensity_sum,
+                        data.protein_matched_peptide_intensity_top3,
+                    ),
+                ),
+                (
+                    "Protein matched products",
+                    format!(
+                        "{} (∑I: {:.3e})",
+                        data.protein_matched_products,
+                        data.protein_matched_product_intensity_sum,
+                    ),
+                ),
+                ("Protein location",
+                    format!(
+                        "{} — {}",
+                        data.peptide_start,
+                        data.peptide_start + data.peptide.len(),
+                    ),
+                ),
+                (
+                    "Peptide score",
+                    format!(
+                        "<span class='colour-dot {curate}' title='{curate}'></span> score: {:.3} (raw: {:.3}) rank: {}",
+                        data.peptide_score,
+                        data.peptide_raw_score,
+                        data.peptide_rank,
+                        curate=data.peptide_auto_curate,
+                    ),
+                ),
+                (
+                    "Peptide metrics",
+                    format!(
+                        "pI: {} volume: {} csa: {:.3} x-P bond: {} charge: {:+} ({:+.2})",
+                        data.peptide_pi,
+                        data.peptide_volume,
+                        data.peptide_csa,
+                        data.peptide_x_p_bond_identified.to_optional_string(),
+                        data.precursor_z.value,
+                        data.precursor_charge,
+                    ),
+                ),
+                (
+                    "Peptide matched products",
+                    format!(
+                        "{:.2}% ({}/{}) (∑I: {:.3e})",
+                        data.peptide_matched_products as f64 / data.peptide_matched_product_theoretical * 100.0,
+                        data.peptide_matched_products,
+                        data.peptide_matched_product_theoretical,
+                        data.peptide_matched_product_intensity,
+                    ),
+                ),
+                (
+                    "Peptide matched products",
+                    data.peptide_matched_product_string.clone(),
+                ),
+                ("Precursor id", data.precursor_le_id.to_string()),
+                (
+                    "Precursor peak fwhm",
+                    format!(
+                        "{:.3} (rms: {:.3})",
+                        data.precursor_fwhm, data.precursor_rms_fwhm_delta,
+                    ),
+                ),
+                (
+                    "Precursor RT (min)",
+                    format!(
+                        "{:.3}<span style='color:var(--color-red)'>◞</span> {:.3} <span style='color:var(--color-red)'>◠</span> {:.3} <span style='color:var(--color-red)'>◟</span>{:.3}",
+                        data.precursor_lift_off_rt.value,
+                        data.precursor_inf_up_rt.value,
+                        data.precursor_inf_down_rt.value,
+                        data.precursor_touch_down_rt.value,
+                    ),
+                ),
+                (
+                    "Product",
+                    {
+                        let charge = data.product_z.map_or(String::new(), |c| format!("+{}",c.value));
+                        format!(
+                            "{}{}{}{} id: {} intensity: {} charge: {}",
+                            data.fragment_type.as_ref().to_optional_string(),
+                            data.product_charge
+                                .map_or(String::new(), |_| format!("<sup>{charge}</sup>")),
+                            data.fragment_index
+                                .map_or(String::new(), |i| format!("<sub style='margin-left:-{w}ch;min-width:{w}ch;display:inline-block'>{i}</sub>", w=charge.len())),
+                            data.fragment_neutral_loss
+                                .as_ref()
+                                .map_or(String::new(), |n| n.hill_notation_html()),
+                            data.product_he_id.to_optional_string(),
+                            data.product_intensity
+                                .map(|v| format!("{v:.3e}"))
+                                .to_optional_string(),
+                            data.product_charge
+                                .map(|v| format!("{v:+.2}"))
+                                .to_optional_string(),
+                        )
+                    },
+                ),
+                ("Product peak fwhm", data.product_fwhm.to_optional_string()),
+                (
+                    "Product RT (min)",
+                    format!(
+                        "{:.3}<span style='color:var(--color-red)'>◞</span> {} <span style='color:var(--color-red)'>◠</span> {:.3} <span style='color:var(--color-red)'>◟</span>{:.3}",
+                        data.product_lift_off_rt
+                            .map(|v| format!("{:.3}", v.value))
+                            .to_optional_string(),
+                        data.product_inf_up_rt.map(|v| format!("{:.3}", v.value)).to_optional_string(),
+                        data.product_inf_down_rt
+                            .map(|v| format!("{:.3}", v.value))
+                            .to_optional_string(),
+                        data.product_touch_down_rt
+                            .map(|v| format!("{:.3}", v.value))
+                            .to_optional_string(),
+                    ),
+                ),
             ],
             MetaData::DeepNovoFamily(_)
             | MetaData::InstaNovo(_)

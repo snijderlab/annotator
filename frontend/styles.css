@@ -1357,83 +1357,6 @@ summary {
     background-color: var(--color-halfway);
 }
 
-/* Original sequence  */
-
-.original-sequence-wrapper {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.original-sequence {
-    display: inline-flex;
-
-    &>div {
-        width: 1ch;
-        position: relative;
-
-        &::after {
-            position: absolute;
-            content: "";
-            left: 1px;
-            right: 1px;
-            background-color: var(--color-primary);
-            height: calc(var(--value) / var(--max-value) * 1.1em);
-            top: calc((1 - var(--value) / var(--max-value)) * 1.1em)
-        }
-    }
-
-    & p {
-        font-family: "Roboto Mono", monospace;
-        margin-bottom: 0;
-    }
-
-    & .modification {
-        position: relative;
-        color: var(--color-primary);
-
-        &::before {
-            content: "";
-            display: block;
-            position: absolute;
-            top: 3px;
-            left: calc(50% - 0.5 * 3px);
-            width: 3px;
-            height: 3px;
-            border-radius: 50%;
-            background-color: currentColor;
-            background-clip: content-box;
-        }
-
-        &.term::before {
-            padding: 0.5em;
-            left: calc(50% - 0.5 * 3px - 0.5em)
-        }
-    }
-
-    & .cross-link {
-        position: relative;
-        color: var(--color-primary);
-
-        &::before {
-            content: "x1";
-            display: block;
-            position: absolute;
-            top: -1.4em;
-            font-size: .5em;
-            text-align: center;
-            width: 100%;
-            transform: rotate(-90deg);
-        }
-
-        &.term::before {
-            top: 0;
-            left: -.4em;
-            transform: none;
-        }
-    }
-}
-
 /* Changed sequence */
 
 .changed-sequence .seq {
@@ -2376,7 +2299,36 @@ summary {
     }
 }
 
+#identified-peptide-details .complex-peptide {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+#identified-peptide-details .peptide {
+    --color: var(--color-purple-light);
+    --fs-peptide: 1rem;
+    --stroke-peptide: 2px;
+}
+
 .spectrum .peptide {
+    &>span {
+        cursor: crosshair;
+        -webkit-user-select: none;
+        user-select: none;
+        border: 2px solid transparent;
+
+        &:hover {
+            border-color: var(--color-halfway-fg);
+        }
+
+        &:focus-visible,
+        &:active {
+            border-color: var(--color-primary);
+        }
+    }
+}
+
+.peptide {
     font-size: var(--fs-peptide);
     margin: 1em;
     display: flex;
@@ -2387,7 +2339,16 @@ summary {
     --side-spacing: calc(var(--stroke-peptide) * 0.5);
     --width: .8em;
     --height: .8em;
+    --fragments-padding: 0px;
+    --confidence-padding: 0px;
 
+    .complex-peptide.with-fragments & {
+        --fragments-padding: 0.5em;
+    }
+
+    .complex-peptide.with-local-confidence & {
+        --confidence-padding: 1.1em;
+    }
 
     &>.name {
         border: 2px solid var(--color-foreground);
@@ -2399,28 +2360,35 @@ summary {
     }
 
     &>span {
-        --pad: .5em;
         --pad-left: 0px;
         --pad-right: 0px;
         margin: 0 2px 0 -2px;
-        border: 2px solid transparent;
         background-color: color-mix(in oklab, var(--color-highlight) 20%, var(--color-background));
         position: relative;
-        padding: var(--pad) calc(var(--pad) + var(--pad-right)) var(--pad) calc(var(--pad) + var(--pad-left));
+        padding: calc(var(--fragments-padding) + var(--confidence-padding)) calc(var(--fragments-padding) + var(--pad-right)) var(--fragments-padding) calc(var(--fragments-padding) + var(--pad-left));
         display: block;
-        cursor: crosshair;
-        -webkit-user-select: none;
-        user-select: none;
         font-family: 'Roboto Mono';
         box-sizing: content-box;
 
-        &:hover {
-            border-color: var(--color-halfway-fg);
-        }
+        /* Original sequence  */
 
-        &:focus-visible,
-        &:active {
-            border-color: var(--color-primary);
+        /* .original-sequence-wrapper {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.original-sequence {
+    display: inline-flex; */
+
+        &::after {
+            position: absolute;
+            content: "";
+            left: 1px;
+            right: 1px;
+            background-color: var(--color-primary);
+            height: calc(var(--confidence) * var(--confidence-padding));
+            top: calc((1 - var(--confidence)) * var(--confidence-padding));
         }
 
         &.modification {
@@ -2540,7 +2508,7 @@ summary {
             font-size: calc(0.5 * var(--fs-peptide));
             color: var(--color-xl, --color-purple-light);
             text-align: center;
-            min-width: calc(var(--pad-left) * 2 + var(--pad-right) * 2 + var(--pad) * 4 + 2ch + 2 * var(--spacing));
+            min-width: calc(var(--pad-left) * 2 + var(--pad-right) * 2 + var(--fragments-padding) * 4 + 2ch + 2 * var(--spacing));
             width: fit-content;
         }
     }
@@ -2552,19 +2520,20 @@ summary {
     color: var(--color);
 }
 
-.spectrum.compact .peptide {
+.spectrum.compact .peptide,
+#identified-peptide-details .peptide {
     --width: calc(.5em - var(--side-spacing));
     --height: .5em;
 
     &>* {
-        padding: var(--pad) var(--pad-right) var(--pad) var(--pad-left);
+        padding: calc(var(--fragments-padding) + var(--confidence-padding)) var(--pad-right) var(--fragments-padding) var(--pad-left);
     }
 
     &>.cross-link {
         &::before {
             content: attr(data-cross-links-compact);
-            top: calc(-1 * var(--pad));
-            left: calc(0.5* var(--pad));
+            top: calc(-1 * var(--fragments-padding));
+            left: calc(0.5* var(--fragments-padding));
             transform: rotate(-90deg);
             transform-origin: left center;
             min-width: calc(var(--pad-left) + var(--pad-right) + var(--fs-peptide));

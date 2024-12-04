@@ -126,16 +126,22 @@ pub async fn search_peptide<'a>(
             })
         })
         .par_bridge()
-        .filter(|p| p.2.peptide().and_then(|p| p.peptide()).is_some())
-        .map(|(id, index, peptide)| {
+        .filter_map(|p| {
+            p.2.peptide()
+                .and_then(|p| p.peptide())
+                .and_then(|p| p.into_owned().into_semi_ambiguous())
+                .map(|simple| (p.0, p.1, p.2, simple))
+        })
+        .map(|(id, index, peptide, simple)| {
             (
                 index,
                 align::<4, SemiAmbiguous, SimpleLinear>(
-                    peptide.peptide().unwrap().peptide().unwrap(),
+                    &simple,
                     &search,
                     AlignScoring::default(),
                     align::AlignType::GLOBAL_B,
-                ),
+                )
+                .to_owned(),
                 peptide,
                 id,
             )

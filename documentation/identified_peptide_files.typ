@@ -38,6 +38,8 @@ There are quite some programs that export peptides with metadata based on spectr
   [1.0.1],
   [pLink],
   [2.3],
+  [PLGS],
+  [3.0],
   [Sage],
   [0.14],
 )

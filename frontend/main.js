@@ -244,12 +244,12 @@ async function update_open_raw_files() {
 
         if (file.single) {
           let select = document.createElement("button");
-          select.innerText = file.selected ? "Unselect" : "Select";
+          select.innerText = file.selected ? "Deselect" : "Select";
           select.addEventListener("click", e => {
             let r = e.target.parentElement.parentElement;
             if (r.dataset.selected == "true") {
-              console.log("unselect")
-              invoke("unselect_spectrum", { fileIndex: file.id, index: 0 }).then(() => {
+              console.log("deselect")
+              invoke("deselect_spectrum", { fileIndex: file.id, index: 0 }).then(() => {
                 r.dataset.selected = false;
                 select.innerText = "Select";
                 update_selected_spectra()
@@ -258,7 +258,7 @@ async function update_open_raw_files() {
               console.log("select")
               invoke("select_spectrum_index", { fileIndex: file.id, index: 0 }).then(() => {
                 r.dataset.selected = true;
-                select.innerText = "Unselect";
+                select.innerText = "Deselect";
                 clearError("open-files-error");
                 update_selected_spectra();
               }).catch((error) => {
@@ -361,9 +361,9 @@ async function update_selected_spectra() {
 
           if (!single) {
             let close = document.createElement("button");
-            close.innerText = "Unselect";
+            close.innerText = "Deselect";
             close.addEventListener("click", () => {
-              invoke("unselect_spectrum", { fileIndex: index, index: single ? 0 : element.id }).then(update_selected_spectra())
+              invoke("deselect_spectrum", { fileIndex: index, index: single ? 0 : element.id }).then(update_selected_spectra())
             });
             li.appendChild(close);
           }
