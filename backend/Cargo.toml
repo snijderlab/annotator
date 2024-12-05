@@ -38,7 +38,6 @@ thin-vec = { version = "0.2", features = ["serde"] }
 
 [patch.crates-io]
 rustyms = { path = "../../rustyms/rustyms" }
-mzdata = { path = "../../mzdata" }
 # hdf5 rust crate needs a new version
 hdf5 = { git = "https://github.com/aldanor/hdf5-rust.git" }
 hdf5-sys = { git = "https://github.com/aldanor/hdf5-rust.git" }

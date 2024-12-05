@@ -6466,7 +6466,3 @@ dependencies = [
  "syn 2.0.89",
  "winnow 0.6.20",
 ]
-
-[[patch.unused]]
-name = "mzdata"
-version = "0.37.0"
