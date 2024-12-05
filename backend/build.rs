@@ -248,8 +248,9 @@ fn main() {
     
         <label for="spectrum-model">Model </label>
         <select id="spectrum-model">
-          <option value="all" title="All possible ions with single water loss from all and additionally double water loss from glycans">All</option>
-          <option value="ethcd" title="b+c+w+y+z+glycan with single water loss from all and additionally double water loss from glycans">EThcD/ETcaD</option>
+          <option value="all" title="All possible ions with single water loss from all">All</option>
+          <option value="ethcd" title="b+c+w+y+z+glycan with single water loss from all and precursor decharging">EThcD/ETcaD</option>
+          <option value="hot_eacid" title="a+b+c+d+x+w+y+z+glycan with single water loss from all and precursor decharging">EThcD/ETcaD</option>
           <option value="cidhcd" title="a+b+d+y+precursor with single water loss">CID/HCD</option>
           <option value="etd" title="c+y+z with single water loss and precursor with single water, ammonia, and ETD specific losses">ETD</option>
           <option value="none" title="Only the base precursor peak, no losses">None</option>

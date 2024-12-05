@@ -189,9 +189,9 @@ fn render_linear_peptide(
             for ion in ions {
                 if !matches!(
                     ion,
-                    FragmentType::immonium(_, _)
+                    FragmentType::Immonium(_, _)
                         | FragmentType::PrecursorSideChainLoss(_, _)
-                        | FragmentType::diagnostic(_)
+                        | FragmentType::Diagnostic(_)
                 ) {
                     write!(
                         output,

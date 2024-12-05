@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use rustyms::{
     identification::{CVTerm, IdentifiedPeptide, MetaData, ReturnedPeptide, SpectrumIds},
-    MolecularFormula, MultiChemical,
+    MultiChemical,
 };
 
 use crate::{
@@ -32,85 +32,6 @@ impl RenderToHtml for IdentifiedPeptide {
             );
 
             HtmlContent::Text(buffer)
-
-            // for peptide in peptide.compound_peptidoform().peptides() {
-            //     let mut pep_html = HtmlTag::div.new();
-            //     pep_html.class("original-sequence").style("--max-value:1");
-
-            //     if let Some(n) = peptide.get_n_term().as_ref() {
-            //         let mut modification = String::new();
-            //         n.display(&mut modification, false, true).unwrap();
-            //         pep_html.content(
-            //             HtmlTag::div
-            //                 .new()
-            //                 .style("--value:0")
-            //                 .content(
-            //                     HtmlTag::p
-            //                         .new()
-            //                         .class(
-            //                             n.simple()
-            //                                 .map_or("cross-link term", |_| "modification term"),
-            //                         )
-            //                         .title(modification),
-            //                 )
-            //                 .clone(),
-            //         );
-            //     }
-
-            //     for (aa, confidence) in peptide.sequence().iter().zip(
-            //         self.local_confidence
-            //             .as_ref()
-            //             .map(|lc| lc.to_vec())
-            //             .unwrap_or(vec![0.0; peptide.len()]),
-            //     ) {
-            //         pep_html.content(
-            //             HtmlTag::div
-            //                 .new()
-            //                 .style(format!("--value:{confidence}"))
-            //                 .content(
-            //                     HtmlTag::p
-            //                         .new()
-            //                         .content(aa.aminoacid.char().to_string())
-            //                         .maybe_class(
-            //                             (aa.modifications.iter().any(|m| m.simple().is_some()))
-            //                                 .then_some("modification"),
-            //                         )
-            //                         .maybe_class(
-            //                             (aa.modifications.iter().any(|m| m.simple().is_none()))
-            //                                 .then_some("cross-link"),
-            //                         )
-            //                         .title(
-            //                             aa.modifications
-            //                                 .iter()
-            //                                 .map(|m| {
-            //                                     let mut s = String::new();
-            //                                     m.display(&mut s, false, true).unwrap();
-            //                                     s
-            //                                 })
-            //                                 .join(","),
-            //                         ),
-            //                 ),
-            //         );
-            //     }
-
-            //     if let Some(c) = peptide.get_c_term().as_ref() {
-            //         let mut modification = String::new();
-            //         c.display(&mut modification, false, true).unwrap();
-            //         pep_html.content(
-            //             HtmlTag::div.new().style("--value:0").content(
-            //                 HtmlTag::p
-            //                     .new()
-            //                     .class(
-            //                         c.simple()
-            //                             .map_or("cross-link term", |_| "modification term"),
-            //                     )
-            //                     .title(modification),
-            //             ),
-            //         );
-            //     }
-            //     html.content(pep_html);
-            // }
-            // html
         } else {
             HtmlContent::Html(HtmlTag::p.new().content("No peptide").clone())
         };

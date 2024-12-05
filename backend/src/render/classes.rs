@@ -16,10 +16,20 @@ pub fn get_classes(annotations: &[Fragment], unique_peptide_lookup: &[(usize, us
     let mut first_peptide_index = None;
     for annotation in annotations {
         output.push(annotation.ion.label().to_string());
-        output.push(format!("p{}", annotation.peptidoform_index));
+        output.push(format!(
+            "p{}",
+            annotation
+                .peptidoform_index
+                .map_or("?".to_string(), |i| i.to_string())
+        ));
         output.push(format!(
             "p{}-{}",
-            annotation.peptidoform_index, annotation.peptide_index
+            annotation
+                .peptidoform_index
+                .map_or("?".to_string(), |i| i.to_string()),
+            annotation
+                .peptide_index
+                .map_or("?".to_string(), |i| i.to_string())
         ));
         if let Some(num) = first_peptidoform_index {
             if num != annotation.peptidoform_index && !output.contains(&"mp".to_string()) {
@@ -41,9 +51,8 @@ pub fn get_classes(annotations: &[Fragment], unique_peptide_lookup: &[(usize, us
                     "pu{}",
                     unique_peptide_lookup
                         .iter()
-                        .position(
-                            |id| *id == (annotation.peptidoform_index, annotation.peptide_index)
-                        )
+                        .position(|id| (Some(id.0), Some(id.1))
+                            == (annotation.peptidoform_index, annotation.peptide_index))
                         .unwrap()
                 );
                 if !output.contains(&pu) {
@@ -56,14 +65,21 @@ pub fn get_classes(annotations: &[Fragment], unique_peptide_lookup: &[(usize, us
                 "pu{}",
                 unique_peptide_lookup
                     .iter()
-                    .position(|id| *id == (annotation.peptidoform_index, annotation.peptide_index))
+                    .position(|id| (Some(id.0), Some(id.1))
+                        == (annotation.peptidoform_index, annotation.peptide_index))
                     .unwrap()
             ))
         }
         if let Some(pos) = annotation.ion.position() {
             output.push(format!(
                 "p{}-{}-{}",
-                annotation.peptidoform_index, annotation.peptide_index, pos.sequence_index
+                annotation
+                    .peptidoform_index
+                    .map_or("?".to_string(), |i| i.to_string()),
+                annotation
+                    .peptide_index
+                    .map_or("?".to_string(), |i| i.to_string()),
+                pos.sequence_index
             ));
         }
         if annotation.ion.kind() == FragmentKind::Oxonium {
@@ -72,7 +88,7 @@ pub fn get_classes(annotations: &[Fragment], unique_peptide_lookup: &[(usize, us
         if annotation.ion.kind() == FragmentKind::diagnostic {
             output.push("diagnostic".to_string());
         }
-        if annotation.neutral_loss.is_some() {
+        if !annotation.neutral_loss.is_empty() {
             output.push("neutral-loss".to_string());
         }
         if let Some(ion) = &shared_ion {

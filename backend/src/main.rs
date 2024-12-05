@@ -193,6 +193,7 @@ impl ModelParameters {
         let mut model = match name {
             "all" => Model::all(),
             "ethcd" => Model::ethcd(),
+            "hot_eacid" => Model::hot_eacid(),
             "cidhcd" => Model::cid_hcd(),
             "etd" => Model::etd(),
             "none" => Model::none(),

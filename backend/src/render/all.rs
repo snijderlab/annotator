@@ -152,9 +152,10 @@ impl<'a> RelAndAbs<(f64, &'a Fragment)> {
         self.rel = Self::min_by(
             self.rel,
             (
-                ((point.experimental_mz.value - fragment.mz(mass_mode).value)
-                    / fragment.mz(mass_mode).value
-                    * 1e6),
+                fragment
+                    .mz(mass_mode)
+                    .map(|f| f.ppm(point.experimental_mz).value * 1e6)
+                    .unwrap_or(f64::INFINITY),
                 fragment,
             ),
             &|a: (f64, &Fragment), b: (f64, &Fragment)| b.0.abs().total_cmp(&a.0.abs()),
@@ -162,7 +163,10 @@ impl<'a> RelAndAbs<(f64, &'a Fragment)> {
         self.abs = Self::min_by(
             self.abs,
             (
-                (point.experimental_mz - fragment.mz(mass_mode)).value,
+                fragment
+                    .mz(mass_mode)
+                    .map(|f| (point.experimental_mz - f).value)
+                    .unwrap_or(f64::INFINITY),
                 fragment,
             ),
             &|a: (f64, &Fragment), b: (f64, &Fragment)| b.0.abs().total_cmp(&a.0.abs()),
@@ -261,16 +265,20 @@ fn spectrum_graph_boundaries(
                     .annotation
                     .iter()
                     .map(|f| {
-                        (f.mz(mass_mode).value - point.experimental_mz.value)
-                            / f.mz(mass_mode).value
-                            * 1e6
+                        f.mz(mass_mode)
+                            .map(|f| f.ppm(point.experimental_mz).value * 1e6)
+                            .unwrap_or(f64::INFINITY)
                     })
                     .min_by(|a, b| b.abs().total_cmp(&a.abs()))
                     .unwrap(),
                 abs: point
                     .annotation
                     .iter()
-                    .map(|f| (f.mz(mass_mode) - point.experimental_mz).value)
+                    .map(|f| {
+                        f.mz(mass_mode)
+                            .map(|f| (point.experimental_mz - f).value)
+                            .unwrap_or(f64::INFINITY)
+                    })
                     .min_by(|a, b| b.abs().total_cmp(&a.abs()))
                     .unwrap(),
             }),
@@ -423,13 +431,17 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
             max_intensity = max_intensity.max(peak.intensity.0);
             peak.annotation.iter().for_each(|fragment| {
                 fragment.ion.position().map(|i| {
-                    output[fragment.peptidoform_index][fragment.peptide_index][match i
-                        .sequence_index
+                    if let (Some(pii), Some(pi)) =
+                        (fragment.peptidoform_index, fragment.peptide_index)
                     {
-                        rustyms::SequencePosition::Index(i) => i,
-                        _ => unreachable!(), // TODO: handle better
-                    }]
-                    .insert(fragment.ion.clone())
+                        output[pii][pi][match i.sequence_index {
+                            rustyms::SequencePosition::Index(i) => i,
+                            _ => unreachable!(), // TODO: handle better
+                        }]
+                        .insert(fragment.ion.clone())
+                    } else {
+                        false
+                    }
                 });
             });
         }
@@ -536,25 +548,26 @@ fn render_spectrum(
         .unwrap();
     }
     for peak in fragments {
-        let peak_mz = peak.mz(mass_mode);
-        if !model.mz_range.contains(&peak_mz) {
-            continue;
+        if let Some(peak_mz) = peak.mz(mass_mode) {
+            if !model.mz_range.contains(&peak_mz) {
+                continue;
+            }
+            write!(
+                output,
+                "<span class='theoretical peak {}' style='--mz:{};' data-label='{}'>{}</span>",
+                get_classes(&[peak.clone()], unique_peptide_lookup),
+                peak_mz.value,
+                (peak_mz.value * 100.0).round() / 100.0,
+                get_label(
+                    &spectrum.peptide,
+                    &[peak.clone()],
+                    multiple_peptidoforms,
+                    multiple_peptides,
+                    multiple_glycans
+                ),
+            )
+            .unwrap();
         }
-        write!(
-            output,
-            "<span class='theoretical peak {}' style='--mz:{};' data-label='{}'>{}</span>",
-            get_classes(&[peak.clone()], unique_peptide_lookup),
-            peak_mz.value,
-            (peak_mz.value * 100.0).round() / 100.0,
-            get_label(
-                &spectrum.peptide,
-                &[peak.clone()],
-                multiple_peptidoforms,
-                multiple_peptides,
-                multiple_glycans
-            ),
-        )
-        .unwrap();
     }
     write!(output, "</div>").unwrap();
     write!(
@@ -630,11 +643,11 @@ pub fn spectrum_table(
                 bonds.iter().map(|b| b.label()).join(""),
                 "Y".to_string(),
             )
-        } else if let FragmentType::immonium(pos, aa) = &annotation.ion {
+        } else if let FragmentType::Immonium(pos, aa) = &annotation.ion {
             (
                 display_sequence_index(pos.sequence_index),
                 pos.series_number.to_string(),
-                format!("immonium {}", aa.char()),
+                format!("immonium {}", aa.aminoacid.char()),
             )
         } else {
             // precursor
@@ -715,12 +728,16 @@ pub fn spectrum_table(
                     [
                         "matched".to_string(),
                         if multiple_peptidoforms {
-                            format!("{}", annotation.peptidoform_index + 1)
+                            annotation
+                                .peptidoform_index
+                                .map_or("?".to_string(), |i| (i + 1).to_string())
                         } else {
                             String::new()
                         },
                         if multiple_peptides {
-                            format!("{}", annotation.peptide_index + 1)
+                            annotation
+                                .peptide_index
+                                .map_or("?".to_string(), |i| (i + 1).to_string())
                         } else {
                             String::new()
                         },
@@ -728,27 +745,29 @@ pub fn spectrum_table(
                         label.to_string(),
                         annotation
                             .neutral_loss
-                            .as_ref()
-                            .map_or(String::new(), display_neutral_loss),
+                            .iter()
+                            .map(display_neutral_loss)
+                            .join(""),
                         format!("<span title='{0}'>{0:.2}</span>", peak.intensity),
                         format!(
                             "<span title='{0}'>{0:.2}</span>",
                             peak.experimental_mz.value
                         ),
-                        display_formula(&annotation.formula, true),
-                        format!(
-                            "{:.5}",
-                            (annotation.mz(MassMode::Monoisotopic) - peak.experimental_mz)
-                                .abs()
-                                .value
-                        ),
-                        format!(
-                            "{:.2}",
-                            ((annotation.mz(MassMode::Monoisotopic) - peak.experimental_mz).abs()
-                                / annotation.mz(MassMode::Monoisotopic)
-                                * 1e6)
-                                .value
-                        ),
+                        annotation
+                            .formula
+                            .as_ref()
+                            .map(|f| display_formula(f, true))
+                            .to_optional_string(),
+                        annotation
+                            .mz(MassMode::Monoisotopic)
+                            .map_or("-".to_string(), |f| {
+                                format!("{:.5}", (f - peak.experimental_mz).abs().value)
+                            }),
+                        annotation
+                            .mz(MassMode::Monoisotopic)
+                            .map_or("-".to_string(), |f| {
+                                format!("{:.2}", f.ppm(peak.experimental_mz).value * 1e6)
+                            }),
                         format!("{:+}", annotation.charge.value),
                         series_number,
                         String::new(), //format!("{:?}", annotation.formula.labels()),
@@ -764,16 +783,22 @@ pub fn spectrum_table(
         {
             let (sequence_index, series_number, label) = generate_text(&fragment.clone());
             data.push((
-                fragment.mz(MassMode::Monoisotopic).value,
+                fragment
+                    .mz(MassMode::Monoisotopic)
+                    .map_or(f64::NAN, |v| v.value),
                 [
                     "fragment".to_string(),
                     if multiple_peptidoforms {
-                        format!("{}", fragment.peptidoform_index + 1)
+                        fragment
+                            .peptidoform_index
+                            .map_or("?".to_string(), |i| (i + 1).to_string())
                     } else {
                         String::new()
                     },
                     if multiple_peptides {
-                        format!("{}", fragment.peptide_index + 1)
+                        fragment
+                            .peptide_index
+                            .map_or("?".to_string(), |i| (i + 1).to_string())
                     } else {
                         String::new()
                     },
@@ -781,14 +806,20 @@ pub fn spectrum_table(
                     label.to_string(),
                     fragment
                         .neutral_loss
-                        .as_ref()
-                        .map_or(String::new(), display_neutral_loss),
+                        .iter()
+                        .map(display_neutral_loss)
+                        .join(""),
                     "-".to_string(),
-                    format!(
-                        "<span title='{0}'>{0:.2}</span>",
-                        fragment.mz(MassMode::Monoisotopic).value
-                    ),
-                    display_formula(&fragment.formula, true),
+                    fragment
+                        .mz(MassMode::Monoisotopic)
+                        .map_or("-".to_string(), |v| {
+                            format!("<span title='{0}'>{0:.2}</span>", v.value)
+                        }),
+                    fragment
+                        .formula
+                        .as_ref()
+                        .map(|f| display_formula(f, true))
+                        .to_optional_string(),
                     "-".to_string(),
                     "-".to_string(),
                     format!("{:+}", fragment.charge.value),
