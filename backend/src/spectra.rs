@@ -459,7 +459,7 @@ pub fn close_raw_file(file_index: usize, state: ModifiableState) {
 }
 
 #[tauri::command]
-pub fn unselect_spectrum(file_index: usize, index: usize, state: ModifiableState) {
+pub fn deselect_spectrum(file_index: usize, index: usize, state: ModifiableState) {
     let _ = state.lock().map(|mut state| {
         state
             .spectra

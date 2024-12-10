@@ -194,8 +194,10 @@ impl ModelParameters {
             "all" => Model::all(),
             "ethcd" => Model::ethcd(),
             "hot_eacid" => Model::hot_eacid(),
+            "ead" => Model::ead(),
             "cidhcd" => Model::cid_hcd(),
             "etd" => Model::etd(),
+            "td_etd" => Model::td_etd(),
             "none" => Model::none(),
             "custom" => Model::none()
                 .a(PrimaryIonSeries {
@@ -465,7 +467,7 @@ fn main() {
             spectra::select_spectrum_native_id,
             spectra::get_open_raw_files,
             spectra::get_selected_spectra,
-            spectra::unselect_spectrum,
+            spectra::deselect_spectrum,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
