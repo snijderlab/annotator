@@ -476,6 +476,7 @@ async function load_identified_peptide() {
   if (select.children.length == 0) return;
   let file_id = Number(select.options[select.selectedIndex].value);
   let index = Number(document.querySelector("#details-identified-peptide-index").value);
+  document.getElementById("load-identified-peptide").classList.add("loading");
   invoke("load_identified_peptide", { index: index, file: file_id }).then((result) => {
     document.querySelector("#peptide").innerText = result.peptide;
     document.querySelector("#spectrum-charge").value = result.charge;
@@ -488,8 +489,10 @@ async function load_identified_peptide() {
       clearError("spectrum-error");
     }
     update_selected_spectra();
+    document.getElementById("load-identified-peptide").classList.remove("loading");
   }).catch(() => {
     document.querySelector("#identified-peptide-details").innerText = "ERROR";
+    document.getElementById("load-identified-peptide").classList.remove("loading");
   })
 }
 

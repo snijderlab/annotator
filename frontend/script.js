@@ -501,7 +501,8 @@ function SequenceElementEvent(e, permanent, turn_on = null) {
 }
 
 export function SetUpSpectrumInterface() {
-    document.getElementById("spectrum-wrapper").classList.add("error-graph-relative");
+    if (!document.getElementById("spectrum-wrapper").classList.contains("error-graph-absolute"))
+        document.getElementById("spectrum-wrapper").classList.add("error-graph-relative");
     SpectrumSetUp();
     var event = new Event('change');
     document.getElementById("error-graph-y-max").dispatchEvent(event);

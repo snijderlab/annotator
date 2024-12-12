@@ -16,6 +16,9 @@ pub fn get_classes(annotations: &[Fragment], unique_peptide_lookup: &[(usize, us
     let mut first_peptide_index = None;
     for annotation in annotations {
         output.push(annotation.ion.label().to_string());
+        if annotation.ion.label() == "z·" {
+            output.push("z".to_string());
+        }
         output.push(format!(
             "p{}",
             annotation
