@@ -2453,7 +2453,7 @@ summary {
             content: "";
             display: block;
             position: absolute;
-            top: calc(.5em + var(--spacing));
+            top: calc(var(--fragments-padding) + var(--spacing));
             left: calc(50% - 0.5 * var(--spacing));
             width: var(--spacing);
             height: var(--spacing);
@@ -2475,7 +2475,7 @@ summary {
             content: "";
             display: block;
             position: absolute;
-            top: calc(.5em + 1.25 * var(--spacing));
+            top: calc(var(--fragments-padding) + 1.25 * var(--spacing));
             left: calc(50% - 0.5 * var(--spacing));
             width: var(--spacing);
             height: calc(0.5 * var(--spacing));
@@ -2496,6 +2496,10 @@ summary {
     }
 
     &>.cross-link {
+        &.term {
+            width: 2.5ch;
+        }
+
         color: var(--color-xl, --color-purple-light);
 
         &::before {
@@ -2510,6 +2514,11 @@ summary {
             text-align: center;
             min-width: calc(var(--pad-left) * 2 + var(--pad-right) * 2 + var(--fragments-padding) * 4 + 2ch + 2 * var(--spacing));
             width: fit-content;
+        }
+
+        &.term::before {
+            font-size: calc(0.75 * var(--fs-peptide));
+            top: unset;
         }
     }
 }
@@ -2530,10 +2539,17 @@ summary {
     }
 
     &>.cross-link {
+        &.term {
+            width: 2ch;
+        }
+
         &::before {
             content: attr(data-cross-links-compact);
             top: calc(-1 * var(--fragments-padding));
             left: calc(0.5* var(--fragments-padding));
+        }
+
+        &:not(.term)::before {
             transform: rotate(-90deg);
             transform-origin: left center;
             min-width: calc(var(--pad-left) + var(--pad-right) + var(--fs-peptide));

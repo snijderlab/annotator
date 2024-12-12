@@ -920,6 +920,17 @@ function updateCustomModifications() {
             })
             .catch(error => console.error(error)));
         new_element.appendChild(edit_button);
+        let duplicate_button = document.createElement("button");
+        duplicate_button.classList.add("duplicate");
+        duplicate_button.appendChild(document.createTextNode("Duplicate"));
+        duplicate_button.addEventListener("click", () =>
+          invoke("duplicate_custom_modification", { id: modification[0], newId: Number(document.getElementById("custom-mod-create").dataset.newId) })
+            .then(result => {
+              loadCustomModification(result);
+              document.getElementById("custom-mod-dialog").showModal();
+            })
+            .catch(error => console.error(error)));
+        new_element.appendChild(duplicate_button);
         let delete_button = document.createElement("button");
         delete_button.classList.add("delete");
         delete_button.classList.add("secondary");

@@ -90,6 +90,14 @@ impl RenderToHtml for IdentifiedPeptide {
                             .to_optional_string(),
                     ))
                     .clone(),
+                HtmlTag::p.new()
+                    .content(format!(
+                        "Protein&nbsp;id:&nbsp;{}, Name:&nbsp;{}, Location:&nbsp;{}",
+                        self.protein_id().to_optional_string(),
+                        self.protein_name().to_optional_string(),
+                        self.protein_location().map(|s| format!("{} — {}", s.start, s.end)).to_optional_string(),
+                    ))
+                    .clone(),
                 HtmlTag::ul.new().children(match self.scans() {
                     SpectrumIds::None => vec![HtmlTag::p.new().content("No spectrum reference").clone()],
                     SpectrumIds::FileNotKnown(scans) => vec![HtmlTag::li.new().content("Scans: ").content(scans.iter().join(";")).clone()],
@@ -187,24 +195,13 @@ impl RenderToTable for MetaData {
                 ("ID", data.id.to_optional_string()),
                 (
                     "Protein",
-                    data.protein_accession
-                        .as_ref()
-                        .and_then(|a| {
-                            data.protein_group.and_then(|g| {
-                                data.protein_id
-                                    .and_then(|i| data.unique.map(|u| (a, g, i, u)))
-                            })
+                        data.protein_group.and_then(|g| {
+                            data.protein_id
+                                .and_then(|i| data.unique.map(|u| (g, i, u)))
                         })
-                        .map(|(a, g, i, u)| {
-                            format!("accession: {a}, group: {g}, ID: {i}, unique: {u}")
+                        .map(|(g, i, u)| {
+                            format!("group: {g}, ID: {i}, unique: {u}")
                         })
-                        .to_optional_string(),
-                ),
-                (
-                    "Protein location",
-                    data.start
-                        .and_then(|s| data.end.map(|e| (s, e)))
-                        .map(|(s, e)| format!("{s} — {e}"))
                         .to_optional_string(),
                 ),
                 (
@@ -234,7 +231,6 @@ impl RenderToTable for MetaData {
                 ("Spectra ID", data.spectra_id.to_optional_string()),
                 ("Fraction", data.fraction.to_optional_string()),
                 ("Protein", data.protein.to_optional_string()),
-                ("Protein location", data.protein_start.map(|s| format!("{s} — {}", s + data.peptide.len())).to_optional_string()),
                 (
                     "Protein Origin",
                     data.protein_origin.as_ref().to_optional_string(),
@@ -257,10 +253,6 @@ impl RenderToTable for MetaData {
                 ("Accession", data.accession.to_string()),
                 ("Organism", data.organism.to_string()),
                 ("Protein name", data.protein_name.to_string()),
-                (
-                    "Protein location",
-                    format!("{} — {}", data.protein_location.0, data.protein_location.1),
-                ),
                 (
                     "Flanking residues",
                     format!(
@@ -569,13 +561,9 @@ impl RenderToTable for MetaData {
                     "Number of enzymatic termini",
                     data.enzymatic_termini.to_string(),
                 ),
-                ("Protein location", format!("{} — {}", data.protein_start, data.protein_end)),
                 ("Intensity", format!("{:e}", data.intensity)),
                 ("Purity", data.purity.to_string()),
                 ("Is unique", data.is_unique.to_string()),
-                ("Protein", data.protein.to_string()),
-                ("Protein ID", data.protein_id.to_string()),
-                ("Entry name", data.entry_name.to_string()),
                 ("Gene", data.gene.to_string()),
                 ("Protein description", data.protein_description.to_string()),
                 ("Mapped genes", data.mapped_genes.join(",")),
@@ -613,14 +601,6 @@ impl RenderToTable for MetaData {
                     data.reliability.as_ref().to_optional_string(),
                 ),
                 ("Uri", data.uri.as_ref().to_optional_string()),
-                (
-                    "Protein location",
-                    format!(
-                        "{} — {}",
-                        data.start.to_optional_string(),
-                        data.end.to_optional_string()
-                    ),
-                ),
                 (
                     "Flanking residues",
                     format!("{}_(seq)_{}", data.preceding_aa, data.following_aa),
@@ -710,13 +690,6 @@ impl RenderToTable for MetaData {
             ],
             MetaData::PLGS(data) => vec![
                 (
-                    "Protein",
-                    format!(
-                        "id: {} description: {}",
-                        data.protein_id, data.protein_description
-                    ),
-                ),
-                (
                     "Protein score",
                     format!(
                         "<span class='colour-dot {curate}' title='{curate}'></span> score: {} fpr: {} coverage: {}%",
@@ -741,13 +714,6 @@ impl RenderToTable for MetaData {
                         "{} (∑I: {:.3e})",
                         data.protein_matched_products,
                         data.protein_matched_product_intensity_sum,
-                    ),
-                ),
-                ("Protein location",
-                    format!(
-                        "{} — {}",
-                        data.peptide_start,
-                        data.peptide_start + data.peptide.len(),
                     ),
                 ),
                 (

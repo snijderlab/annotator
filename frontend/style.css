@@ -1145,7 +1145,7 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
     }
   }
 
-  .delete {
+  button:not(:first-of-type) {
     margin-left: .5rem;
   }
 }

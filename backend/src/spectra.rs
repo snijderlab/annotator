@@ -1,4 +1,4 @@
-use std::{io::ErrorKind, str::FromStr};
+use std::{io::ErrorKind, ops::RangeInclusive, str::FromStr};
 
 use itertools::Itertools;
 use mzdata::{
@@ -15,7 +15,7 @@ use mzdata::{
 use mzpeaks::CentroidPeak;
 use rustyms::{
     error::{Context, CustomError},
-    system::{dalton, Mass},
+    system::{dalton, Mass, OrderedTime},
 };
 use serde::{Deserialize, Serialize};
 
@@ -445,6 +445,22 @@ pub fn select_spectrum_native_id(
         .find(|f| f.id() == file_index)
         .ok_or("File index not valid")
         .and_then(|file| file.select_native_id(native_id))
+}
+
+#[tauri::command]
+pub fn select_retention_time(
+    file_index: usize,
+    rt: RangeInclusive<OrderedTime>,
+    state: ModifiableState,
+) -> Result<(), &'static str> {
+    state
+        .lock()
+        .unwrap()
+        .spectra
+        .iter_mut()
+        .find(|f| f.id() == file_index)
+        .ok_or("File index not valid")
+        .and_then(|file| file.select_retention_time(rt))
 }
 
 #[tauri::command]

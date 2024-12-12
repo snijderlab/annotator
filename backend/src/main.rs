@@ -439,6 +439,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             annotate_spectrum,
             custom_modifications::delete_custom_modification,
+            custom_modifications::duplicate_custom_modification,
             custom_modifications::get_custom_modification,
             custom_modifications::get_custom_modifications,
             custom_modifications::update_modification,

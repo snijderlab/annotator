@@ -168,7 +168,7 @@ pub fn validate_custom_linker_specificity(
         if stubs.is_empty() {
             String::new()
         } else {
-            ", Neutral losses: ".to_string() + &stubs.iter().map(|s| display_stubs(s, true)).join(", ")
+            ", Breakage: ".to_string() + &stubs.iter().map(|s| display_stubs(s, true)).join(", ")
         },
         if diagnostic_ions.is_empty() {
             String::new()
@@ -193,6 +193,78 @@ pub fn get_custom_modifications(
             )
         })
         .collect())
+}
+
+#[tauri::command]
+pub fn duplicate_custom_modification(
+    id: usize,
+    new_id: usize,
+    state: ModifiableState,
+) -> Result<CustomModification, &'static str> {
+    let mut locked_state = state.lock().map_err(|_| "Could not lock mutex")?;
+    if let Some(index) = locked_state
+        .database
+        .iter()
+        .position(|p| p.0.is_some_and(|i| i == id))
+    {
+        let mut modification = locked_state.database[index].clone();
+        modification.0 = Some(new_id);
+        modification.2 = match modification.2.as_ref().clone() {
+            SimpleModificationInner::Database {
+                mut id,
+                specificities,
+                formula,
+            } => {
+                id.id = Some(new_id);
+                SimpleModificationInner::Database {
+                    specificities,
+                    formula,
+                    id,
+                }
+            }
+            SimpleModificationInner::Gno {
+                mut id,
+                composition,
+                structure_score,
+                subsumption_level,
+                motif,
+                taxonomy,
+                glycomeatlas,
+            } => {
+                id.id = Some(new_id);
+                SimpleModificationInner::Gno {
+                    id,
+                    composition,
+                    structure_score,
+                    subsumption_level,
+                    motif,
+                    taxonomy,
+                    glycomeatlas,
+                }
+            }
+            SimpleModificationInner::Linker {
+                mut id,
+                specificities,
+                formula,
+                length,
+            } => {
+                id.id = Some(new_id);
+                SimpleModificationInner::Linker {
+                    id,
+                    specificities,
+                    formula,
+                    length,
+                }
+            }
+            full => full,
+        }
+        .into();
+        locked_state.database.push(modification);
+        drop(locked_state);
+        get_custom_modification(new_id, state)
+    } else {
+        Err("Could not find specified id")
+    }
 }
 
 #[tauri::command]

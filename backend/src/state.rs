@@ -1,15 +1,16 @@
 use std::{
     cell::{Ref, RefCell, RefMut},
     fs::File,
+    ops::RangeInclusive,
     sync::atomic::AtomicUsize,
 };
 
 use mzdata::{
-    io::{MZReaderType, SpectrumSource},
+    io::{MZReaderType, RandomAccessSpectrumIterator, SpectrumSource},
     prelude::SpectrumLike,
     spectrum::MultiLayerSpectrum,
 };
-use rustyms::{identification::IdentifiedPeptide, ontologies::CustomDatabase};
+use rustyms::{identification::IdentifiedPeptide, ontologies::CustomDatabase, system::OrderedTime};
 use serde::{Deserialize, Serialize};
 
 pub struct State {
@@ -165,6 +166,33 @@ impl RawFile {
                 } else {
                     Err("Native ID does not exist")
                 }
+            }
+        }
+    }
+
+    pub fn select_retention_time(
+        &mut self,
+        rt: RangeInclusive<OrderedTime>,
+    ) -> Result<(), &'static str> {
+        match self {
+            Self::File {
+                rawfile,
+                selected_spectra,
+                ..
+            } => rawfile
+                .start_from_time(rt.start().value)
+                .map(|iter| {
+                    iter.take_while(|s| s.start_time() <= rt.end().value)
+                        .for_each(|s| {
+                            if s.ms_level() == 2 && !selected_spectra.contains(&s.index()) {
+                                selected_spectra.push(s.index());
+                                selected_spectra.sort();
+                            }
+                        })
+                })
+                .map_err(|_| "Retention time outside of range"),
+            Self::Single { .. } => {
+                Err("Cannot select based on retention time for a single spectrum")
             }
         }
     }

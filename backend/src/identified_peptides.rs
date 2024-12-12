@@ -243,6 +243,7 @@ pub async fn load_identified_peptide(
                                 let _ = match scan {
                                     SpectrumId::Index(i) => state.spectra[index].select_index(i),
                                     SpectrumId::Native(n) => state.spectra[index].select_native_id(n),
+                                    SpectrumId::RetentionTime(rt) => state.spectra[index].select_retention_time(rt),
                                 };
                             }
                         } else {
@@ -287,6 +288,7 @@ pub async fn load_identified_peptide(
                                     let _ = match scan {
                                         SpectrumId::Index(i) => state.spectra[index].select_index(i),
                                         SpectrumId::Native(n) => state.spectra[index].select_native_id(n),
+                                        SpectrumId::RetentionTime(rt) => state.spectra[index].select_retention_time(rt),
                                     };
                                 }
                             } else {
