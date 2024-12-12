@@ -2370,17 +2370,6 @@ summary {
         font-family: 'Roboto Mono';
         box-sizing: content-box;
 
-        /* Original sequence  */
-
-        /* .original-sequence-wrapper {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.original-sequence {
-    display: inline-flex; */
-
         &::after {
             position: absolute;
             content: "";
@@ -2441,6 +2430,90 @@ summary {
         &.default:has(+.default) {
             border-right: transparent;
             --pad-right: 2px;
+        }
+    }
+
+    .corner {
+        position: absolute;
+        display: block;
+        border: var(--stroke-peptide) solid var(--color-highlight, var(--color, red));
+        width: var(--width);
+        height: var(--height);
+        pointer-events: none;
+
+        &.x,
+        &.y,
+        &.z,
+        &.z· {
+            border-right: none;
+            border-bottom: none;
+            top: 0px;
+            left: calc(var(--side-spacing) + var(--pad-left));
+        }
+
+        &.y {
+            top: var(--spacing);
+            left: calc(var(--spacing) + var(--side-spacing) + var(--pad-left));
+            height: calc(var(--height) - var(--spacing));
+            width: calc(var(--width) - var(--spacing));
+        }
+
+        &.z,
+        &.z· {
+            top: calc(2 * var(--spacing));
+            left: calc(2 * var(--spacing) + var(--side-spacing) + var(--pad-left));
+            height: calc(var(--height) - 2 * var(--spacing));
+            width: calc(var(--width) - 2 * var(--spacing));
+        }
+
+        &.w {
+            height: 0;
+            border-width: calc(var(--stroke-peptide) * 0.5);
+            left: calc(3 * var(--spacing) + var(--side-spacing) + var(--pad-left));
+            right: calc(3 * var(--spacing) + var(--side-spacing) + var(--pad-right));
+            top: calc(3 * var(--spacing));
+            width: auto;
+        }
+
+        &.a,
+        &.b,
+        &.c {
+            border-left: none;
+            border-top: none;
+            bottom: 0px;
+            right: calc(var(--side-spacing) + var(--pad-right));
+        }
+
+        &.a {
+            bottom: calc(2 * var(--spacing));
+            right: calc(2 * var(--spacing) + var(--side-spacing) + var(--pad-right));
+            height: calc(var(--height) - 2 * var(--spacing));
+            width: calc(var(--width) - 2 * var(--spacing));
+        }
+
+        &.b {
+            bottom: var(--spacing);
+            right: calc(var(--spacing) + var(--side-spacing) + var(--pad-right));
+            height: calc(var(--height) - var(--spacing));
+            width: calc(var(--width) - var(--spacing));
+        }
+
+        &.d {
+            height: 0;
+            border-width: calc(var(--stroke-peptide) * 0.5);
+            left: calc(3 * var(--spacing) + var(--side-spacing) + var(--pad-left));
+            right: calc(3 * var(--spacing) + var(--side-spacing) + var(--pad-right));
+            bottom: calc(3 * var(--spacing));
+            width: auto;
+        }
+
+        &.v {
+            height: 0;
+            border-width: calc(var(--stroke-peptide) * 0.5);
+            left: calc(3 * var(--spacing) + var(--side-spacing) + var(--pad-left));
+            right: calc(3 * var(--spacing) + var(--side-spacing) + var(--pad-right));
+            bottom: calc(4 * var(--spacing));
+            width: auto;
         }
     }
 
@@ -2554,6 +2627,51 @@ summary {
             transform-origin: left center;
             min-width: calc(var(--pad-left) + var(--pad-right) + var(--fs-peptide));
         }
+    }
+
+    .corner.d {
+        left: unset;
+        height: var(--side-spacing);
+    }
+
+    .corner.w {
+        height: var(--side-spacing);
+    }
+
+}
+
+.spectrum.peptide-intensity-ion .corner {
+    width: calc(2 * var(--stroke-peptide));
+    height: calc(var(--intensity) / var(--max-position-intensity) * (0.5em + var(--fragments-padding)));
+    background-color: var(--color);
+    border: none;
+    --spacing: calc(var(--stroke-peptide) * 4);
+    --pad-left: -13px;
+    --pad-right: -13px;
+
+    &.a,
+    &.b,
+    &.c {
+        top: calc(50% + 0.5 * var(--stroke-peptide));
+        bottom: unset;
+    }
+
+    &.d {
+        top: calc(var(--fragments-padding) + 1em);
+        bottom: unset;
+    }
+
+    &.x,
+    &.y,
+    &.z {
+        bottom: calc(50% + 0.5 * var(--stroke-peptide));
+        top: unset;
+    }
+
+    &.v,
+    &.w {
+        bottom: calc(var(--fragments-padding) + 1em);
+        top: unset;
     }
 }
 
@@ -2948,99 +3066,6 @@ summary {
 .spectrum .complex-peptide {
     display: flex;
     flex-wrap: wrap;
-}
-
-.spectrum .corner {
-    position: absolute;
-    display: block;
-    border: var(--stroke-peptide) solid var(--color-highlight, var(--color, red));
-    width: var(--width);
-    height: var(--height);
-    pointer-events: none;
-
-    &.x,
-    &.y,
-    &.z,
-    &.z· {
-        border-right: none;
-        border-bottom: none;
-        top: 0px;
-        left: calc(var(--side-spacing) + var(--pad-left));
-    }
-
-    &.y {
-        top: var(--spacing);
-        left: calc(var(--spacing) + var(--side-spacing) + var(--pad-left));
-        height: calc(var(--height) - var(--spacing));
-        width: calc(var(--width) - var(--spacing));
-    }
-
-    &.z,
-    &.z· {
-        top: calc(2 * var(--spacing));
-        left: calc(2 * var(--spacing) + var(--side-spacing) + var(--pad-left));
-        height: calc(var(--height) - 2 * var(--spacing));
-        width: calc(var(--width) - 2 * var(--spacing));
-    }
-
-    &.w {
-        height: 0;
-        border-width: calc(var(--stroke-peptide) * 0.5);
-        left: calc(3 * var(--spacing) + var(--side-spacing) + var(--pad-left));
-        right: calc(3 * var(--spacing) + var(--side-spacing) + var(--pad-right));
-        top: calc(3 * var(--spacing));
-        width: auto;
-    }
-
-    &.a,
-    &.b,
-    &.c {
-        border-left: none;
-        border-top: none;
-        bottom: 0px;
-        right: calc(var(--side-spacing) + var(--pad-right));
-    }
-
-    &.b {
-        bottom: var(--spacing);
-        right: calc(var(--spacing) + var(--side-spacing) + var(--pad-right));
-        height: calc(var(--height) - var(--spacing));
-        width: calc(var(--width) - var(--spacing));
-    }
-
-    &.c {
-        bottom: calc(2 * var(--spacing));
-        right: calc(2 * var(--spacing) + var(--side-spacing) + var(--pad-right));
-        height: calc(var(--height) - 2 * var(--spacing));
-        width: calc(var(--width) - 2 * var(--spacing));
-    }
-
-    &.d {
-        height: 0;
-        border-width: calc(var(--stroke-peptide) * 0.5);
-        left: calc(3 * var(--spacing) + var(--side-spacing) + var(--pad-left));
-        right: calc(3 * var(--spacing) + var(--side-spacing) + var(--pad-right));
-        bottom: calc(3 * var(--spacing));
-        width: auto;
-    }
-
-    &.v {
-        height: 0;
-        border-width: calc(var(--stroke-peptide) * 0.5);
-        left: calc(3 * var(--spacing) + var(--side-spacing) + var(--pad-left));
-        right: calc(3 * var(--spacing) + var(--side-spacing) + var(--pad-right));
-        bottom: calc(4 * var(--spacing));
-        width: auto;
-    }
-}
-
-.compact span.corner.d {
-    left: unset;
-    height: var(--side-spacing);
-}
-
-.compact span.corner.w {
-    height: var(--side-spacing);
 }
 
 .spectrum .canvas-wrapper {

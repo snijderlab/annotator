@@ -805,6 +805,13 @@ function PeptideSettings(event) {
         spectrum_wrapper.classList.toggle("compact");
     } else if (t.name == "highlight") {
         selected_colour = t.value;
+    } else if (t.name == "peptide-intensities") {
+        spectrum_wrapper.classList.remove("peptide-intensity-ion", "peptide-intensity-combined");
+        if (t.value == "ion") {
+            spectrum_wrapper.classList.add("peptide-intensity-ion");
+        } else if (t.value == "combined") {
+            spectrum_wrapper.classList.add("peptide-intensity-combined");
+        }
     } else if (t.id == "clear-colour") {
         spectrum_wrapper.querySelectorAll(".peptide>span").forEach(item => item.classList.remove("red", "green", "blue", "yellow", "purple", "default", "highlight"))
         spectrum_wrapper.querySelectorAll(".ion-series .permanent").forEach(item => item.classList.remove("permanent"))

@@ -1,12 +1,12 @@
-use std::{collections::HashSet, fmt::Write};
+use std::{collections::HashMap, fmt::Write};
 
+use crate::html_builder::HtmlTag;
 use itertools::Itertools;
+use ordered_float::OrderedFloat;
 use rustyms::{
     fragment::*, modification::CrossLinkName, CompoundPeptidoform, LinearPeptide, Linked,
     Modification,
 };
-
-use crate::html_builder::HtmlTag;
 
 /// Render a peptidoform with the given ions present. It returns a lookup with the unique ids for all peptides.
 pub fn render_peptide(
@@ -21,9 +21,30 @@ pub fn render_peptide(
         .peptidoforms()
         .iter()
         .any(|p| p.peptides().len() > 1);
+    let max_position_intensity = overview
+        .as_ref()
+        .and_then(|o| {
+            o.iter()
+                .flat_map(|o| o.iter())
+                .flat_map(|o| o.iter())
+                .flat_map(|o| o.values())
+                .max()
+                .copied()
+        })
+        .unwrap_or_default();
+    let max_combined_position_intensity = overview
+        .as_ref()
+        .and_then(|o| {
+            o.iter()
+                .flat_map(|o| o.iter())
+                .flat_map(|o| o.iter())
+                .map(|o| o.values().sum::<OrderedFloat<f64>>())
+                .max()
+        })
+        .unwrap_or_default();
     write!(
         output,
-        "<div class='complex-peptide{}{}'>",
+        "<div class='complex-peptide{}{}' style='--max-position-intensity:{max_position_intensity};--max-combined-position-intensity:{max_combined_position_intensity};'>",
         overview.as_ref().map_or("", |_| " with-fragments"),
         local_confidence
             .as_ref()
@@ -59,7 +80,7 @@ pub fn render_peptide(
 fn render_linear_peptide(
     output: &mut String,
     peptide: &LinearPeptide<Linked>,
-    overview: Option<&[HashSet<FragmentType>]>,
+    overview: Option<&[HashMap<FragmentType, OrderedFloat<f64>>]>,
     local_confidence: Option<&[f64]>,
     peptidoform_index: usize,
     peptide_index: usize,
@@ -205,7 +226,7 @@ fn render_linear_peptide(
         )
         .unwrap();
         if let Some(ions) = ions {
-            for ion in ions {
+            for (ion, intensity) in ions {
                 if !matches!(
                     ion,
                     FragmentType::Immonium(_, _)
@@ -214,7 +235,7 @@ fn render_linear_peptide(
                 ) {
                     write!(
                         output,
-                        "<span class='corner {}'></span>",
+                        "<span class='corner {}' style='--intensity:{intensity}'></span>",
                         ion.label().trim_end_matches('·')
                     )
                     .unwrap();

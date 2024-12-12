@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::HashSet, fmt::Write};
+use std::{cmp::Ordering, collections::HashMap, fmt::Write};
 
 use itertools::Itertools;
 use mzdata::spectrum::MultiLayerSpectrum;
@@ -17,6 +17,7 @@ use crate::{
     metadata_render::OptionalString,
     render::label::display_sequence_index,
 };
+use ordered_float::OrderedFloat;
 
 use super::{classes::get_classes, label::get_label};
 
@@ -401,7 +402,7 @@ fn render_error_graph(
     write!(output, "</div>").unwrap();
 }
 
-pub type PositionCoverage = Vec<Vec<Vec<HashSet<FragmentType>>>>;
+pub type PositionCoverage = Vec<Vec<Vec<HashMap<FragmentType, OrderedFloat<f64>>>>>;
 
 pub struct Limits {
     pub mz: MassOverCharge,
@@ -417,7 +418,7 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
         .map(|p| {
             p.peptides()
                 .iter()
-                .map(|p| vec![HashSet::new(); p.len()])
+                .map(|p| vec![HashMap::new(); p.len()])
                 .collect()
         })
         .collect();
@@ -434,11 +435,13 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
                     if let (Some(pii), Some(pi)) =
                         (fragment.peptidoform_index, fragment.peptide_index)
                     {
-                        output[pii][pi][match i.sequence_index {
+                        *output[pii][pi][match i.sequence_index {
                             rustyms::SequencePosition::Index(i) => i,
                             _ => unreachable!(), // TODO: handle better
                         }]
-                        .insert(fragment.ion.clone())
+                        .entry(fragment.ion.clone())
+                        .or_insert_with(|| OrderedFloat::default()) += peak.intensity;
+                        true
                     } else {
                         false
                     }

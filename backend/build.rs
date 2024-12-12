@@ -449,6 +449,15 @@ fn main() {
               </div>
               <button id='clear-colour' class='clear-colour' title='Remove all annotations on all peptides' tabindex='0'>Clear</button>
             </div>
+
+            <div class='row'>
+              <span class='title'>Show intensities</span>
+              <div class='select-box' id='peptide-intensities'>
+                <label tabindex='0'><input type='radio' name='peptide-intensities' value='off' id='peptide-intensities-off' checked>Off</label>
+                <label tabindex='0'><input type='radio' name='peptide-intensities' value='ion' id='peptide-intensities-ion'>Ion</label>
+                <label tabindex='0'><input type='radio' name='peptide-intensities' value='combined' id='peptide-intensities-combined'>Combined</label>
+              </div>
+            </div>
     
           </fieldset>
 
