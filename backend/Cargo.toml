@@ -25,14 +25,14 @@ rustyms = { version = "0.9.0-alpha.2", default-features = false, features = [
 ] }
 ordered-float = { version = "4.5", features = ["serde"] }
 rayon = "1.10"
-mzdata = { version = "0.39", default-features = false, features = [
+mzdata = { version = "0.40", default-features = false, features = [
     "mzsignal",
     "proxi-async",
     "thermo",
     "zlib",
 ] }
-mzpeaks = "0.23"
-mzsignal = "0.27"
+mzpeaks = "1.0"
+mzsignal = "1.0"
 tauri-plugin-dialog = "2"
 thin-vec = { version = "0.2", features = ["serde"] }
 
