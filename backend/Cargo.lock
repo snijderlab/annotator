@@ -72,8 +72,8 @@ name = "annotator"
 version = "0.2.2"
 dependencies = [
  "itertools",
- "mzdata 0.40.0",
- "mzpeaks 1.0.0",
+ "mzdata",
+ "mzpeaks",
  "mzsignal",
  "ordered-float",
  "rayon",
@@ -2584,32 +2584,6 @@ dependencies = [
 
 [[package]]
 name = "mzdata"
-version = "0.39.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "927876dbd058419e3be4479cc90d12f1007a9032d942276112334fdb1622e533"
-dependencies = [
- "base16ct",
- "base64-simd",
- "bitflags 2.6.0",
- "bytemuck",
- "chrono",
- "flate2",
- "identity-hash",
- "indexmap 2.7.0",
- "log",
- "md5",
- "mzpeaks 0.23.0",
- "num-traits",
- "quick-xml 0.30.0",
- "regex",
- "serde",
- "serde_json",
- "sha1",
- "thiserror 2.0.7",
-]
-
-[[package]]
-name = "mzdata"
 version = "0.40.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "931f8b52e9264ebd2186344b030cf36bc08e1b4db07052ba581f07c405dcc0cc"
@@ -2628,7 +2602,7 @@ dependencies = [
  "libz-sys",
  "log",
  "md5",
- "mzpeaks 1.0.0",
+ "mzpeaks",
  "mzsignal",
  "ndarray 0.15.6",
  "num-traits",
@@ -2640,15 +2614,6 @@ dependencies = [
  "sha1",
  "thermorawfilereader",
  "thiserror 2.0.7",
-]
-
-[[package]]
-name = "mzpeaks"
-version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0f5a0f2db11aded7a562641db7be9910e4c46b8b7ebf733c430a0652ea2501f"
-dependencies = [
- "num-traits",
 ]
 
 [[package]]
@@ -2669,7 +2634,7 @@ dependencies = [
  "cfg-if",
  "libm",
  "log",
- "mzpeaks 1.0.0",
+ "mzpeaks",
  "nalgebra",
  "num-traits",
  "rayon",
@@ -4036,7 +4001,7 @@ dependencies = [
  "bincode",
  "flate2",
  "itertools",
- "mzdata 0.39.0",
+ "mzdata",
  "ndarray 0.16.1",
  "ordered-float",
  "probability",

@@ -812,6 +812,31 @@ impl RenderToTable for MetaData {
                     ),
                 ),
             ],
+            MetaData::SpectrumSequenceList(data) => vec![
+                (
+                    "Retention range (min)",
+                    data.start_time.map_or("-".to_string(), |st| format!(
+                        "{:.3} — {}",
+                        st.get::<rustyms::system::time::min>(),
+                        data.end_time.map_or("-".to_string(), |c| format!("{:.3}", c.get::<rustyms::system::time::min>()))
+                    )),
+                ),
+                ("Score type", data.score_type.as_ref().to_optional_string()),
+                ("Adduct", data.adduct.as_ref().to_optional_string()),
+                ("Molecule name", data.moleculename.as_ref().to_optional_string()),
+                ("Inchikey", data.inchikey.as_ref().to_optional_string()),
+                ("Other keys", data.otherkeys.as_ref().to_optional_string()),
+                (
+                    "Ion Mobility", 
+                    data.ion_mobility.as_ref().map_or("-".to_string(), |im| format!(
+                        "{im:.3} {}",
+                        data.ion_mobility_units.as_ref().to_optional_string()
+                    ))
+                ),
+                (
+                    "CCS", data.ccs.map_or("-".to_string(), |ccs| format!("{ccs:.3} Å²")),
+                )
+            ],
             MetaData::DeepNovoFamily(_)
             | MetaData::InstaNovo(_)
             | MetaData::PowerNovo(_)
