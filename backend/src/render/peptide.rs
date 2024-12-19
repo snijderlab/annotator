@@ -115,11 +115,20 @@ fn render_linear_peptide(
         .unwrap();
     }
     if peptide.get_n_term().is_some() {
-        let (class, xl_long, xl_compact) = match peptide.get_n_term() {
-            Some(Modification::Ambiguous { .. }) => (
+        let (class, xl_long, xl_compact, title) = match peptide.get_n_term() {
+            Some(Modification::Ambiguous {
+                group,
+                modification,
+                localisation_score,
+                ..
+            }) => (
                 "possible-modification".to_string(),
                 String::new(),
                 String::new(),
+                format!(
+                    "Modification of unknown position: {modification}\x23{group}{}",
+                    localisation_score.map_or(String::new(), |s| format!("({s:3})"))
+                ),
             ),
             Some(Modification::CrossLink { peptide, name, .. }) => {
                 let xl_index = cross_link_lookup
@@ -133,16 +142,20 @@ fn render_linear_peptide(
                     format!("cross-link c{xl_index}"),
                     format!("xl.{}p{peptide}", xl_index + 1),
                     format!("x{}", xl_index + 1),
+                    format!("Cross-link: {name}"),
                 )
             }
-            Some(Modification::Simple(_)) => {
-                ("modification".to_string(), String::new(), String::new())
-            }
-            None => (String::new(), String::new(), String::new()),
+            Some(Modification::Simple(m)) => (
+                "modification".to_string(),
+                String::new(),
+                String::new(),
+                format!("Modification: {m}"),
+            ),
+            None => (String::new(), String::new(), String::new(), String::new()),
         };
         write!(
             output,
-            "<span class='{class} term' data-cross-links='{xl_long}' data-cross-links-compact='{xl_compact}'></span>",
+            "<span class='{class} term' data-cross-links='{xl_long}' data-cross-links-compact='{xl_compact}' title='N-term {title}'></span>",
         )
         .unwrap();
     }
@@ -165,21 +178,48 @@ fn render_linear_peptide(
         let mut xl_indices = Vec::new();
         let mut xl_names = Vec::new();
         let mut xl_peptides = Vec::new();
+        let mut modifications = String::new();
+        let mut modifications_of_unknown_position = String::new();
         for m in &pos.modifications {
-            if let Modification::CrossLink { peptide, name, .. } = m {
-                let xl_index = cross_link_lookup
-                    .iter()
-                    .position(|xl| *xl == *name)
-                    .unwrap_or_else(|| {
-                        cross_link_lookup.push(name.clone());
-                        cross_link_lookup.len() - 1
-                    });
-                write!(classes, " c{xl_index}").unwrap();
-                xl_indices.push(xl_index + 1);
-                xl_names.push(name);
-                if *peptide != peptide_index {
-                    xl_peptides.push(*peptide + 1);
+            match m {
+                Modification::Ambiguous {
+                    group,
+                    modification,
+                    localisation_score,
+                    ..
+                } => {
+                    write!(
+                        modifications_of_unknown_position,
+                        "{}{modification}\x23{group}{}",
+                        if !modifications_of_unknown_position.is_empty() {
+                            ", "
+                        } else {
+                            ""
+                        },
+                        localisation_score.map_or(String::new(), |s| format!("({s:3})"))
+                    );
                 }
+                Modification::CrossLink { peptide, name, .. } => {
+                    let xl_index = cross_link_lookup
+                        .iter()
+                        .position(|xl| *xl == *name)
+                        .unwrap_or_else(|| {
+                            cross_link_lookup.push(name.clone());
+                            cross_link_lookup.len() - 1
+                        });
+                    write!(classes, " c{xl_index}").unwrap();
+                    xl_indices.push(xl_index + 1);
+                    xl_names.push(name);
+                    if *peptide != peptide_index {
+                        xl_peptides.push(*peptide + 1);
+                    }
+                }
+                Modification::Simple(m) => write!(
+                    modifications,
+                    "{}{m}",
+                    if !modifications.is_empty() { ", " } else { "" },
+                )
+                .unwrap(),
             }
         }
 
@@ -213,9 +253,19 @@ fn render_linear_peptide(
         }
         write!(
             output,
-            "<span data-pos='{peptidoform_index}-{peptide_index}-{index}' data-cross-links='{cross_links}' data-cross-links-compact='{cross_links_compact}'{classes} tabindex='0' title='N terminal position: {}, C terminal position: {}{}' style='--confidence:{}'>{}",
+            "<span data-pos='{peptidoform_index}-{peptide_index}-{index}' data-cross-links='{cross_links}' data-cross-links-compact='{cross_links_compact}'{classes} tabindex='0' title='N terminal position: {}, C terminal position: {}{}{}{}' style='--confidence:{}'>{}",
             index + 1,
             peptide.len() - index,
+            if modifications.is_empty() {
+                String::new()
+            } else {
+                format!(", Modifications: {modifications}")
+            },
+            if modifications_of_unknown_position.is_empty() {
+                String::new()
+            } else {
+                format!(", Modifications of unknown position: {modifications_of_unknown_position}")
+            },
             if xl_names.is_empty() {
                 String::new()
             } else {
@@ -245,11 +295,20 @@ fn render_linear_peptide(
         write!(output, "</span>").unwrap();
     }
     if peptide.get_c_term().is_some() {
-        let (class, xl_long, xl_compact) = match peptide.get_c_term() {
-            Some(Modification::Ambiguous { .. }) => (
+        let (class, xl_long, xl_compact, title) = match peptide.get_c_term() {
+            Some(Modification::Ambiguous {
+                group,
+                modification,
+                localisation_score,
+                ..
+            }) => (
                 "possible-modification".to_string(),
                 String::new(),
                 String::new(),
+                format!(
+                    "Modification of unknown position: {modification}\x23{group}{}",
+                    localisation_score.map_or(String::new(), |s| format!("({s:3})"))
+                ),
             ),
             Some(Modification::CrossLink { peptide, name, .. }) => {
                 let xl_index = cross_link_lookup
@@ -263,16 +322,20 @@ fn render_linear_peptide(
                     format!("cross-link c{xl_index}"),
                     format!("xl.{}p{peptide}", xl_index + 1),
                     format!("x{}", xl_index + 1),
+                    format!("Cross-link: {name}"),
                 )
             }
-            Some(Modification::Simple(_)) => {
-                ("modification".to_string(), String::new(), String::new())
-            }
-            None => (String::new(), String::new(), String::new()),
+            Some(Modification::Simple(m)) => (
+                "modification".to_string(),
+                String::new(),
+                String::new(),
+                format!("Modification: {m}"),
+            ),
+            None => (String::new(), String::new(), String::new(), String::new()),
         };
         write!(
             output,
-            "<span class='{class} term' data-cross-links='{xl_long}' data-cross-links-compact='{xl_compact}'></span>",
+            "<span class='{class} term' data-cross-links='{xl_long}' data-cross-links-compact='{xl_compact}' title='C-term {title}'></span>",
         )
         .unwrap();
     }
