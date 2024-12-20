@@ -676,7 +676,7 @@ pub fn spectrum_table(
                 <th>Ion type</th>
                 <th>Loss</th>
                 <th>Intensity</th>
-                <th>mz Theoretical</th>
+                <th title='Experimental mz for background and matched peaks, but theoretical mz for missing peaks'>mz</th>
                 <th>Formula</th>
                 <th>mz Error (Th)</th>
                 <th>mz Error (ppm)</th>

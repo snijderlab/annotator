@@ -2640,39 +2640,52 @@ summary {
 
 }
 
-.spectrum.peptide-intensity-ion .corner {
-    width: calc(2 * var(--stroke-peptide));
-    height: calc(var(--intensity) / var(--max-position-intensity) * (0.5em + var(--fragments-padding)));
-    background-color: var(--color);
-    border: none;
-    --spacing: calc(var(--stroke-peptide) * 4);
-    --pad-left: -13px;
-    --pad-right: -13px;
+.spectrum.peptide-intensity-ion {
+    --offset: 50%;
+    --width: 2;
+    --padding: -13px;
 
-    &.a,
-    &.b,
-    &.c {
-        top: calc(50% + 0.5 * var(--stroke-peptide));
-        bottom: unset;
-    }
+    & .corner {
+        width: calc(var(--width) * var(--stroke-peptide));
+        height: calc(var(--intensity) / var(--max-position-intensity) * (0.5em + var(--fragments-padding)));
+        background-color: var(--color);
+        border: none;
+        --spacing: calc(var(--stroke-peptide) * 2 * var(--width));
+        --pad-left: var(--padding);
+        --pad-right: var(--padding);
 
-    &.d {
-        top: calc(var(--fragments-padding) + 1em);
-        bottom: unset;
-    }
 
-    &.x,
-    &.y,
-    &.z {
-        bottom: calc(50% + 0.5 * var(--stroke-peptide));
-        top: unset;
-    }
+        &.a,
+        &.b,
+        &.c {
+            top: calc(var(--offset) + 0.5 * var(--stroke-peptide));
+            bottom: unset;
+        }
 
-    &.v,
-    &.w {
-        bottom: calc(var(--fragments-padding) + 1em);
-        top: unset;
+        &.d {
+            top: calc(var(--fragments-padding) + 1em);
+            bottom: unset;
+        }
+
+        &.x,
+        &.y,
+        &.z {
+            bottom: calc(var(--offset) + 0.5 * var(--stroke-peptide));
+            top: unset;
+        }
+
+        &.v,
+        &.w {
+            bottom: calc(var(--fragments-padding) + 1em);
+            top: unset;
+        }
     }
+}
+
+.spectrum.peptide-intensity-ion.compact .peptide {
+    --width: 1;
+    --offset: 1.5em;
+    --padding: 0px;
 }
 
 

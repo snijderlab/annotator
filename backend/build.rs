@@ -435,6 +435,7 @@ fn main() {
           <fieldset class='settings peptide-settings'>
             <legend>Peptide settings</legend>
             <label for='spectrum-compact' title='Display the peptide ion support in a more compact way'><input id='spectrum-compact' class='compact' type='checkbox' switch/>Compact peptide</label>
+            <label for='peptide-intensities' title='Display the intensities in the peptide support'><input id='peptide-intensities' class='compact' type='checkbox' switch/>Display intensities</label>
     
             <div class='row'>
               <span class='title'>Highlight</span>
@@ -448,15 +449,6 @@ fn main() {
                 <label title='Remove the annotation for regions in a peptide' tabindex='0'><input type='radio' name='highlight' value='remove' id='highlight-remove'>X</label>
               </div>
               <button id='clear-colour' class='clear-colour' title='Remove all annotations on all peptides' tabindex='0'>Clear</button>
-            </div>
-
-            <div class='row'>
-              <span class='title'>Show intensities</span>
-              <div class='select-box' id='peptide-intensities'>
-                <label tabindex='0'><input type='radio' name='peptide-intensities' value='off' id='peptide-intensities-off' checked>Off</label>
-                <label tabindex='0'><input type='radio' name='peptide-intensities' value='ion' id='peptide-intensities-ion'>Ion</label>
-                <label tabindex='0'><input type='radio' name='peptide-intensities' value='combined' id='peptide-intensities-combined'>Combined</label>
-              </div>
             </div>
     
           </fieldset>
