@@ -2642,15 +2642,15 @@ summary {
 
 .spectrum.peptide-intensity-ion {
     --offset: 50%;
-    --width: 2;
+    --ion-bar-width-factor: 2;
     --padding: -13px;
 
     & .corner {
-        width: calc(var(--width) * var(--stroke-peptide));
+        width: calc(var(--ion-bar-width-factor) * var(--stroke-peptide));
         height: calc(var(--intensity) / var(--max-position-intensity) * (0.5em + var(--fragments-padding)));
         background-color: var(--color);
         border: none;
-        --spacing: calc(var(--stroke-peptide) * 2 * var(--width));
+        --spacing: calc(var(--stroke-peptide) * 2 * var(--ion-bar-width-factor));
         --pad-left: var(--padding);
         --pad-right: var(--padding);
 
@@ -2683,7 +2683,7 @@ summary {
 }
 
 .spectrum.peptide-intensity-ion.compact .peptide {
-    --width: 1;
+    --ion-bar-width-factor: 1;
     --offset: 1.5em;
     --padding: 0px;
 }
