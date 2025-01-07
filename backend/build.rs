@@ -141,14 +141,13 @@ fn main() {
     <head>
       <meta charset="UTF-8" />
       <link rel="stylesheet" href="styles.css" />
-      <link rel="stylesheet" href="style.css" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Annotator</title>
       <script type="module" src="/main.js" defer></script>
       <script src="script.js"></script>
     </head>
     
-    <body class="theme-auto">
+    <body class="theme-auto" id="body">
       <div class='header'>
         <button print" onclick="window.print()">Export</button>
         <button class="cancel-drop" onclick='document.querySelector("html").classList.remove("file-drop-hover")'>Cancel drop</button>
