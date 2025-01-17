@@ -2,7 +2,7 @@ use std::{io::ErrorKind, ops::RangeInclusive, str::FromStr};
 
 use itertools::Itertools;
 use mzdata::{
-    io::{proxi::PROXIError, usi::USIParseError, MZFileReader},
+    io::{proxi::PROXIError, usi::USIParseError, MZFileReader, SpectrumSource},
     meta::DissociationMethodTerm,
     params::{ParamDescribed, Unit, Value},
     prelude::{IonProperties, PrecursorSelection, SpectrumLike},
@@ -148,8 +148,12 @@ pub async fn load_raw<'a>(
     state: ModifiableState<'a>,
 ) -> Result<RawFileDetails, String> {
     match mzdata::io::MZReaderType::open_path(path) {
-        Ok(file) => {
-            let file = RawFile::new_file(path, file);
+        Ok(mut file) => {
+            let file = if file.len() == 1 {
+                RawFile::new_single(file.next().unwrap(), path.to_string())
+            } else {
+                RawFile::new_file(path, file)
+            };
             let spectra = &mut state.lock().unwrap().spectra;
             let details = file.details();
             spectra.push(file);
@@ -310,7 +314,8 @@ fn load_thermo_clipboard(lines: &[&str]) -> Result<mzdata::spectrum::RawSpectrum
     data_intensity.compression = BinaryCompressionType::Decoded;
 
     for (line_number, line) in lines.iter().enumerate().skip(1) {
-        if line.to_lowercase() == "spectrum - ms" || line.to_ascii_lowercase() == "mass	intensity" {
+        if line.eq_ignore_ascii_case("spectrum - ms") || line.eq_ignore_ascii_case("mass intensity")
+        {
             continue;
         }
         let line_number = line_number + 1; // Humans like 1 based counting...

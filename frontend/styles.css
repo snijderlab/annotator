@@ -2285,6 +2285,10 @@ input:not(:checked)+.collapsible {
     display: none;
 }
 
+#spectrum-table {
+    table-layout: auto;
+}
+
 .spectrum .general-stats {
     margin-top: 1em;
 }

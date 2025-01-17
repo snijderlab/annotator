@@ -249,14 +249,12 @@ async function update_open_raw_files() {
           select.addEventListener("click", e => {
             let r = e.target.parentElement.parentElement;
             if (r.dataset.selected == "true") {
-              console.log("deselect")
               invoke("deselect_spectrum", { fileIndex: file.id, index: 0 }).then(() => {
                 r.dataset.selected = false;
                 select.innerText = "Select";
                 update_selected_spectra()
               });
             } else {
-              console.log("select")
               invoke("select_spectrum_index", { fileIndex: file.id, index: 0 }).then(() => {
                 r.dataset.selected = true;
                 select.innerText = "Deselect";
@@ -358,7 +356,7 @@ async function update_selected_spectra() {
 
         for (let element of result[i][1]) {
           let li = document.createElement("li");
-          let single = rawfile.parentElement.dataset.single === "single";
+          let single = rawfile.parentElement.dataset.single;
 
           if (!single) {
             let close = document.createElement("button");
