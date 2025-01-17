@@ -24,7 +24,7 @@ use crate::{
 pub fn validate_molecular_formula(text: String) -> Result<String, CustomError> {
     text.parse::<f64>()
         .map(MolecularFormula::with_additional_mass)
-        .or_else(|_| MolecularFormula::from_pro_forma(&text, .., false, true, true))
+        .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true))
         .map(|f| display_formula(&f, true))
 }
 
@@ -45,11 +45,11 @@ pub fn parse_stub(text: &str) -> Result<(MolecularFormula, MolecularFormula), Cu
         let f1 = text[..index]
             .parse::<f64>()
             .map(MolecularFormula::with_additional_mass)
-            .or_else(|_| MolecularFormula::from_pro_forma(text, ..index, false, true, true))?;
+            .or_else(|_| MolecularFormula::from_pro_forma(text, ..index, true, true, true))?;
         let f2 = text[index + 1..]
             .parse::<f64>()
             .map(MolecularFormula::with_additional_mass)
-            .or_else(|_| MolecularFormula::from_pro_forma(text, index + 1.., false, true, true))?;
+            .or_else(|_| MolecularFormula::from_pro_forma(text, index + 1.., true, true, true))?;
         Ok((f1, f2))
     } else {
         Err(CustomError::error(
@@ -91,7 +91,7 @@ pub fn validate_custom_single_specificity(
         .map(|text| {
             text.parse::<f64>()
                 .map(MolecularFormula::with_additional_mass)
-                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., false, true, true))
+                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true))
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(
@@ -150,7 +150,7 @@ pub fn validate_custom_linker_specificity(
         .map(|text| {
             text.parse::<f64>()
                 .map(MolecularFormula::with_additional_mass)
-                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., false, true, true))
+                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true))
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(
@@ -420,7 +420,7 @@ pub async fn update_modification(
         .parse::<f64>()
         .map(MolecularFormula::with_additional_mass)
         .or_else(|_| {
-            MolecularFormula::from_pro_forma(&custom_modification.formula, .., false, true, true)
+            MolecularFormula::from_pro_forma(&custom_modification.formula, .., true, true, true)
         })?;
     let id = ModificationId {
         ontology: Ontology::Custom,
@@ -464,7 +464,7 @@ pub async fn update_modification(
                                             MolecularFormula::from_pro_forma(
                                                 d,
                                                 ..,
-                                                false,
+                                                true,
                                                 true,
                                                 true,
                                             )
@@ -528,7 +528,7 @@ pub async fn update_modification(
                                             MolecularFormula::from_pro_forma(
                                                 d,
                                                 ..,
-                                                false,
+                                                true,
                                                 true,
                                                 true,
                                             )

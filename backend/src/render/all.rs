@@ -9,7 +9,7 @@ use rustyms::{
     placement_rule::PlacementRule,
     spectrum::{AnnotatedPeak, Fdr, PeakSpectrum, Recovered, Score},
     system::{da, mz, Mass, MassOverCharge},
-    AnnotatedSpectrum, MassMode, Model, MolecularFormula, NeutralLoss,
+    AnnotatedSpectrum, CompoundPeptidoform, MassMode, Model, MolecularFormula, NeutralLoss,
 };
 
 use crate::{
@@ -267,7 +267,7 @@ fn spectrum_graph_boundaries(
                     .iter()
                     .map(|f| {
                         f.mz(mass_mode)
-                            .map(|f| f.ppm(point.experimental_mz).value * 1e6)
+                            .map(|f| f.signed_ppm(point.experimental_mz).value * 1e6)
                             .unwrap_or(f64::INFINITY)
                     })
                     .min_by(|a, b| b.abs().total_cmp(&a.abs()))
@@ -440,7 +440,7 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
                             _ => unreachable!(), // TODO: handle better
                         }]
                         .entry(fragment.ion.clone())
-                        .or_insert_with(|| OrderedFloat::default()) += peak.intensity;
+                        .or_insert_with(OrderedFloat::default) += peak.intensity;
                         true
                     } else {
                         false
@@ -611,10 +611,21 @@ pub fn spectrum_table(
     multiple_peptidoforms: bool,
     multiple_peptides: bool,
 ) -> String {
-    fn generate_text(annotation: &Fragment) -> (String, String, String) {
+    fn generate_text(
+        annotation: &Fragment,
+        compound_peptidoform: &CompoundPeptidoform,
+    ) -> (String, String, String) {
         if let Some(pos) = annotation.ion.position() {
             (
-                display_sequence_index(pos.sequence_index),
+                format!(
+                    "{}{}",
+                    compound_peptidoform.peptidoforms()
+                        [annotation.peptidoform_index.unwrap_or_default()]
+                    .peptides()[annotation.peptide_index.unwrap_or_default()][pos.sequence_index]
+                        .aminoacid
+                        .char(),
+                    display_sequence_index(pos.sequence_index)
+                ),
                 pos.series_number.to_string(),
                 annotation.ion.label().to_string(),
             )
@@ -725,7 +736,8 @@ pub fn spectrum_table(
             ));
         } else {
             for annotation in &peak.annotation {
-                let (sequence_index, series_number, label) = generate_text(annotation);
+                let (sequence_index, series_number, label) =
+                    generate_text(annotation, &spectrum.peptide);
                 data.push((
                     peak.experimental_mz.value,
                     [
@@ -784,7 +796,8 @@ pub fn spectrum_table(
             .spectrum()
             .any(|p| p.annotation.iter().any(|a| *a == *fragment))
         {
-            let (sequence_index, series_number, label) = generate_text(&fragment.clone());
+            let (sequence_index, series_number, label) =
+                generate_text(&fragment.clone(), &spectrum.peptide);
             data.push((
                 fragment
                     .mz(MassMode::Monoisotopic)

@@ -40,7 +40,7 @@ pub async fn search_modification(
             &mut Vec::new(),
             Some(&state.database),
         )
-        .map(|m| match m {
+        .map(|(m, _)| match m {
             ReturnModification::Defined(d) => Ok(d),
             _ => Err(CustomError::error(
                 "Invalid modification",

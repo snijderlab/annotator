@@ -165,6 +165,7 @@ async function select_identified_peptides_file(id) {
   for (let child of select.children) {
     if (child.value == id) {
       document.getElementById("details-identified-peptide-index").value = 0;
+      document.getElementById("details-identified-peptide-index").max = child.dataset.length - 1;
       document.getElementById("number-of-identified-peptides").innerText = child.dataset.length;
       child.selected = true;
       identified_peptide_details();

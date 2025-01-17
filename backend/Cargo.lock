@@ -71,7 +71,7 @@ dependencies = [
 name = "annotator"
 version = "0.2.2"
 dependencies = [
- "itertools",
+ "itertools 0.13.0",
  "mzdata",
  "mzpeaks",
  "mzsignal",
@@ -2201,6 +2201,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2575,9 +2584,9 @@ dependencies = [
 
 [[package]]
 name = "mzdata"
-version = "0.40.0"
+version = "0.41.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "931f8b52e9264ebd2186344b030cf36bc08e1b4db07052ba581f07c405dcc0cc"
+checksum = "b2ff6f5c6f039879ca86ee4fc4bd67f97f0d1f18fad6a79c3dbbbe74d5e875d7"
 dependencies = [
  "base16ct",
  "base64-simd",
@@ -3994,7 +4003,7 @@ version = "0.9.0-alpha.3"
 dependencies = [
  "bincode",
  "flate2",
- "itertools",
+ "itertools 0.14.0",
  "mzdata",
  "ndarray 0.16.1",
  "ordered-float",

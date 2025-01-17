@@ -339,18 +339,31 @@ fn get_modifications(
             {
                 Some(format!(
                     "{}<sub>{}</sub>{}",
-                    compound_peptidoform.peptidoforms()[annotation.peptidoform_index?].peptides()
-                        [annotation.peptide_index?][*sequence_index]
-                        .modifications
-                        .iter()
-                        .find_map(
-                            |m| if let Modification::Ambiguous { id: mid, group, .. } = m {
-                                (*mid == *id).then_some(group)
-                            } else {
-                                None
-                            }
-                        )
-                        .unwrap(),
+                    match sequence_index {
+                        SequencePosition::NTerm => compound_peptidoform.peptidoforms()
+                            [annotation.peptidoform_index?]
+                            .peptides()[annotation.peptide_index?]
+                            .get_n_term(),
+                        SequencePosition::Index(i) => compound_peptidoform.peptidoforms()
+                            [annotation.peptidoform_index?]
+                            .peptides()[annotation.peptide_index?]
+                            .sequence()[*i]
+                            .modifications
+                            .as_slice(),
+                        SequencePosition::CTerm => compound_peptidoform.peptidoforms()
+                            [annotation.peptidoform_index?]
+                            .peptides()[annotation.peptide_index?]
+                            .get_c_term(),
+                    }
+                    .iter()
+                    .find_map(
+                        |m| if let Modification::Ambiguous { id: mid, group, .. } = m {
+                            (*mid == *id).then_some(group)
+                        } else {
+                            None
+                        }
+                    )
+                    .unwrap(),
                     display_sequence_index(*sequence_index),
                     if multiple_peptides {
                         format!("<sub class='peptide-id'>p{}</sub>", peptide_index + 1)

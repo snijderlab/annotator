@@ -114,48 +114,56 @@ fn render_linear_peptide(
         )
         .unwrap();
     }
-    if peptide.get_n_term().is_some() {
-        let (class, xl_long, xl_compact, title) = match peptide.get_n_term() {
-            Some(Modification::Ambiguous {
-                group,
-                modification,
-                localisation_score,
-                ..
-            }) => (
-                "possible-modification".to_string(),
-                String::new(),
-                String::new(),
-                format!(
-                    "Modification of unknown position: {modification}\x23{group}{}",
+    if !peptide.get_n_term().is_empty() {
+        let mut possible_modifications = Vec::new();
+        let mut cross_link = Vec::new();
+        let mut modifications = Vec::new();
+        for m in peptide.get_n_term() {
+            match m {
+                Modification::Ambiguous {
+                    group,
+                    modification,
+                    localisation_score,
+                    ..
+                } => possible_modifications.push(format!(
+                    "{modification}\x23{group}{}",
                     localisation_score.map_or(String::new(), |s| format!("({s:3})"))
-                ),
-            ),
-            Some(Modification::CrossLink { peptide, name, .. }) => {
-                let xl_index = cross_link_lookup
-                    .iter()
-                    .position(|xl| *xl == *name)
-                    .unwrap_or_else(|| {
-                        cross_link_lookup.push(name.clone());
-                        cross_link_lookup.len() - 1
-                    });
-                (
-                    format!("cross-link c{xl_index}"),
-                    format!("xl.{}p{peptide}", xl_index + 1),
-                    format!("x{}", xl_index + 1),
-                    format!("Cross-link: {name}"),
-                )
+                )),
+                Modification::CrossLink { peptide, name, .. } => {
+                    let xl_index = cross_link_lookup
+                        .iter()
+                        .position(|xl| *xl == *name)
+                        .unwrap_or_else(|| {
+                            cross_link_lookup.push(name.clone());
+                            cross_link_lookup.len() - 1
+                        });
+                    cross_link.push((
+                        format!("c{xl_index}"),
+                        format!("xl.{}p{peptide}", xl_index + 1),
+                        format!("x{}", xl_index + 1),
+                        format!("{name}"),
+                    ));
+                }
+                Modification::Simple(m) => modifications.push(m.to_string()),
             }
-            Some(Modification::Simple(m)) => (
-                "modification".to_string(),
-                String::new(),
-                String::new(),
-                format!("Modification: {m}"),
-            ),
-            None => (String::new(), String::new(), String::new(), String::new()),
-        };
+        }
         write!(
             output,
-            "<span class='{class} term' data-cross-links='{xl_long}' data-cross-links-compact='{xl_compact}' title='N-term {title}'></span>",
+            "<span class='{} term' data-cross-links='{}' data-cross-links-compact='{}' title='N-term {}{}{}{}{}{}{}{}'></span>", 
+            (!possible_modifications.is_empty()).then_some("possible-modification").into_iter()
+                .chain((!cross_link.is_empty()).then_some("cross-link").into_iter())
+                .chain((!modifications.is_empty()).then_some("modification").into_iter())
+                .chain(cross_link.iter().map(|c| c.0.as_str())).join(" "),
+                cross_link.iter().map(|c| c.1.as_str()).join(" "),
+                cross_link.iter().map(|c| c.2.as_str()).join(" "),
+                if modifications.is_empty() {""} else {"Modification: "}, 
+                modifications.join(", "),
+                if !modifications.is_empty() && !possible_modifications.is_empty() {", "} else {""},
+                if possible_modifications.is_empty() {""} else{"Modification of unknown position: "}, 
+                possible_modifications.join(", "),
+                if (!modifications.is_empty() || !possible_modifications.is_empty()) && !cross_link.is_empty() {", "} else {""},
+                if cross_link.is_empty() {""} else {"Cross-link: "}, 
+                cross_link.iter().map(|c| c.3.as_str()).join(", "),
         )
         .unwrap();
     }
@@ -197,7 +205,8 @@ fn render_linear_peptide(
                             ""
                         },
                         localisation_score.map_or(String::new(), |s| format!("({s:3})"))
-                    );
+                    )
+                    .unwrap();
                 }
                 Modification::CrossLink { peptide, name, .. } => {
                     let xl_index = cross_link_lookup
@@ -294,48 +303,56 @@ fn render_linear_peptide(
         }
         write!(output, "</span>").unwrap();
     }
-    if peptide.get_c_term().is_some() {
-        let (class, xl_long, xl_compact, title) = match peptide.get_c_term() {
-            Some(Modification::Ambiguous {
-                group,
-                modification,
-                localisation_score,
-                ..
-            }) => (
-                "possible-modification".to_string(),
-                String::new(),
-                String::new(),
-                format!(
-                    "Modification of unknown position: {modification}\x23{group}{}",
+    if !peptide.get_c_term().is_empty() {
+        let mut possible_modifications = Vec::new();
+        let mut cross_link = Vec::new();
+        let mut modifications = Vec::new();
+        for m in peptide.get_c_term() {
+            match m {
+                Modification::Ambiguous {
+                    group,
+                    modification,
+                    localisation_score,
+                    ..
+                } => possible_modifications.push(format!(
+                    "{modification}\x23{group}{}",
                     localisation_score.map_or(String::new(), |s| format!("({s:3})"))
-                ),
-            ),
-            Some(Modification::CrossLink { peptide, name, .. }) => {
-                let xl_index = cross_link_lookup
-                    .iter()
-                    .position(|xl| *xl == *name)
-                    .unwrap_or_else(|| {
-                        cross_link_lookup.push(name.clone());
-                        cross_link_lookup.len() - 1
-                    });
-                (
-                    format!("cross-link c{xl_index}"),
-                    format!("xl.{}p{peptide}", xl_index + 1),
-                    format!("x{}", xl_index + 1),
-                    format!("Cross-link: {name}"),
-                )
+                )),
+                Modification::CrossLink { peptide, name, .. } => {
+                    let xl_index = cross_link_lookup
+                        .iter()
+                        .position(|xl| *xl == *name)
+                        .unwrap_or_else(|| {
+                            cross_link_lookup.push(name.clone());
+                            cross_link_lookup.len() - 1
+                        });
+                    cross_link.push((
+                        format!("c{xl_index}"),
+                        format!("xl.{}p{peptide}", xl_index + 1),
+                        format!("x{}", xl_index + 1),
+                        format!("{name}"),
+                    ));
+                }
+                Modification::Simple(m) => modifications.push(m.to_string()),
             }
-            Some(Modification::Simple(m)) => (
-                "modification".to_string(),
-                String::new(),
-                String::new(),
-                format!("Modification: {m}"),
-            ),
-            None => (String::new(), String::new(), String::new(), String::new()),
-        };
+        }
         write!(
             output,
-            "<span class='{class} term' data-cross-links='{xl_long}' data-cross-links-compact='{xl_compact}' title='C-term {title}'></span>",
+            "<span class='{} term' data-cross-links='{}' data-cross-links-compact='{}' title='C-term {}{}{}{}{}{}{}{}'></span>", 
+            (!possible_modifications.is_empty()).then_some("possible-modification").into_iter()
+                .chain((!cross_link.is_empty()).then_some("cross-link").into_iter())
+                .chain((!modifications.is_empty()).then_some("modification").into_iter())
+                .chain(cross_link.iter().map(|c| c.0.as_str())).join(" "),
+                cross_link.iter().map(|c| c.1.as_str()).join(" "),
+                cross_link.iter().map(|c| c.2.as_str()).join(" "),
+                if modifications.is_empty() {""} else {"Modification: "}, 
+                modifications.join(", "),
+                if !modifications.is_empty() && !possible_modifications.is_empty() {", "} else {""},
+                if possible_modifications.is_empty() {""} else{"Modification of unknown position: "}, 
+                possible_modifications.join(", "),
+                if (!modifications.is_empty() || !possible_modifications.is_empty()) && !cross_link.is_empty() {", "} else {""},
+                if cross_link.is_empty() {""} else {"Cross-link: "}, 
+                cross_link.iter().map(|c| c.3.as_str()).join(", "),
         )
         .unwrap();
     }

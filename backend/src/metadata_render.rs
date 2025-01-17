@@ -193,6 +193,8 @@ impl RenderToTable for MetaData {
                 ("Accession", data.accession.as_ref().to_optional_string()),
                 ("From Chimera", data.from_chimera.to_optional_string()),
                 ("ID", data.id.to_optional_string()),
+                ("Precursor ID", data.precursor_id.to_optional_string()),
+                ("Ion mobility", data.k0_range.as_ref().map_or("-".to_string(), |range| format!("{} — {} 1/K<sub>0</sub>", range.start(), range.end()))),
                 (
                     "Protein",
                         data.protein_group.and_then(|g| {
