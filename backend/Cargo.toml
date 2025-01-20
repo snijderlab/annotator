@@ -13,11 +13,11 @@ tauri-build = { version = "2.0", features = [] }
 tauri = { version = "2.0" }
 
 [dependencies]
-itertools = "0.13"
+itertools = "0.14"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "2.0", features = ["protocol-asset"] }
-rustyms = { version = "0.9.0-alpha.2", default-features = false, features = [
+rustyms = { version = "0.9.0", default-features = false, features = [
     "identification",
     "align",
     "isotopes",
@@ -37,7 +37,6 @@ tauri-plugin-dialog = "2"
 thin-vec = { version = "0.2", features = ["serde"] }
 
 [patch.crates-io]
-rustyms = { path = "../../rustyms/rustyms" }
 # hdf5 rust crate needs a new version
 hdf5 = { git = "https://github.com/aldanor/hdf5-rust.git" }
 hdf5-sys = { git = "https://github.com/aldanor/hdf5-rust.git" }
