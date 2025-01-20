@@ -48,8 +48,8 @@ impl RenderToHtml for IdentifiedPeptide {
                             .map(|p| format!("{}&nbsp;AA", match p {
                                 ReturnedPeptide::LinearSemiAmbiguous(p) => p.len().to_string(),
                                 ReturnedPeptide::LinearSimpleLinear(p) => p.len().to_string(),
-                                ReturnedPeptide::Peptidoform(p) => p.peptides().iter().map(|p| p.len()).join("&nbsp;+&nbsp;"),
-                                ReturnedPeptide::CompoundPeptidoform(p) => p.peptides().map(|p| p.len()).join("&nbsp;+&nbsp;"),
+                                ReturnedPeptide::Peptidoform(p) => p.peptidoforms().iter().map(|p| p.len()).join("&nbsp;+&nbsp;"),
+                                ReturnedPeptide::CompoundPeptidoform(p) => p.peptidoforms().map(|p| p.len()).join("&nbsp;+&nbsp;"),
                             }))
                             .to_optional_string(),
                         formula

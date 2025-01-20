@@ -9,7 +9,7 @@ use rustyms::{
     placement_rule::PlacementRule,
     spectrum::{AnnotatedPeak, Fdr, PeakSpectrum, Recovered, Score},
     system::{da, mz, Mass, MassOverCharge},
-    AnnotatedSpectrum, CompoundPeptidoform, MassMode, Model, MolecularFormula, NeutralLoss,
+    AnnotatedSpectrum, CompoundPeptidoformIon, MassMode, Model, MolecularFormula, NeutralLoss,
 };
 
 use crate::{
@@ -33,17 +33,17 @@ pub fn annotated_spectrum(
     let (limits, overview) = get_overview(spectrum);
     let (graph_data, graph_boundaries) =
         spectrum_graph_boundaries(spectrum, fragments, model, mass_mode);
-    let multiple_peptidoforms = spectrum.peptide.peptidoforms().len() > 1;
-    let multiple_peptides = spectrum
+    let multiple_peptidoform_ions = spectrum.peptide.peptidoform_ions().len() > 1;
+    let multiple_peptidoforms = spectrum
         .peptide
-        .peptidoforms()
+        .peptidoform_ions()
         .iter()
-        .any(|p| p.peptides().len() > 1);
+        .any(|p| p.peptidoforms().len() > 1);
     let multiple_glycans = spectrum
         .peptide
-        .peptidoforms()
+        .peptidoform_ions()
         .iter()
-        .flat_map(|p| p.peptides())
+        .flat_map(|p| p.peptidoforms())
         .any(|p| {
             p.sequence()
                 .iter()
@@ -72,8 +72,8 @@ pub fn annotated_spectrum(
         &graph_boundaries,
         &limits,
         "first",
+        multiple_peptidoform_ions,
         multiple_peptidoforms,
-        multiple_peptides,
         multiple_glycans,
         mass_mode,
         &unique_peptide_lookup,
@@ -93,8 +93,8 @@ pub fn annotated_spectrum(
         &mut output,
         spectrum,
         fragments,
+        multiple_peptidoform_ions,
         multiple_peptidoforms,
-        multiple_peptides,
         model,
         mass_mode,
     );
@@ -413,10 +413,10 @@ pub struct Limits {
 fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
     let mut output: PositionCoverage = spectrum
         .peptide
-        .peptidoforms()
+        .peptidoform_ions()
         .iter()
         .map(|p| {
-            p.peptides()
+            p.peptidoforms()
                 .iter()
                 .map(|p| vec![HashMap::new(); p.len()])
                 .collect()
@@ -433,7 +433,7 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
             peak.annotation.iter().for_each(|fragment| {
                 fragment.ion.position().map(|i| {
                     if let (Some(pii), Some(pi)) =
-                        (fragment.peptidoform_index, fragment.peptide_index)
+                        (fragment.peptidoform_ion_index, fragment.peptidoform_index)
                     {
                         *output[pii][pi][match i.sequence_index {
                             rustyms::SequencePosition::Index(i) => i,
@@ -608,20 +608,21 @@ fn render_spectrum(
 pub fn spectrum_table(
     spectrum: &AnnotatedSpectrum,
     fragments: &[Fragment],
+    multiple_peptidoform_ions: bool,
     multiple_peptidoforms: bool,
-    multiple_peptides: bool,
 ) -> String {
     fn generate_text(
         annotation: &Fragment,
-        compound_peptidoform: &CompoundPeptidoform,
+        compound_peptidoform: &CompoundPeptidoformIon,
     ) -> (String, String, String) {
         if let Some(pos) = annotation.ion.position() {
             (
                 format!(
                     "{}{}",
-                    compound_peptidoform.peptidoforms()
-                        [annotation.peptidoform_index.unwrap_or_default()]
-                    .peptides()[annotation.peptide_index.unwrap_or_default()][pos.sequence_index]
+                    compound_peptidoform.peptidoform_ions()
+                        [annotation.peptidoform_ion_index.unwrap_or_default()]
+                    .peptidoforms()[annotation.peptidoform_index.unwrap_or_default()]
+                        [pos.sequence_index]
                         .aminoacid
                         .char(),
                     display_sequence_index(pos.sequence_index)
@@ -696,12 +697,12 @@ pub fn spectrum_table(
                 <th>Additional label</th>
             </tr></thead><tdata>",
         spectrum.peptide,
-        if multiple_peptidoforms {
+        if multiple_peptidoform_ions {
             "<th>Peptidoform</th>"
         } else {
             ""
         },
-        if multiple_peptides {
+        if multiple_peptidoforms {
             "<th>Peptide</th>"
         } else {
             ""
@@ -742,16 +743,16 @@ pub fn spectrum_table(
                     peak.experimental_mz.value,
                     [
                         "matched".to_string(),
-                        if multiple_peptidoforms {
+                        if multiple_peptidoform_ions {
                             annotation
-                                .peptidoform_index
+                                .peptidoform_ion_index
                                 .map_or("?".to_string(), |i| (i + 1).to_string())
                         } else {
                             String::new()
                         },
-                        if multiple_peptides {
+                        if multiple_peptidoforms {
                             annotation
-                                .peptide_index
+                                .peptidoform_index
                                 .map_or("?".to_string(), |i| (i + 1).to_string())
                         } else {
                             String::new()
@@ -804,16 +805,16 @@ pub fn spectrum_table(
                     .map_or(f64::NAN, |v| v.value),
                 [
                     "fragment".to_string(),
-                    if multiple_peptidoforms {
+                    if multiple_peptidoform_ions {
                         fragment
                             .peptidoform_index
                             .map_or("?".to_string(), |i| (i + 1).to_string())
                     } else {
                         String::new()
                     },
-                    if multiple_peptides {
+                    if multiple_peptidoforms {
                         fragment
-                            .peptide_index
+                            .peptidoform_index
                             .map_or("?".to_string(), |i| (i + 1).to_string())
                     } else {
                         String::new()
@@ -848,8 +849,8 @@ pub fn spectrum_table(
     data.sort_unstable_by(|a, b| a.0.total_cmp(&b.0));
     for row in data {
         write!(output, "<tr class='{}'>", row.1[0]).unwrap();
-        for cell in &row.1[if multiple_peptides {
-            if multiple_peptidoforms {
+        for cell in &row.1[if multiple_peptidoforms {
+            if multiple_peptidoform_ions {
                 1
             } else {
                 2
@@ -870,8 +871,8 @@ fn general_stats(
     output: &mut String,
     spectrum: &AnnotatedSpectrum,
     fragments: &[Fragment],
+    multiple_peptidoform_ions: bool,
     multiple_peptidoforms: bool,
-    multiple_peptides: bool,
     model: &Model,
     mass_mode: MassMode,
 ) {
@@ -944,17 +945,19 @@ fn general_stats(
     let (combined_scores, separate_peptide_scores) = spectrum.scores(fragments, model, mass_mode);
     let fdr = (spectrum.spectrum().len() != 0).then(|| spectrum.fdr(fragments, model, mass_mode));
 
-    for (peptidoform_index, peptidoform_scores) in separate_peptide_scores.iter().enumerate() {
-        for (peptide_index, peptide_score) in peptidoform_scores.iter().enumerate() {
-            let precursor = spectrum.peptide.peptidoforms()[peptidoform_index].peptides()
-                [peptide_index]
+    for (peptidoform_ion_index, peptidoform_ion_scores) in
+        separate_peptide_scores.iter().enumerate()
+    {
+        for (peptidoform_index, peptidoform_score) in peptidoform_ion_scores.iter().enumerate() {
+            let precursor = spectrum.peptide.peptidoform_ions()[peptidoform_ion_index]
+                .peptidoforms()[peptidoform_index]
                 .clone()
                 .into_linear()
-                .map_or("Part of peptidoform".to_string(), |p| {
+                .map_or("Part of peptidoform ion".to_string(), |p| {
                     p.formulas().iter().map(display_masses).join(", ")
                 });
             write!(mass_row, "<td>{precursor}</td>").unwrap();
-            match peptide_score.score {
+            match peptidoform_score.score {
                 Score::Position {
                     fragments,
                     peaks,
@@ -976,7 +979,7 @@ fn general_stats(
                         "<td>{}</td>",
                         fdr.as_ref()
                             .map(|(_, separate_peptide_fdrs)| format_fdr_peaks(
-                                &separate_peptide_fdrs[peptidoform_index][peptide_index]
+                                &separate_peptide_fdrs[peptidoform_ion_index][peptidoform_index]
                             ))
                             .to_optional_string()
                     )
@@ -986,7 +989,7 @@ fn general_stats(
                         "<td>{}</td>",
                         fdr.as_ref()
                             .map(|(_, separate_peptide_fdrs)| format_fdr_intensity(
-                                &separate_peptide_fdrs[peptidoform_index][peptide_index]
+                                &separate_peptide_fdrs[peptidoform_ion_index][peptidoform_index]
                             ))
                             .to_optional_string()
                     )
@@ -1012,7 +1015,7 @@ fn general_stats(
                         "<td>{}</td>",
                         fdr.as_ref()
                             .map(|(_, separate_peptide_fdrs)| format_fdr_peaks(
-                                &separate_peptide_fdrs[peptidoform_index][peptide_index]
+                                &separate_peptide_fdrs[peptidoform_ion_index][peptidoform_index]
                             ))
                             .to_optional_string()
                     )
@@ -1022,7 +1025,7 @@ fn general_stats(
                         "<td>{}</td>",
                         fdr.as_ref()
                             .map(|(_, separate_peptide_fdrs)| format_fdr_intensity(
-                                &separate_peptide_fdrs[peptidoform_index][peptide_index]
+                                &separate_peptide_fdrs[peptidoform_ion_index][peptidoform_index]
                             ))
                             .to_optional_string()
                     )
@@ -1033,7 +1036,7 @@ fn general_stats(
             write!(peaks_details_row, "<td><table>").unwrap();
             write!(intensity_details_row, "<td><table>").unwrap();
             write!(positions_details_row, "<td><table>").unwrap();
-            for (ion, score) in &peptide_score.ions {
+            for (ion, score) in &peptidoform_score.ions {
                 match score {
                     Score::Position {
                         fragments,
@@ -1108,22 +1111,29 @@ fn general_stats(
     }
 
     write!(output, "<label><input type='checkbox' switch id='general-stats-show-details'>Show statistics per ion series</label><table class='general-stats'>").unwrap();
-    if multiple_peptidoforms || multiple_peptides {
+    if multiple_peptidoform_ions || multiple_peptidoforms {
         write!(output, "<tr><td>General Statistics</td>").unwrap();
-        for (peptidoform_index, peptidoform) in spectrum.peptide.peptidoforms().iter().enumerate() {
-            for peptide_index in 0..peptidoform.peptides().len() {
-                if multiple_peptidoforms && multiple_peptides {
+        for (peptidoform_ion_index, peptidoform_ion) in
+            spectrum.peptide.peptidoform_ions().iter().enumerate()
+        {
+            for peptidoform_index in 0..peptidoform_ion.peptidoforms().len() {
+                if multiple_peptidoform_ions && multiple_peptidoforms {
                     write!(
                         output,
-                        "<td>Peptidoform {} Peptide {}</td>",
-                        peptidoform_index + 1,
-                        peptide_index + 1
+                        "<td>Peptidoform ion {} Peptidoform {}</td>",
+                        peptidoform_ion_index + 1,
+                        peptidoform_index + 1
+                    )
+                    .unwrap();
+                } else if multiple_peptidoform_ions {
+                    write!(
+                        output,
+                        "<td>Peptidoform ion {} </td>",
+                        peptidoform_ion_index + 1,
                     )
                     .unwrap();
                 } else if multiple_peptidoforms {
-                    write!(output, "<td>Peptidoform {} </td>", peptidoform_index + 1,).unwrap();
-                } else if multiple_peptides {
-                    write!(output, "<td>Peptide {}</td>", peptide_index + 1).unwrap();
+                    write!(output, "<td>Peptidoform {}</td>", peptidoform_index + 1).unwrap();
                 }
             }
         }

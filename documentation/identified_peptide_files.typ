@@ -11,6 +11,8 @@ There are quite some programs that export peptides with metadata based on spectr
   [No header requirements],
   [mzTab],
   [v1.0 & Casanovo],
+  [SSL],
+  [Spectrum sequence list]
 )
 
 #table(

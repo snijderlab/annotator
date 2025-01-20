@@ -315,12 +315,12 @@ async fn annotate_spectrum<'a>(
         "most_abundant" => MassMode::MostAbundant,
         _ => return Err(CustomError::error("Invalid mass mode", "", Context::None)),
     };
-    let peptide = rustyms::CompoundPeptidoform::pro_forma(peptide, Some(&state.database))?;
-    let multiple_peptidoforms = peptide.peptidoforms().len() == 1;
+    let peptide = rustyms::CompoundPeptidoformIon::pro_forma(peptide, Some(&state.database))?;
+    let multiple_peptidoforms = peptide.peptidoform_ions().len() == 1;
     let multiple_peptides = peptide
-        .peptidoforms()
+        .peptidoform_ions()
         .iter()
-        .flat_map(|p| p.peptides())
+        .flat_map(|p| p.peptidoforms())
         .count()
         == 1;
 

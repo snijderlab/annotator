@@ -1,15 +1,15 @@
 use itertools::Itertools;
 use rustyms::{
     fragment::{FragmentType, GlycanBreakPos},
-    AmbiguousLabel, CompoundPeptidoform, Fragment, Modification, SequencePosition,
+    AmbiguousLabel, CompoundPeptidoformIon, Fragment, Modification, SequencePosition,
 };
 use std::fmt::Write;
 
 pub fn get_label(
-    compound_peptidoform: &CompoundPeptidoform,
+    compound_peptidoform: &CompoundPeptidoformIon,
     annotations: &[Fragment],
+    multiple_peptidoform_ions: bool,
     multiple_peptidoforms: bool,
-    multiple_peptides: bool,
     multiple_glycans: bool,
 ) -> String {
     if annotations.is_empty() {
@@ -18,18 +18,18 @@ pub fn get_label(
         let mut shared_charge = Some(annotations[0].charge);
         let mut shared_ion = Some(annotations[0].ion.label());
         let mut shared_pos = Some(annotations[0].ion.position_label());
+        let mut shared_peptidoform_ion = Some(annotations[0].peptidoform_ion_index);
         let mut shared_peptidoform = Some(annotations[0].peptidoform_index);
-        let mut shared_peptide = Some(annotations[0].peptide_index);
         let mut shared_glycan = Some(annotations[0].ion.glycan_position().map(|g| g.attachment()));
         let mut shared_loss = Some(annotations[0].neutral_loss.clone());
         let mut shared_xl = Some(get_xl(&annotations[0]));
         let mut shared_ambiguous_amino_acids = Some(get_ambiguous_amino_acids(
             &annotations[0],
-            multiple_peptides,
+            multiple_peptidoforms,
         ));
         let mut shared_modifications = Some(get_modifications(
             &annotations[0],
-            multiple_peptides,
+            multiple_peptidoforms,
             compound_peptidoform,
         ));
         let mut shared_charge_carriers = Some(get_charge_carriers(&annotations[0]));
@@ -50,14 +50,14 @@ pub fn get_label(
                     shared_pos = None;
                 }
             }
-            if let Some(peptidoform) = shared_peptidoform {
-                if peptidoform != a.peptidoform_index {
-                    shared_peptidoform = None;
+            if let Some(peptidoform) = shared_peptidoform_ion {
+                if peptidoform != a.peptidoform_ion_index {
+                    shared_peptidoform_ion = None;
                 }
             }
-            if let Some(peptide) = shared_peptide {
-                if peptide != a.peptide_index {
-                    shared_peptide = None;
+            if let Some(peptide) = shared_peptidoform {
+                if peptide != a.peptidoform_index {
+                    shared_peptidoform = None;
                 }
             }
             if let Some(glycan) = &shared_glycan {
@@ -76,12 +76,12 @@ pub fn get_label(
                 }
             }
             if let Some(aaa) = &shared_ambiguous_amino_acids {
-                if *aaa != get_ambiguous_amino_acids(a, multiple_peptides) {
+                if *aaa != get_ambiguous_amino_acids(a, multiple_peptidoforms) {
                     shared_ambiguous_amino_acids = None;
                 }
             }
             if let Some(sm) = &shared_modifications {
-                if *sm != get_modifications(a, multiple_peptides, compound_peptidoform) {
+                if *sm != get_modifications(a, multiple_peptidoforms, compound_peptidoform) {
                     shared_modifications = None;
                 }
             }
@@ -95,8 +95,8 @@ pub fn get_label(
         if shared_charge.is_none()
             && shared_ion.is_none()
             && shared_pos.is_none()
+            && shared_peptidoform_ion.is_none()
             && shared_peptidoform.is_none()
-            && shared_peptide.is_none()
             && shared_glycan.is_none()
             && shared_loss.is_none()
             && shared_xl.is_none()
@@ -115,11 +115,11 @@ pub fn get_label(
             let pos_str = shared_pos
                 .map(|pos| pos.unwrap_or_default())
                 .unwrap_or("*".to_string());
-            let peptidoform_str = shared_peptidoform
+            let peptidoform_str = shared_peptidoform_ion
                 .flatten()
                 .map(|pep| (pep + 1).to_string())
                 .unwrap_or("*".to_string());
-            let peptide_str = shared_peptide
+            let peptide_str = shared_peptidoform
                 .flatten()
                 .map(|pep| (pep + 1).to_string())
                 .unwrap_or("*".to_string());
@@ -142,8 +142,8 @@ pub fn get_label(
                         "{}",
                         get_single_label(
                             annotation,
+                            multiple_peptidoform_ions,
                             multiple_peptidoforms,
-                            multiple_peptides,
                             multiple_glycans,
                             compound_peptidoform,
                         )
@@ -160,8 +160,8 @@ pub fn get_label(
             if single_internal_glycan {
                 get_single_label(
                     &annotations[0],
+                    multiple_peptidoform_ions,
                     multiple_peptidoforms,
-                    multiple_peptides,
                     multiple_glycans,
                     compound_peptidoform,
                 )
@@ -177,11 +177,11 @@ pub fn get_label(
                     } else {
                         String::new()
                     },
-                    if multiple_peptidoforms && multiple_peptides {
+                    if multiple_peptidoform_ions && multiple_peptidoforms {
                         format!("p{}.{}", peptidoform_str, peptide_str)
-                    }else if multiple_peptidoforms {
+                    }else if multiple_peptidoform_ions {
                         format!("p{}", peptidoform_str)
-                    } else if multiple_peptides {
+                    } else if multiple_peptidoforms {
                         format!("p{}", peptide_str)
                     } else {
                         String::new()
@@ -200,10 +200,10 @@ pub fn get_label(
 
 fn get_single_label(
     annotation: &Fragment,
+    multiple_peptidoform_ions: bool,
     multiple_peptidoforms: bool,
-    multiple_peptides: bool,
     multiple_glycans: bool,
-    compound_peptidoform: &CompoundPeptidoform,
+    compound_peptidoform: &CompoundPeptidoformIon,
 ) -> String {
     let ch = format!("{:+}", annotation.charge.value);
     format!(
@@ -233,19 +233,19 @@ fn get_single_label(
         } else {
             String::new()
         },
-        if multiple_peptidoforms && multiple_peptides {
-            format!("p{}.{}", annotation.peptidoform_index.map_or("?".to_string(), |i| (i+1).to_string()), annotation.peptide_index.map_or("?".to_string(), |i| (i+1).to_string()))
-        }else if multiple_peptidoforms {
+        if multiple_peptidoform_ions && multiple_peptidoforms {
+            format!("p{}.{}", annotation.peptidoform_ion_index.map_or("?".to_string(), |i| (i+1).to_string()), annotation.peptidoform_index.map_or("?".to_string(), |i| (i+1).to_string()))
+        }else if multiple_peptidoform_ions {
+            format!("p{}", annotation.peptidoform_ion_index.map_or("?".to_string(), |i| (i+1).to_string()))
+        } else if multiple_peptidoforms {
             format!("p{}", annotation.peptidoform_index.map_or("?".to_string(), |i| (i+1).to_string()))
-        } else if multiple_peptides {
-            format!("p{}", annotation.peptide_index.map_or("?".to_string(), |i| (i+1).to_string()))
         } else {
             String::new()
         },
         annotation.neutral_loss.iter().map(|n| n.hill_notation_html()).join(""),
         get_xl(annotation),
-        get_ambiguous_amino_acids(annotation, multiple_peptides),
-        get_modifications(annotation, multiple_peptides, compound_peptidoform),
+        get_ambiguous_amino_acids(annotation, multiple_peptidoforms),
+        get_modifications(annotation, multiple_peptidoforms, compound_peptidoform),
         get_charge_carriers(annotation),
     )
 }
@@ -302,14 +302,14 @@ fn get_ambiguous_amino_acids(annotation: &Fragment, multiple_peptides: bool) -> 
             if let AmbiguousLabel::AminoAcid {
                 option,
                 sequence_index,
-                peptide_index,
+                peptidoform_index,
             } = label
             {
                 Some(format!(
                     "{option}<sub>{}</sub>{}",
                     sequence_index + 1,
                     if multiple_peptides {
-                        format!("<sub class='peptide-id'>p{}</sub>", peptide_index + 1)
+                        format!("<sub class='peptide-id'>p{}</sub>", peptidoform_index + 1)
                     } else {
                         String::new()
                     }
@@ -323,8 +323,8 @@ fn get_ambiguous_amino_acids(annotation: &Fragment, multiple_peptides: bool) -> 
 
 fn get_modifications(
     annotation: &Fragment,
-    multiple_peptides: bool,
-    compound_peptidoform: &CompoundPeptidoform,
+    multiple_peptidoforms: bool,
+    compound_peptidoform: &CompoundPeptidoformIon,
 ) -> String {
     annotation
         .formula
@@ -334,25 +334,25 @@ fn get_modifications(
             if let AmbiguousLabel::Modification {
                 id,
                 sequence_index,
-                peptide_index,
+                peptidoform_index,
             } = label
             {
                 Some(format!(
                     "{}<sub>{}</sub>{}",
                     match sequence_index {
-                        SequencePosition::NTerm => compound_peptidoform.peptidoforms()
-                            [annotation.peptidoform_index?]
-                            .peptides()[annotation.peptide_index?]
+                        SequencePosition::NTerm => compound_peptidoform.peptidoform_ions()
+                            [annotation.peptidoform_ion_index?]
+                            .peptidoforms()[annotation.peptidoform_index?]
                             .get_n_term(),
-                        SequencePosition::Index(i) => compound_peptidoform.peptidoforms()
-                            [annotation.peptidoform_index?]
-                            .peptides()[annotation.peptide_index?]
+                        SequencePosition::Index(i) => compound_peptidoform.peptidoform_ions()
+                            [annotation.peptidoform_ion_index?]
+                            .peptidoforms()[annotation.peptidoform_index?]
                             .sequence()[*i]
                             .modifications
                             .as_slice(),
-                        SequencePosition::CTerm => compound_peptidoform.peptidoforms()
+                        SequencePosition::CTerm => compound_peptidoform.peptidoform_ions()
                             [annotation.peptidoform_index?]
-                            .peptides()[annotation.peptide_index?]
+                            .peptidoforms()[annotation.peptidoform_index?]
                             .get_c_term(),
                     }
                     .iter()
@@ -365,8 +365,8 @@ fn get_modifications(
                     )
                     .unwrap(),
                     display_sequence_index(*sequence_index),
-                    if multiple_peptides {
-                        format!("<sub class='peptide-id'>p{}</sub>", peptide_index + 1)
+                    if multiple_peptidoforms {
+                        format!("<sub class='peptide-id'>p{}</sub>", peptidoform_index + 1)
                     } else {
                         String::new()
                     }

@@ -4,23 +4,23 @@ use crate::html_builder::HtmlTag;
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
 use rustyms::{
-    fragment::*, modification::CrossLinkName, CompoundPeptidoform, LinearPeptide, Linked,
-    Modification,
+    fragment::*, modification::CrossLinkName, CompoundPeptidoformIon, Linked, Modification,
+    Peptidoform,
 };
 
 /// Render a peptidoform with the given ions present. It returns a lookup with the unique ids for all peptides.
 pub fn render_peptide(
     output: &mut String,
-    compound_peptidoform: &CompoundPeptidoform,
+    compound_peptidoform: &CompoundPeptidoformIon,
     overview: Option<super::PositionCoverage>,
     local_confidence: Option<Vec<Vec<Vec<f64>>>>,
 ) -> Vec<(usize, usize)> {
     let mut unique_peptide_lookup = Vec::new();
-    let multiple_peptidoforms = compound_peptidoform.peptidoforms().len() > 1;
+    let multiple_peptidoforms = compound_peptidoform.peptidoform_ions().len() > 1;
     let multiple_peptides = compound_peptidoform
-        .peptidoforms()
+        .peptidoform_ions()
         .iter()
-        .any(|p| p.peptides().len() > 1);
+        .any(|p| p.peptidoforms().len() > 1);
     let max_position_intensity = overview
         .as_ref()
         .and_then(|o| {
@@ -52,73 +52,78 @@ pub fn render_peptide(
     )
     .unwrap();
     let mut cross_link_lookup = Vec::new();
-    for (peptidoform_index, peptidoform) in compound_peptidoform.peptidoforms().iter().enumerate() {
-        for (peptide_index, peptide) in peptidoform.peptides().iter().enumerate() {
-            render_linear_peptide(
+    for (peptidoform_ion_index, peptidoform_ion) in
+        compound_peptidoform.peptidoform_ions().iter().enumerate()
+    {
+        for (peptidoform_index, peptidoform) in peptidoform_ion.peptidoforms().iter().enumerate() {
+            render_linear_peptidoform(
                 output,
-                peptide,
+                peptidoform,
                 overview
                     .as_ref()
-                    .map(|o| o[peptidoform_index][peptide_index].as_slice()),
+                    .map(|o| o[peptidoform_ion_index][peptidoform_index].as_slice()),
                 local_confidence
                     .as_ref()
-                    .map(|o| o[peptidoform_index][peptide_index].as_slice()),
+                    .map(|o| o[peptidoform_ion_index][peptidoform_index].as_slice()),
+                peptidoform_ion_index,
                 peptidoform_index,
-                peptide_index,
                 unique_peptide_lookup.len(),
                 multiple_peptidoforms,
                 multiple_peptides,
                 &mut cross_link_lookup,
             );
-            unique_peptide_lookup.push((peptidoform_index, peptide_index));
+            unique_peptide_lookup.push((peptidoform_ion_index, peptidoform_index));
         }
     }
     write!(output, "</div>").unwrap();
     unique_peptide_lookup
 }
 
-fn render_linear_peptide(
+fn render_linear_peptidoform(
     output: &mut String,
-    peptide: &LinearPeptide<Linked>,
+    peptidoform: &Peptidoform<Linked>,
     overview: Option<&[HashMap<FragmentType, OrderedFloat<f64>>]>,
     local_confidence: Option<&[f64]>,
+    peptidoform_ion_index: usize,
     peptidoform_index: usize,
-    peptide_index: usize,
-    unique_peptide_index: usize,
+    unique_peptidoform_index: usize,
+    multiple_peptidoform_ions: bool,
     multiple_peptidoforms: bool,
-    multiple_peptides: bool,
     cross_link_lookup: &mut Vec<CrossLinkName>,
 ) {
     write!(
         output,
-        "<div class='peptide pu{unique_peptide_index} p{peptidoform_index}'>"
+        "<div class='peptide pu{unique_peptidoform_index} p{peptidoform_ion_index}'>"
     )
     .unwrap();
-    if multiple_peptides || multiple_peptidoforms {
+    if multiple_peptidoforms || multiple_peptidoform_ions {
         write!(
             output,
             "{}",
             HtmlTag::span
                 .new()
                 .class("name")
-                .data([("pos", format!("{peptidoform_index}-{peptide_index}"))])
-                .content(if multiple_peptidoforms && multiple_peptides {
-                    format!("{}.{}", peptidoform_index + 1, peptide_index + 1)
+                .data([(
+                    "pos",
+                    format!("{peptidoform_ion_index}-{peptidoform_index}")
+                )])
+                .content(if multiple_peptidoform_ions && multiple_peptidoforms {
+                    format!("{}.{}", peptidoform_ion_index + 1, peptidoform_index + 1)
+                } else if multiple_peptidoform_ions {
+                    (peptidoform_ion_index + 1).to_string()
                 } else if multiple_peptidoforms {
                     (peptidoform_index + 1).to_string()
-                } else if multiple_peptides {
-                    (peptide_index + 1).to_string()
                 } else {
                     String::new()
                 })
         )
         .unwrap();
     }
-    if !peptide.get_n_term().is_empty() {
+    if !peptidoform.get_n_term().is_empty() {
         let mut possible_modifications = Vec::new();
         let mut cross_link = Vec::new();
         let mut modifications = Vec::new();
-        for m in peptide.get_n_term() {
+        for m in peptidoform.get_n_term() {
             match m {
                 Modification::Ambiguous {
                     group,
@@ -167,18 +172,18 @@ fn render_linear_peptide(
         )
         .unwrap();
     }
-    for (index, ((pos, ions), confidence)) in peptide
+    for (index, ((pos, ions), confidence)) in peptidoform
         .sequence()
         .iter()
         .zip(
             overview
                 .map(|o| o.iter().map(Some).collect_vec())
-                .unwrap_or(vec![None; peptide.len()]),
+                .unwrap_or(vec![None; peptidoform.len()]),
         )
         .zip(
             local_confidence
                 .map(|o| o.iter().map(Some).collect_vec())
-                .unwrap_or(vec![None; peptide.len()]),
+                .unwrap_or(vec![None; peptidoform.len()]),
         )
         .enumerate()
     {
@@ -219,7 +224,7 @@ fn render_linear_peptide(
                     write!(classes, " c{xl_index}").unwrap();
                     xl_indices.push(xl_index + 1);
                     xl_names.push(name);
-                    if *peptide != peptide_index {
+                    if *peptide != peptidoform_index {
                         xl_peptides.push(*peptide + 1);
                     }
                 }
@@ -262,9 +267,9 @@ fn render_linear_peptide(
         }
         write!(
             output,
-            "<span data-pos='{peptidoform_index}-{peptide_index}-{index}' data-cross-links='{cross_links}' data-cross-links-compact='{cross_links_compact}'{classes} tabindex='0' title='N terminal position: {}, C terminal position: {}{}{}{}' style='--confidence:{}'>{}",
+            "<span data-pos='{peptidoform_ion_index}-{peptidoform_index}-{index}' data-cross-links='{cross_links}' data-cross-links-compact='{cross_links_compact}'{classes} tabindex='0' title='N terminal position: {}, C terminal position: {}{}{}{}' style='--confidence:{}'>{}",
             index + 1,
-            peptide.len() - index,
+            peptidoform.len() - index,
             if modifications.is_empty() {
                 String::new()
             } else {
@@ -303,11 +308,11 @@ fn render_linear_peptide(
         }
         write!(output, "</span>").unwrap();
     }
-    if !peptide.get_c_term().is_empty() {
+    if !peptidoform.get_c_term().is_empty() {
         let mut possible_modifications = Vec::new();
         let mut cross_link = Vec::new();
         let mut modifications = Vec::new();
-        for m in peptide.get_c_term() {
+        for m in peptidoform.get_c_term() {
             match m {
                 Modification::Ambiguous {
                     group,
@@ -356,7 +361,7 @@ fn render_linear_peptide(
         )
         .unwrap();
     }
-    if let Some(charge_carriers) = &peptide.get_charge_carriers() {
+    if let Some(charge_carriers) = &peptidoform.get_charge_carriers() {
         write!(
             output,
             "<span class='charge-carriers'>/{charge_carriers}</span>",

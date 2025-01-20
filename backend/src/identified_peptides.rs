@@ -102,7 +102,7 @@ pub async fn search_peptide<'a>(
             Context::None,
         )
     })?;
-    let search = LinearPeptide::<Linked>::pro_forma(text, Some(&state.database))?
+    let search = Peptidoform::<Linked>::pro_forma(text, Some(&state.database))?
         .into_simple_linear()
         .ok_or_else(|| {
             CustomError::error(
