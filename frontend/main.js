@@ -4,9 +4,10 @@ const { invoke } = window.__TAURI__.core;
 
 const { listen } = window.__TAURI__.event;
 
-const { open } = window.__TAURI__.dialog;
+const { open, save } = window.__TAURI__.dialog;
 
 const RAW_EXTENSIONS = ['mgf', 'mgf.gz', "mzml", "mzml.gz", "imzml", "imzml.gz", "mzmlb", "mzmlb.gz", "raw", "raw.gz"];
+const RAW_WRITE_EXTENSIONS = ['mgf', "mzml"];
 const IDENTIFIED_EXTENSIONS = ["csv", "csv.gz", "tsv", "tsv.gz", "txt", "txt.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz", "mztab", "mztab.gz", "deepnovo_denovo", "deepnovo_denovo.gz", "ssl", "ssl.gz"];
 
 import { SetUpSpectrumInterface, spectrumClearDistanceLabels } from "./script.js";
@@ -112,6 +113,33 @@ async function dialog_select_identified_peptides_file(e) {
         identified_peptide_details();
         document.querySelector("#load-identified-peptides").classList.remove("loading");
       });
+    }
+  })
+};
+
+/** 
+ * Save the current open spectrum
+ * @param e: Element
+*/
+async function save_spectrum_file(e) {
+  let properties = {
+    title: "Save selected spectrum",
+    filters: [{
+      extensions: RAW_WRITE_EXTENSIONS, name: "MGF or mzML"
+    }]
+  };
+  save(properties).then((result) => {
+    if (result != null) {
+      document.querySelector("#save-spectrum").classList.add("loading")
+      var noise_threshold = Number(document.querySelector("#noise-filter").value);
+      var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);
+      invoke("save_spectrum", { filter: noise_threshold, path: result, sequence: document.querySelector("#peptide").innerText, model: document.querySelector("#spectrum-model").value, charge: charge }).then(() => {
+        clearError("open-files-error");
+        document.querySelector("#save-spectrum").classList.remove("loading");
+      }).catch((error) => {
+        showError("open-files-error", error);
+        document.querySelector("#save-spectrum").classList.remove("loading");
+      })
     }
   })
 };
@@ -353,10 +381,10 @@ async function update_selected_spectra() {
         let index = Number(result[i][0]);
         let rawfile = document.getElementById("rawfile-" + index + "-spectra");
         rawfile.innerHTML = '';
+        let single = result[i][1];
 
-        for (let element of result[i][1]) {
+        for (let element of result[i][2]) {
           let li = document.createElement("li");
-          let single = rawfile.parentElement.dataset.single;
 
           if (!single) {
             let close = document.createElement("button");
@@ -683,6 +711,9 @@ window.addEventListener("DOMContentLoaded", () => {
   document
     .querySelector("#load-raw-path")
     .addEventListener("click", (event) => select_raw_file(event.target));
+  document
+    .querySelector("#save-spectrum")
+    .addEventListener("click", (event) => save_spectrum_file(event.target));
   document
     .querySelector("#load-usi")
     .addEventListener("click", () => load_usi());

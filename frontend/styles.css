@@ -3036,7 +3036,8 @@ dialog.neutral-loss {
 
 /* Loading animation */
 
-#annotate-button {
+#annotate-button,
+#save-spectrum {
     height: 2rem;
 }
 
@@ -3060,7 +3061,7 @@ dialog.neutral-loss {
     }
 }
 
-.loading+.orbitrap {
+.loading~.orbitrap {
     visibility: visible;
     height: 5rem;
 }

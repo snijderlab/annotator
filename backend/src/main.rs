@@ -6,12 +6,7 @@
 use std::sync::Mutex;
 
 use itertools::Itertools;
-use mzdata::{
-    prelude::{IonProperties, SpectrumLike},
-    spectrum::{MultiLayerSpectrum, SpectrumDescription},
-};
-use mzpeaks::{CentroidPeak, DeconvolutedPeak};
-use mzsignal::PeakPicker;
+use mzdata::prelude::{IonProperties, SpectrumLike};
 use ordered_float::OrderedFloat;
 use render::{display_formula, display_mass};
 use rustyms::{
@@ -307,7 +302,7 @@ async fn annotate_spectrum<'a>(
     mass_mode: &'a str,
     mz_range: (Option<f64>, Option<f64>),
 ) -> Result<AnnotationResult, CustomError> {
-    let mut state = state.lock().unwrap();
+    let state = state.lock().unwrap();
     let model = custom_model.create_model(model, tolerance, mz_range)?;
     let mass_mode = match mass_mode {
         "monoisotopic" => MassMode::Monoisotopic,
@@ -324,47 +319,7 @@ async fn annotate_spectrum<'a>(
         .count()
         == 1;
 
-    let mut spectra = Vec::new();
-    for file in state.spectra.iter_mut() {
-        spectra.extend(file.get_selected_spectra());
-    }
-    let mut spectrum = if spectra.is_empty() {
-        return Err(CustomError::error(
-            "No selected spectra",
-            "Select a spectrum from an open raw file, or open a raw file if none are opened yet",
-            Context::None,
-        ));
-    } else if spectra.len() == 1 {
-        spectra.pop().unwrap()
-    } else {
-        let data = mzdata::spectrum::average_spectra(&spectra, 0.001);
-        MultiLayerSpectrum::<CentroidPeak, DeconvolutedPeak>::new(
-            SpectrumDescription::default(),
-            Some(data.into()),
-            None,
-            None,
-        )
-    };
-    if spectrum.peaks.is_none() {
-        if filter != 0.0 {
-            spectrum.denoise(filter).map_err(|err| {
-                CustomError::error(
-                    "Spectrum could not be denoised",
-                    err.to_string(),
-                    Context::None,
-                )
-            })?;
-        }
-        spectrum
-            .pick_peaks_with(&PeakPicker::default())
-            .map_err(|err| {
-                CustomError::error(
-                    "Spectrum could not be peak picked",
-                    err.to_string(),
-                    Context::None,
-                )
-            })?;
-    };
+    let spectrum = crate::spectra::create_selected_spectrum(state, filter)?;
 
     let use_charge = Charge::new::<e>(
         charge
@@ -461,14 +416,15 @@ fn main() {
             render::density_graph,
             search_modification::search_modification,
             spectra::close_raw_file,
+            spectra::deselect_spectrum,
+            spectra::get_open_raw_files,
+            spectra::get_selected_spectra,
             spectra::load_clipboard,
             spectra::load_raw,
             spectra::load_usi,
+            spectra::save_spectrum,
             spectra::select_spectrum_index,
             spectra::select_spectrum_native_id,
-            spectra::get_open_raw_files,
-            spectra::get_selected_spectra,
-            spectra::deselect_spectrum,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

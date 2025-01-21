@@ -1,18 +1,19 @@
-use std::{io::ErrorKind, ops::RangeInclusive, str::FromStr};
+use std::{ffi::OsString, io::ErrorKind, ops::RangeInclusive, path::Path, str::FromStr};
 
 use itertools::Itertools;
 use mzdata::{
     io::{proxi::PROXIError, usi::USIParseError, MZFileReader, SpectrumSource},
     meta::DissociationMethodTerm,
-    params::{ParamDescribed, Unit, Value},
+    params::{ParamDescribed, Unit, Value, ValueRef},
     prelude::{IonProperties, PrecursorSelection, SpectrumLike},
     spectrum::{
         bindata::BinaryCompressionType, ArrayType, BinaryDataArrayType, DataArray,
-        MultiLayerSpectrum, SignalContinuity,
+        MultiLayerSpectrum, SignalContinuity, SpectrumDescription,
     },
     Param,
 };
-use mzpeaks::CentroidPeak;
+use mzpeaks::{peak_set::PeakSetVec, CentroidPeak, DeconvolutedPeak};
+use mzsignal::PeakPicker;
 use rustyms::{
     error::{Context, CustomError},
     system::{dalton, Mass, OrderedTime},
@@ -502,7 +503,9 @@ pub fn get_open_raw_files(state: ModifiableState) -> Vec<RawFileDetails> {
 }
 
 #[tauri::command]
-pub fn get_selected_spectra(state: ModifiableState) -> Vec<(usize, Vec<SelectedSpectrumDetails>)> {
+pub fn get_selected_spectra(
+    state: ModifiableState,
+) -> Vec<(usize, bool, Vec<SelectedSpectrumDetails>)> {
     state
         .lock()
         .unwrap()
@@ -511,6 +514,7 @@ pub fn get_selected_spectra(state: ModifiableState) -> Vec<(usize, Vec<SelectedS
         .map(|file| {
             let id = file.id();
             (id,
+            matches!(file, RawFile::Single{..}),
             file.get_selected_spectra().map(|spectrum | {
                 let d = spectrum.description();
                 let p = spectrum.precursor();
@@ -519,7 +523,7 @@ pub fn get_selected_spectra(state: ModifiableState) -> Vec<(usize, Vec<SelectedS
                     id: spectrum.index(),
                     short: d.id.to_string(),
                     description: format!(
-                        "index: {} id: {}<br>time: {:.3} signal mode: {:?} ms level: {} ion mobility: {}<br>mz range: {:.1} — {:.1} peak count: {} tic: {:.3e} base peak intensity: {:.3e}<br>{}{}",
+                        "index: {} id: {}<br>time: {:.3} signal mode: {:?} ms level: {} ion mobility: {}<br>mz range: {:.1} — {:.1} peak count: {} tic: {:.3e} base peak intensity: {:.3e} resultion: {}<br>{}<br>{}{}",
                         spectrum.index(),
                         d.id,
                         spectrum.start_time(),
@@ -531,6 +535,12 @@ pub fn get_selected_spectra(state: ModifiableState) -> Vec<(usize, Vec<SelectedS
                         summary.count,
                         summary.tic,
                         summary.base_peak.intensity,
+                        spectrum.description.acquisition.first_scan().and_then(|s| s.resolution()).map_or("-".to_string(), |v| match v {
+                            ValueRef::Float(f) => format!("{f:.3e}"),
+                            ValueRef::Int(i) => format!("{i:.3e}"),
+                            _ => "-".to_string(),
+                        }),
+                        spectrum.description.acquisition.first_scan().and_then(|s| s.filter_string()).map_or("No filter string".to_string(), |v| format!("Filter: {v}")),
                         p.map_or("No precursor".to_string(), |p| {
                             let i = p.isolation_window();
                             format!(
@@ -541,8 +551,9 @@ pub fn get_selected_spectra(state: ModifiableState) -> Vec<(usize, Vec<SelectedS
                                 i.lower_bound,
                                 i.upper_bound,
                                 p.activation
-                                    .method()
-                                    .map_or("-", |m| match m {
+                                    .methods()
+                                    .iter()
+                                    .map(|m| match m {
                                         DissociationMethodTerm::BeamTypeCollisionInducedDissociation => "BeamCID",
                                         DissociationMethodTerm::BlackbodyInfraredRadiativeDissociation => "BlackbodyInfraredRadiativeDissociation",
                                         DissociationMethodTerm::CollisionInducedDissociation => "CID",
@@ -566,7 +577,7 @@ pub fn get_selected_spectra(state: ModifiableState) -> Vec<(usize, Vec<SelectedS
                                         DissociationMethodTerm::SustainedOffResonanceIrradiation => "SustainedOffResonanceIrradiation",
                                         DissociationMethodTerm::TrapTypeCollisionInducedDissociation => "trapCID",
                                         DissociationMethodTerm::UltravioletPhotodissociation => "UVPD",
-                                    }),
+                                    }).join("+"),
                                 p.activation.energy,
                             )
                         }),
@@ -579,4 +590,152 @@ pub fn get_selected_spectra(state: ModifiableState) -> Vec<(usize, Vec<SelectedS
                 }
             }).collect_vec())
         }).collect_vec()
+}
+
+pub fn create_selected_spectrum(
+    mut state: std::sync::MutexGuard<'_, crate::State>,
+    filter: f32,
+) -> Result<MultiLayerSpectrum, CustomError> {
+    let mut spectra = Vec::new();
+    for file in state.spectra.iter_mut() {
+        spectra.extend(file.get_selected_spectra());
+    }
+    let mut spectrum = if spectra.is_empty() {
+        return Err(CustomError::error(
+            "No selected spectra",
+            "Select a spectrum from an open raw file, or open a raw file if none are opened yet",
+            Context::None,
+        ));
+    } else if spectra.len() == 1 {
+        spectra.pop().unwrap()
+    } else {
+        let data = mzdata::spectrum::average_spectra(&spectra, 0.001);
+        MultiLayerSpectrum::<CentroidPeak, DeconvolutedPeak>::new(
+            SpectrumDescription::default(),
+            Some(data.into()),
+            None,
+            None,
+        )
+    };
+    if spectrum.peaks.is_none() {
+        if filter != 0.0 {
+            spectrum.denoise(filter).map_err(|err| {
+                CustomError::error(
+                    "Spectrum could not be denoised",
+                    err.to_string(),
+                    Context::None,
+                )
+            })?;
+        }
+        if spectrum.signal_continuity() == SignalContinuity::Profile {
+            spectrum
+                .pick_peaks_with(&PeakPicker::default())
+                .map_err(|err| {
+                    CustomError::error(
+                        "Spectrum could not be peak picked",
+                        err.to_string(),
+                        Context::None,
+                    )
+                })?;
+        } else if spectrum.signal_continuity() == SignalContinuity::Unknown
+            && spectrum.arrays.is_some()
+        {
+            spectrum.peaks = spectrum.arrays.as_ref().map(|a| a.into());
+        }
+    }
+
+    Ok(spectrum)
+}
+
+#[tauri::command]
+pub fn save_spectrum<'a>(
+    state: ModifiableState,
+    filter: f32,
+    path: &Path,
+    sequence: &'a str,
+    model: &'a str,
+    charge: Option<usize>,
+) -> Result<(), CustomError> {
+    let state = state.lock().map_err(|e| {
+        CustomError::error(
+            "Could not write file",
+            "Mutex locked, are you doing too much at the same time?",
+            Context::show(e),
+        )
+    })?;
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .open(path)
+        .map_err(|e| {
+            CustomError::error(
+                "Could not write file",
+                "File could not be opened for writing",
+                Context::show(e),
+            )
+        })?;
+    let ext = path
+        .extension()
+        .map(|s| s.to_string_lossy().to_ascii_lowercase());
+    let mut spectrum = create_selected_spectrum(state, filter)?;
+    if !sequence.is_empty() {
+        spectrum.description.params.push(Param::new_key_value(
+            "sequence",
+            mzdata::params::Value::String(sequence.to_string()),
+        ));
+    }
+    if model != "all" && model != "none" && model != "custom" {
+        if let Some(p) = &mut spectrum.description.precursor {
+            p.activation.methods_mut().append(&mut match model {
+                "ethcd" => vec![
+                    DissociationMethodTerm::ElectronTransferDissociation,
+                    DissociationMethodTerm::CollisionInducedDissociation,
+                ],
+                "hot_eacid" => vec![
+                    DissociationMethodTerm::ElectronActivatedDissociation,
+                    DissociationMethodTerm::CollisionInducedDissociation,
+                ],
+                "ead" => vec![DissociationMethodTerm::ElectronActivatedDissociation],
+                "cidhcd" => vec![DissociationMethodTerm::CollisionInducedDissociation],
+                "etd" => vec![DissociationMethodTerm::ElectronTransferDissociation],
+                "td_etd" => vec![DissociationMethodTerm::ElectronTransferDissociation],
+                _ => Vec::new(),
+            })
+        }
+    }
+    if let Some(charge) = charge {
+        if let Some(p) = &mut spectrum.description.precursor {
+            if let Some(i) = p.ions.first_mut() {
+                i.charge = Some(charge as i32);
+            }
+        }
+    }
+    match ext.as_deref() {
+        Some("mgf") => {
+            let mut writer = mzdata::MGFWriter::new(file);
+            writer.write(&spectrum).map(|_| ()).map_err(|e| {
+                CustomError::error(
+                    "Could not write file",
+                    "Could not write MGF",
+                    Context::show(e),
+                )
+            })
+        }
+        Some("mzml") => {
+            let mut writer = mzdata::MzMLWriter::new(file);
+            writer.write_spectrum(&spectrum).map_err(|e| {
+                CustomError::error(
+                    "Could not write file",
+                    "Could not write mzML",
+                    Context::show(e),
+                )
+            })
+        }
+        _ => Err(CustomError::error(
+            "Could not write file",
+            "Invalid path, use mgf or mzml as extension",
+            Context::show(path.to_string_lossy()),
+        )),
+    }
 }
