@@ -1,0 +1,25 @@
+title: Annotator
+version: 1.0.0
+abstract:  A rust library for parsing Pro Forma peptides and matching them against MS spectra .
+authors:
+  - affiliation: Utrecht University
+    family-names: Schulte
+    given-names: Douwe
+    orcid: https://orcid.org/0000-0003-0594-0993
+  - affiliation: Utrecht University
+    family-names: Heerdink
+    given-names: Auke
+cff-version: 1.2.0
+identifiers:
+  - description: Release paper (preprint)
+    type: doi
+    value: 10.1101/2025.01.18.633732 
+  - description: Repository
+    type: url
+    value: https://github.com/snijderlab/annotator
+keywords:
+  - mass-spectrometry
+  - de novo
+license: MIT OR Apache-2.0
+message: If you use this software, please cite it using these metadata.
+repository-code: https://github.com/snijderlab/annotator
