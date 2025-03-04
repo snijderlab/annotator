@@ -25,7 +25,7 @@ rustyms = { version = "0.9.0", default-features = false, features = [
 ] }
 ordered-float = { version = "4.5", features = ["serde"] }
 rayon = "1.10"
-mzdata = { version = "0.41", default-features = false, features = [
+mzdata = { version = "0.44", default-features = false, features = [
     "mzsignal",
     "proxi-async",
     "thermo",
@@ -40,6 +40,7 @@ thin-vec = { version = "0.2", features = ["serde"] }
 # hdf5 rust crate needs a new version
 hdf5 = { git = "https://github.com/aldanor/hdf5-rust.git" }
 hdf5-sys = { git = "https://github.com/aldanor/hdf5-rust.git" }
+rustyms = {path = "../../rustyms/rustyms"}
 
 [features]
 default = ["custom-protocol"]

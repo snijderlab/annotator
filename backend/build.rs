@@ -580,9 +580,6 @@ fn main() {
         </div>
         <output class="error collapsible-content hidden" id="details-formula-error"></output>
         <output class="collapsible-content" id="details-formula-result"></output>
-
-        <h2>Browse GNOme structures using the GNOme structure browser</h2>
-        <iframe title="GNOme Structure Browser" src="https://pages.glycosmos.org/gnome/public/index.html"></iframe>
       </fieldset>
       <input type="checkbox" id="collapsible-custom-mods">
       <fieldset class="collapsible" data-linked-item="collapsible-custom-mods" id="custom-modifications">

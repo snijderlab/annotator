@@ -17,7 +17,7 @@ use tauri::Manager;
 use crate::{
     render::{display_formula, display_neutral_loss, display_placement_rule, display_stubs},
     state::State,
-    ModifiableState,
+    ModifiableState, Theme,
 };
 
 #[tauri::command]
@@ -181,6 +181,7 @@ pub fn validate_custom_linker_specificity(
 #[tauri::command]
 pub fn get_custom_modifications(
     state: ModifiableState,
+    theme: Theme,
 ) -> Result<Vec<(usize, String)>, &'static str> {
     let state = state.lock().map_err(|_| "Could not lock mutex")?;
     Ok(state
@@ -189,7 +190,7 @@ pub fn get_custom_modifications(
         .map(|(index, _, modification)| {
             (
                 index.unwrap_or_default(),
-                crate::search_modification::render_modification(modification).to_string(),
+                crate::search_modification::render_modification(modification, theme).to_string(),
             )
         })
         .collect())

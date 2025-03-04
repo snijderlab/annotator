@@ -1,13 +1,14 @@
 use crate::{
     html_builder,
     metadata_render::OptionalString,
-    render::{display_formula, display_masses, display_placement_rule},
-    ModifiableState,
+    render::{display_formula, display_masses, display_placement_rule, render_full_glycan},
+    ModifiableState, Theme,
 };
 use itertools::Itertools;
 use modification::ModificationId;
 use rustyms::{
     error::*,
+    glycan::GlycanStructure,
     modification::{GnoComposition, LinkerSpecificity, SimpleModificationInner},
     placement_rule::PlacementRule,
     system::{dalton, Mass},
@@ -24,6 +25,7 @@ pub async fn search_modification(
     text: &str,
     tolerance: f64,
     state: ModifiableState<'_>,
+    theme: Theme,
 ) -> Result<String, CustomError> {
     let state = state.lock().unwrap();
     let modification = if text.is_empty() {
@@ -98,7 +100,7 @@ pub async fn search_modification(
             ..
         } => Ok(HtmlTag::div
             .new()
-            .content(render_modification(&modification))
+            .content(render_modification(&modification, theme))
             .content(html_builder::HtmlElement::table(
                 Some(&["Name", "Structure"]),
                 modification_search_glycan(g, true).map(|(ontology, id, name, modification)| {
@@ -109,7 +111,7 @@ pub async fn search_modification(
                             ..
                         } = &*modification
                         {
-                            structure.to_string()
+                            render_full_glycan(structure, false, false, theme).0
                         } else {
                             "-".to_string()
                         },
@@ -117,11 +119,11 @@ pub async fn search_modification(
                 }),
             ))
             .to_string()),
-        modification => Ok(render_modification(modification).to_string()),
+        modification => Ok(render_modification(modification, theme).to_string()),
     }
 }
 
-pub fn render_modification(modification: &SimpleModificationInner) -> HtmlElement {
+pub fn render_modification(modification: &SimpleModificationInner, theme: Theme) -> HtmlElement {
     let mut output = HtmlTag::div.new();
     output.class("modification");
 
@@ -238,7 +240,9 @@ pub fn render_modification(modification: &SimpleModificationInner) -> HtmlElemen
                             .iter()
                             .fold(String::new(), |acc, m| acc + &format!("{}{}", m.0, m.1))
                     )),
-                    HtmlTag::p.new().content(format!("Structure: {structure}")),
+                    HtmlTag::p
+                        .new()
+                        .content(render_full_glycan(structure, true, false, theme).0),
                 ]);
             }
         }

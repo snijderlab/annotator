@@ -988,9 +988,9 @@ dependencies = [
 
 [[package]]
 name = "dotnetrawfilereader-sys"
-version = "0.4.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8681dac6bb5547a1a2ffb53d58d01ae0a001a81bef95abb20357eb465dc88f76"
+checksum = "8aa617a5390fd3e8459dd968086b872b89d849bc7d4a8e34b1a154bdb50b2b73"
 dependencies = [
  "include_dir",
  "netcorehost",
@@ -2575,9 +2575,9 @@ dependencies = [
 
 [[package]]
 name = "mzdata"
-version = "0.41.0"
+version = "0.44.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2ff6f5c6f039879ca86ee4fc4bd67f97f0d1f18fad6a79c3dbbbe74d5e875d7"
+checksum = "d1a7bcd32a89fdbc5d026229cfe3382d03ed0857d0f269cc9e7a9d0706efc71c"
 dependencies = [
  "base16ct",
  "base64-simd",
@@ -2609,18 +2609,18 @@ dependencies = [
 
 [[package]]
 name = "mzpeaks"
-version = "1.0.2"
+version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "684e4a200c8afaba33aae0820d222ef65b67b980ded188571e31c965ed3da79c"
+checksum = "07d04f50feca5fb159a85725a6c7a833bd3de0209a593d5522739d0e76e01a61"
 dependencies = [
  "num-traits",
 ]
 
 [[package]]
 name = "mzsignal"
-version = "1.0.7"
+version = "1.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb66ac2d5c6eb66dc5a1c6bf654020b1ff982ad3319a136a996d6ea65b2366f1"
+checksum = "ec7fca429bb8fff3713b3519a8b8b93fd2a0d2249b5e7d6233160cbf582757d8"
 dependencies = [
  "cfg-if",
  "libm",
@@ -3997,8 +3997,6 @@ checksum = "f7c45b9784283f1b2e7fb61b42047c2fd678ef0960d4f6f1eba131594cc369d4"
 [[package]]
 name = "rustyms"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd009e11afaa35a5514830c951472dae812fb554cd4eaa53d3c4356a06178036"
 dependencies = [
  "bincode",
  "flate2",
@@ -4931,9 +4929,9 @@ dependencies = [
 
 [[package]]
 name = "thermorawfilereader"
-version = "0.3.1"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "263307a8f6521a9aad904670c80659ad48d6e2b7d787e1f9e703ae298cbe3596"
+checksum = "23672085e9b1b63c8e0c30c71d7087f0e60b631e934014fbfba85a62daaec3da"
 dependencies = [
  "bytemuck",
  "dotnetrawfilereader-sys",

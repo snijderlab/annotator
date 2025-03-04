@@ -1175,6 +1175,12 @@ input:not(:checked)+.collapsible {
             border-right: transparent;
             --pad-right: 2px;
         }
+
+        & .glycan {
+            position: absolute;
+            bottom: calc(var(--fragments-padding) * 2 + var(--confidence-padding) + 1em);
+            left: calc(var(--fragments-padding) + var(--pad-left) + var(--width) / 2);
+        }
     }
 
     .corner {

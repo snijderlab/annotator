@@ -152,6 +152,11 @@ async function load_raw(path) {
   });
 }
 
+let Theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? "Dark" : "Light";
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+  Theme = event.matches ? "Dark" : "Light";
+});
+
 async function load_usi() {
   document.querySelector("#load-usi").classList.add("loading")
   return invoke("load_usi", { usi: document.getElementById("usi").value }).then((result) => {
@@ -469,7 +474,7 @@ window.load_peptide = load_peptide;
 async function search_modification() {
   if (document.querySelector("#search-modification").value != "") {
     document.querySelector("#search-modification-button").classList.add("loading");
-    invoke("search_modification", { text: document.querySelector("#search-modification").value, tolerance: Number(document.querySelector("#search-modification-tolerance").value) }).then((result) => {
+    invoke("search_modification", { text: document.querySelector("#search-modification").value, tolerance: Number(document.querySelector("#search-modification-tolerance").value), theme: Theme }).then((result) => {
       document.querySelector("#search-modification-result").innerHTML = result;
       document.querySelector("#search-modification-button").classList.remove("loading");
       clearError("search-modification-error");
@@ -755,6 +760,17 @@ window.addEventListener("DOMContentLoaded", () => {
     .addEventListener("change", (e) => {
       document.body.classList.remove("theme-light", "theme-dark", "theme-auto");
       document.body.classList.add(e.target.value);
+      switch (e.target.value) {
+        case "theme-light":
+          Theme = "Light";
+          break;
+        case "theme-dark":
+          Theme = "Dark";
+          break;
+        case "theme-auto":
+          Theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? "Dark" : "Light";
+          break;
+      }
     });
   document
     .querySelector("#distance-labels-clear")
@@ -933,7 +949,7 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 function updateCustomModifications() {
-  invoke("get_custom_modifications")
+  invoke("get_custom_modifications", { theme: Theme })
     .then(modifications => {
       let container = document.getElementById("custom-mods");
       container.innerText = "";

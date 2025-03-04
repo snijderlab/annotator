@@ -4,6 +4,7 @@ use itertools::Itertools;
 use mzdata::spectrum::MultiLayerSpectrum;
 use rustyms::{
     fragment::*,
+    glycan::{GlycanDirection, GlycanRoot, GlycanStructure},
     model::Location,
     modification::{Ontology, SimpleModificationInner},
     placement_rule::PlacementRule,
@@ -16,6 +17,7 @@ use crate::{
     html_builder::{HtmlContent, HtmlElement, HtmlTag},
     metadata_render::OptionalString,
     render::label::display_sequence_index,
+    Theme,
 };
 use ordered_float::OrderedFloat;
 
@@ -1550,4 +1552,37 @@ pub fn link_modification(ontology: Ontology, id: Option<usize>, name: &str) -> S
     } else {
         String::new()
     }
+}
+
+pub fn render_full_glycan(
+    glycan: &GlycanStructure,
+    big: bool,
+    top_down: bool,
+    theme: Theme,
+) -> (String, f32) {
+    glycan
+        .render(
+            GlycanRoot::Symbol,
+            if big { 40.0 } else { 20.0 },
+            if big { 20.0 } else { 10.0 },
+            if big { 2.0 } else { 1.0 },
+            if top_down {
+                GlycanDirection::TopDown
+            } else {
+                GlycanDirection::LeftToRight
+            },
+            None,
+            &[],
+            theme.fg(),
+            theme.bg(),
+            &mut Vec::new(),
+        )
+        .map_or(("Render error".to_string(), 0.0), |r| {
+            let mut output = String::new();
+            if r.to_svg(&mut output).is_ok() {
+                (output, r.midpoint)
+            } else {
+                ("Render error".to_string(), 0.0)
+            }
+        })
 }

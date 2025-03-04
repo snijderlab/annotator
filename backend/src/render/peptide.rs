@@ -1,12 +1,15 @@
 use std::{collections::HashMap, fmt::Write};
 
-use crate::html_builder::HtmlTag;
+use crate::{html_builder::HtmlTag, Theme};
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
 use rustyms::{
-    fragment::*, modification::CrossLinkName, CompoundPeptidoformIon, Linked, Modification,
-    Peptidoform,
+    fragment::*,
+    modification::{CrossLinkName, GnoComposition, SimpleModificationInner},
+    CompoundPeptidoformIon, Linked, Modification, Peptidoform,
 };
+
+use super::render_full_glycan;
 
 /// Render a peptidoform with the given ions present. It returns a lookup with the unique ids for all peptides.
 pub fn render_peptide(
@@ -149,7 +152,14 @@ fn render_linear_peptidoform(
                         format!("{name}"),
                     ));
                 }
-                Modification::Simple(m) => modifications.push(m.to_string()),
+                Modification::Simple(m) => match &**m {
+                    SimpleModificationInner::Gno {
+                        composition: GnoComposition::Topology(structure),
+                        id,
+                        ..
+                    } => (),
+                    other => modifications.push(other.to_string()),
+                },
             }
         }
         write!(
@@ -192,6 +202,7 @@ fn render_linear_peptidoform(
         let mut xl_names = Vec::new();
         let mut xl_peptides = Vec::new();
         let mut modifications = String::new();
+        let mut glycans = String::new();
         let mut modifications_of_unknown_position = String::new();
         for m in &pos.modifications {
             match m {
@@ -228,12 +239,29 @@ fn render_linear_peptidoform(
                         xl_peptides.push(*peptide + 1);
                     }
                 }
-                Modification::Simple(m) => write!(
-                    modifications,
-                    "{}{m}",
-                    if !modifications.is_empty() { ", " } else { "" },
-                )
-                .unwrap(),
+                Modification::Simple(m) => match &**m {
+                    SimpleModificationInner::Gno {
+                        composition: GnoComposition::Topology(structure),
+                        id,
+                        ..
+                    } => {
+                        let (svg, midpoint) =
+                            render_full_glycan(structure, false, true, Theme::Dark);
+                        write!(glycans, "<div class='glycan' style='transform:translate(-{midpoint}px,0)'>{svg}</div>");
+                        write!(
+                            modifications,
+                            "{}{id}",
+                            if !modifications.is_empty() { ", " } else { "" },
+                        )
+                        .unwrap()
+                    }
+                    other => write!(
+                        modifications,
+                        "{}{other}",
+                        if !modifications.is_empty() { ", " } else { "" },
+                    )
+                    .unwrap(),
+                },
             }
         }
 
@@ -289,6 +317,9 @@ fn render_linear_peptidoform(
             pos.aminoacid.char(),
         )
         .unwrap();
+        if !glycans.is_empty() {
+            write!(output, "<div class='glycans'>{glycans}</div>").unwrap();
+        }
         if let Some(ions) = ions {
             for (ion, intensity) in ions {
                 if !matches!(

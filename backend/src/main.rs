@@ -31,6 +31,27 @@ mod state;
 
 use crate::{metadata_render::RenderToHtml, state::State};
 
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub enum Theme {
+    Light,
+    Dark,
+}
+
+impl Theme {
+    pub fn fg(self) -> [u8; 3] {
+        match self {
+            Self::Light => [30, 30, 30],
+            Self::Dark => [212, 212, 212],
+        }
+    }
+    pub fn bg(self) -> [u8; 3] {
+        match self {
+            Self::Light => [255, 255, 255],
+            Self::Dark => [30, 30, 30],
+        }
+    }
+}
+
 const CUSTOM_MODIFICATIONS_FILE: &str = "custom_modifications.json";
 type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
 
