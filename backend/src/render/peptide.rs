@@ -201,6 +201,7 @@ fn render_linear_peptidoform(
         let mut xl_indices = Vec::new();
         let mut xl_names = Vec::new();
         let mut xl_peptides = Vec::new();
+        let mut modification = false;
         let mut modifications = String::new();
         let mut glycans = String::new();
         let mut modifications_of_unknown_position = String::new();
@@ -259,12 +260,15 @@ fn render_linear_peptidoform(
                         )
                         .unwrap()
                     }
-                    other => write!(
-                        modifications,
-                        "{}{other}",
-                        if !modifications.is_empty() { ", " } else { "" },
-                    )
-                    .unwrap(),
+                    other => {
+                        modification = true;
+                        write!(
+                            modifications,
+                            "{}{other}",
+                            if !modifications.is_empty() { ", " } else { "" },
+                        )
+                        .unwrap()
+                    }
                 },
             }
         }
@@ -281,11 +285,7 @@ fn render_linear_peptidoform(
 
         let cross_links_compact = format!("x{}", xl_indices.iter().join(","),);
 
-        if pos
-            .modifications
-            .iter()
-            .any(|m| matches!(m, Modification::Simple(_)))
-        {
+        if modification {
             write!(classes, " modification").unwrap();
         }
         if !xl_indices.is_empty() {

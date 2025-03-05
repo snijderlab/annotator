@@ -1099,9 +1099,8 @@ input:not(:checked)+.collapsible {
         border: 2px solid var(--color-foreground);
         border-radius: 100000px;
         text-align: center;
-        margin: auto .5em auto 0;
+        margin: 0 .5em var(--fragments-padding) 0;
         padding: 0 .25em !important;
-        vertical-align: middle;
     }
 
     &>span {
