@@ -8,8 +8,7 @@ use itertools::Itertools;
 use modification::ModificationId;
 use rustyms::{
     error::*,
-    glycan::GlycanStructure,
-    modification::{GnoComposition, LinkerSpecificity, SimpleModificationInner},
+    modification::{GnoComposition, LinkerSpecificity, Ontology, SimpleModificationInner},
     placement_rule::PlacementRule,
     system::{dalton, Mass},
     ReturnModification, *,
@@ -329,7 +328,7 @@ fn render_modification_id(id: &ModificationId) -> HtmlElement {
     text
         .content(HtmlTag::p.new().content(format!(
             "Ontology: <span class='ontology'>{}</span>, name: <span class='name'>{}</span>, index: <span class='index'>{}</span>{}",
-            id.ontology, id.name, id.id.to_optional_string(), if let Some(url) = id.url() {
+            id.ontology, if id.ontology == Ontology::Gnome {id.name.to_ascii_uppercase()} else {id.name.clone()}, id.id.to_optional_string(), if let Some(url) = id.url() {
                 format!(", {}", HtmlTag::a.new()
                 .content("view online")
                 .header("href", url)
@@ -361,7 +360,86 @@ fn render_modification_id(id: &ModificationId) -> HtmlElement {
                 .children(id.cross_ids.iter().map(|(meta, id)| {
                     HtmlTag::li
                         .new()
-                        .content(format!("<span class='cross-id-system'>{meta}</span>: {id}"))
+                        .content(match meta.as_str() {
+                            "RESID"
+                                if id.starts_with("AA")
+                                    && id.len() > 2
+                                    && id[2..].parse::<usize>().is_ok() =>
+                            {
+                                link_modification(
+                                    Ontology::Resid,
+                                    Some(id[2..].parse::<usize>().unwrap()),
+                                    "",
+                                )
+                            }
+                            "PSI-MOD" if id.parse::<usize>().is_ok() => link_modification(
+                                Ontology::Psimod,
+                                Some(id.parse::<usize>().unwrap()),
+                                "",
+                            ),
+                            "Unimod" if id.parse::<usize>().is_ok() => link_modification(
+                                Ontology::Unimod,
+                                Some(id.parse::<usize>().unwrap()),
+                                "",
+                            ),
+                            "ChEBI" if id.parse::<usize>().is_ok() => HtmlTag::a
+                                .new()
+                                .header(
+                                    "href",
+                                    format!(
+                                        "https://www.ebi.ac.uk/chebi/chebiOntology.do?chebiId={id}"
+                                    ),
+                                )
+                                .header("target", "_blank")
+                                .content(format!(
+                                    "<span class='cross-id-system'>{meta}</span>: {id}"
+                                ))
+                                .to_string(),
+                            "PubMed" | "PMID" if id.parse::<usize>().is_ok() => HtmlTag::a
+                                .new()
+                                .header("href", format!("https://pubmed.ncbi.nlm.nih.gov/{id}"))
+                                .header("target", "_blank")
+                                .content(format!(
+                                    "<span class='cross-id-system'>PubMed</span>: {id}"
+                                ))
+                                .to_string(),
+                            "DOI" => HtmlTag::a
+                                .new()
+                                .header("href", format!("https://doi.org/{id}"))
+                                .header("target", "_blank")
+                                .content(format!(
+                                    "<span class='cross-id-system'>{meta}</span>: {id}"
+                                ))
+                                .to_string(),
+                            "FindMod" => HtmlTag::a
+                                .new()
+                                .header("href", format!("https://web.expasy.org/findmod/{id}.html"))
+                                .header("target", "_blank")
+                                .content(format!(
+                                    "<span class='cross-id-system'>{meta}</span>: {id}"
+                                ))
+                                .to_string(),
+                            "PDBHET" => HtmlTag::a
+                                .new()
+                                .header("href", format!("https://www.rcsb.org/ligand/{id}"))
+                                .header("target", "_blank")
+                                .content(format!(
+                                    "<span class='cross-id-system'>{meta}</span>: {id}"
+                                ))
+                                .to_string(),
+                            _ => {
+                                if id.starts_with("http://") || id.starts_with("https://") {
+                                    HtmlTag::a
+                                        .new()
+                                        .header("href", id)
+                                        .header("target", "_blank")
+                                        .content(meta)
+                                        .to_string()
+                                } else {
+                                    format!("<span class='cross-id-system'>{meta}</span>: {id}")
+                                }
+                            }
+                        })
                         .clone()
                 })),
         );

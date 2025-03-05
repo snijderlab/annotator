@@ -247,7 +247,11 @@ fn render_linear_peptidoform(
                     } => {
                         let (svg, midpoint) =
                             render_full_glycan(structure, false, true, Theme::Dark);
-                        write!(glycans, "<div class='glycan' style='transform:translate(-{midpoint}px,0)'>{svg}</div>");
+                        write!(
+                            glycans,
+                            "<div class='glycan' style='--midpoint:{midpoint}'>{svg}</div>"
+                        )
+                        .unwrap();
                         write!(
                             modifications,
                             "{}{id}",

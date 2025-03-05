@@ -1407,6 +1407,15 @@ pub fn display_masses(value: &MolecularFormula) -> HtmlElement {
         .clone()
 }
 
+pub fn display_masses_unformatted(value: &MolecularFormula) -> String {
+    format!(
+        "{} / {} / {}",
+        display_mass_unformatted(value.monoisotopic_mass()),
+        display_mass_unformatted(value.average_weight()),
+        display_mass_unformatted(value.most_abundant_mass()),
+    )
+}
+
 pub fn display_mass(value: Mass, kind: Option<MassMode>) -> HtmlElement {
     let (num, suf, full) = engineering_notation(value.value, 3);
     let suf = suf.map_or(String::new(), |suf| suf.to_string());
@@ -1433,6 +1442,12 @@ pub fn display_mass(value: Mass, kind: Option<MassMode>) -> HtmlElement {
         )
         .content(format!("{} {}Da", num, suf))
         .clone()
+}
+
+pub fn display_mass_unformatted(value: Mass) -> String {
+    let (num, suf, _) = engineering_notation(value.value, 3);
+    let suf = suf.map_or(String::new(), |suf| suf.to_string());
+    format!("{} {}Da", num, suf)
 }
 
 /// Display the given value in engineering notation eg `1000` -> `10 k`, with the given number of decimal points and returns the suffix separately.
@@ -1546,9 +1561,23 @@ pub fn display_placement_rule(rule: &PlacementRule, formatted: bool) -> String {
 
 pub fn link_modification(ontology: Ontology, id: Option<usize>, name: &str) -> String {
     if ontology == Ontology::Gnome {
-        format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'>{0}:{1}</a>", ontology.char(), name)
+        format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'>{0}:{1}</a>", ontology.char(), name.to_ascii_uppercase())
     } else if let Some(id) = id {
-        format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'>{0}:{1}</a>", ontology.name(), id)
+        let preview = if let Some(
+            SimpleModificationInner::Database { formula, id, .. }
+            | SimpleModificationInner::Linker { formula, id, .. },
+        ) = ontology.find_id(id, None).as_deref()
+        {
+            format!(
+                " title=\"{} Formula: {} Mass: {}\"",
+                id.name,
+                display_formula(formula, false),
+                display_masses_unformatted(formula)
+            )
+        } else {
+            String::new()
+        };
+        format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{2}{1}\";document.getElementById(\"search-modification-button\").click()'{preview}>{0}:{2}{1}</a>", ontology.name(), id, if ontology == Ontology::Resid {"AA"} else {""})
     } else {
         String::new()
     }
@@ -1557,16 +1586,20 @@ pub fn link_modification(ontology: Ontology, id: Option<usize>, name: &str) -> S
 pub fn render_full_glycan(
     glycan: &GlycanStructure,
     big: bool,
-    top_down: bool,
+    on_peptide: bool,
     theme: Theme,
 ) -> (String, f32) {
     glycan
         .render(
-            GlycanRoot::Symbol,
+            if on_peptide {
+                GlycanRoot::Line
+            } else {
+                GlycanRoot::Symbol
+            },
             if big { 40.0 } else { 20.0 },
             if big { 20.0 } else { 10.0 },
             if big { 2.0 } else { 1.0 },
-            if top_down {
+            if on_peptide {
                 GlycanDirection::TopDown
             } else {
                 GlycanDirection::LeftToRight
