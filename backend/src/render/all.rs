@@ -442,7 +442,7 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
                             _ => unreachable!(), // TODO: handle better
                         }]
                         .entry(fragment.ion.clone())
-                        .or_insert_with(OrderedFloat::default) += peak.intensity;
+                        .or_default() += peak.intensity;
                         true
                     } else {
                         false
@@ -638,17 +638,13 @@ pub fn spectrum_table(
                 format!("{}{}", pos.series_number, pos.branch_names()),
                 annotation.ion.label().to_string(),
             )
-        } else if let FragmentType::Oxonium(breakages) = &annotation.ion {
+        } else if let FragmentType::Oxonium { b, y, .. } = &annotation.ion {
             (
-                breakages
-                    .first()
-                    .map(|b| b.position().attachment())
-                    .unwrap_or("-".to_string()),
-                breakages
-                    .iter()
-                    .filter(|b| !matches!(b, GlycanBreakPos::End(_)))
-                    .map(|b| format!("{}<sub>{}</sub>", b.label(), b.position().label()))
-                    .join(""),
+                b.attachment.map_or("-".to_string(), |_| b.attachment()),
+                format!("B<sub>{}</sub>", b.label())
+                    + &y.iter()
+                        .map(|b| format!("Y<sub>{}</sub>", b.label()))
+                        .join(""),
                 "oxonium".to_string(),
             )
         } else if let FragmentType::Y(bonds) = &annotation.ion {
@@ -1606,6 +1602,35 @@ pub fn render_full_glycan(
             },
             None,
             &[],
+            theme.fg(),
+            theme.bg(),
+            &mut Vec::new(),
+        )
+        .map_or(("Render error".to_string(), 0.0), |r| {
+            let mut output = String::new();
+            if r.to_svg(&mut output).is_ok() {
+                (output, r.midpoint)
+            } else {
+                ("Render error".to_string(), 0.0)
+            }
+        })
+}
+
+pub fn render_glycan_fragment(
+    glycan: &GlycanStructure,
+    root: Option<&GlycanPosition>,
+    branches: &[GlycanPosition],
+    theme: Theme,
+) -> (String, f32) {
+    glycan
+        .render(
+            GlycanRoot::Symbol,
+            20.0,
+            10.0,
+            1.0,
+            GlycanDirection::TopDown,
+            root.cloned(),
+            branches,
             theme.fg(),
             theme.bg(),
             &mut Vec::new(),
