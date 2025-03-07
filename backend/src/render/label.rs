@@ -243,12 +243,12 @@ fn get_glycan_figure(
                                 }
                                 _ => None,
                             })
-                            .map(|s| (s, g.1, g.2))
+                            .map(|s| (s, g.1))
                     })
                 })
             })
         })
-        .map(|(structure, root, branches)| render_glycan_fragment(structure, root, branches, theme))
+        .map(|(structure, selection)| render_glycan_fragment(structure, selection, theme))
 }
 
 fn get_single_label(

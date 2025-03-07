@@ -4,7 +4,7 @@ use itertools::Itertools;
 use mzdata::spectrum::MultiLayerSpectrum;
 use rustyms::{
     fragment::*,
-    glycan::{GlycanDirection, GlycanRoot, GlycanStructure},
+    glycan::{GlycanDirection, GlycanRoot, GlycanSelection, GlycanStructure},
     model::Location,
     modification::{Ontology, SimpleModificationInner},
     placement_rule::PlacementRule,
@@ -1600,8 +1600,7 @@ pub fn render_full_glycan(
             } else {
                 GlycanDirection::LeftToRight
             },
-            None,
-            &[],
+            GlycanSelection::FULL,
             theme.fg(),
             theme.bg(),
             &mut Vec::new(),
@@ -1618,8 +1617,7 @@ pub fn render_full_glycan(
 
 pub fn render_glycan_fragment(
     glycan: &GlycanStructure,
-    root: Option<&GlycanPosition>,
-    branches: &[GlycanPosition],
+    selection: GlycanSelection,
     theme: Theme,
 ) -> (String, f32) {
     glycan
@@ -1629,8 +1627,7 @@ pub fn render_glycan_fragment(
             10.0,
             1.0,
             GlycanDirection::TopDown,
-            root.cloned(),
-            branches,
+            selection,
             theme.fg(),
             theme.bg(),
             &mut Vec::new(),
