@@ -158,6 +158,7 @@
 
 html {
     min-height: 100vh;
+    overflow-y: scroll;
 }
 
 body {
@@ -168,7 +169,7 @@ body {
     padding: .5rem;
     min-height: 100vh;
     box-sizing: border-box;
-    overflow-y: scroll;
+    overflow-y: clip;
     display: flex;
     flex-direction: column;
     justify-items: stretch;

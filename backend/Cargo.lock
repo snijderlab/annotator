@@ -1217,7 +1217,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c936bfdafb507ebbf50b8074c54fa31c5be9a1e7e5f467dd659697041407d07c"
 dependencies = [
  "crc32fast",
- "libz-sys",
  "miniz_oxide",
 ]
 
@@ -2401,7 +2400,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df9b68e50e6e0b26f672573834882eb57759f6db9b3be2ea3c35c91188bb4eaa"
 dependencies = [
  "cc",
- "cmake",
  "libc",
  "pkg-config",
  "vcpkg",
@@ -2575,9 +2573,9 @@ dependencies = [
 
 [[package]]
 name = "mzdata"
-version = "0.44.0"
+version = "0.48.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1a7bcd32a89fdbc5d026229cfe3382d03ed0857d0f269cc9e7a9d0706efc71c"
+checksum = "198baf144ba740842d0dc724a40b646490aa1319aa7a2fbec62ddbfcc83a6b34"
 dependencies = [
  "base16ct",
  "base64-simd",
@@ -2614,6 +2612,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07d04f50feca5fb159a85725a6c7a833bd3de0209a593d5522739d0e76e01a61"
 dependencies = [
  "num-traits",
+ "serde",
+ "serde-big-array",
 ]
 
 [[package]]
@@ -2629,6 +2629,7 @@ dependencies = [
  "nalgebra",
  "num-traits",
  "rayon",
+ "serde",
  "thiserror 2.0.11",
 ]
 
@@ -4143,6 +4144,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02fc4265df13d6fa1d00ecff087228cc0a2b5f3c0e87e258d8b94a156e984c70"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde-big-array"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11fc7cc2c76d73e0f27ee52abbd64eec84d46f370c88371120433196934e4b7f"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

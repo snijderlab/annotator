@@ -22,14 +22,17 @@ rustyms = { version = "0.9.0", default-features = false, features = [
     "align",
     "isotopes",
     "mzdata",
+    "glycan-render",
 ] }
 ordered-float = { version = "4.5", features = ["serde"] }
 rayon = "1.10"
-mzdata = { version = "0.44", default-features = false, features = [
+mzdata = { version = "0.48", default-features = false, features = [
     "mzsignal",
     "proxi-async",
     "thermo",
-    "zlib",
+    "miniz_oxide",
+    "mgf",
+    "mzml",
 ] }
 mzpeaks = "1.0"
 mzsignal = "1.0"
