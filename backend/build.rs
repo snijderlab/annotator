@@ -488,6 +488,13 @@ fn main() {
               <input id='spectrum-m-z-value' type='number' min='0' max='100' value='0'/>
               %
             </label>
+
+            <label class='has-slider mz row align'>
+              <span>Show glycan for top:</span>
+              <input id='spectrum-glycan' type='range' min='0' max='100' value='100'/>
+              <input id='spectrum-glycan-value' type='number' min='0' max='100' value='100'/>
+              %
+            </label>
     
             <div class='row'>
               <span class='title'>Manually force show</span>
@@ -495,6 +502,7 @@ fn main() {
                 <label tabindex='0'><input type='radio' name='force-show' value='none' id='force-show-none' checked>None</label>
                 <label tabindex='0'><input type='radio' name='force-show' value='label' id='force-show-label'>Label</label>
                 <label tabindex='0'><input type='radio' name='force-show' value='m-z' id='force-show-m-z'>m/z</label>
+                <label tabindex='0'><input type='radio' name='force-show' value='glycan' id='force-show-glycan'>Glycan</label>
                 <label tabindex='0'><input type='radio' name='force-show' value='hide' id='force-show-hide' title='Select a peak to not show label & m/z regardless of the show range selected'>Hide</label>
                 <!--<label tabindex='0'><input type='radio' name='force-show' value='distance' id='force-show-distance'>Distance</label>-->
               </div>
@@ -562,7 +570,7 @@ fn main() {
       <fieldset class="collapsible" data-linked-item="collapsible-tools" id="tools">
         <legend>Tools</legend>
         <h2>Search for modifications</h2>
-        <p>Search by mass with a given tolerance, by formula (use <code>Formula:O-1</code>), or by glycan composition to search for matching modification. Additionally searching for a name or index for an existing modification will show all details of that modification.</p>
+        <p>Search by mass with a given tolerance, by formula (e.g. <code>Formula:O-1</code>), or by glycan composition  (e.g. <code>Glycan:Hex4HexNAc2</code>) to search for matching modification. Additionally searching for a name or index for an existing modification will show all details of that modification.</p>
         <div class="flex-input collapsible-content">
           <label for="search-modification">Search modification</label>
           <input id="search-modification" type="text" title="Search for a ProForma modification, it will display its details. If you give a mass, formula, or glycan composition modification it instead will return all modifications with that composition."></input>

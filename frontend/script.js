@@ -427,9 +427,16 @@ function ForceShowLabels(e) {
         } else {
             e.target.dataset.showMZManually = "true";
         }
+    } else if (spectrum.classList.contains("force-show-glycan")) {
+        if ("showGlycanManually" in e.target.dataset) {
+            delete e.target.dataset.showGlycanManually;
+        } else {
+            e.target.dataset.showGlycanManually = "true";
+        }
     } else if (spectrum.classList.contains("force-show-hide")) {
         e.target.dataset.showLabelManually = "false";
         e.target.dataset.showMZManually = "false";
+        e.target.dataset.showGlycanManually = "false";
     }
 }
 
@@ -847,18 +854,21 @@ function SpectrumSettings(event) {
             ruler_mode = true;
         }
     } else if (t.id == "force-show-none") {
-        spectrum_wrapper.classList.remove("force-show-label", "force-show-m-z", "force-show-hide");
+        spectrum_wrapper.classList.remove("force-show-label", "force-show-m-z", "force-show-glycan", "force-show-hide");
     } else if (t.id == "force-show-label") {
-        spectrum_wrapper.classList.remove("force-show-m-z", "force-show-hide");
+        spectrum_wrapper.classList.remove("force-show-m-z", "force-show-glycan", "force-show-hide");
         spectrum_wrapper.classList.add("force-show-label");
     } else if (t.id == "force-show-m-z") {
-        spectrum_wrapper.classList.remove("force-show-label", "force-show-hide");
+        spectrum_wrapper.classList.remove("force-show-label", "force-show-glycan", "force-show-hide");
         spectrum_wrapper.classList.add("force-show-m-z");
+    } else if (t.id == "force-show-glycan") {
+        spectrum_wrapper.classList.remove("force-show-label", "force-show-m-z", "force-show-hide");
+        spectrum_wrapper.classList.add("force-show-glycan");
     } else if (t.id == "force-show-hide") {
-        spectrum_wrapper.classList.remove("force-show-label", "force-show-m-z");
+        spectrum_wrapper.classList.remove("force-show-label", "force-show-m-z", "force-show-glycan");
         spectrum_wrapper.classList.add("force-show-hide");
     } else if (t.id == "force-show-clear") {
-        spectrum_wrapper.querySelectorAll(".peak").forEach(element => { delete element.dataset.showLabelManually; delete element.dataset.showMZManually; });
+        spectrum_wrapper.querySelectorAll(".peak").forEach(element => { delete element.dataset.showLabelManually; delete element.dataset.showMZManually; delete element.dataset.showGlycanManually });
     } else if (cl == "unassigned") {
         if (t.checked) { // Will be adding all background peaks
             spectrum_wrapper.classList.add('show-unassigned');
@@ -934,8 +944,10 @@ function SpectrumUpdateLabels(canvas) {
     const max = Number(canvas.parentElement.style.getPropertyValue("--max-intensity"));
     const label_value = Number(document.getElementById("spectrum-label-value").value);
     const mz_value = Number(document.getElementById("spectrum-m-z-value").value);
+    const glycan_value = Number(document.getElementById("spectrum-glycan-value").value);
     const label_threshold = (100 - label_value) / 100 * max;
     const mz_threshold = (100 - mz_value) / 100 * max;
+    const glycan_threshold = (100 - glycan_value) / 100 * max;
 
     setTimeout(() => {
         for (let index = 1; index < canvas.children.length; index++) {
@@ -951,6 +963,11 @@ function SpectrumUpdateLabels(canvas) {
                 peak.dataset.showMZ = "true";
             } else {
                 peak.dataset.showMZ = "";
+            }
+            if (glycan_value != 0 && intensity >= glycan_threshold) {
+                peak.dataset.showGlycan = "true";
+            } else {
+                peak.dataset.showGlycan = "";
             }
             // Update cut peaks
             if (intensity > max) {

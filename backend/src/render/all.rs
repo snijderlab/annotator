@@ -532,13 +532,13 @@ fn render_spectrum(
     for peak in spectrum.spectrum() {
         write!(
             output,
-            "<span class='peak {}' style='--mz:{};--intensity:{};' data-label='{}' {}>{}</span>",
+            "<span class='peak {}' style='--mz:{};--intensity:{};' data-label='{}' {}data-show-glycan='true'>{}</span>",
             get_classes(&peak.annotation, unique_peptide_lookup),
             peak.experimental_mz.value,
             peak.intensity,
             (peak.experimental_mz.value * 100.0).round() / 100.0,
             if peak.intensity.0 / limits.intensity >= 0.1 {
-                "data-show-label='true'"
+                "data-show-label='true' "
             } else {
                 ""
             },

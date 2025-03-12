@@ -77,7 +77,7 @@ pub fn get_label(
             }
             if let Some(glycan) = &shared_glycan_figures {
                 if *glycan != get_glycan_figure(compound_peptidoform, a, Theme::Dark) {
-                    shared_glycan = None;
+                    shared_glycan_figures = None;
                 }
             }
             if let Some(loss) = &shared_loss {

@@ -1198,12 +1198,11 @@ input:not(:checked)+.collapsible {
         &.z· {
             border-right: none;
             border-bottom: none;
-            top: 0px;
+            bottom: calc(var(--fragments-padding) + var(--height));
             left: calc(var(--side-spacing) + var(--pad-left));
         }
 
         &.y {
-            top: var(--spacing);
             left: calc(var(--spacing) + var(--side-spacing) + var(--pad-left));
             height: calc(var(--height) - var(--spacing));
             width: calc(var(--width) - var(--spacing));
@@ -1211,7 +1210,6 @@ input:not(:checked)+.collapsible {
 
         &.z,
         &.z· {
-            top: calc(2 * var(--spacing));
             left: calc(2 * var(--spacing) + var(--side-spacing) + var(--pad-left));
             height: calc(var(--height) - 2 * var(--spacing));
             width: calc(var(--width) - 2 * var(--spacing));
@@ -1222,7 +1220,7 @@ input:not(:checked)+.collapsible {
             border-width: calc(var(--stroke-peptide) * 0.5);
             left: calc(3 * var(--spacing) + var(--side-spacing) + var(--pad-left));
             right: calc(3 * var(--spacing) + var(--side-spacing) + var(--pad-right));
-            top: calc(3 * var(--spacing));
+            bottom: calc(var(--fragments-padding) + var(--height) + var(--spacing) + 2 * var(--stroke-peptide));
             width: auto;
         }
 
@@ -2090,6 +2088,17 @@ input:not(:checked)+.collapsible {
         }
     }
 
+    &>.glycan {
+        display: none;
+        transform: translate(calc(var(--midpoint) * -1px), calc(-100% - var(--stroke-spectrum)));
+        position: absolute;
+    }
+
+    &[data-show-glycan=true]:not([data-show-glycan-manually=false])>.glycan,
+    &[data-show-glycan-manually=true]>.glycan,
+    &:hover>.glycan {
+        display: block;
+    }
 
     &[data-show-label=true]:not([data-show-label-manually=false]) span:not(.multi),
     &[data-show-label-manually=true] span:not(.multi) {
@@ -2984,7 +2993,6 @@ dialog.neutral-loss {
     top: calc(100% * (var(--y-max) - var(--y)) / (var(--y-max) - var(--y-min)));
     left: calc(100% * (1 - (var(--max-mz) - var(--mz)) / (var(--max-mz) - var(--min-mz))));
     display: block;
-    z-index: 2;
 
     &.hidden {
         display: none;
