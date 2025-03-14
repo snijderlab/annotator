@@ -33,17 +33,12 @@ mzdata = { version = "0.48", default-features = false, features = [
     "miniz_oxide",
     "mgf",
     "mzml",
+    "bruker_tdf",
 ] }
 mzpeaks = "1.0"
 mzsignal = "1.0"
 tauri-plugin-dialog = "2"
 thin-vec = { version = "0.2", features = ["serde"] }
-
-[patch.crates-io]
-# hdf5 rust crate needs a new version
-hdf5 = { git = "https://github.com/aldanor/hdf5-rust.git" }
-hdf5-sys = { git = "https://github.com/aldanor/hdf5-rust.git" }
-rustyms = {path = "../../rustyms/rustyms"}
 
 [features]
 default = ["custom-protocol"]
@@ -52,9 +47,3 @@ custom-protocol = ["tauri/custom-protocol"]
 mzmlb = ["mzdata/mzmlb"]
 # Use static HDF5 libraries
 hdf5-static = ["mzdata/hdf5_static"]
-
-[profile.release]
-debug = true
-opt-level = 3
-lto = true
-codegen-units = 1

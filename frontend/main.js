@@ -6,8 +6,8 @@ const { listen } = window.__TAURI__.event;
 
 const { open, save } = window.__TAURI__.dialog;
 
-const RAW_EXTENSIONS = ['mgf', 'mgf.gz', "mzml", "mzml.gz", "imzml", "imzml.gz", "mzmlb", "mzmlb.gz", "raw", "raw.gz"];
-const RAW_WRITE_EXTENSIONS = ['mgf', "mzml"];
+const RAW_EXTENSIONS = ["mgf", "mzml", "imzml", "mzmlb", "raw"];
+const RAW_WRITE_EXTENSIONS = ["mgf", "mzml"];
 const IDENTIFIED_EXTENSIONS = ["csv", "csv.gz", "tsv", "tsv.gz", "txt", "txt.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz", "mztab", "mztab.gz", "deepnovo_denovo", "deepnovo_denovo.gz", "ssl", "ssl.gz"];
 
 import { SetUpSpectrumInterface, spectrumClearDistanceLabels } from "./script.js";
@@ -25,7 +25,7 @@ listen('tauri://drag-drop', event => {
       extension = file.toLowerCase().split('.').reverse()[1] + ".gz";
     }
     if (RAW_EXTENSIONS.includes(extension)) {
-      document.querySelector("#load-raw-path").classList.add("loading")
+      document.querySelector("#load-raw-file").classList.add("loading")
       raw_files = true;
       opens.push(load_raw(file));
     } else if (IDENTIFIED_EXTENSIONS.includes(extension)) {
@@ -44,7 +44,7 @@ listen('tauri://drag-drop', event => {
     }
     if (raw_files) {
       update_open_raw_files();
-      document.querySelector("#load-raw-path").classList.remove("loading");
+      document.querySelector("#load-raw-file").classList.remove("loading");
     }
   });
 })
@@ -67,24 +67,27 @@ document.addEventListener("dragend", () => document.querySelector("html").classL
 /**
 * @param e: Element
 */
-async function select_raw_file(e) {
+async function select_raw_file(e, directory) {
+  let id = directory ? "load-raw-folder" : "load-raw-file";
   let properties = {
-    directory: false,
+    directory: directory,
     multiple: true,
-    filters: [{
+    filters: [directory ? {
+      extensions: ["d"], name: "*.d"
+    } : {
       extensions: RAW_EXTENSIONS, name: "*"
     }]
   };
   open(properties).then((result) => {
     if (result != null) {
-      document.querySelector("#load-raw-path").classList.add("loading")
+      document.getElementById(id).classList.add("loading")
       let opens = [];
       for (let file of result) {
         opens.push(load_raw(file));
       }
       Promise.all(opens).then(() => {
         update_open_raw_files();
-        document.querySelector("#load-raw-path").classList.remove("loading");
+        document.getElementById(id).classList.remove("loading");
       });
     }
   })
@@ -714,8 +717,11 @@ window.addEventListener("DOMContentLoaded", () => {
   document.querySelector(".resize").addEventListener("mousedown", resizeDown);
   document.querySelectorAll(".collapsible>legend").forEach(element => element.addEventListener("click", (e) => document.getElementById(e.target.parentElement.dataset.linkedItem).toggleAttribute("checked")));
   document
-    .querySelector("#load-raw-path")
-    .addEventListener("click", (event) => select_raw_file(event.target));
+    .querySelector("#load-raw-file")
+    .addEventListener("click", (event) => select_raw_file(event.target, false));
+  document
+    .querySelector("#load-raw-folder")
+    .addEventListener("click", (event) => select_raw_file(event.target, true));
   document
     .querySelector("#save-spectrum")
     .addEventListener("click", (event) => save_spectrum_file(event.target));

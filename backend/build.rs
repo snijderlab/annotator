@@ -161,7 +161,7 @@ fn main() {
         </div>
       </div>
       <div class="input-flex">
-        <button type="button" id="load-raw-path">Load raw data file</button>
+        <div class="joined-button" id="load-raw-path"><button type="button" id="load-raw-file">Load raw data file</button><button type="button" id="load-raw-folder" title="Open a Bruker TDF .d directory">folder</button></div>
         <button type="button" id="load-clipboard">Load Clipboard</button>
         <button type="button" id="load-identified-peptides">Load identified peptides file</button>
       </div>
