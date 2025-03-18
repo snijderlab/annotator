@@ -477,8 +477,8 @@ fn main() {
             <legend>Label settings</legend>
             <label class='has-slider label row align'>
               <span>Show labels for top:</span>
-              <input id='spectrum-label' type='range' min='0' max='100' value='100'/>
-              <input id='spectrum-label-value' type='number' min='0' max='100' value='100'/>
+              <input id='spectrum-label' type='range' min='0' max='100' value='90'/>
+              <input id='spectrum-label-value' type='number' min='0' max='100' value='90'/>
               %
             </label>
             
@@ -491,8 +491,8 @@ fn main() {
 
             <label class='has-slider mz row align'>
               <span>Show glycan for top:</span>
-              <input id='spectrum-glycan' type='range' min='0' max='100' value='100'/>
-              <input id='spectrum-glycan-value' type='number' min='0' max='100' value='100'/>
+              <input id='spectrum-glycan' type='range' min='0' max='100' value='90'/>
+              <input id='spectrum-glycan-value' type='number' min='0' max='100' value='90'/>
               %
             </label>
     

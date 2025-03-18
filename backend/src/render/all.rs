@@ -64,8 +64,14 @@ pub fn annotated_spectrum(
                 .count()
                 > 1
         });
-    let unique_peptide_lookup =
-        super::render_peptide(&mut output, &spectrum.peptide, Some(overview), None);
+    let mut glycan_footnotes = Vec::new();
+    let unique_peptide_lookup = super::render_peptide(
+        &mut output,
+        &spectrum.peptide,
+        Some(overview),
+        None,
+        &mut glycan_footnotes,
+    );
     render_spectrum(
         &mut output,
         spectrum,
@@ -80,6 +86,7 @@ pub fn annotated_spectrum(
         mass_mode,
         &unique_peptide_lookup,
         model,
+        &mut glycan_footnotes,
     );
     // Error graph
     render_error_graph(
@@ -90,6 +97,20 @@ pub fn annotated_spectrum(
         &unique_peptide_lookup,
     );
     write!(output, "</div></div>").unwrap();
+    // Glycan footnotes
+    if !glycan_footnotes.is_empty() {
+        output.push_str("<p>Glycan modifications: ");
+        for (index, footnote) in glycan_footnotes.into_iter().enumerate() {
+            write!(
+                &mut output,
+                "{}<span class='glycan-footnote'>{}: {footnote}</span>",
+                if index != 0 { ", " } else { "" },
+                index + 1
+            )
+            .unwrap();
+        }
+        output.push_str("</p>");
+    }
     // General stats
     general_stats(
         &mut output,
@@ -475,6 +496,7 @@ fn render_spectrum(
     mass_mode: MassMode,
     unique_peptide_lookup: &[(usize, usize)],
     model: &Model,
+    glycan_footnotes: &mut Vec<String>,
 ) {
     write!(
         output,
@@ -532,13 +554,13 @@ fn render_spectrum(
     for peak in spectrum.spectrum() {
         write!(
             output,
-            "<span class='peak {}' style='--mz:{};--intensity:{};' data-label='{}' {}data-show-glycan='true'>{}</span>",
+            "<span class='peak {}' style='--mz:{};--intensity:{};' data-label='{}' {}>{}</span>",
             get_classes(&peak.annotation, unique_peptide_lookup),
             peak.experimental_mz.value,
             peak.intensity,
             (peak.experimental_mz.value * 100.0).round() / 100.0,
             if peak.intensity.0 / limits.intensity >= 0.1 {
-                "data-show-label='true' "
+                "data-show-label='true' data-show-glycan='true'"
             } else {
                 ""
             },
@@ -547,7 +569,8 @@ fn render_spectrum(
                 &peak.annotation,
                 multiple_peptidoforms,
                 multiple_peptides,
-                multiple_glycans
+                multiple_glycans,
+                glycan_footnotes,
             ),
         )
         .unwrap();
@@ -568,7 +591,8 @@ fn render_spectrum(
                     &[peak.clone()],
                     multiple_peptidoforms,
                     multiple_peptides,
-                    multiple_glycans
+                    multiple_glycans,
+                    glycan_footnotes,
                 ),
             )
             .unwrap();
@@ -1584,7 +1608,8 @@ pub fn render_full_glycan(
     big: bool,
     on_peptide: bool,
     theme: Theme,
-) -> (String, f32) {
+    footnotes: &mut Vec<String>,
+) -> String {
     glycan
         .render(
             if on_peptide {
@@ -1603,14 +1628,14 @@ pub fn render_full_glycan(
             GlycanSelection::FULL,
             theme.fg(),
             theme.bg(),
-            &mut Vec::new(),
+            footnotes,
         )
-        .map_or(("Render error".to_string(), 0.0), |r| {
+        .map_or("Render error".to_string(), |r| {
             let mut output = String::new();
             if r.to_svg(&mut output).is_ok() {
-                (output, r.midpoint)
+                output
             } else {
-                ("Render error".to_string(), 0.0)
+                "Render error".to_string()
             }
         })
 }
@@ -1619,7 +1644,8 @@ pub fn render_glycan_fragment(
     glycan: &GlycanStructure,
     selection: GlycanSelection,
     theme: Theme,
-) -> (String, f32) {
+    footnotes: &mut Vec<String>,
+) -> String {
     glycan
         .render(
             GlycanRoot::Symbol,
@@ -1630,14 +1656,14 @@ pub fn render_glycan_fragment(
             selection,
             theme.fg(),
             theme.bg(),
-            &mut Vec::new(),
+            footnotes,
         )
-        .map_or(("Render error".to_string(), 0.0), |r| {
+        .map_or("Render error".to_string(), |r| {
             let mut output = String::new();
             if r.to_svg(&mut output).is_ok() {
-                (output, r.midpoint)
+                output
             } else {
-                ("Render error".to_string(), 0.0)
+                "Render error".to_string()
             }
         })
 }

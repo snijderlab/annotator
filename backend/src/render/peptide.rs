@@ -17,6 +17,7 @@ pub fn render_peptide(
     compound_peptidoform: &CompoundPeptidoformIon,
     overview: Option<super::PositionCoverage>,
     local_confidence: Option<Vec<Vec<Vec<f64>>>>,
+    glycan_footnotes: &mut Vec<String>,
 ) -> Vec<(usize, usize)> {
     let mut unique_peptide_lookup = Vec::new();
     let multiple_peptidoforms = compound_peptidoform.peptidoform_ions().len() > 1;
@@ -74,6 +75,7 @@ pub fn render_peptide(
                 multiple_peptidoforms,
                 multiple_peptides,
                 &mut cross_link_lookup,
+                glycan_footnotes,
             );
             unique_peptide_lookup.push((peptidoform_ion_index, peptidoform_index));
         }
@@ -93,6 +95,7 @@ fn render_linear_peptidoform(
     multiple_peptidoform_ions: bool,
     multiple_peptidoforms: bool,
     cross_link_lookup: &mut Vec<CrossLinkName>,
+    glycan_footnotes: &mut Vec<String>,
 ) {
     write!(
         output,
@@ -246,8 +249,13 @@ fn render_linear_peptidoform(
                         id,
                         ..
                     } => {
-                        let (svg, midpoint) =
-                            render_full_glycan(structure, false, true, Theme::Dark);
+                        let svg = render_full_glycan(
+                            structure,
+                            false,
+                            true,
+                            Theme::Dark,
+                            glycan_footnotes,
+                        );
                         glycans.push_str(&svg);
                         write!(
                             modifications,

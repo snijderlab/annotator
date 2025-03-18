@@ -27,6 +27,7 @@ pub async fn search_modification(
     theme: Theme,
 ) -> Result<String, CustomError> {
     let state = state.lock().unwrap();
+    let mut glycan_footnotes = Vec::new();
     let modification = if text.is_empty() {
         Err(CustomError::error(
             "Invalid modification",
@@ -110,13 +111,30 @@ pub async fn search_modification(
                             ..
                         } = &*modification
                         {
-                            render_full_glycan(structure, false, false, theme).0
+                            render_full_glycan(
+                                structure,
+                                false,
+                                false,
+                                theme,
+                                &mut glycan_footnotes,
+                            )
                         } else {
                             "-".to_string()
                         },
                     ]
                 }),
             ))
+            .children(glycan_footnotes.iter().enumerate().map(|(index, note)| {
+                HtmlTag::span
+                    .new()
+                    .class("glycan-footnote")
+                    .content(format!(
+                        "{}{}: {note}",
+                        if index != 0 { ", " } else { "" },
+                        index + 1
+                    ))
+                    .clone()
+            }))
             .to_string()),
         modification => Ok(render_modification(modification, theme).to_string()),
     }
@@ -231,18 +249,43 @@ pub fn render_modification(modification: &SimpleModificationInner, theme: Theme)
                     )));
             }
             GnoComposition::Topology(structure) => {
-                output.extend([
-                    HtmlTag::p.new().content(format!(
-                        "Composition: {}",
-                        structure
-                            .composition()
-                            .iter()
-                            .fold(String::new(), |acc, m| acc + &format!("{}{}", m.0, m.1))
-                    )),
-                    HtmlTag::p
-                        .new()
-                        .content(render_full_glycan(structure, true, false, theme).0),
-                ]);
+                let mut glycan_footnotes = Vec::new();
+                output.extend(
+                    [
+                        HtmlTag::p
+                            .new()
+                            .content(format!(
+                                "Composition: {}",
+                                structure
+                                    .composition()
+                                    .iter()
+                                    .fold(String::new(), |acc, m| acc + &format!("{}{}", m.0, m.1))
+                            ))
+                            .clone(),
+                        HtmlTag::p
+                            .new()
+                            .content(render_full_glycan(
+                                structure,
+                                true,
+                                false,
+                                theme,
+                                &mut glycan_footnotes,
+                            ))
+                            .clone(),
+                    ]
+                    .into_iter()
+                    .chain(glycan_footnotes.iter().enumerate().map(|(index, note)| {
+                        HtmlTag::span
+                            .new()
+                            .class("glycan-footnote")
+                            .content(format!(
+                                "{}{}: {note}",
+                                if index != 0 { ", " } else { "" },
+                                index + 1
+                            ))
+                            .clone()
+                    })),
+                );
             }
         }
     } else if let SimpleModificationInner::Linker {

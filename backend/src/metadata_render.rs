@@ -21,6 +21,7 @@ impl RenderToHtml for IdentifiedPeptide {
     fn to_html(&self) -> HtmlElement {
         // Render the peptide with its local confidence
         let peptide = if let Some(peptide) = self.peptide() {
+            let mut glycan_footnotes = Vec::new();
             let mut buffer = String::new();
             render_peptide(
                 &mut buffer,
@@ -29,7 +30,15 @@ impl RenderToHtml for IdentifiedPeptide {
                 self.local_confidence
                     .as_ref()
                     .map(|lc| vec![vec![lc.clone()]]),
+                &mut glycan_footnotes,
             );
+            for (index, footnote) in glycan_footnotes.into_iter().enumerate() {
+                buffer.push_str(&format!(
+                    "{}<span class='glycan-footnote'>{}: {footnote}</span>",
+                    if index != 0 { ", " } else { "" },
+                    index + 1
+                ));
+            }
 
             HtmlContent::Text(buffer)
         } else {
