@@ -43,7 +43,7 @@
     inset: 0pt,
     radius: 0pt,
     outset: 3pt,
-    text(font: "Roboto Mono", size: 0.9em)[#it]
+    text(font: "Roboto Mono", size: 0.9em, hyphenate: false)[#it]
   )
   h(3pt)
 }

@@ -27,7 +27,7 @@ Some modifications generate specific diagnostic ions, these can be turned on or 
 
 Immonium ions are internal fragments that break on both sides of a single amino acid. These can be turned on/off. Turning these on also allows common immonium related ions, which are common neutral losses/gains often seen for immonium ions.
 
-In some fragmentation techniques sidechains of amino acids can be lost as neutral loss. This can be turned on for precursors.
+In some fragmentation techniques side chains of amino acids can be lost as neutral loss. This can be turned on for precursors.
 
 If there are cross-links in the peptidoform it can be controlled if these are allowed to cleave in theoretical fragmentation. This only work for cross-link modifications that have defined cleavage rules, see @custom-modifications.
 
@@ -53,6 +53,7 @@ The annotator uses the #link("https://github.com/HUPO-PSI/ProForma")[ProForma] s
 + Defined charge and adduct ions \ #peptide("VAEINPSNGGTT/2[1Na+,1H+]")
 + A DSSO cross-link between two lysines on two peptides (note the use of `//` versus `+` to indicate cross-linked peptides) \ #peptide("VAEINK[X:DSSO#XL1]SNGGTT//WAK[#XL1]INK")
 + A hydrolysed DSSO cross-linker \ #peptide("VAEINK[X:DSSO#XL1]SNGGTT")
++ An antibody Fab, encoding the disulfide bridge as `L-cystine (cross link)` from PSI-MOD \ #peptide("EVQLVESGGGLVQPGGSLRLSC[L-cystine (cross link)#XL1]AASGFNIKDTYIHWVRQAPGKGL\u{200B}EWVARIYPTNGYTRYADSVKGRFTISADTSKNTAYLQMNSLRAEDTAVYYC[#XL1]SRWGGDGFYAMDYW​G\u{200B}QGTLVTVSSASTKGPSVFPLAPSSKSTSGGTAALGC[L-cystine (cross link)#XL2]LVKDYFPEP\u{200B}VTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSSLGTQTYIC[#XL2]NVNHKPSNTKVDKKVEPKS\u{200B}C[L-cystine (cross link)#XL3]DKT//DIQMTQSPSSLSASVGDRVTIT\u{200B}C[L-cystine (cross link)#XL4]\u{200B}RASQDVNTAVAWYQQKPGKAPKLLIYSASFLYSGVPSRFSGSRSGTDFTLTISSLQ\u{200B}PEDFATYYC[#XL4]QQHYTTPPTFGQGTKVEIKRTVAAPSVFIFPPSDEQLKSGTASVV\u{200B}C[L-cystine (cross link)#XL5]LLNNFYPREAKVQWKVDNALQSGNSQESVTEQDSKDSTYSLSSTLTLSKADYEKHK\u{200B}VYAC[#XL5]EVTHQ\u{200B}GLSSPVTKSFNRGEC[#XL3]")
 
 == Custom modifications <custom-modifications>
 
