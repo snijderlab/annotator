@@ -662,7 +662,7 @@ pub fn spectrum_table(
                 format!("{}{}", pos.series_number, pos.branch_names()),
                 annotation.ion.label().to_string(),
             )
-        } else if let FragmentType::Oxonium { b, y, .. } = &annotation.ion {
+        } else if let FragmentType::B { b, y, .. } = &annotation.ion {
             (
                 b.attachment.map_or("-".to_string(), |_| b.attachment()),
                 format!("B<sub>{}</sub>", b.label())

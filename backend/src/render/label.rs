@@ -178,8 +178,8 @@ pub fn get_label(
             } else {
                 String::new()
             };
-            let single_internal_glycan = matches!(annotations[0].ion, FragmentType::Oxonium { .. })
-                && annotations.len() == 1;
+            let single_internal_glycan =
+                matches!(annotations[0].ion, FragmentType::B { .. }) && annotations.len() == 1;
 
             if single_internal_glycan {
                 get_single_label(
@@ -273,7 +273,7 @@ fn get_single_label(
     format!(
         "{}<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span><span class='cross-links'>{}</span><span class='ambiguous-amino-acids'>{}</span><span class='modifications'>{}</span><span class='charge-carriers'>{}</span></span>",
         get_glycan_figure(compound_peptidoform, annotation, Theme::Dark, glycan_footnotes).unwrap_or_default(),
-        if let FragmentType::Oxonium{b,y,..} = &annotation.ion {
+        if let FragmentType::B{b,y,..} = &annotation.ion {
             format!("B<sub>{}</sub>",b.label())
                 + &y.iter()
                     .map(|b| format!("Y<sub>{}</sub>", b.label()))
@@ -283,13 +283,13 @@ fn get_single_label(
         },
         ch,
         ch.len(),
-        if let FragmentType::Oxonium{..} = &annotation.ion {
+        if let FragmentType::B{..} = &annotation.ion {
             String::new()
         } else {
             annotation.ion.position_label().unwrap_or_default()
         },
         if multiple_glycans {
-            if let FragmentType::Oxonium{b,..} = &annotation.ion {
+            if let FragmentType::B{b,..} = &annotation.ion {
                 b.attachment()
             } else {
                 annotation.ion.glycan_position().map(|g| g.attachment()).unwrap_or_default()

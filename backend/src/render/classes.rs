@@ -94,7 +94,7 @@ pub fn get_classes(
                 pos.sequence_index
             ));
         }
-        if annotation.ion.kind() == FragmentKind::Oxonium {
+        if annotation.ion.kind() == FragmentKind::B {
             output.push("oxonium".to_string());
         }
         if annotation.ion.kind() == FragmentKind::diagnostic {
