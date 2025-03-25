@@ -255,12 +255,12 @@ fn get_unassigned_data(
     };
     for fragment in fragments {
         match &fragment.ion {
-            FragmentType::a(_) => a.fold(fragment, point, mass_mode),
-            FragmentType::b(_) => b.fold(fragment, point, mass_mode),
-            FragmentType::c(_) => c.fold(fragment, point, mass_mode),
-            FragmentType::x(_) => x.fold(fragment, point, mass_mode),
-            FragmentType::y(_) => y.fold(fragment, point, mass_mode),
-            FragmentType::z(_) => z.fold(fragment, point, mass_mode),
+            FragmentType::a(_, _) => a.fold(fragment, point, mass_mode),
+            FragmentType::b(_, _) => b.fold(fragment, point, mass_mode),
+            FragmentType::c(_, _) => c.fold(fragment, point, mass_mode),
+            FragmentType::x(_, _) => x.fold(fragment, point, mass_mode),
+            FragmentType::y(_, _) => y.fold(fragment, point, mass_mode),
+            FragmentType::z(_, _) => z.fold(fragment, point, mass_mode),
             _ => (),
         }
     }

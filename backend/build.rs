@@ -7,37 +7,92 @@ mod html_builder;
 use html_builder::*;
 
 fn create_loss_modal(id: &str) -> HtmlElement {
+    let mut dialog = vec![
+        HtmlTag::h2.new().content("Normal losses and gains").clone(),
+        HtmlTag::div
+            .new()
+            .class("col-2")
+            .children([
+                HtmlTag::div
+                    .new()
+                    .children(
+                        std::iter::once(HtmlTag::h3.new().content("Losses").clone()).chain(
+                            HtmlElement::input_list(
+                                format!("model-{id}-loss-selection"),
+                                "checkbox",
+                                "block",
+                                [
+                                    ("-H1O1", "OH"),
+                                    ("-H2O1", "Water"),
+                                    ("-H4O2", "Double water"),
+                                    ("-H6O3", "Triple water"),
+                                    ("-H1", "Hydrogen"),
+                                    ("-H2", "Double hydrogen"),
+                                    ("-H3", "Triple hydrogen"),
+                                    ("-H3N1", "Ammonia"),
+                                    ("-C1O1", "Carbon monoxide"),
+                                ],
+                            ),
+                        ),
+                    )
+                    .clone(),
+                HtmlTag::div
+                    .new()
+                    .children(
+                        std::iter::once(HtmlTag::h3.new().content("Gains").clone()).chain(
+                            HtmlElement::input_list(
+                                format!("model-{id}-gain-selection"),
+                                "checkbox",
+                                "block",
+                                [
+                                    ("+H2O1", "Water"),
+                                    ("+H4O2", "Double water"),
+                                    ("+H6O3", "Triple water"),
+                                    ("+H1", "Hydrogen"),
+                                    ("+H2", "Double hydrogen"),
+                                    ("+H3", "Triple hydrogen"),
+                                ],
+                            ),
+                        ),
+                    )
+                    .clone(),
+            ])
+            .clone(),
+        HtmlTag::h3.new().content("Custom").clone(),
+        HtmlElement::separated_input(
+            format!("model-{id}-loss"),
+            "Add molecular formula or mass preceded by '+' or '-'",
+            "neutral_loss",
+        ),
+    ];
+    if id != "glycan" {
+        dialog.extend(
+          [HtmlTag::h2.new().content("Amino acid specific losses and gains").clone(),
+          HtmlTag::p.new().content("Some losses are only seen from certain amino acids, so all losses specified here will only be generated if the indicated amino acid is present in the fragment. When defining rules multiple amino acids can be combined with multiple losses, for example <code>N,D:-C1H4,-C1H4O1</code> indicates that N and D can both lose either C<sub>1</sub>H<sub>4</sub> or C<sub>1</sub>H<sub>4</sub>O<sub>1</sub>.").clone()
+        ].into_iter().chain(
+          HtmlElement::input_list(format!("model-{id}-aa-loss-selection"), "checkbox", "block", [
+            ("N:-C1H1O2", "N: COOH"),
+            ("Q:-C2H3O2", "Q: C<sub>2</sub>H<sub>3</sub>O<sub>2</sub>"),
+          ])).chain([
+            HtmlElement::separated_input(format!("model-{id}-aa-loss"), "Amino acid codes followed by a colon and the losses separated by commas", "aa_neutral_loss"),
+            HtmlTag::h2.new().content("Amino acid side chain losses").clone(),
+            HtmlTag::p.new().content("For some fragmentation techniques, notably ETD, the loss of side chains can be seen. Sometimes even multiple side chains can be lost from a single fragment. The amino acids that can lose a side chain can be selected below, if no selection is given all amino acids will be allowed.").clone(),
+            HtmlTag::label.new().content(HtmlTag::input.new().id(format!("model-{id}-aa-side-chain-loss-number")).header("type", "number").header("min", "0").header("value", "0").header("max", "255").clone()).content("Maximal number of lost side chains").clone(),
+            HtmlElement::separated_input(format!("model-{id}-aa-side-chain-loss-selection"), "Add amino acid code", "amino_acid"),])
+          )
+    };
+    dialog.push(
+        HtmlTag::button
+            .new()
+            .header2("autofocus")
+            .header("onclick", "this.parentElement.close()")
+            .content("Close")
+            .clone(),
+    );
     HtmlTag::div.new().children([
     HtmlTag::button.new().header("onclick", format!("document.getElementById('model-{id}-loss-selection-dialog').showModal();")).content("Select"),
     HtmlTag::output.new().id(format!("model-{id}-loss-selection-output")).class("selected-neutral-loss").content("0 selected"),
-    HtmlTag::dialog.new().class("neutral-loss").id(format!("model-{id}-loss-selection-dialog")).header("onclose", format!(r##"var num = 0; document.getElementsByName("model-{id}-loss-selection").forEach(e=>num += e.checked); num += document.querySelectorAll("#model-{id}-loss-selection-dialog .element").length;document.getElementById("model-{id}-loss-selection-output").innerText = num + " selected";"##)).children(
-      std::iter::once(HtmlTag::p.new().content("Losses").clone()).chain(
-      HtmlElement::input_list(format!("model-{id}-loss-selection"), "checkbox", "block", [
-        ("-H1O1", "OH"),
-        ("-H2O1", "Water"),
-        ("-H4O2", "Double water"),
-        ("-H6O3", "Triple water"),
-        ("-H1", "Hydrogen"),
-        ("-H2", "Double hydrogen"),
-        ("-H3", "Triple hydrogen"),
-        ("-H3N1", "Ammonia"),
-        ("-C1O1", "Carbon monoxide"),
-        ("-C1H1O2", "COOH (seen with ETD on Asp)"),
-        ("-C2H3O2", "C<sub>2</sub>H<sub>3</sub>O<sub>2</sub> (seen with ETD on Glu)"),
-      ])).chain(std::iter::once(
-      HtmlTag::p.new().content("Gains").clone())).chain(
-      HtmlElement::input_list(format!("model-{id}-loss-selection"), "checkbox", "block", [
-        ("+H2O1", "Water"),
-        ("+H4O2", "Double water"),
-        ("+H6O3", "Triple water"),
-        ("+H1", "Hydrogen"),
-        ("+H2", "Double hydrogen"),
-        ("+H3", "Triple hydrogen"),
-      ])).chain([
-        HtmlTag::p.new().content("Custom").clone(),
-        HtmlElement::separated_input(format!("model-{id}-loss"), "Add molecular formula or mass preceded by '+' or '-'", "neutral_loss"),
-        HtmlTag::button.new().header2("autofocus").header("onclick", "this.parentElement.close()").content("Close").clone()])
-    )
+    HtmlTag::dialog.new().class("neutral-loss").id(format!("model-{id}-loss-selection-dialog")).header("onclose", format!(r##"var num = 0; document.getElementsByName("model-{id}-loss-selection").forEach(e=>num += e.checked); num += document.querySelectorAll("#model-{id}-loss-selection-dialog .element").length;document.getElementById("model-{id}-loss-selection-output").innerText = num + " selected";"##)).children(dialog)
   ]).clone()
 }
 
@@ -67,65 +122,63 @@ impl ChargeRange {
     }
 }
 
-fn create_charge_range_fields(id: &str, default: ChargeRange, comment: &str) -> HtmlElement {
+fn create_charge_range_fields(id: &str, default: ChargeRange) -> HtmlElement {
     let settings = default.settings();
-    let mut outer = HtmlTag::div
+    HtmlTag::div
         .new()
         .class("charge-range")
         .children([
-            HtmlTag::select
-                .new()
-                .id(format!("model-{id}-charge-start-type"))
-                .children([
-                    HtmlTag::option
-                        .new()
-                        .value("Absolute")
-                        .title("An absolute charge")
-                        .header2(settings.0)
-                        .content("Absolute"),
-                    HtmlTag::option
-                        .new()
-                        .value("Relative")
-                        .title("Relative to the precursor charge")
-                        .header2(settings.1)
-                        .content("Precursor"),
-                ]),
-            HtmlTag::input
-                .new()
-                .id(format!("model-{id}-charge-start-value"))
-                .header("type", "number")
-                .value(settings.2.to_string()),
+            HtmlTag::span.new().children([
+                HtmlTag::select
+                    .new()
+                    .id(format!("model-{id}-charge-start-type"))
+                    .children([
+                        HtmlTag::option
+                            .new()
+                            .value("Absolute")
+                            .title("An absolute charge")
+                            .header2(settings.0)
+                            .content("Absolute"),
+                        HtmlTag::option
+                            .new()
+                            .value("Relative")
+                            .title("Relative to the precursor charge")
+                            .header2(settings.1)
+                            .content("Precursor"),
+                    ]),
+                HtmlTag::input
+                    .new()
+                    .id(format!("model-{id}-charge-start-value"))
+                    .header("type", "number")
+                    .value(settings.2.to_string()),
+            ]),
             HtmlTag::span.new().content("-"),
-            HtmlTag::select
-                .new()
-                .id(format!("model-{id}-charge-end-type"))
-                .children([
-                    HtmlTag::option
-                        .new()
-                        .value("Absolute")
-                        .title("An absolute charge")
-                        .header2(settings.3)
-                        .content("Absolute"),
-                    HtmlTag::option
-                        .new()
-                        .value("Relative")
-                        .title("Relative to the precursor charge")
-                        .header2(settings.4)
-                        .content("Precursor"),
-                ]),
-            HtmlTag::input
-                .new()
-                .id(format!("model-{id}-charge-end-value"))
-                .header("type", "number")
-                .value(settings.5.to_string()),
+            HtmlTag::span.new().children([
+                HtmlTag::select
+                    .new()
+                    .id(format!("model-{id}-charge-end-type"))
+                    .children([
+                        HtmlTag::option
+                            .new()
+                            .value("Absolute")
+                            .title("An absolute charge")
+                            .header2(settings.3)
+                            .content("Absolute"),
+                        HtmlTag::option
+                            .new()
+                            .value("Relative")
+                            .title("Relative to the precursor charge")
+                            .header2(settings.4)
+                            .content("Precursor"),
+                    ]),
+                HtmlTag::input
+                    .new()
+                    .id(format!("model-{id}-charge-end-value"))
+                    .header("type", "number")
+                    .value(settings.5.to_string()),
+            ]),
         ])
-        .clone();
-
-    if !comment.is_empty() {
-        outer.children([HtmlTag::span.new().content(format!(" ({comment})"))]);
-    }
-
-    outer
+        .clone()
 }
 
 fn main() {
@@ -262,12 +315,24 @@ fn main() {
           <p>Ion</p>
           <p>Location</p>
           <p>Neutral Loss/Gain</p>
-          <p>Charge range</p>"#).unwrap();
+          <p>Charge range</p>
+          <p>Variant</p>"#).unwrap();
     for ion in ["a", "b", "c", "d", "v", "w", "x", "y", "z"] {
-        write!(
-                writer,
-                r#"<label>{0}</label>
-              <div id="model-{0}-location" class="location select-input">
+        write!(writer, "<label>{ion}</label>").unwrap();
+        if ["d", "v", "w"].contains(&ion) {
+            let other_ion = match ion {
+                "d" => "a",
+                "v" => "y",
+                "w" => "z",
+                _ => "",
+            };
+            write!(writer, r#"<div class="satellite-ion-location" title="{ion} ions are formed by secondary fragmentation from {other_ion}, so if turned on these will be generated for any location that produces {other_ion}. The maximal distance is the maximal number of side chains between the fragmenting side chain and the parent ion breakage, when the side chain immediatly adjecent to the parent ion breakage breaks this distance is 0, so to only get standard satellite ions the distance needs to be set to 0. If no distance is specified the satellite ions are not generated.">{}<label>Base maximal distance<input type="number" min="0" max="255" value="" id="model-{ion}-base-distance"></input></label></div>"#,
+            HtmlElement::separated_input(format!("model-{ion}-location"), "Amino acid codes followed by a colon and the maximal distance", "satellite_ion"),
+          ).unwrap();
+        } else {
+            write!(
+            writer,
+           r#"<div id="model-{ion}-location" class="location select-input">
               <select onchange="this.className=this.options[Number(this.value)].dataset.cls;">
                 <option value="0" data-cls="arg-0" data-value="All" title="All backbone bonds produce fragments ions">All</option>
                 <option value="1" data-cls="arg-0" data-value="None" selected title="No fragments are generated">None</option>
@@ -280,9 +345,25 @@ fn main() {
               </select>
               <input type="number" value="1" min="1">
               <input type="number" value="1" min="1">
-              </div>
-              {1}{2}"#,
-                ion, create_loss_modal(ion), create_charge_range_fields(ion, ChargeRange::OneToPrecursor, "")
+              </div>"#
+        ).unwrap();
+        }
+        write!(writer, "{}", create_loss_modal(ion)).unwrap();
+        write!(
+            writer,
+            "{}",
+            create_charge_range_fields(ion, ChargeRange::OneToPrecursor)
+        )
+        .unwrap();
+        write!(
+              writer,
+              r#"<div class="variant" id="variant-{ion}">
+                <label title="The normal {ion} ion with two less hydrogens"><input type="checkbox" id="variant-{ion}-2"></input>''</label>
+                <label title="The normal {ion} ion with one less hydrogen"><input type="checkbox" id="variant-{ion}-1"></input>'</label>
+                <label title="The normal definition of the {ion} ion as defined by Biemann"><input type="checkbox" id="variant-{ion}0" checked></input>{ion}</label>
+                <label title="The normal {ion} ion with one more hydrogen"><input type="checkbox" id="variant-{ion}+1"></input>·</label>
+                <label title="The normal {ion} ion with two more hydrogens"><input type="checkbox" id="variant-{ion}+2"></input>··</label>
+              </div>"#,
             )
             .unwrap();
     }
@@ -295,11 +376,13 @@ fn main() {
               <label>glycan</label>
               <label><input id='model-glycan-enabled' type='checkbox' switch/>Enable fragments from structure (GNO)</label>
               {}{}
+              <span>(Y)</span>
             </div>
             <div class='grid-row'>
               <label>glycan</label>
               <span style="grid-column: span 2">Enable fragments from compositions between <input id='model-glycan-composition-min' type='number' min='0' value='0'/> — <input id='model-glycan-composition-max' type='number' min='0' value='0'/> monosaccharides</span>
               {}
+              <span>(B)</span>
             </div>
             <div class="grid-row">
               <label title="Allow modification specific diagnostic ions, as defined by the database">modification diagnostic ions</label>
@@ -312,10 +395,6 @@ fn main() {
               <label><input id='model-immonium-enabled' type='checkbox' switch/>Enable</label>
               <span class='empty'></span>
               {}
-            </div>
-            <div class="grid-row">
-              <label title="side chain loss from precursor as seen in electron based fragmentation">precursor side chain loss</label>
-              <label><input id='model-m-enabled' type='checkbox' switch/>Enable</label>
             </div>
             <div class="grid-row">
               <label title="Allow modification specific neutral losses, as defined by the database">modification neutral losses</label>
@@ -734,12 +813,12 @@ fn main() {
     
     </html>"#,
     create_loss_modal("precursor"),
-    create_charge_range_fields("precursor", ChargeRange::Precursor, ""),
+    create_charge_range_fields("precursor", ChargeRange::Precursor),
     create_loss_modal("glycan"),
-    create_charge_range_fields("glycan-other", ChargeRange::OneToPrecursor, "Y"),
-    create_charge_range_fields("glycan-oxonium", ChargeRange::One, "Oxonium"),
-    create_charge_range_fields("diagnostic", ChargeRange::One, ""),
-    create_charge_range_fields("immonium", ChargeRange::One, ""),
+    create_charge_range_fields("glycan-other", ChargeRange::OneToPrecursor),
+    create_charge_range_fields("glycan-oxonium", ChargeRange::One),
+    create_charge_range_fields("diagnostic", ChargeRange::One),
+    create_charge_range_fields("immonium", ChargeRange::One),
     version
         )
         .unwrap();

@@ -6,15 +6,15 @@
 use std::sync::Mutex;
 
 use itertools::Itertools;
+use model::ModelParameters;
 use mzdata::prelude::{IonProperties, SpectrumLike};
 use ordered_float::OrderedFloat;
 use render::{display_formula, display_mass};
 use rustyms::{
     error::*,
-    model::*,
     modification::SimpleModification,
     spectrum::*,
-    system::{e, mz, usize::Charge, MassOverCharge},
+    system::{e, usize::Charge},
     *,
 };
 use serde::{Deserialize, Serialize};
@@ -24,10 +24,12 @@ mod custom_modifications;
 mod html_builder;
 mod identified_peptides;
 mod metadata_render;
+mod model;
 mod render;
 mod search_modification;
 mod spectra;
 mod state;
+mod validate;
 
 use crate::{metadata_render::RenderToHtml, state::State};
 
@@ -172,136 +174,6 @@ pub enum NoiseFilter {
     TopX(f64, usize),
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub struct ModelParameters {
-    pub a: (Location, Vec<String>, ChargeRange),
-    pub b: (Location, Vec<String>, ChargeRange),
-    pub c: (Location, Vec<String>, ChargeRange),
-    pub d: (Location, Vec<String>, ChargeRange),
-    pub v: (Location, Vec<String>, ChargeRange),
-    pub w: (Location, Vec<String>, ChargeRange),
-    pub x: (Location, Vec<String>, ChargeRange),
-    pub y: (Location, Vec<String>, ChargeRange),
-    pub z: (Location, Vec<String>, ChargeRange),
-    pub precursor: (Vec<String>, ChargeRange),
-    pub immonium: (bool, ChargeRange),
-    pub m: bool,
-    pub modification_diagnostic: (bool, ChargeRange),
-    pub modification_neutral: bool,
-    pub cleave_cross_links: bool,
-    pub glycan: (bool, (usize, usize), Vec<String>, ChargeRange, ChargeRange),
-}
-
-impl ModelParameters {
-    fn create_model(
-        self,
-        name: &str,
-        tolerance: (f64, &str),
-        mz_range: (Option<f64>, Option<f64>),
-    ) -> Result<Model, CustomError> {
-        let get_model_param = |neutral_losses: &[String]| {
-            neutral_losses
-                .iter()
-                .filter(|n| !n.is_empty())
-                .map(|n| n.parse::<NeutralLoss>())
-                .collect::<Result<Vec<_>, _>>()
-        };
-        let mut model = match name {
-            "all" => Model::all(),
-            "ethcd" => Model::ethcd(),
-            "hot_eacid" => Model::hot_eacid(),
-            "ead" => Model::ead(),
-            "cidhcd" => Model::cid_hcd(),
-            "etd" => Model::etd(),
-            "td_etd" => Model::td_etd(),
-            "none" => Model::none(),
-            "custom" => Model::none()
-                .a(PrimaryIonSeries {
-                    location: self.a.0,
-                    neutral_losses: get_model_param(&self.a.1)?,
-                    charge_range: self.a.2,
-                })
-                .b(PrimaryIonSeries {
-                    location: self.b.0,
-                    neutral_losses: get_model_param(&self.b.1)?,
-                    charge_range: self.b.2,
-                })
-                .c(PrimaryIonSeries {
-                    location: self.c.0,
-                    neutral_losses: get_model_param(&self.c.1)?,
-                    charge_range: self.c.2,
-                })
-                .d(PrimaryIonSeries {
-                    location: self.d.0,
-                    neutral_losses: get_model_param(&self.d.1)?,
-                    charge_range: self.d.2,
-                })
-                .v(PrimaryIonSeries {
-                    location: self.v.0,
-                    neutral_losses: get_model_param(&self.v.1)?,
-                    charge_range: self.v.2,
-                })
-                .w(PrimaryIonSeries {
-                    location: self.w.0,
-                    neutral_losses: get_model_param(&self.w.1)?,
-                    charge_range: self.w.2,
-                })
-                .x(PrimaryIonSeries {
-                    location: self.x.0,
-                    neutral_losses: get_model_param(&self.x.1)?,
-                    charge_range: self.x.2,
-                })
-                .y(PrimaryIonSeries {
-                    location: self.y.0,
-                    neutral_losses: get_model_param(&self.y.1)?,
-                    charge_range: self.y.2,
-                })
-                .z(PrimaryIonSeries {
-                    location: self.z.0,
-                    neutral_losses: get_model_param(&self.z.1)?,
-                    charge_range: self.z.2,
-                })
-                .precursor(get_model_param(&self.precursor.0)?, self.precursor.1)
-                .immonium(self.immonium)
-                .m(self.m)
-                .modification_specific_diagnostic_ions(self.modification_diagnostic)
-                .modification_specific_neutral_losses(self.modification_neutral)
-                .allow_cross_link_cleavage(self.cleave_cross_links)
-                .glycan(GlycanModel {
-                    allow_structural: self.glycan.0,
-                    compositional_range: self.glycan.1 .0..=self.glycan.1 .1,
-                    neutral_losses: get_model_param(&self.glycan.2)?,
-                    oxonium_charge_range: self.glycan.3,
-                    other_charge_range: self.glycan.4,
-                }),
-            _ => Model::all(),
-        };
-        if tolerance.1 == "ppm" {
-            model.tolerance = Tolerance::new_ppm(tolerance.0);
-        } else if tolerance.1 == "th" {
-            model.tolerance =
-                Tolerance::new_absolute(MassOverCharge::new::<rustyms::system::mz>(tolerance.0));
-        } else {
-            return Err(CustomError::error(
-                "Invalid tolerance unit",
-                "",
-                Context::None,
-            ));
-        }
-        let min = mz_range.0.unwrap_or(0.0);
-        let max = mz_range.1.unwrap_or(f64::MAX);
-        if min > max {
-            return Err(CustomError::error(
-                "m/z range invalid",
-                "The minimal value is less then the maximal value",
-                Context::None,
-            ));
-        }
-        model.mz_range = MassOverCharge::new::<mz>(min)..=MassOverCharge::new::<mz>(max);
-        Ok(model)
-    }
-}
-
 #[derive(Debug, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
 pub struct AnnotationResult {
     pub spectrum: String,
@@ -419,20 +291,14 @@ fn main() {
             custom_modifications::get_custom_modification,
             custom_modifications::get_custom_modifications,
             custom_modifications::update_modification,
-            custom_modifications::validate_custom_linker_specificity,
-            custom_modifications::validate_custom_single_specificity,
-            custom_modifications::validate_molecular_formula,
-            custom_modifications::validate_neutral_loss,
-            custom_modifications::validate_placement_rule,
-            custom_modifications::validate_stub,
             details_formula,
+            get_custom_mods_path,
             identified_peptide_details,
             identified_peptides::close_identified_peptides_file,
             identified_peptides::get_identified_peptides_files,
             identified_peptides::load_identified_peptide,
             identified_peptides::load_identified_peptides_file,
             identified_peptides::search_peptide,
-            get_custom_mods_path,
             refresh,
             render::density_graph,
             search_modification::search_modification,
@@ -446,6 +312,15 @@ fn main() {
             spectra::save_spectrum,
             spectra::select_spectrum_index,
             spectra::select_spectrum_native_id,
+            validate::validate_aa_neutral_loss,
+            validate::validate_amino_acid,
+            validate::validate_custom_linker_specificity,
+            validate::validate_custom_single_specificity,
+            validate::validate_molecular_formula,
+            validate::validate_neutral_loss,
+            validate::validate_placement_rule,
+            validate::validate_satellite_ion,
+            validate::validate_stub,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -2791,9 +2791,28 @@ output.warning {
 
 dialog.neutral-loss {
     min-width: 525px;
+    max-width: 750px;
 
-    button {
+    &>button {
         margin-top: 1rem;
+    }
+
+    input[type=number] {
+        margin: 0px;
+        margin-bottom: 3px;
+        margin-right: 0.5em;
+    }
+
+    .col-2 {
+        column-count: 2;
+
+        &>div {
+            break-inside: avoid;
+
+            &>h3:first-child {
+                margin-top: 0
+            }
+        }
     }
 }
 
@@ -2832,7 +2851,7 @@ dialog.neutral-loss {
 .custom-model {
     grid-column: 1 / -1;
     display: none;
-    grid-template-columns: repeat(4, auto);
+    grid-template-columns: repeat(5, auto);
     gap: inherit;
     align-items: baseline;
     border: 2px solid var(--color-halfway);
@@ -2848,15 +2867,47 @@ dialog.neutral-loss {
     }
 
     & .charge-range {
-        display: flex;
-
         span {
-            margin: 2px;
+            white-space: nowrap;
+
+            &:nth-child(2) {
+                margin: 2px;
+            }
         }
 
         input {
             border-left: none;
             width: 3rem;
+            padding: 4px;
+        }
+    }
+
+    & .variant {
+        label {
+            width: 2em;
+            display: inline-block;
+        }
+
+        & input {
+            margin: 2px;
+
+            &:not(:first-child) {
+                margin-left: 4px;
+            }
+        }
+    }
+
+    .satellite-ion-location {
+        display: flex;
+        gap: 4px;
+        align-items: baseline;
+
+        label input {
+            margin-left: 2px;
+        }
+
+        .separated-input {
+            flex-grow: 1;
         }
     }
 }
@@ -3345,6 +3396,18 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
         & .input {
             border: none;
             flex-grow: 1;
+
+            &:first-child:empty::after {
+                content: attr(placeholder);
+                display: inline;
+                color: var(--color-halfway);
+                text-overflow: ellipsis;
+                flex-shrink: 1;
+            }
+
+            &:not(:first-child:empty)::after {
+                display: none;
+            }
         }
 
         &>.element {

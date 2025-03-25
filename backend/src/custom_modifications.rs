@@ -3,7 +3,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use itertools::Itertools;
 use ordered_float::OrderedFloat;
 use rustyms::{
     error::{Context, CustomError},
@@ -15,168 +14,11 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 use crate::{
-    render::{display_formula, display_neutral_loss, display_placement_rule, display_stubs},
+    render::{display_placement_rule, display_stubs},
     state::State,
+    validate::parse_stub,
     ModifiableState, Theme,
 };
-
-#[tauri::command]
-pub fn validate_molecular_formula(text: String) -> Result<String, CustomError> {
-    text.parse::<f64>()
-        .map(MolecularFormula::with_additional_mass)
-        .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true))
-        .map(|f| display_formula(&f, true))
-}
-
-#[tauri::command]
-pub fn validate_neutral_loss(text: String) -> Result<String, CustomError> {
-    text.parse::<NeutralLoss>()
-        .map(|f| display_neutral_loss(&f))
-}
-
-#[tauri::command]
-pub fn validate_placement_rule(text: String) -> Result<String, CustomError> {
-    text.parse::<PlacementRule>()
-        .map(|r| display_placement_rule(&r, false))
-}
-
-pub fn parse_stub(text: &str) -> Result<(MolecularFormula, MolecularFormula), CustomError> {
-    if let Some(index) = text.find(':') {
-        let f1 = text[..index]
-            .parse::<f64>()
-            .map(MolecularFormula::with_additional_mass)
-            .or_else(|_| MolecularFormula::from_pro_forma(text, ..index, true, true, true))?;
-        let f2 = text[index + 1..]
-            .parse::<f64>()
-            .map(MolecularFormula::with_additional_mass)
-            .or_else(|_| MolecularFormula::from_pro_forma(text, index + 1.., true, true, true))?;
-        Ok((f1, f2))
-    } else {
-        Err(CustomError::error(
-            "Invalid breakage",
-            "A breakage should be specified with 'formula1:formula2'",
-            Context::full_line(0, text),
-        ))
-    }
-}
-
-#[tauri::command]
-pub fn validate_stub(text: String) -> Result<String, CustomError> {
-    parse_stub(&text).map(|s| display_stubs(&s, true))
-}
-
-#[tauri::command]
-pub fn validate_custom_single_specificity(
-    placement_rules: Vec<String>,
-    neutral_losses: Vec<String>,
-    diagnostic_ions: Vec<String>,
-) -> Result<String, CustomError> {
-    let rules = placement_rules
-        .into_iter()
-        .map(|text| text.parse::<PlacementRule>())
-        .collect::<Result<Vec<_>, _>>()?;
-    let rules = if rules.is_empty() {
-        vec![PlacementRule::Anywhere]
-    } else {
-        rules
-    };
-
-    let neutral_losses = neutral_losses
-        .into_iter()
-        .map(|text| text.parse::<NeutralLoss>())
-        .collect::<Result<Vec<_>, _>>()?;
-
-    let diagnostic_ions = diagnostic_ions
-        .into_iter()
-        .map(|text| {
-            text.parse::<f64>()
-                .map(MolecularFormula::with_additional_mass)
-                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(format!(
-        "<span data-value='{{\"placement_rules\":[{}],\"neutral_losses\":[{}],\"diagnostic_ions\":[{}]}}'>Placement rules: {}{}{}</span>",
-        rules.iter().map(|r| format!("\"{}\"", display_placement_rule(r, false))).join(","),
-        neutral_losses.iter().map(|n| format!("\"{}\"", n.hill_notation())).join(","),
-        diagnostic_ions.iter().map(|n| format!("\"{}\"", n.hill_notation())).join(","),
-        rules.iter().map(|p|display_placement_rule(p,true)).join(", "),
-        if neutral_losses.is_empty() {
-            String::new()
-        } else {
-            ", Neutral losses: ".to_string() + &neutral_losses.iter().map(display_neutral_loss).join(", ")
-        },
-        if diagnostic_ions.is_empty() {
-            String::new()
-        } else {
-            ", Diagnostic ions: ".to_string() + &diagnostic_ions.iter().map(|f| display_formula(f, true)).join(", ")
-        },
-    ))
-}
-
-#[tauri::command]
-pub fn validate_custom_linker_specificity(
-    asymmetric: bool,
-    placement_rules: Vec<String>,
-    secondary_placement_rules: Vec<String>,
-    stubs: Vec<String>,
-    diagnostic_ions: Vec<String>,
-) -> Result<String, CustomError> {
-    let rules1 = placement_rules
-        .into_iter()
-        .map(|text| text.parse::<PlacementRule>())
-        .collect::<Result<Vec<_>, _>>()?;
-    let rules1 = if rules1.is_empty() {
-        vec![PlacementRule::Anywhere]
-    } else {
-        rules1
-    };
-    let rules2 = secondary_placement_rules
-        .into_iter()
-        .map(|text| text.parse::<PlacementRule>())
-        .collect::<Result<Vec<_>, _>>()?;
-    let rules2 = if rules2.is_empty() {
-        vec![PlacementRule::Anywhere]
-    } else {
-        rules2
-    };
-
-    let stubs = stubs
-        .into_iter()
-        .map(|text| parse_stub(&text))
-        .collect::<Result<Vec<_>, _>>()?;
-
-    let diagnostic_ions = diagnostic_ions
-        .into_iter()
-        .map(|text| {
-            text.parse::<f64>()
-                .map(MolecularFormula::with_additional_mass)
-                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(format!(
-        "<span data-value='{{\"asymmetric\":{asymmetric},\"placement_rules\":[{}],\"secondary_placement_rules\":[{}],\"stubs\":[{}],\"diagnostic_ions\":[{}]}}'>Placement rules: {}{}{}{}</span>",
-        rules1.iter().map(|r| format!("\"{}\"", display_placement_rule(r, false))).join(","),
-        rules2.iter().map(|r| format!("\"{}\"", display_placement_rule(r, false))).join(","),
-        stubs.iter().map(|s| format!("\"{}\"", display_stubs(s, false))).join(","),
-        diagnostic_ions.iter().map(|n| format!("\"{}\"", n.hill_notation())).join(","),
-        rules1.iter().map(|p|display_placement_rule(p,true)).join(", "),
-        if asymmetric {
-            ", Secondary placement rules: ".to_string() + &rules2.iter().map(|p|display_placement_rule(p,true)).join(", ")
-        } else {
-            String::new()
-        },
-        if stubs.is_empty() {
-            String::new()
-        } else {
-            ", Breakage: ".to_string() + &stubs.iter().map(|s| display_stubs(s, true)).join(", ")
-        },
-        if diagnostic_ions.is_empty() {
-            String::new()
-        } else {
-            ", Diagnostic ions: ".to_string() + &diagnostic_ions.iter().map(|f| display_formula(f, true)).join(", ")
-        },
-    ))
-}
 
 #[tauri::command]
 pub fn get_custom_modifications(

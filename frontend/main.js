@@ -531,7 +531,6 @@ async function load_identified_peptide() {
   })
 }
 
-
 function get_location(id) {
   let loc = document.querySelector(id);
   let t = loc.children[0].options[Number(loc.children[0].value)].dataset.value;
@@ -549,13 +548,50 @@ function get_location(id) {
 }
 
 function get_losses(ion) {
-  let loss = loadSeparatedInput("model-" + ion + "-loss");
+  let normal_loss = loadSeparatedInput("model-" + ion + "-loss");
   document.getElementsByName("model-" + ion + "-loss-selection").forEach(element => {
     if (element.checked) {
-      loss.push(element.value);
+      normal_loss.push(element.value);
     }
   });
-  return loss;
+  document.getElementsByName("model-" + ion + "-gain-selection").forEach(element => {
+    if (element.checked) {
+      normal_loss.push(element.value);
+    }
+  });
+  if (ion == "glycan") {
+    return normal_loss;
+  }
+  let aa_loss = loadSeparatedInput("model-" + ion + "-aa-loss");
+  document.getElementsByName("model-" + ion + "-aa-loss-selection").forEach(element => {
+    if (element.checked) {
+      aa_loss.push(element.value);
+    }
+  });
+  let side_chain_loss_number = Number(document.getElementById("model-" + ion + "-aa-side-chain-loss-number").value);
+  let side_chain_loss_selection = loadSeparatedInput("model-" + ion + "-aa-side-chain-loss-selection");
+
+  return { neutral_losses: normal_loss, amino_acid_neutral_losses: aa_loss, amino_acid_side_chain_losses: side_chain_loss_number, amino_acid_side_chain_losses_selection: side_chain_loss_selection };
+}
+
+function get_variants(ion) {
+  let variants = [];
+  if (document.getElementById("variant-" + ion + "-2").checked) {
+    variants.push(-2);
+  }
+  if (document.getElementById("variant-" + ion + "-1").checked) {
+    variants.push(-1);
+  }
+  if (document.getElementById("variant-" + ion + "0").checked) {
+    variants.push(0);
+  }
+  if (document.getElementById("variant-" + ion + "+1").checked) {
+    variants.push(1);
+  }
+  if (document.getElementById("variant-" + ion + "+2").checked) {
+    variants.push(2);
+  }
+  return variants;
 }
 
 function get_charge_range(ion) {
@@ -566,24 +602,28 @@ function get_charge_range(ion) {
   return { start: { [start_type]: start_value }, end: { [end_type]: end_value } };
 }
 
+function number_or_null(id) {
+  let value = document.getElementById(id).value;
+  return value == "" ? null : Number(value);
+}
+
 async function annotate_spectrum() {
   document.querySelector("#annotate-button").classList.add("loading");
   document.querySelector("#peptide").innerText = document.querySelector("#peptide").innerText.trim();
-  var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);
+  var charge = number_or_null("spectrum-charge");
   var noise_threshold = Number(document.querySelector("#noise-filter").value);
   var model = {
-    a: [get_location("#model-a-location"), get_losses("a"), get_charge_range("a")],
-    b: [get_location("#model-b-location"), get_losses("b"), get_charge_range("b")],
-    c: [get_location("#model-c-location"), get_losses("c"), get_charge_range("c")],
-    d: [get_location("#model-d-location"), get_losses("d"), get_charge_range("d")],
-    v: [get_location("#model-v-location"), get_losses("v"), get_charge_range("v")],
-    w: [get_location("#model-w-location"), get_losses("w"), get_charge_range("w")],
-    x: [get_location("#model-x-location"), get_losses("x"), get_charge_range("x")],
-    y: [get_location("#model-y-location"), get_losses("y"), get_charge_range("y")],
-    z: [get_location("#model-z-location"), get_losses("z"), get_charge_range("z")],
+    a: { location: get_location("#model-a-location"), charge_range: get_charge_range("a"), variants: get_variants("a"), ...get_losses("a") },
+    b: { location: get_location("#model-b-location"), charge_range: get_charge_range("b"), variants: get_variants("b"), ...get_losses("b") },
+    c: { location: get_location("#model-c-location"), charge_range: get_charge_range("c"), variants: get_variants("c"), ...get_losses("c") },
+    d: { location_rules: loadSeparatedInput("model-d-location"), location_base: number_or_null("model-d-base-distance"), charge_range: get_charge_range("d"), variants: get_variants("d"), ...get_losses("d") },
+    v: { location_rules: loadSeparatedInput("model-v-location"), location_base: number_or_null("model-v-base-distance"), charge_range: get_charge_range("v"), variants: get_variants("v"), ...get_losses("v") },
+    w: { location_rules: loadSeparatedInput("model-w-location"), location_base: number_or_null("model-w-base-distance"), charge_range: get_charge_range("w"), variants: get_variants("w"), ...get_losses("w") },
+    x: { location: get_location("#model-x-location"), charge_range: get_charge_range("x"), variants: get_variants("x"), ...get_losses("x") },
+    y: { location: get_location("#model-y-location"), charge_range: get_charge_range("y"), variants: get_variants("y"), ...get_losses("y") },
+    z: { location: get_location("#model-z-location"), charge_range: get_charge_range("z"), variants: get_variants("z"), ...get_losses("z") },
     precursor: [get_losses("precursor"), get_charge_range("precursor")],
     immonium: [document.querySelector("#model-immonium-enabled").checked, get_charge_range("immonium")],
-    m: document.querySelector("#model-m-enabled").checked,
     modification_neutral: document.querySelector("#model-modification-neutral-enabled").checked,
     modification_diagnostic: [document.querySelector("#model-modification-diagnostic-enabled").checked, get_charge_range("diagnostic")],
     cleave_cross_links: document.querySelector("#model-cleave-cross-links-enabled").checked,
@@ -594,6 +634,7 @@ async function annotate_spectrum() {
       get_charge_range("glycan-oxonium"),
       get_charge_range("glycan-other")],
   };
+  console.log(model);
   invoke("annotate_spectrum", {
     tolerance: [Number(document.querySelector("#spectrum-tolerance").value), document.querySelector("#spectrum-tolerance-unit").value],
     charge: charge,
@@ -1176,6 +1217,27 @@ async function addValueSeparatedElement(element, value) {
       break;
     case "neutral_loss":
       verified_value = await invoke("validate_neutral_loss", { text: value })
+        .catch(error => {
+          input.innerHTML = showContext(error, value);
+          outer.querySelector("output.error").innerHTML = formatError(error, false);
+        });
+      break;
+    case "aa_neutral_loss":
+      verified_value = await invoke("validate_aa_neutral_loss", { text: value })
+        .catch(error => {
+          input.innerHTML = showContext(error, value);
+          outer.querySelector("output.error").innerHTML = formatError(error, false);
+        });
+      break;
+    case "amino_acid":
+      verified_value = await invoke("validate_amino_acid", { text: value })
+        .catch(error => {
+          input.innerHTML = showContext(error, value);
+          outer.querySelector("output.error").innerHTML = formatError(error, false);
+        });
+      break;
+    case "satellite_ion":
+      verified_value = await invoke("validate_satellite_ion", { text: value })
         .catch(error => {
           input.innerHTML = showContext(error, value);
           outer.querySelector("output.error").innerHTML = formatError(error, false);
