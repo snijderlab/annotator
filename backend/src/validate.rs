@@ -71,10 +71,13 @@ pub fn parse_aa_neutral_loss(
     }
 }
 
+pub fn display_aa_neutral_loss(aa: &[AminoAcid], loss: &[NeutralLoss]) -> String {
+    aa.iter().join(",") + ":" + &loss.iter().map(display_neutral_loss).join(",")
+}
+
 #[tauri::command]
 pub fn validate_aa_neutral_loss(text: String) -> Result<String, CustomError> {
-    parse_aa_neutral_loss(&text)
-        .map(|s| s.0.iter().join(",") + ":" + &s.1.iter().map(display_neutral_loss).join(","))
+    parse_aa_neutral_loss(&text).map(|s| display_aa_neutral_loss(&s.0, &s.1))
 }
 
 pub fn parse_aa_list(text: &str) -> Result<Vec<AminoAcid>, CustomError> {
@@ -121,9 +124,13 @@ pub fn parse_satellite_ion(text: &str) -> Result<(Vec<AminoAcid>, u8), CustomErr
     }
 }
 
+pub fn display_satellite_ion(aa: &[AminoAcid], distance: u8) -> String {
+    aa.iter().join(",") + ":" + &distance.to_string()
+}
+
 #[tauri::command]
 pub fn validate_satellite_ion(text: String) -> Result<String, CustomError> {
-    parse_satellite_ion(&text).map(|s| s.0.iter().join(",") + ":" + &s.1.to_string())
+    parse_satellite_ion(&text).map(|s| display_satellite_ion(&s.0, s.1))
 }
 
 #[tauri::command]

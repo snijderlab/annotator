@@ -25,6 +25,7 @@ dist-ssr
 
 # Build directories
 /*/target
+/target
 /*/gen
 
 # Auto generated files

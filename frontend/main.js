@@ -627,12 +627,13 @@ async function annotate_spectrum() {
     modification_neutral: document.querySelector("#model-modification-neutral-enabled").checked,
     modification_diagnostic: [document.querySelector("#model-modification-diagnostic-enabled").checked, get_charge_range("diagnostic")],
     cleave_cross_links: document.querySelector("#model-cleave-cross-links-enabled").checked,
-    glycan: [
-      document.querySelector("#model-glycan-enabled").checked,
-      [Number(document.querySelector("#model-glycan-composition-min").value), Number(document.querySelector("#model-glycan-composition-max").value)],
-      get_losses("glycan"),
-      get_charge_range("glycan-oxonium"),
-      get_charge_range("glycan-other")],
+    glycan: {
+      allow_structural: document.querySelector("#model-glycan-enabled").checked,
+      compositional_range: [Number(document.querySelector("#model-glycan-composition-min").value), Number(document.querySelector("#model-glycan-composition-max").value)],
+      neutral_losses: get_losses("glycan"),
+      oxonium_charge_range: get_charge_range("glycan-oxonium"),
+      other_charge_range: get_charge_range("glycan-other")
+    },
   };
   console.log(model);
   invoke("annotate_spectrum", {

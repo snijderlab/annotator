@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
 use rustyms::{
@@ -8,7 +7,10 @@ use rustyms::{
     *,
 };
 
-use crate::validate::{parse_aa_neutral_loss, parse_amino_acid, parse_satellite_ion};
+use crate::validate::{
+    display_aa_neutral_loss, display_satellite_ion, parse_aa_neutral_loss, parse_amino_acid,
+    parse_satellite_ion,
+};
 
 #[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct ModelParameters {
@@ -26,7 +28,117 @@ pub struct ModelParameters {
     pub modification_diagnostic: (bool, ChargeRange),
     pub modification_neutral: bool,
     pub cleave_cross_links: bool,
-    pub glycan: (bool, (usize, usize), Vec<String>, ChargeRange, ChargeRange),
+    pub glycan: GlycanParameters,
+}
+
+impl TryFrom<ModelParameters> for Model {
+    type Error = CustomError;
+    fn try_from(value: ModelParameters) -> Result<Self, Self::Error> {
+        Ok(Model::none()
+            .a(value.a.try_into()?)
+            .b(value.b.try_into()?)
+            .c(value.c.try_into()?)
+            .d(value.d.try_into()?)
+            .v(value.v.try_into()?)
+            .w(value.w.try_into()?)
+            .x(value.x.try_into()?)
+            .y(value.y.try_into()?)
+            .z(value.z.try_into()?)
+            .precursor(
+                parse_neutral_losses(&value.precursor.0.neutral_losses)?,
+                value
+                    .precursor
+                    .0
+                    .amino_acid_neutral_losses
+                    .iter()
+                    .map(|rule| parse_aa_neutral_loss(rule))
+                    .collect::<Result<_, _>>()?,
+                (value.precursor.0.amino_acid_side_chain_losses, {
+                    let selection = value
+                        .precursor
+                        .0
+                        .amino_acid_side_chain_losses_selection
+                        .iter()
+                        .map(|aa| parse_amino_acid(aa))
+                        .collect::<Result<Vec<_>, _>>()?;
+                    (!selection.is_empty()).then_some(selection)
+                }),
+                value.precursor.1,
+            )
+            .immonium(value.immonium.0.then_some(value.immonium.1))
+            .modification_specific_diagnostic_ions(
+                value
+                    .modification_diagnostic
+                    .0
+                    .then_some(value.modification_diagnostic.1),
+            )
+            .modification_specific_neutral_losses(value.modification_neutral)
+            .allow_cross_link_cleavage(value.cleave_cross_links)
+            .glycan(value.glycan.try_into()?))
+    }
+}
+
+impl From<Model> for ModelParameters {
+    fn from(value: Model) -> Self {
+        ModelParameters {
+            a: value.a.into(),
+            b: value.b.into(),
+            c: value.c.into(),
+            d: value.d.into(),
+            v: value.v.into(),
+            w: value.w.into(),
+            x: value.x.into(),
+            y: value.y.into(),
+            z: value.z.into(),
+            precursor: ((&value.precursor).into(), value.precursor.3),
+            immonium: value
+                .immonium
+                .map_or((false, ChargeRange::ONE), |c| (true, c)),
+            modification_diagnostic: value
+                .modification_specific_diagnostic_ions
+                .map_or((false, ChargeRange::ONE), |c| (true, c)),
+            modification_neutral: value.modification_specific_neutral_losses,
+            cleave_cross_links: value.allow_cross_link_cleavage,
+            glycan: value.glycan.into(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+pub struct GlycanParameters {
+    allow_structural: bool,
+    compositional_range: (usize, usize),
+    neutral_losses: Vec<String>,
+    oxonium_charge_range: ChargeRange,
+    other_charge_range: ChargeRange,
+}
+
+impl TryFrom<GlycanParameters> for GlycanModel {
+    type Error = CustomError;
+    fn try_from(value: GlycanParameters) -> Result<Self, Self::Error> {
+        Ok(Self {
+            allow_structural: value.allow_structural,
+            compositional_range: value.compositional_range.0..=value.compositional_range.1,
+            neutral_losses: parse_neutral_losses(&value.neutral_losses)?,
+            oxonium_charge_range: value.oxonium_charge_range,
+            other_charge_range: value.other_charge_range,
+        })
+    }
+}
+
+impl From<GlycanModel> for GlycanParameters {
+    fn from(value: GlycanModel) -> Self {
+        Self {
+            allow_structural: value.allow_structural,
+            compositional_range: (
+                *value.compositional_range.start(),
+                *value.compositional_range.end(),
+            ),
+            neutral_losses: value.neutral_losses.iter().map(|l| l.to_string()).collect(),
+            oxonium_charge_range: value.oxonium_charge_range,
+            other_charge_range: value.other_charge_range,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -35,6 +147,40 @@ pub struct PrecursorLosses {
     amino_acid_neutral_losses: Vec<String>,
     amino_acid_side_chain_losses: u8,
     amino_acid_side_chain_losses_selection: Vec<String>,
+}
+
+impl
+    From<&(
+        Vec<NeutralLoss>,
+        Vec<(Vec<AminoAcid>, Vec<NeutralLoss>)>,
+        (u8, Option<Vec<AminoAcid>>),
+        ChargeRange,
+    )> for PrecursorLosses
+{
+    fn from(
+        value: &(
+            Vec<NeutralLoss>,
+            Vec<(Vec<AminoAcid>, Vec<NeutralLoss>)>,
+            (u8, Option<Vec<AminoAcid>>),
+            ChargeRange,
+        ),
+    ) -> Self {
+        Self {
+            neutral_losses: value.0.iter().map(|l| l.to_string()).collect(),
+            amino_acid_neutral_losses: value
+                .1
+                .iter()
+                .map(|l| display_aa_neutral_loss(&l.0, &l.1))
+                .collect(),
+            amino_acid_side_chain_losses: value.2 .0,
+            amino_acid_side_chain_losses_selection: value
+                .2
+                 .1
+                .iter()
+                .flat_map(|selection| selection.iter().map(|a| a.to_string()))
+                .collect(),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -48,28 +194,52 @@ pub struct PrimarySeriesParameters {
     variants: Vec<i8>,
 }
 
-impl PrimarySeriesParameters {
-    fn into_final(self) -> Result<PrimaryIonSeries, CustomError> {
-        let selection = self
+impl TryFrom<PrimarySeriesParameters> for PrimaryIonSeries {
+    type Error = CustomError;
+    fn try_from(value: PrimarySeriesParameters) -> Result<Self, Self::Error> {
+        let selection = value
             .amino_acid_side_chain_losses_selection
             .iter()
             .map(|aa| parse_amino_acid(aa))
             .collect::<Result<Vec<_>, _>>()?;
-        Ok(PrimaryIonSeries {
-            location: self.location,
-            neutral_losses: parse_neutral_losses(&self.neutral_losses)?,
-            amino_acid_neutral_losses: self
+        Ok(Self {
+            location: value.location,
+            neutral_losses: parse_neutral_losses(&value.neutral_losses)?,
+            amino_acid_neutral_losses: value
                 .amino_acid_neutral_losses
                 .iter()
                 .map(|rule| parse_aa_neutral_loss(rule))
                 .collect::<Result<_, _>>()?,
             amino_acid_side_chain_losses: (
-                self.amino_acid_side_chain_losses,
+                value.amino_acid_side_chain_losses,
                 (!selection.is_empty()).then_some(selection),
             ),
-            charge_range: self.charge_range,
-            allowed_variants: self.variants,
+            charge_range: value.charge_range,
+            allowed_variants: value.variants,
         })
+    }
+}
+
+impl From<PrimaryIonSeries> for PrimarySeriesParameters {
+    fn from(value: PrimaryIonSeries) -> Self {
+        PrimarySeriesParameters {
+            location: value.location,
+            neutral_losses: value.neutral_losses.iter().map(|l| l.to_string()).collect(),
+            amino_acid_neutral_losses: value
+                .amino_acid_neutral_losses
+                .iter()
+                .map(|l| display_aa_neutral_loss(&l.0, &l.1))
+                .collect(),
+            amino_acid_side_chain_losses: value.amino_acid_side_chain_losses.0,
+            amino_acid_side_chain_losses_selection: value
+                .amino_acid_side_chain_losses
+                .1
+                .iter()
+                .flat_map(|selection| selection.iter().map(|a| a.to_string()))
+                .collect(),
+            charge_range: value.charge_range,
+            variants: value.allowed_variants,
+        }
     }
 }
 
@@ -85,35 +255,65 @@ pub struct SatelliteSeriesParameters {
     variants: Vec<i8>,
 }
 
-impl SatelliteSeriesParameters {
-    fn into_final(self) -> Result<SatelliteIonSeries, CustomError> {
-        let selection = self
+impl TryFrom<SatelliteSeriesParameters> for SatelliteIonSeries {
+    type Error = CustomError;
+    fn try_from(value: SatelliteSeriesParameters) -> Result<Self, Self::Error> {
+        let selection = value
             .amino_acid_side_chain_losses_selection
             .iter()
             .map(|aa| parse_amino_acid(aa))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(SatelliteIonSeries {
             location: SatelliteLocation {
-                rules: self
+                rules: value
                     .location_rules
                     .into_iter()
                     .map(|rule| parse_satellite_ion(&rule))
                     .collect::<Result<Vec<_>, _>>()?,
-                base: self.location_base,
+                base: value.location_base,
             },
-            neutral_losses: parse_neutral_losses(&self.neutral_losses)?,
-            amino_acid_neutral_losses: self
+            neutral_losses: parse_neutral_losses(&value.neutral_losses)?,
+            amino_acid_neutral_losses: value
                 .amino_acid_neutral_losses
                 .iter()
                 .map(|rule| parse_aa_neutral_loss(rule))
                 .collect::<Result<_, _>>()?,
             amino_acid_side_chain_losses: (
-                self.amino_acid_side_chain_losses,
+                value.amino_acid_side_chain_losses,
                 (!selection.is_empty()).then_some(selection),
             ),
-            charge_range: self.charge_range,
-            allowed_variants: self.variants,
+            charge_range: value.charge_range,
+            allowed_variants: value.variants,
         })
+    }
+}
+
+impl From<SatelliteIonSeries> for SatelliteSeriesParameters {
+    fn from(value: SatelliteIonSeries) -> Self {
+        SatelliteSeriesParameters {
+            location_base: value.location.base,
+            location_rules: value
+                .location
+                .rules
+                .iter()
+                .map(|rule| display_satellite_ion(&rule.0, rule.1))
+                .collect(),
+            neutral_losses: value.neutral_losses.iter().map(|l| l.to_string()).collect(),
+            amino_acid_neutral_losses: value
+                .amino_acid_neutral_losses
+                .iter()
+                .map(|l| display_aa_neutral_loss(&l.0, &l.1))
+                .collect(),
+            amino_acid_side_chain_losses: value.amino_acid_side_chain_losses.0,
+            amino_acid_side_chain_losses_selection: value
+                .amino_acid_side_chain_losses
+                .1
+                .iter()
+                .flat_map(|selection| selection.iter().map(|a| a.to_string()))
+                .collect(),
+            charge_range: value.charge_range,
+            variants: value.allowed_variants,
+        }
     }
 }
 
@@ -141,51 +341,7 @@ impl ModelParameters {
             "etd" => Model::etd(),
             "td_etd" => Model::td_etd(),
             "none" => Model::none(),
-            "custom" => Model::none()
-                .a(self.a.into_final()?)
-                .b(self.b.into_final()?)
-                .c(self.c.into_final()?)
-                .d(self.d.into_final()?)
-                .v(self.v.into_final()?)
-                .w(self.w.into_final()?)
-                .x(self.x.into_final()?)
-                .y(self.y.into_final()?)
-                .z(self.z.into_final()?)
-                .precursor(
-                    parse_neutral_losses(&self.precursor.0.neutral_losses)?,
-                    self.precursor
-                        .0
-                        .amino_acid_neutral_losses
-                        .iter()
-                        .map(|rule| parse_aa_neutral_loss(rule))
-                        .collect::<Result<_, _>>()?,
-                    (self.precursor.0.amino_acid_side_chain_losses, {
-                        let selection = self
-                            .precursor
-                            .0
-                            .amino_acid_side_chain_losses_selection
-                            .iter()
-                            .map(|aa| parse_amino_acid(aa))
-                            .collect::<Result<Vec<_>, _>>()?;
-                        (!selection.is_empty()).then_some(selection)
-                    }),
-                    self.precursor.1,
-                )
-                .immonium(self.immonium.0.then_some(self.immonium.1))
-                .modification_specific_diagnostic_ions(
-                    self.modification_diagnostic
-                        .0
-                        .then_some(self.modification_diagnostic.1),
-                )
-                .modification_specific_neutral_losses(self.modification_neutral)
-                .allow_cross_link_cleavage(self.cleave_cross_links)
-                .glycan(GlycanModel {
-                    allow_structural: self.glycan.0,
-                    compositional_range: self.glycan.1 .0..=self.glycan.1 .1,
-                    neutral_losses: parse_neutral_losses(&self.glycan.2)?,
-                    oxonium_charge_range: self.glycan.3,
-                    other_charge_range: self.glycan.4,
-                }),
+            "custom" => self.try_into()?,
             _ => Model::all(),
         };
         if tolerance.1 == "ppm" {
