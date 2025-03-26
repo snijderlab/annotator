@@ -326,13 +326,8 @@ fn parse_neutral_losses(neutral_losses: &[String]) -> Result<Vec<NeutralLoss>, C
 }
 
 impl ModelParameters {
-    pub fn create_model(
-        self,
-        name: &str,
-        tolerance: (f64, &str),
-        mz_range: (Option<f64>, Option<f64>),
-    ) -> Result<Model, CustomError> {
-        let mut model = match name {
+    pub fn get_model(self, name: &str) -> Result<Model, CustomError> {
+        Ok(match name {
             "all" => Model::all(),
             "ethcd" => Model::ethcd(),
             "hot_eacid" => Model::hot_eacid(),
@@ -343,7 +338,16 @@ impl ModelParameters {
             "none" => Model::none(),
             "custom" => self.try_into()?,
             _ => Model::all(),
-        };
+        })
+    }
+
+    pub fn create_model(
+        self,
+        name: &str,
+        tolerance: (f64, &str),
+        mz_range: (Option<f64>, Option<f64>),
+    ) -> Result<Model, CustomError> {
+        let mut model = self.get_model(name)?;
         if tolerance.1 == "ppm" {
             model.tolerance = Tolerance::new_ppm(tolerance.0);
         } else if tolerance.1 == "th" {

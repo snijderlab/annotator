@@ -547,6 +547,44 @@ function get_location(id) {
   }
 }
 
+function set_location(id, location) {
+  let loc = document.querySelector(id);
+  let t = loc.children[0].options[Number(loc.children[0].value)].dataset.value;
+  let value = [0, 0, 0];
+  if (location == "All") {
+    value = [0, 0, 0];
+  } else if (location == "None") {
+    value = [1, 0, 0];
+  } else {
+    switch (Object.keys(location)[0]) {
+      case "SkipN":
+        value = [2, location["SkipN"], 0];
+        break;
+      case "SkipC":
+        value = [3, location["SkipC"], 0];
+        break;
+      case "TakeC":
+        value = [5, location["TakeC"], 0];
+        break;
+      case "TakeN":
+        let s = location["TakeN"]["skip"];
+        let t = location["TakeN"]["take"];
+        if (s == 0) {
+          value = [4, t, 0];
+        } else {
+          value = [6, s, t];
+        }
+        break;
+      case "SkipNC":
+        value = [7, location["SkipNC"][0], location["SkipNC"][1]];
+        break;
+    }
+  }
+  loc.children[0].value = value[0];
+  loc.children[1].value = value[1];
+  loc.children[2].value = value[2];
+}
+
 function get_losses(ion) {
   let normal_loss = loadSeparatedInput("model-" + ion + "-loss");
   document.getElementsByName("model-" + ion + "-loss-selection").forEach(element => {
@@ -574,6 +612,31 @@ function get_losses(ion) {
   return { neutral_losses: normal_loss, amino_acid_neutral_losses: aa_loss, amino_acid_side_chain_losses: side_chain_loss_number, amino_acid_side_chain_losses_selection: side_chain_loss_selection };
 }
 
+function set_losses(ion, losses) {
+  let custom = [];
+  for (let loss of losses["neutral_losses"]) {
+    if (["-H1O1", "-H2O1", "-H4O2", "-H6O3", "-H1", "-H2", "-H3", "-H3N1", "-C1O1", "+H2O1", "+H4O2", "+H6O3", "+H1", "+H2", "+H3",].includes(loss)) {
+      document.getElementById("model-" + ion + "-loss-selection" + loss).checked = true;
+    } else {
+      custom.push(loss)
+    }
+  }
+  populateSeparatedInput("model-" + ion + "-loss", custom);
+  if (ion == "glycan") return;
+  let custom_aa = [];
+  for (let loss of losses["amino_acid_neutral_losses"]) {
+    if (["N:-COOH", "Q:-C2H3O2"].includes(loss)) {
+      document.getElementById("model-" + ion + "-aa-loss-selection" + loss).checked = true;
+    } else {
+      custom.push(loss)
+    }
+  }
+  populateSeparatedInput("model-" + ion + "-aa-loss", custom_aa);
+  document.getElementById("model-" + ion + "-aa-side-chain-loss-number").value = losses["amino_acid_side_chain_losses"];
+  populateSeparatedInput("model-" + ion + "-aa-side-chain-loss-selection", losses["amino_acid_side_chain_losses_selection"]);
+  // TODO:  Refresh the counter behind the button (also make it so that the counter works for the new complex types)
+}
+
 function get_variants(ion) {
   let variants = [];
   if (document.getElementById("variant-" + ion + "-2").checked) {
@@ -594,6 +657,14 @@ function get_variants(ion) {
   return variants;
 }
 
+function set_variants(ion, variants) {
+  document.getElementById("variant-" + ion + "-2").checked = -2 in variants;
+  document.getElementById("variant-" + ion + "-1").checked = -1 in variants;
+  document.getElementById("variant-" + ion + "0").checked = 0 in variants;
+  document.getElementById("variant-" + ion + "+1").checked = 1 in variants;
+  document.getElementById("variant-" + ion + "+2").checked = 2 in variants;
+}
+
 function get_charge_range(ion) {
   let start_type = document.getElementById("model-" + ion + "-charge-start-type").value;
   let start_value = Number(document.getElementById("model-" + ion + "-charge-start-value").value);
@@ -602,16 +673,21 @@ function get_charge_range(ion) {
   return { start: { [start_type]: start_value }, end: { [end_type]: end_value } };
 }
 
+function set_charge_range(ion, charge_range) {
+  let start_type = Object.keys(charge_range["start"])[0]
+  document.getElementById("model-" + ion + "-charge-start-type").value = start_type;
+  document.getElementById("model-" + ion + "-charge-start-value").value = charge_range["start"][start_type];
+  let end_type = Object.keys(charge_range["end"])[0]
+  document.getElementById("model-" + ion + "-charge-end-type").value = end_type;
+  document.getElementById("model-" + ion + "-charge-end-value").value = charge_range["end"][end_type];
+}
+
 function number_or_null(id) {
   let value = document.getElementById(id).value;
   return value == "" ? null : Number(value);
 }
 
-async function annotate_spectrum() {
-  document.querySelector("#annotate-button").classList.add("loading");
-  document.querySelector("#peptide").innerText = document.querySelector("#peptide").innerText.trim();
-  var charge = number_or_null("spectrum-charge");
-  var noise_threshold = Number(document.querySelector("#noise-filter").value);
+function get_model() {
   var model = {
     a: { location: get_location("#model-a-location"), charge_range: get_charge_range("a"), variants: get_variants("a"), ...get_losses("a") },
     b: { location: get_location("#model-b-location"), charge_range: get_charge_range("b"), variants: get_variants("b"), ...get_losses("b") },
@@ -635,6 +711,49 @@ async function annotate_spectrum() {
       other_charge_range: get_charge_range("glycan-other")
     },
   };
+  return model;
+}
+
+function set_model(model) {
+  // Main series
+  for (let ion of ["a", "b", "c", "x", "y", "z"]) {
+    set_location("#model-" + ion + "-location", model[ion]["location"]);
+    set_charge_range(ion, model[ion]["charge_range"]);
+    set_variants(ion, model[ion]["variants"]);
+    set_losses(ion, model[ion]);
+  }
+  for (let ion of ["d", "v", "w"]) {
+    populateSeparatedInput("model-" + ion + "-location", model[ion]["location_rules"]);
+    document.getElementById("model-" + ion + "-base-distance").value = model[ion]["location_base"];
+    set_charge_range(ion, model[ion]["charge_range"]);
+    set_variants(ion, model[ion]["variants"]);
+    set_losses(ion, model[ion]);
+  }
+  // Precursor
+  set_charge_range("precursor", model["precursor"][1]);
+  set_losses("precursor", model["precursor"][0]);
+  // Glycan
+  document.getElementById("model-glycan-enabled").checked = model["glycan"]["allow_structural"];
+  set_losses("glycan", model["glycan"]);
+  set_charge_range("glycan-other", model["glycan"]["other_charge_range"]);
+  document.getElementById("model-glycan-composition-min").value = model["glycan"]["compositional_range"][0];
+  document.getElementById("model-glycan-composition-max").value = model["glycan"]["compositional_range"][1];
+  set_charge_range("glycan-oxonium", model["glycan"]["oxonium_charge_range"]);
+  // Other
+  document.getElementById("model-modification-diagnostic-enabled").checked = model["modification_diagnostic"][0];
+  set_charge_range("diagnostic", model["modification_diagnostic"][1]);
+  document.getElementById("model-immonium-enabled").checked = model["immonium"][0];
+  set_charge_range("immonium", model["immonium"][1]);
+  document.getElementById("model-modification-neutral-enabled").checked = model["modification_neutral"];
+  document.getElementById("model-cleave-cross-links-enabled").checked = model["cleave_cross_links"];
+}
+
+async function annotate_spectrum() {
+  document.querySelector("#annotate-button").classList.add("loading");
+  document.querySelector("#peptide").innerText = document.querySelector("#peptide").innerText.trim();
+  var charge = number_or_null("spectrum-charge");
+  var noise_threshold = Number(document.querySelector("#noise-filter").value);
+  var model = get_model();
   console.log(model);
   invoke("annotate_spectrum", {
     tolerance: [Number(document.querySelector("#spectrum-tolerance").value), document.querySelector("#spectrum-tolerance-unit").value],
@@ -980,6 +1099,9 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("custom-modifications-path").innerText = path
   );
   updateCustomModifications();
+
+  // Custom models
+  invoke("get_model", { name: "ethcd", customModel: get_model() }).then(model => { console.log(model); set_model(model) }).catch(err => console.error(err));
 
   // Refresh interface for hot reload
   invoke("refresh").then((result) => {

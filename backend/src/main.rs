@@ -182,6 +182,14 @@ pub struct AnnotationResult {
     pub intensity_max: f64,
 }
 
+#[tauri::command]
+async fn get_model(
+    name: &str,
+    custom_model: ModelParameters,
+) -> Result<ModelParameters, CustomError> {
+    custom_model.get_model(name).map(|m| m.into())
+}
+
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
 async fn annotate_spectrum<'a>(
@@ -294,6 +302,7 @@ fn main() {
             details_formula,
             get_custom_mods_path,
             identified_peptide_details,
+            get_model,
             identified_peptides::close_identified_peptides_file,
             identified_peptides::get_identified_peptides_files,
             identified_peptides::load_identified_peptide,

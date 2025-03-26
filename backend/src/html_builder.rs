@@ -50,10 +50,10 @@ impl HtmlElement {
     }
 
     pub fn input_list(
-        name: impl Into<String> + Clone,
+        name: impl Into<String> + Clone + Display,
         input_type: impl Into<String> + Clone,
         additional_classes: impl Into<String> + Clone,
-        inputs: impl IntoIterator<Item = (impl Into<String>, impl Into<HtmlContent>)>,
+        inputs: impl IntoIterator<Item = (impl Into<String> + Display, impl Into<HtmlContent>)>,
     ) -> Vec<Self> {
         inputs
             .into_iter()
@@ -65,6 +65,7 @@ impl HtmlElement {
                         .new()
                         .header("type", input_type.clone())
                         .header("name", name.clone())
+                        .id(format!("{name}{value}"))
                         .value(value)])
                     .content(text)
                     .clone()
