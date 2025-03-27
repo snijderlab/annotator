@@ -55,6 +55,7 @@ impl Theme {
 }
 
 const CUSTOM_MODIFICATIONS_FILE: &str = "custom_modifications.json";
+const CUSTOM_MODELS_FILE: &str = "custom_models.json";
 type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
 
 #[tauri::command]
@@ -272,15 +273,39 @@ fn load_custom_mods(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
     }
 }
 
-#[tauri::command]
-fn get_custom_mods_path(app: tauri::AppHandle) -> String {
-    app.path()
+fn load_custom_models(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let path = app
+        .path()
         .app_config_dir()
-        .map_or("not loaded".to_string(), |dir| {
-            dir.join(CUSTOM_MODIFICATIONS_FILE)
-                .to_string_lossy()
-                .to_string()
-        })
+        .map(|dir| dir.join(CUSTOM_MODELS_FILE));
+    if let Ok(path) = path {
+        let state = app.state::<Mutex<State>>();
+        if let Ok(data) = std::fs::read(path) {
+            let mods: Vec<(String, Model)> = serde_json::from_slice(&data)?;
+            state
+                .lock()
+                .expect("Poisoned mutex at setup of custom models")
+                .models = mods;
+        }
+        Ok(())
+    } else {
+        Err("Could not find configuration file".into())
+    }
+}
+
+#[tauri::command]
+fn get_custom_configuration_path(app: tauri::AppHandle) -> (String, String) {
+    app.path().app_config_dir().map_or(
+        ("not loaded".to_string(), "not loaded".to_string()),
+        |dir| {
+            (
+                dir.join(CUSTOM_MODIFICATIONS_FILE)
+                    .to_string_lossy()
+                    .to_string(),
+                dir.join(CUSTOM_MODELS_FILE).to_string_lossy().to_string(),
+            )
+        },
+    )
 }
 
 fn main() {
@@ -290,8 +315,10 @@ fn main() {
             spectra: Vec::new(),
             identified_peptide_files: std::cell::RefCell::new(Vec::new()),
             database: Vec::new(),
+            models: Vec::new(),
         }))
         .setup(load_custom_mods)
+        .setup(load_custom_models)
         .invoke_handler(tauri::generate_handler![
             annotate_spectrum,
             custom_modifications::delete_custom_modification,
@@ -300,14 +327,19 @@ fn main() {
             custom_modifications::get_custom_modifications,
             custom_modifications::update_modification,
             details_formula,
-            get_custom_mods_path,
-            identified_peptide_details,
+            get_custom_configuration_path,
             get_model,
+            identified_peptide_details,
             identified_peptides::close_identified_peptides_file,
             identified_peptides::get_identified_peptides_files,
             identified_peptides::load_identified_peptide,
             identified_peptides::load_identified_peptides_file,
             identified_peptides::search_peptide,
+            model::delete_custom_model,
+            model::duplicate_custom_model,
+            model::get_custom_model,
+            model::get_custom_models,
+            model::update_model,
             refresh,
             render::density_graph,
             search_modification::search_modification,

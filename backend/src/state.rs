@@ -10,13 +10,16 @@ use mzdata::{
     prelude::SpectrumLike,
     spectrum::MultiLayerSpectrum,
 };
-use rustyms::{identification::IdentifiedPeptide, ontologies::CustomDatabase, system::OrderedTime};
+use rustyms::{
+    Model, identification::IdentifiedPeptide, ontologies::CustomDatabase, system::OrderedTime,
+};
 use serde::{Deserialize, Serialize};
 
 pub struct State {
     pub spectra: Vec<RawFile>,
     pub identified_peptide_files: RefCell<Vec<IdentifiedPeptideFile>>,
     pub database: CustomDatabase,
+    pub models: Vec<(String, Model)>,
 }
 
 impl State {

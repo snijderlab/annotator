@@ -1,16 +1,142 @@
+use std::{io::BufWriter, sync::Mutex};
+
 use serde::{Deserialize, Serialize};
 
 use rustyms::{
     error::*,
     model::*,
-    system::{mz, MassOverCharge},
+    system::{MassOverCharge, mz},
     *,
 };
+use tauri::Manager;
 
-use crate::validate::{
-    display_aa_neutral_loss, display_satellite_ion, parse_aa_neutral_loss, parse_amino_acid,
-    parse_satellite_ion,
+use crate::{
+    ModifiableState,
+    state::State,
+    validate::{
+        display_aa_neutral_loss, display_satellite_ion, parse_aa_neutral_loss, parse_amino_acid,
+        parse_satellite_ion,
+    },
 };
+
+#[tauri::command]
+pub fn get_custom_models(state: ModifiableState) -> Result<Vec<(usize, String)>, &'static str> {
+    let state = state.lock().map_err(|_| "Could not lock mutex")?;
+    Ok(state
+        .models
+        .iter()
+        .enumerate()
+        .map(|(index, (name, _))| (index, name.clone()))
+        .collect())
+}
+
+#[tauri::command]
+pub fn duplicate_custom_model(
+    id: usize,
+    state: ModifiableState,
+) -> Result<ModelParameters, &'static str> {
+    let mut locked_state = state.lock().map_err(|_| "Could not lock mutex")?;
+    if let Some((name, model)) = locked_state.models.get(id).cloned() {
+        let new_id = locked_state.models.len() - 1;
+        locked_state.models.push((name, model));
+        drop(locked_state);
+        get_custom_model(new_id, state)
+    } else {
+        Err("Could not find specified id")
+    }
+}
+
+#[tauri::command]
+pub fn delete_custom_model(id: usize, state: ModifiableState) -> Result<(), &'static str> {
+    let mut state = state.lock().map_err(|_| "Could not lock mutex")?;
+    if id < state.models.len() {
+        state.models.remove(id);
+        Ok(())
+    } else {
+        Err("Could not find specified id")
+    }
+}
+
+#[tauri::command]
+pub fn get_custom_model(
+    id: usize,
+    state: ModifiableState,
+) -> Result<ModelParameters, &'static str> {
+    let state = state.lock().map_err(|_| "Could not lock mutex")?;
+    if let Some((_, model)) = state.models.get(id) {
+        Ok(model.clone().into())
+    } else {
+        Err("Given index does not exist")
+    }
+}
+
+#[tauri::command]
+pub async fn update_model(
+    id: usize,
+    name: String,
+    model: ModelParameters,
+    app: tauri::AppHandle,
+) -> Result<(), CustomError> {
+    let model = (name, model.try_into()?);
+
+    if let Ok(mut state) = app.state::<Mutex<State>>().lock() {
+        // Update state
+        if id < state.models.len() {
+            state.models[id] = model;
+        } else {
+            state.models.push(model);
+        }
+
+        // Store mods config file
+        let path = app
+            .path()
+            .app_config_dir()
+            .map(|dir| dir.join(crate::CUSTOM_MODELS_FILE))
+            .map_err(|e| {
+                CustomError::error(
+                    "Cannot find app data directory",
+                    e.to_string(),
+                    Context::None,
+                )
+            })?;
+        let parent = path.parent().ok_or_else(|| {
+            CustomError::error(
+                "Custom models configuration does not have a valid directory",
+                "Please report",
+                Context::show(path.to_string_lossy()),
+            )
+        })?;
+        std::fs::create_dir_all(parent).map_err(|err| {
+            CustomError::error(
+                "Could not create parent directories for custom models configuration file",
+                err,
+                Context::show(parent.to_string_lossy()),
+            )
+        })?;
+        let file = BufWriter::new(std::fs::File::create(&path).map_err(|err| {
+            CustomError::error(
+                "Could not open custom models configuration file",
+                err,
+                Context::show(path.to_string_lossy()),
+            )
+        })?);
+        serde_json::to_writer_pretty(file, &state.database).map_err(|err| {
+            CustomError::error(
+                "Could not write custom models to configuration file",
+                err,
+                Context::None,
+            )
+        })?;
+
+        Ok(())
+    } else {
+        Err(CustomError::error(
+            "State locked",
+            "Cannot unlock the mutable state, are you doing many things in parallel?",
+            Context::None,
+        ))
+    }
+}
 
 #[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct ModelParameters {
@@ -172,10 +298,10 @@ impl
                 .iter()
                 .map(|l| display_aa_neutral_loss(&l.0, &l.1))
                 .collect(),
-            amino_acid_side_chain_losses: value.2 .0,
+            amino_acid_side_chain_losses: value.2.0,
             amino_acid_side_chain_losses_selection: value
                 .2
-                 .1
+                .1
                 .iter()
                 .flat_map(|selection| selection.iter().map(|a| a.to_string()))
                 .collect(),

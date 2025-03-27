@@ -531,6 +531,58 @@ async function load_identified_peptide() {
   })
 }
 
+function updateCustomModels() {
+  invoke("get_custom_models")
+    .then(models => {
+      console.log(models);
+      let container = document.getElementById("custom-models");
+      container.innerText = "";
+      let highest_id = -1;
+      for (let model of models) {
+        let new_element = document.createElement("li");
+        new_element.dataset.id = model[0];
+        new_element.innerHTML = model[1];
+        let edit_button = document.createElement("button");
+        edit_button.classList.add("edit");
+        edit_button.appendChild(document.createTextNode("Edit"));
+        edit_button.addEventListener("click", () =>
+          invoke("get_custom_model", { id: model[0] })
+            .then(result => {
+              loadCustommodel(result);
+              document.getElementById("custom-model-dialog").showModal();
+            })
+            .catch(error => console.error(error)));
+        new_element.appendChild(edit_button);
+        let duplicate_button = document.createElement("button");
+        duplicate_button.classList.add("duplicate");
+        duplicate_button.appendChild(document.createTextNode("Duplicate"));
+        duplicate_button.addEventListener("click", () =>
+          invoke("duplicate_custom_model", { id: model[0], newId: Number(document.getElementById("custom-mod-create").dataset.newId) })
+            .then(result => {
+              loadCustommodel(result);
+              document.getElementById("custom-model-dialog").showModal();
+            })
+            .catch(error => console.error(error)));
+        new_element.appendChild(duplicate_button);
+        let delete_button = document.createElement("button");
+        delete_button.classList.add("delete");
+        delete_button.classList.add("secondary");
+        delete_button.appendChild(document.createTextNode("Delete"));
+        delete_button.addEventListener("click", () =>
+          invoke("delete_custom_model", { id: model[0] })
+            .then(() => {
+              updateCustommodels();
+            })
+            .catch(error => console.error(error)));
+        new_element.appendChild(delete_button);
+        container.appendChild(new_element);
+        highest_id = Math.max(highest_id, model[0]);
+      }
+      document.getElementById("custom-model-create").dataset.newId = highest_id + 1;
+    })
+    .catch(error => console.error(error))
+}
+
 function get_location(id) {
   let loc = document.querySelector(id);
   let t = loc.children[0].options[Number(loc.children[0].value)].dataset.value;
@@ -1028,48 +1080,64 @@ window.addEventListener("DOMContentLoaded", () => {
     })
     t.querySelector(".save").addEventListener("click", async e => {
       let listInput = e.target.parentElement.parentElement;
-      listInput.classList.remove("creating");
-      let new_element = document.createElement("li");
-      new_element.classList.add("element");
+      let allow_delete = true;
+      let validation_error = undefined;
+      let inner = undefined;
+
       if (listInput.classList.contains("single")) {
-        new_element.innerHTML = await invoke("validate_custom_single_specificity", {
+        inner = await invoke("validate_custom_single_specificity", {
           placementRules: loadSeparatedInput("custom-mod-single-placement-rules"),
           neutralLosses: loadSeparatedInput("custom-mod-single-neutral-losses"),
           diagnosticIons: loadSeparatedInput("custom-mod-single-diagnostic-ions")
         }).catch(error => {
-          console.error(error)
+          validation_error = error;
         });
       } else if (listInput.classList.contains("linker")) {
-        new_element.innerHTML = await invoke("validate_custom_linker_specificity", {
+        inner = await invoke("validate_custom_linker_specificity", {
           asymmetric: document.getElementById("custom-mod-linker-asymmetric").checked,
           placementRules: loadSeparatedInput("custom-mod-linker-placement-rules"),
           secondaryPlacementRules: loadSeparatedInput("custom-mod-linker-secondary-placement-rules"),
           stubs: loadSeparatedInput("custom-mod-linker-stubs"),
           diagnosticIons: loadSeparatedInput("custom-mod-linker-diagnostic-ions")
         }).catch(error => {
-          console.error(error)
+          validation_error = error;
         });
       } else if (listInput.classList.contains("glycan-fragments")) {
-        new_element.innerHTML = await invoke("validate_glycan_fragments", {
+        allow_delete = document.getElementById("model-glycan-fragments-other").hidden;
+        inner = await invoke("validate_glycan_fragments", {
           fallback: !document.getElementById("model-glycan-fragments-other").hidden,
           selection: loadSeparatedInput("model-glycan-fragments-selection"),
           free: document.getElementById("model-glycan-fragments-free").checked,
           core: document.getElementById("model-glycan-fragments-core").checked,
           full: document.getElementById("model-glycan-fragments-full").checked,
         }).catch(error => {
-          console.error(error)
+          validation_error = error;
         });
       }
-      new_element.children[0].title = "Edit";
-      new_element.children[0].addEventListener("click", e => editListInput(e, listInput));
-      let delete_button = document.createElement("button");
-      delete_button.classList.add("delete");
-      delete_button.appendChild(document.createTextNode("x"));
-      delete_button.addEventListener("click", e => e.target.parentElement.remove());
-      delete_button.title = "Delete";
-      new_element.appendChild(delete_button);
-      listInput.querySelector(".values").appendChild(new_element);
-      listInput.querySelectorAll(".modal .separated-input").forEach(s => clearSeparatedInput(s));
+      if (validation_error == undefined) {
+        listInput.querySelector("&>.error").hidden = true;
+        listInput.classList.remove("creating");
+        let new_element = document.createElement("li");
+        new_element.classList.add("element");
+        new_element.innerHTML = inner;
+        new_element.children[0].title = "Edit";
+        new_element.children[0].addEventListener("click", e => editListInput(e, listInput));
+        if (allow_delete) {
+          let delete_button = document.createElement("button");
+          delete_button.classList.add("delete");
+          delete_button.appendChild(document.createTextNode("x"));
+          delete_button.addEventListener("click", e => e.target.parentElement.remove());
+          delete_button.title = "Delete";
+          new_element.appendChild(delete_button);
+        }
+        e.target.parentElement.parentElement.querySelectorAll(".hidden").forEach(e => e.remove());
+        listInput.querySelector(".values").appendChild(new_element);
+        listInput.querySelectorAll(".modal .separated-input").forEach(s => clearSeparatedInput(s));
+      } else {
+        let node = listInput.querySelector("&>.error");
+        node.hidden = false;
+        node.innerHTML = formatError(validation_error, true);
+      }
     })
     t.querySelector(".cancel").addEventListener("click", e => {
       e.target.parentElement.parentElement.classList.remove("creating");
@@ -1090,7 +1158,7 @@ window.addEventListener("DOMContentLoaded", () => {
       linker: document.getElementById("custom-mod-type-linker").checked,
       single_specificities: loadListInput("custom-mod-single-specificities"),
       linker_specificities: loadListInput("custom-mod-linker-specificities"),
-      linker_length: Number(document.getElementById("custom-mod-linker-length").value),
+      linker_length: number_or_null("custom-mod-linker-length"),
     };
     invoke("update_modification", {
       customModification: mod
@@ -1099,13 +1167,21 @@ window.addEventListener("DOMContentLoaded", () => {
       .catch(error => console.error(error))
   });
   document.getElementById("custom-mod-cancel").addEventListener("click", () => document.getElementById("custom-mod-dialog").close());
-  invoke("get_custom_mods_path").then(path =>
-    document.getElementById("custom-modifications-path").innerText = path
-  );
+  invoke("get_custom_configuration_path").then(path => {
+    document.getElementById("custom-modifications-path").innerText = path[0];
+    document.getElementById("custom-models-path").innerText = path[1];
+  });
   updateCustomModifications();
+  updateCustomModels();
 
   // Custom models
   invoke("get_model", { name: "ethcd", customModel: get_model() }).then(model => { console.log(model); set_model(model) }).catch(err => console.error(err));
+  // All built in models should be listed and the only way to create a new model should be to duplicate a built in one.
+  document.getElementById("custom-model-create").addEventListener("click", e => {
+    // loadCustomModel();
+    document.getElementById("custom-model-id").value = e.target.dataset.newId;
+    document.getElementById("custom-model-dialog").showModal()
+  });
 
   // Refresh interface for hot reload
   invoke("refresh").then((result) => {

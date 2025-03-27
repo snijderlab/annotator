@@ -83,7 +83,7 @@ fn create_loss_modal(id: &str) -> HtmlElement {
                 HtmlTag::label.new().content(HtmlTag::input.new().header("name", "model-glycan-fragments-form").header("type", "checkbox").id("model-glycan-fragments-full")).content("Full").clone(),
                 HtmlTag::button.new().class("save").id("model-glycan-fragments-save").content("Save").clone(),
                 HtmlTag::button.new().class("cancel secondary").id("model-glycan-fragments-cancel").content("Cancel").clone(),
-              ])).clone()
+              ])).content(HtmlTag::output.new().class("error").header2("hidden")).clone()
         ]))
     } else {
         dialog.extend(
@@ -329,103 +329,11 @@ fn main() {
           <option value="td_etd" title="c+z with single water, and ammonia loss and one, two, and three hydrogen gain and precursor with single water, ammonia, and ETD specific losses and one, two, and three hydrogen gain">Top-down ETD</option>
           <option value="none" title="Only the base precursor peak, no losses">None</option>
           <option value="custom">Custom</option>
-        </select>
-        <fieldset class="custom-model">
-          <legend>Custom model</legend>
-          <p>Ion</p>
-          <p>Location</p>
-          <p>Neutral Loss/Gain</p>
-          <p>Charge range</p>
-          <p>Variant</p>"#).unwrap();
-    for ion in ["a", "b", "c", "d", "v", "w", "x", "y", "z"] {
-        write!(writer, "<label>{ion}</label>").unwrap();
-        if ["d", "v", "w"].contains(&ion) {
-            let other_ion = match ion {
-                "d" => "a",
-                "v" => "y",
-                "w" => "z",
-                _ => "",
-            };
-            write!(writer, r#"<div class="satellite-ion-location" title="{ion} ions are formed by secondary fragmentation from {other_ion}, so if turned on these will be generated for any location that produces {other_ion}. The maximal distance is the maximal number of side chains between the fragmenting side chain and the parent ion breakage, when the side chain immediatly adjecent to the parent ion breakage breaks this distance is 0, so to only get standard satellite ions the distance needs to be set to 0. If no distance is specified the satellite ions are not generated.">{}<label>Base maximal distance<input type="number" min="0" max="255" value="" id="model-{ion}-base-distance"></input></label></div>"#,
-            HtmlElement::separated_input(format!("model-{ion}-location"), "Amino acid codes followed by a colon and the maximal distance", "satellite_ion"),
-          ).unwrap();
-        } else {
-            write!(
-            writer,
-           r#"<div id="model-{ion}-location" class="location select-input">
-              <select onchange="this.className=this.options[Number(this.value)].dataset.cls;">
-                <option value="0" data-cls="arg-0" data-value="All" title="All backbone bonds produce fragments ions">All</option>
-                <option value="1" data-cls="arg-0" data-value="None" selected title="No fragments are generated">None</option>
-                <option value="2" data-cls="arg-1" data-value="SkipN" title="Select a number of amino acids from the N terminal that do not produce a fragment, the rest does produce fragments.">Disallow x from N terminal</option>
-                <option value="3" data-cls="arg-1" data-value="SkipC" title="Select a number of amino acids from the C terminal that do not produce a fragment, the rest does produce fragments.">Disallow x from C terminal</option>
-                <option value="4" data-cls="arg-1" data-value="TakeN1" title="Select a number of amino acids from the N terminal that do produce a fragment, the rest does not produce fragments.">Allow x from N terminal</option>
-                <option value="5" data-cls="arg-1" data-value="TakeC" title="Select a number of amino acids from the C terminal that do produce a fragment, the rest does not produce fragments.">Allow x from C terminal</option>
-                <option value="6" data-cls="arg-2" data-value="TakeN" title="Select an offset from the N terminal that do not produce fragments, then select a number of amino acids that do.">Disallow x from N and allow y</option>
-                <option value="7" data-cls="arg-2" data-value="SkipNC" title="Select an offset from the N terminal that do not produce fragments, and select an offset from the C terminal that does not produce fragments, the middle left over section does">Disallow x from N and disallow y from C</option>
-              </select>
-              <input type="number" value="1" min="1">
-              <input type="number" value="1" min="1">
-              </div>"#
-        ).unwrap();
-        }
-        write!(writer, "{}", create_loss_modal(ion)).unwrap();
-        write!(
-            writer,
-            "{}",
-            create_charge_range_fields(ion, ChargeRange::OneToPrecursor)
-        )
-        .unwrap();
-        write!(
-              writer,
-              r#"<div class="variant" id="variant-{ion}">
-                <label title="The normal {ion} ion with two less hydrogens"><input type="checkbox" id="variant-{ion}-2"></input>''</label>
-                <label title="The normal {ion} ion with one less hydrogen"><input type="checkbox" id="variant-{ion}-1"></input>'</label>
-                <label title="The normal definition of the {ion} ion as defined by Biemann"><input type="checkbox" id="variant-{ion}0" checked></input>{ion}</label>
-                <label title="The normal {ion} ion with one more hydrogen"><input type="checkbox" id="variant-{ion}+1"></input>·</label>
-                <label title="The normal {ion} ion with two more hydrogens"><input type="checkbox" id="variant-{ion}+2"></input>··</label>
-              </div>"#,
-            )
-            .unwrap();
-    }
+        </select>"#).unwrap();
+
     write!(
             writer,
-            r#"<label>precursor</label>
-            <div class="empty"></div>
-            {}{}
-            <div class="grid-row">
-              <label>glycan</label>
-              <label><input id='model-glycan-enabled' type='checkbox' switch/>Enable fragments from structure (GNO)</label>
-              {}{}
-              <span>(Y)</span>
-            </div>
-            <div class='grid-row'>
-              <label>glycan</label>
-              <span style="grid-column: span 2">Enable fragments from compositions between <input id='model-glycan-composition-min' type='number' min='0' value='0'/> — <input id='model-glycan-composition-max' type='number' min='0' value='0'/> monosaccharides</span>
-              {}
-              <span>(B)</span>
-            </div>
-            <div class="grid-row">
-              <label title="Allow modification specific diagnostic ions, as defined by the database">modification diagnostic ions</label>
-              <label><input id='model-modification-diagnostic-enabled' type='checkbox' switch/>Enable</label>
-              <span class='empty'></span>
-              {}
-            </div>
-            <div class="grid-row">
-              <label>immonium</label>
-              <label><input id='model-immonium-enabled' type='checkbox' switch/>Enable</label>
-              <span class='empty'></span>
-              {}
-            </div>
-            <div class="grid-row">
-              <label title="Allow modification specific neutral losses, as defined by the database">modification neutral losses</label>
-              <label><input id='model-modification-neutral-enabled' type='checkbox' switch/>Enable</label>
-            </div>
-            <div class="grid-row">
-              <label title="Allow MS cleavable cross-links to be cleaved">MS cleavable cross-links</label>
-              <label><input id='model-cleave-cross-links-enabled' type='checkbox' switch/>Enable</label>
-            </div>
-          </fieldset>
-          <label class="wide" for="peptide">Peptide sequence </label>
+            r#"<label class="wide" for="peptide">Peptide sequence </label>
           <div class="peptide-input wide context" id="peptide" contentEditable="plaintext-only"></div>
           <button id="annotate-button" type="button" class="col-2 center">Annotate</button>
           <button id="save-spectrum" type="button" class="secondary center" title="Save the (merged) selected spectrum, with the noise filter applied.">Save selected spectrum</button>
@@ -767,6 +675,7 @@ fn main() {
                 <button class="save" id="custom-mod-single-save">Save</button>
                 <button class="cancel secondary" id="custom-mod-single-cancel">Cancel</button>
               </div>
+              <ouput class="error" hidden></output>
             </div>
           </div>
           <div class="linker">
@@ -811,7 +720,8 @@ fn main() {
                 </div>
                 <button class="save" id="custom-mod-linker-save">Save</button>
                 <button class="cancel secondary" id="custom-mod-linker-cancel">Cancel</button>
-                </div>
+              </div>
+              <ouput class="error" hidden></output>
             </div>
           </div>
           <div class="row">
@@ -821,6 +731,106 @@ fn main() {
         </dialog>
         <button id="custom-mod-create" data-new-id="0">Create new</button>
         <ol id="custom-mods"></ol>
+      </fieldset>
+      <input type="checkbox" id="collapsible-custom-models">
+      <fieldset class="collapsible" data-linked-item="collapsible-custom-models" id="custom-models-collapsible">
+        <legend>Custom models</legend>
+        <p>Path to configuration file: <span style='-webkit-user-select:all;user-select:all;' id='custom-models-path'>Not loaded</span></p>
+        <dialog class="custom-model" id="custom-model-dialog">
+          <legend>Custom model</legend>
+          <p>Ion</p>
+          <p>Location</p>
+          <p>Neutral Loss/Gain</p>
+          <p>Charge range</p>
+          <p>Variant</p>"#).unwrap();
+    for ion in ["a", "b", "c", "d", "v", "w", "x", "y", "z"] {
+        write!(writer, "<label>{ion}</label>").unwrap();
+        if ["d", "v", "w"].contains(&ion) {
+            let other_ion = match ion {
+                "d" => "a",
+                "v" => "y",
+                "w" => "z",
+                _ => "",
+            };
+            write!(writer, r#"<div class="satellite-ion-location" title="{ion} ions are formed by secondary fragmentation from {other_ion}, so if turned on these will be generated for any location that produces {other_ion}. The maximal distance is the maximal number of side chains between the fragmenting side chain and the parent ion breakage, when the side chain immediatly adjecent to the parent ion breakage breaks this distance is 0, so to only get standard satellite ions the distance needs to be set to 0. If no distance is specified the satellite ions are not generated.">{}<label>Base maximal distance<input type="number" min="0" max="255" value="" id="model-{ion}-base-distance"></input></label></div>"#,
+              HtmlElement::separated_input(format!("model-{ion}-location"), "Amino acid codes followed by a colon and the maximal distance", "satellite_ion"),
+            ).unwrap();
+        } else {
+            write!(
+              writer,
+             r#"<div id="model-{ion}-location" class="location select-input">
+                <select onchange="this.className=this.options[Number(this.value)].dataset.cls;">
+                  <option value="0" data-cls="arg-0" data-value="All" title="All backbone bonds produce fragments ions">All</option>
+                  <option value="1" data-cls="arg-0" data-value="None" selected title="No fragments are generated">None</option>
+                  <option value="2" data-cls="arg-1" data-value="SkipN" title="Select a number of amino acids from the N terminal that do not produce a fragment, the rest does produce fragments.">Disallow x from N terminal</option>
+                  <option value="3" data-cls="arg-1" data-value="SkipC" title="Select a number of amino acids from the C terminal that do not produce a fragment, the rest does produce fragments.">Disallow x from C terminal</option>
+                  <option value="4" data-cls="arg-1" data-value="TakeN1" title="Select a number of amino acids from the N terminal that do produce a fragment, the rest does not produce fragments.">Allow x from N terminal</option>
+                  <option value="5" data-cls="arg-1" data-value="TakeC" title="Select a number of amino acids from the C terminal that do produce a fragment, the rest does not produce fragments.">Allow x from C terminal</option>
+                  <option value="6" data-cls="arg-2" data-value="TakeN" title="Select an offset from the N terminal that do not produce fragments, then select a number of amino acids that do.">Disallow x from N and allow y</option>
+                  <option value="7" data-cls="arg-2" data-value="SkipNC" title="Select an offset from the N terminal that do not produce fragments, and select an offset from the C terminal that does not produce fragments, the middle left over section does">Disallow x from N and disallow y from C</option>
+                </select>
+                <input type="number" value="1" min="1">
+                <input type="number" value="1" min="1">
+                </div>"#
+          ).unwrap();
+        }
+        write!(writer, "{}", create_loss_modal(ion)).unwrap();
+        write!(
+            writer,
+            "{}",
+            create_charge_range_fields(ion, ChargeRange::OneToPrecursor)
+        )
+        .unwrap();
+        write!(
+                writer,
+                r#"<div class="variant" id="variant-{ion}">
+                  <label title="The normal {ion} ion with two less hydrogens"><input type="checkbox" id="variant-{ion}-2"></input>''</label>
+                  <label title="The normal {ion} ion with one less hydrogen"><input type="checkbox" id="variant-{ion}-1"></input>'</label>
+                  <label title="The normal definition of the {ion} ion as defined by Biemann"><input type="checkbox" id="variant-{ion}0" checked></input>{ion}</label>
+                  <label title="The normal {ion} ion with one more hydrogen"><input type="checkbox" id="variant-{ion}+1"></input>·</label>
+                  <label title="The normal {ion} ion with two more hydrogens"><input type="checkbox" id="variant-{ion}+2"></input>··</label>
+                </div>"#,
+              )
+              .unwrap();
+    }
+    write!(writer, r#"<label>precursor</label>
+          <div class="empty"></div>
+          {}{}
+          <div class="grid-row">
+            <label>glycan</label>
+            <label><input id='model-glycan-enabled' type='checkbox' switch/>Enable fragments from structure (GNO)</label>
+            {}{}
+            <span>(Y)</span>
+          </div>
+          <div class='grid-row'>
+            <label>glycan</label>
+            <span style="grid-column: span 2">Enable fragments from compositions between <input id='model-glycan-composition-min' type='number' min='0' value='0'/> — <input id='model-glycan-composition-max' type='number' min='0' value='0'/> monosaccharides</span>
+            {}
+            <span>(B)</span>
+          </div>
+          <div class="grid-row">
+            <label title="Allow modification specific diagnostic ions, as defined by the database">modification diagnostic ions</label>
+            <label><input id='model-modification-diagnostic-enabled' type='checkbox' switch/>Enable</label>
+            <span class='empty'></span>
+            {}
+          </div>
+          <div class="grid-row">
+            <label>immonium</label>
+            <label><input id='model-immonium-enabled' type='checkbox' switch/>Enable</label>
+            <span class='empty'></span>
+            {}
+          </div>
+          <div class="grid-row">
+            <label title="Allow modification specific neutral losses, as defined by the database">modification neutral losses</label>
+            <label><input id='model-modification-neutral-enabled' type='checkbox' switch/>Enable</label>
+          </div>
+          <div class="grid-row">
+            <label title="Allow MS cleavable cross-links to be cleaved">MS cleavable cross-links</label>
+            <label><input id='model-cleave-cross-links-enabled' type='checkbox' switch/>Enable</label>
+          </div>
+        </dialog>
+        <button id="custom-model-create">Create new</button>
+        <ul id="custom-models"></ul>
       </fieldset>
       <div class="grow"></div>
       <footer>

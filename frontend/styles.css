@@ -2335,7 +2335,8 @@ input:not(:checked)+.collapsible {
     margin-top: 1em;
 }
 
-.hidden {
+.hidden,
+[hidden] {
     display: none;
 }
 
@@ -2697,13 +2698,15 @@ output.warning {
     padding-left: .5rem;
     border: 2px solid var(--color-red);
     color: var(--color-foreground);
+    display: block;
 
     &.warning {
         border-color: var(--color-yellow);
     }
 
-    &:not(.hidden) {
-        display: block;
+    &.hidden,
+    &[hidden] {
+        display: none;
     }
 
     & .raw {
@@ -3662,10 +3665,6 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
 #model-glycan-fragments-create {
     label {
         display: block;
-    }
-
-    label[hidden] {
-        display: none;
     }
 
     #model-glycan-fragments-other {

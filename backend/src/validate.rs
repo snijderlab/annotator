@@ -1,7 +1,6 @@
 use std::num::{IntErrorKind, ParseIntError};
 
 use itertools::Itertools;
-use mzsignal::text;
 use rustyms::{
     AminoAcid, MolecularFormula, NeutralLoss,
     error::{Context, CustomError},
@@ -330,20 +329,34 @@ pub fn validate_glycan_fragments(
         .map(|aa| parse_amino_acid(aa))
         .collect::<Result<Vec<_>, _>>()?;
 
-    Ok(format!(
-        "<span data-value='{{\"fallback\": {fallback}, \"selection\": [{}], \"free\": {free}, \"core\": {core}, \"full\": {full} }}'>{}, Fragments: {}{}{}{}{}",
-        aas.iter().map(|aa| format!("\"{aa}\"")).join(","),
-        if fallback {
-            "All undefined".to_string()
-        } else {
-            format!("Attachment: {}", aas.iter().join(", "),)
-        },
-        if free { "free" } else { "" },
-        if free && (core || full) { ", " } else { "" },
-        if core { "core" } else { "" },
-        if core && full { ", " } else { "" },
-        if full { "full" } else { "" },
-    ))
+    if !fallback && aas.is_empty() {
+        Err(CustomError::error(
+            "Invalid glycan fragments",
+            "At least one amino acid has to be provided for the selection",
+            Context::None,
+        ))
+    } else if !(free || core || full) {
+        Err(CustomError::error(
+            "Invalid glycan fragments",
+            "At least one fragment type has to be specified (one of free/core/full)",
+            Context::None,
+        ))
+    } else {
+        Ok(format!(
+            "<span data-value='{{\"fallback\": {fallback}, \"selection\": [{}], \"free\": {free}, \"core\": {core}, \"full\": {full} }}'>{}, Fragments: {}{}{}{}{}",
+            aas.iter().map(|aa| format!("\"{aa}\"")).join(","),
+            if fallback {
+                "All undefined".to_string()
+            } else {
+                format!("Attachment: {}", aas.iter().join(", "),)
+            },
+            if free { "free" } else { "" },
+            if free && (core || full) { ", " } else { "" },
+            if core { "core" } else { "" },
+            if core && full { ", " } else { "" },
+            if full { "full" } else { "" },
+        ))
+    }
 }
 
 /// To be used as `The xx number ` + the explanation from here (does not have a dot).
