@@ -3,9 +3,9 @@ use std::num::{IntErrorKind, ParseIntError};
 use itertools::Itertools;
 use mzsignal::text;
 use rustyms::{
+    AminoAcid, MolecularFormula, NeutralLoss,
     error::{Context, CustomError},
     placement_rule::PlacementRule,
-    AminoAcid, MolecularFormula, NeutralLoss,
 };
 
 use crate::render::{display_formula, display_neutral_loss, display_placement_rule, display_stubs};
@@ -195,19 +195,36 @@ pub fn validate_custom_single_specificity(
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(
         "<span data-value='{{\"placement_rules\":[{}],\"neutral_losses\":[{}],\"diagnostic_ions\":[{}]}}'>Placement rules: {}{}{}</span>",
-        rules.iter().map(|r| format!("\"{}\"", display_placement_rule(r, false))).join(","),
-        neutral_losses.iter().map(|n| format!("\"{}\"", n.hill_notation())).join(","),
-        diagnostic_ions.iter().map(|n| format!("\"{}\"", n.hill_notation())).join(","),
-        rules.iter().map(|p|display_placement_rule(p,true)).join(", "),
+        rules
+            .iter()
+            .map(|r| format!("\"{}\"", display_placement_rule(r, false)))
+            .join(","),
+        neutral_losses
+            .iter()
+            .map(|n| format!("\"{}\"", n.hill_notation()))
+            .join(","),
+        diagnostic_ions
+            .iter()
+            .map(|n| format!("\"{}\"", n.hill_notation()))
+            .join(","),
+        rules
+            .iter()
+            .map(|p| display_placement_rule(p, true))
+            .join(", "),
         if neutral_losses.is_empty() {
             String::new()
         } else {
-            ", Neutral losses: ".to_string() + &neutral_losses.iter().map(display_neutral_loss).join(", ")
+            ", Neutral losses: ".to_string()
+                + &neutral_losses.iter().map(display_neutral_loss).join(", ")
         },
         if diagnostic_ions.is_empty() {
             String::new()
         } else {
-            ", Diagnostic ions: ".to_string() + &diagnostic_ions.iter().map(|f| display_formula(f, true)).join(", ")
+            ", Diagnostic ions: ".to_string()
+                + &diagnostic_ions
+                    .iter()
+                    .map(|f| display_formula(f, true))
+                    .join(", ")
         },
     ))
 }
@@ -254,13 +271,32 @@ pub fn validate_custom_linker_specificity(
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(
         "<span data-value='{{\"asymmetric\":{asymmetric},\"placement_rules\":[{}],\"secondary_placement_rules\":[{}],\"stubs\":[{}],\"diagnostic_ions\":[{}]}}'>Placement rules: {}{}{}{}</span>",
-        rules1.iter().map(|r| format!("\"{}\"", display_placement_rule(r, false))).join(","),
-        rules2.iter().map(|r| format!("\"{}\"", display_placement_rule(r, false))).join(","),
-        stubs.iter().map(|s| format!("\"{}\"", display_stubs(s, false))).join(","),
-        diagnostic_ions.iter().map(|n| format!("\"{}\"", n.hill_notation())).join(","),
-        rules1.iter().map(|p|display_placement_rule(p,true)).join(", "),
+        rules1
+            .iter()
+            .map(|r| format!("\"{}\"", display_placement_rule(r, false)))
+            .join(","),
+        rules2
+            .iter()
+            .map(|r| format!("\"{}\"", display_placement_rule(r, false)))
+            .join(","),
+        stubs
+            .iter()
+            .map(|s| format!("\"{}\"", display_stubs(s, false)))
+            .join(","),
+        diagnostic_ions
+            .iter()
+            .map(|n| format!("\"{}\"", n.hill_notation()))
+            .join(","),
+        rules1
+            .iter()
+            .map(|p| display_placement_rule(p, true))
+            .join(", "),
         if asymmetric {
-            ", Secondary placement rules: ".to_string() + &rules2.iter().map(|p|display_placement_rule(p,true)).join(", ")
+            ", Secondary placement rules: ".to_string()
+                + &rules2
+                    .iter()
+                    .map(|p| display_placement_rule(p, true))
+                    .join(", ")
         } else {
             String::new()
         },
@@ -272,8 +308,41 @@ pub fn validate_custom_linker_specificity(
         if diagnostic_ions.is_empty() {
             String::new()
         } else {
-            ", Diagnostic ions: ".to_string() + &diagnostic_ions.iter().map(|f| display_formula(f, true)).join(", ")
+            ", Diagnostic ions: ".to_string()
+                + &diagnostic_ions
+                    .iter()
+                    .map(|f| display_formula(f, true))
+                    .join(", ")
         },
+    ))
+}
+
+#[tauri::command]
+pub fn validate_glycan_fragments(
+    fallback: bool,
+    selection: Vec<String>,
+    free: bool,
+    core: bool,
+    full: bool,
+) -> Result<String, CustomError> {
+    let aas = selection
+        .iter()
+        .map(|aa| parse_amino_acid(aa))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    Ok(format!(
+        "<span data-value='{{\"fallback\": {fallback}, \"selection\": [{}], \"free\": {free}, \"core\": {core}, \"full\": {full} }}'>{}, Fragments: {}{}{}{}{}",
+        aas.iter().map(|aa| format!("\"{aa}\"")).join(","),
+        if fallback {
+            "All undefined".to_string()
+        } else {
+            format!("Attachment: {}", aas.iter().join(", "),)
+        },
+        if free { "free" } else { "" },
+        if free && (core || full) { ", " } else { "" },
+        if core { "core" } else { "" },
+        if core && full { ", " } else { "" },
+        if full { "full" } else { "" },
     ))
 }
 

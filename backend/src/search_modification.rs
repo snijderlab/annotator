@@ -94,9 +94,9 @@ pub async fn search_modification(
             ),
         )
         .to_string()),
-        SimpleModificationInner::Glycan(ref g)
+        SimpleModificationInner::Glycan(g)
         | SimpleModificationInner::Gno {
-            composition: GnoComposition::Composition(ref g),
+            composition: GnoComposition::Composition(g),
             ..
         } => Ok(HtmlTag::div
             .new()

@@ -1014,7 +1014,16 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("custom-mod-name").addEventListener("input", e => document.getElementById("custom-mod-example-name").innerText = "C:" + e.target.value);
   document.querySelectorAll(".list-input").forEach(t => {
+    t.querySelectorAll(".values>li>span").forEach(v => v.addEventListener("click", e => editListInput(e, t)));
     t.querySelector(".create").addEventListener("click", e => {
+      if (e.target.parentElement.classList.contains("glycan-fragments")) {
+        document.getElementById("model-glycan-fragments-other").hidden = true;
+        document.getElementById("model-glycan-fragments-selection").parentElement.hidden = false;
+        document.getElementById("model-glycan-fragments-selection-label").hidden = false;
+        document.getElementById("model-glycan-fragments-free").checked = false;
+        document.getElementById("model-glycan-fragments-core").checked = false;
+        document.getElementById("model-glycan-fragments-full").checked = false;
+      }
       e.target.parentElement.classList.add("creating");
     })
     t.querySelector(".save").addEventListener("click", async e => {
@@ -1040,24 +1049,19 @@ window.addEventListener("DOMContentLoaded", () => {
         }).catch(error => {
           console.error(error)
         });
+      } else if (listInput.classList.contains("glycan-fragments")) {
+        new_element.innerHTML = await invoke("validate_glycan_fragments", {
+          fallback: !document.getElementById("model-glycan-fragments-other").hidden,
+          selection: loadSeparatedInput("model-glycan-fragments-selection"),
+          free: document.getElementById("model-glycan-fragments-free").checked,
+          core: document.getElementById("model-glycan-fragments-core").checked,
+          full: document.getElementById("model-glycan-fragments-full").checked,
+        }).catch(error => {
+          console.error(error)
+        });
       }
       new_element.children[0].title = "Edit";
-      new_element.children[0].addEventListener("click", e => {
-        let data = JSON.parse(e.target.dataset.value);
-        if (listInput.classList.contains("single")) {
-          populateSeparatedInput("custom-mod-single-placement-rules", data.placement_rules);
-          populateSeparatedInput("custom-mod-single-neutral-losses", data.neutral_losses);
-          populateSeparatedInput("custom-mod-single-diagnostic-ions", data.diagnostic_ions);
-        } else if (listInput.classList.contains("linker")) {
-          document.getElementById("custom-mod-linker-asymmetric").checked = data.asymmetric;
-          populateSeparatedInput("custom-mod-linker-placement-rules", data.placement_rules);
-          populateSeparatedInput("custom-mod-linker-secondary-placement-rules", data.secondary_placement_rules);
-          populateSeparatedInput("custom-mod-linker-stubs", data.stubs);
-          populateSeparatedInput("custom-mod-linker-diagnostic-ions", data.diagnostic_ions);
-        }
-        listInput.classList.add("creating");
-        e.target.parentElement.classList.add("hidden");
-      });
+      new_element.children[0].addEventListener("click", e => editListInput(e, listInput));
       let delete_button = document.createElement("button");
       delete_button.classList.add("delete");
       delete_button.appendChild(document.createTextNode("x"));
@@ -1117,6 +1121,42 @@ window.addEventListener("DOMContentLoaded", () => {
     update_open_raw_files();
   })
 });
+
+/** 
+ * @param {Event} e
+ * @param {Element} listInput  
+ * */
+function editListInput(e, listInput) {
+  console.log(e.target.dataset.value);
+  let data = JSON.parse(e.target.dataset.value);
+  if (listInput.classList.contains("single")) {
+    populateSeparatedInput("custom-mod-single-placement-rules", data.placement_rules);
+    populateSeparatedInput("custom-mod-single-neutral-losses", data.neutral_losses);
+    populateSeparatedInput("custom-mod-single-diagnostic-ions", data.diagnostic_ions);
+  } else if (listInput.classList.contains("linker")) {
+    document.getElementById("custom-mod-linker-asymmetric").checked = data.asymmetric;
+    populateSeparatedInput("custom-mod-linker-placement-rules", data.placement_rules);
+    populateSeparatedInput("custom-mod-linker-secondary-placement-rules", data.secondary_placement_rules);
+    populateSeparatedInput("custom-mod-linker-stubs", data.stubs);
+    populateSeparatedInput("custom-mod-linker-diagnostic-ions", data.diagnostic_ions);
+  } else if (listInput.classList.contains("glycan-fragments")) {
+    if (data.fallback) {
+      document.getElementById("model-glycan-fragments-other").hidden = false;
+      document.getElementById("model-glycan-fragments-selection").parentElement.hidden = true;
+      document.getElementById("model-glycan-fragments-selection-label").hidden = true;
+    } else {
+      document.getElementById("model-glycan-fragments-other").hidden = true;
+      document.getElementById("model-glycan-fragments-selection").parentElement.hidden = false;
+      document.getElementById("model-glycan-fragments-selection-label").hidden = false;
+      populateSeparatedInput("model-glycan-fragments-selection", data.selection);
+    }
+    document.getElementById("model-glycan-fragments-free").checked = data.free;
+    document.getElementById("model-glycan-fragments-core").checked = data.core;
+    document.getElementById("model-glycan-fragments-full").checked = data.full;
+  }
+  listInput.classList.add("creating");
+  e.target.parentElement.classList.add("hidden");
+}
 
 function updateCustomModifications() {
   invoke("get_custom_modifications", { theme: Theme })

@@ -3659,6 +3659,20 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
     }
 }
 
+#model-glycan-fragments-create {
+    label {
+        display: block;
+    }
+
+    label[hidden] {
+        display: none;
+    }
+
+    #model-glycan-fragments-other {
+        font-style: italic;
+    }
+}
+
 .modification {
     p {
         margin: 0;

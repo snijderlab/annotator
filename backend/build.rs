@@ -65,9 +65,29 @@ fn create_loss_modal(id: &str) -> HtmlElement {
             "neutral_loss",
         ),
     ];
-    if id != "glycan" {
+    if id == "glycan" {
         dialog.extend(
-          [HtmlTag::h2.new().content("Amino acid specific losses and gains").clone(),
+        [HtmlTag::h2.new().content("Glycan attachment to fragments").clone(),
+            HtmlTag::p.new().content("Glycans can be attached to amino acid in different ways and each of these ways can result in different fragmentation behaviour. Here rules on the behaviour can be defined that determine which part of a glycan can be attached to any fragment with a glycan. Free indicates that the entire glycan is removed. Core indicates that the core, the first HexNAc possibly with some fucoses, remains attached to the fragment. Full indicates that the full glycan is present on all glycan containing fragments. If multiple options are checked all options will be generated.").clone()
+          ].into_iter().chain([
+            HtmlTag::div.new().class("list-input glycan-fragments").content(
+              HtmlTag::ul.new().class("values").id("model-glycan-fragments").content(r#"<li class="element"><span data-value='{"fallback": true, "selection": [], "free": false, "core": false, "full": true }' title="Edit">All undefined, Fragments: full</span></li>"#))
+              .content(HtmlTag::button.new().class("create").id("model-glycan-fragments-create").content("New rule"))
+              .content(HtmlTag::div.new().class("modal").id("model-glycan-fragments-create").children([
+                HtmlTag::label.new().id("model-glycan-fragments-selection-label").header("for", "model-glycan-fragments-selection").content("Amino acid location of a glycan").clone(),
+                HtmlElement::separated_input("model-glycan-fragments-selection", "Amino acid code", "amino_acid"),
+                HtmlTag::label.new().id("model-glycan-fragments-other").content("All undefined attachment locations").clone(),
+                HtmlTag::label.new().header("for", "model-glycan-fragments-form").content("Allowed glycan forms on fragments").clone(),
+                HtmlTag::label.new().content(HtmlTag::input.new().header("name", "model-glycan-fragments-form").header("type", "checkbox").id("model-glycan-fragments-free")).content("Free").clone(),
+                HtmlTag::label.new().content(HtmlTag::input.new().header("name", "model-glycan-fragments-form").header("type", "checkbox").id("model-glycan-fragments-core")).content("Core").clone(),
+                HtmlTag::label.new().content(HtmlTag::input.new().header("name", "model-glycan-fragments-form").header("type", "checkbox").id("model-glycan-fragments-full")).content("Full").clone(),
+                HtmlTag::button.new().class("save").id("model-glycan-fragments-save").content("Save").clone(),
+                HtmlTag::button.new().class("cancel secondary").id("model-glycan-fragments-cancel").content("Cancel").clone(),
+              ])).clone()
+        ]))
+    } else {
+        dialog.extend(
+        [HtmlTag::h2.new().content("Amino acid specific losses and gains").clone(),
           HtmlTag::p.new().content("Some losses are only seen from certain amino acids, so all losses specified here will only be generated if the indicated amino acid is present in the fragment. When defining rules multiple amino acids can be combined with multiple losses, for example <code>N,D:-C1H4,-C1H4O1</code> indicates that N and D can both lose either C<sub>1</sub>H<sub>4</sub> or C<sub>1</sub>H<sub>4</sub>O<sub>1</sub>.").clone()
         ].into_iter().chain(
           HtmlElement::input_list(format!("model-{id}-aa-loss-selection"), "checkbox", "block", [

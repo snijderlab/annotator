@@ -5,12 +5,12 @@ description = "Spectrum annotator"
 authors = ["Douwe Schulte <d.schulte@uu.nl>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/snijderlab/annotator"
-edition = "2021"
-rust-version = "1.82.0"
+edition = "2024"
+rust-version = "1.85.0"
 
 [build-dependencies]
-tauri-build = { version = "2.0", features = [] }
-tauri = { version = "2.0" }
+tauri-build = { version = "2.1", features = [] }
+tauri = { version = "2.4" }
 
 [dependencies]
 itertools = "0.14"

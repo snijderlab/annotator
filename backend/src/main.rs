@@ -138,12 +138,12 @@ async fn details_formula(text: &str) -> Result<String, CustomError> {
     };
 
     Ok(format!(
-        "<p>Details on {}</p><p><span style='color:var(--color-red)'>Monoisotopic mass</span> {}, average weight {}, <span style='color:var(--color-green)'>most abundant isotope</span> offset {max} Da</p>{}", 
-            display_formula(&formula, true),
-            display_mass(formula.monoisotopic_mass(), Some(MassMode::Monoisotopic)),
-            display_mass(formula.average_weight(), Some(MassMode::Average)),
-            isotopes_display,
-        ))
+        "<p>Details on {}</p><p><span style='color:var(--color-red)'>Monoisotopic mass</span> {}, average weight {}, <span style='color:var(--color-green)'>most abundant isotope</span> offset {max} Da</p>{}",
+        display_formula(&formula, true),
+        display_mass(formula.monoisotopic_mass(), Some(MassMode::Monoisotopic)),
+        display_mass(formula.average_weight(), Some(MassMode::Average)),
+        isotopes_display,
+    ))
 }
 
 #[tauri::command]
@@ -325,6 +325,7 @@ fn main() {
             validate::validate_amino_acid,
             validate::validate_custom_linker_specificity,
             validate::validate_custom_single_specificity,
+            validate::validate_glycan_fragments,
             validate::validate_molecular_formula,
             validate::validate_neutral_loss,
             validate::validate_placement_rule,
