@@ -2847,17 +2847,19 @@ dialog.neutral-loss {
     }
 }
 
-.input-settings:has(option[value="custom"]:checked) .custom-model {
-    display: grid;
+#custom-models {
+    .name {
+        margin: 0;
+        margin-top: 0.5em;
+    }
 }
 
 .custom-model {
+    display: grid;
     grid-column: 1 / -1;
-    display: none;
     grid-template-columns: repeat(5, auto);
     gap: inherit;
     align-items: baseline;
-    border: 2px solid var(--color-halfway);
 
     & .col-2 {
         grid-column: span 2;

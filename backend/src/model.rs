@@ -19,14 +19,38 @@ use crate::{
     },
 };
 
+fn models(state: &State) -> (usize, Vec<(bool, String, Model)>) {
+    let mut output = vec![
+        (true, "All".to_string(), Model::all()),
+        (true, "EtHCD/EtCAD".to_string(), Model::ethcd()),
+        (true, "Hot EACID".to_string(), Model::hot_eacid()),
+        (true, "EAD".to_string(), Model::ead()),
+        (true, "CID/HCD".to_string(), Model::cid_hcd()),
+        (true, "ETD".to_string(), Model::etd()),
+        (true, "Top-down ETD".to_string(), Model::td_etd()),
+        (true, "UVPD".to_string(), Model::uvpd()),
+        (true, "None".to_string(), Model::none()),
+    ];
+    let built_in_length = output.len();
+    output.extend(
+        state
+            .models
+            .iter()
+            .map(|(n, m)| (false, n.clone(), m.clone())),
+    );
+    (built_in_length, output)
+}
+
 #[tauri::command]
-pub fn get_custom_models(state: ModifiableState) -> Result<Vec<(usize, String)>, &'static str> {
+pub fn get_custom_models(
+    state: ModifiableState,
+) -> Result<Vec<(bool, usize, String)>, &'static str> {
     let state = state.lock().map_err(|_| "Could not lock mutex")?;
-    Ok(state
-        .models
+    Ok(models(&state)
+        .1
         .iter()
         .enumerate()
-        .map(|(index, (name, _))| (index, name.clone()))
+        .map(|(index, (built_in, name, _))| (*built_in, index, name.clone()))
         .collect())
 }
 
@@ -34,13 +58,13 @@ pub fn get_custom_models(state: ModifiableState) -> Result<Vec<(usize, String)>,
 pub fn duplicate_custom_model(
     id: usize,
     state: ModifiableState,
-) -> Result<ModelParameters, &'static str> {
+) -> Result<(usize, bool, String, ModelParameters), &'static str> {
     let mut locked_state = state.lock().map_err(|_| "Could not lock mutex")?;
-    if let Some((name, model)) = locked_state.models.get(id).cloned() {
-        let new_id = locked_state.models.len() - 1;
-        locked_state.models.push((name, model));
+    let models = models(&locked_state).1;
+    if let Some((built_in, name, model)) = models.get(id).cloned() {
+        locked_state.models.push((name.clone(), model.clone()));
         drop(locked_state);
-        get_custom_model(new_id, state)
+        Ok((models.len(), built_in, name, model.into()))
     } else {
         Err("Could not find specified id")
     }
@@ -49,9 +73,15 @@ pub fn duplicate_custom_model(
 #[tauri::command]
 pub fn delete_custom_model(id: usize, state: ModifiableState) -> Result<(), &'static str> {
     let mut state = state.lock().map_err(|_| "Could not lock mutex")?;
-    if id < state.models.len() {
-        state.models.remove(id);
-        Ok(())
+    let models = models(&state);
+    if id < models.1.len() {
+        let (built_in, _, _) = models.1[id];
+        if built_in {
+            Err("Can not delete built in model")
+        } else {
+            state.models.remove(id - models.0);
+            Ok(())
+        }
     } else {
         Err("Could not find specified id")
     }
@@ -61,10 +91,11 @@ pub fn delete_custom_model(id: usize, state: ModifiableState) -> Result<(), &'st
 pub fn get_custom_model(
     id: usize,
     state: ModifiableState,
-) -> Result<ModelParameters, &'static str> {
+) -> Result<(usize, String, ModelParameters), &'static str> {
     let state = state.lock().map_err(|_| "Could not lock mutex")?;
-    if let Some((_, model)) = state.models.get(id) {
-        Ok(model.clone().into())
+    let models = models(&state);
+    if let Some((_, name, model)) = models.1.get(id) {
+        Ok((id, name.clone(), model.clone().into()))
     } else {
         Err("Given index does not exist")
     }
@@ -80,9 +111,19 @@ pub async fn update_model(
     let model = (name, model.try_into()?);
 
     if let Ok(mut state) = app.state::<Mutex<State>>().lock() {
-        // Update state
-        if id < state.models.len() {
-            state.models[id] = model;
+        let (built_in_models_length, models) = models(&state);
+        let index = id.saturating_sub(built_in_models_length);
+        if index < state.models.len() {
+            let (built_in, _, _) = models[id];
+            if built_in {
+                return Err(CustomError::error(
+                    "Can not update built in model",
+                    "A built in model cannot be edited",
+                    Context::None,
+                ));
+            } else {
+                state.models[index] = model;
+            }
         } else {
             state.models.push(model);
         }
@@ -120,7 +161,7 @@ pub async fn update_model(
                 Context::show(path.to_string_lossy()),
             )
         })?);
-        serde_json::to_writer_pretty(file, &state.database).map_err(|err| {
+        serde_json::to_writer_pretty(file, &state.models).map_err(|err| {
             CustomError::error(
                 "Could not write custom models to configuration file",
                 err,

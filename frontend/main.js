@@ -534,51 +534,58 @@ async function load_identified_peptide() {
 function updateCustomModels() {
   invoke("get_custom_models")
     .then(models => {
-      console.log(models);
       let container = document.getElementById("custom-models");
       container.innerText = "";
-      let highest_id = -1;
       for (let model of models) {
         let new_element = document.createElement("li");
-        new_element.dataset.id = model[0];
-        new_element.innerHTML = model[1];
-        let edit_button = document.createElement("button");
-        edit_button.classList.add("edit");
-        edit_button.appendChild(document.createTextNode("Edit"));
-        edit_button.addEventListener("click", () =>
-          invoke("get_custom_model", { id: model[0] })
-            .then(result => {
-              loadCustommodel(result);
-              document.getElementById("custom-model-dialog").showModal();
-            })
-            .catch(error => console.error(error)));
-        new_element.appendChild(edit_button);
+        let built_in = model[0];
+        new_element.dataset.id = model[1];
+        new_element.innerHTML = "<p class='name'>" + model[2] + "</p>";
+        if (!built_in) {
+          let edit_button = document.createElement("button");
+          edit_button.classList.add("edit");
+          edit_button.appendChild(document.createTextNode("Edit"));
+          edit_button.addEventListener("click", () =>
+            invoke("get_custom_model", { id: model[1] })
+              .then(result => {
+                document.getElementById("custom-model-dialog").dataset.id = result[0];
+                document.getElementById("custom-model-dialog").dataset.duplicate = false;
+                document.getElementById("custom-model-name").value = result[1];
+                loadCustomModelEdit(result[2]);
+                document.getElementById("custom-model-dialog").showModal();
+              })
+              .catch(error => console.error(error)));
+          new_element.appendChild(edit_button);
+        }
         let duplicate_button = document.createElement("button");
         duplicate_button.classList.add("duplicate");
         duplicate_button.appendChild(document.createTextNode("Duplicate"));
         duplicate_button.addEventListener("click", () =>
-          invoke("duplicate_custom_model", { id: model[0], newId: Number(document.getElementById("custom-mod-create").dataset.newId) })
+          invoke("duplicate_custom_model", { id: model[1], newId: Number(document.getElementById("custom-mod-create").dataset.newId) })
             .then(result => {
-              loadCustommodel(result);
+              document.getElementById("custom-model-dialog").dataset.id = result[0];
+              document.getElementById("custom-model-dialog").dataset.duplicate = true;
+              document.getElementById("custom-model-name").value = result[2];
+              loadCustomModelEdit(result[3]);
               document.getElementById("custom-model-dialog").showModal();
             })
             .catch(error => console.error(error)));
         new_element.appendChild(duplicate_button);
-        let delete_button = document.createElement("button");
-        delete_button.classList.add("delete");
-        delete_button.classList.add("secondary");
-        delete_button.appendChild(document.createTextNode("Delete"));
-        delete_button.addEventListener("click", () =>
-          invoke("delete_custom_model", { id: model[0] })
-            .then(() => {
-              updateCustommodels();
-            })
-            .catch(error => console.error(error)));
-        new_element.appendChild(delete_button);
+        if (!built_in) {
+          let delete_button = document.createElement("button");
+          delete_button.classList.add("delete");
+          delete_button.classList.add("secondary");
+          delete_button.appendChild(document.createTextNode("Delete"));
+          delete_button.addEventListener("click", () =>
+            invoke("delete_custom_model", { id: model[1] })
+              .then(() => {
+                updateCustomModels();
+              })
+              .catch(error => console.error(error)));
+          new_element.appendChild(delete_button);
+        }
         container.appendChild(new_element);
-        highest_id = Math.max(highest_id, model[0]);
       }
-      document.getElementById("custom-model-create").dataset.newId = highest_id + 1;
     })
     .catch(error => console.error(error))
 }
@@ -667,8 +674,10 @@ function get_losses(ion) {
 function set_losses(ion, losses) {
   let custom = [];
   for (let loss of losses["neutral_losses"]) {
-    if (["-H1O1", "-H2O1", "-H4O2", "-H6O3", "-H1", "-H2", "-H3", "-H3N1", "-C1O1", "+H2O1", "+H4O2", "+H6O3", "+H1", "+H2", "+H3",].includes(loss)) {
+    if (["-H1O1", "-H2O1", "-H4O2", "-H6O3", "-H1", "-H2", "-H3", "-H3N1", "-C1O1"].includes(loss)) {
       document.getElementById("model-" + ion + "-loss-selection" + loss).checked = true;
+    } else if (["+H2O1", "+H4O2", "+H6O3", "+H1", "+H2", "+H3",].includes(loss)) {
+      document.getElementById("model-" + ion + "-gain-selection" + loss).checked = true;
     } else {
       custom.push(loss)
     }
@@ -766,7 +775,7 @@ function get_model() {
   return model;
 }
 
-function set_model(model) {
+function loadCustomModelEdit(model) {
   // Main series
   for (let ion of ["a", "b", "c", "x", "y", "z"]) {
     set_location("#model-" + ion + "-location", model[ion]["location"]);
@@ -806,7 +815,6 @@ async function annotate_spectrum() {
   var charge = number_or_null("spectrum-charge");
   var noise_threshold = Number(document.querySelector("#noise-filter").value);
   var model = get_model();
-  console.log(model);
   invoke("annotate_spectrum", {
     tolerance: [Number(document.querySelector("#spectrum-tolerance").value), document.querySelector("#spectrum-tolerance-unit").value],
     charge: charge,
@@ -1172,16 +1180,25 @@ window.addEventListener("DOMContentLoaded", () => {
     document.getElementById("custom-models-path").innerText = path[1];
   });
   updateCustomModifications();
-  updateCustomModels();
 
   // Custom models
-  invoke("get_model", { name: "ethcd", customModel: get_model() }).then(model => { console.log(model); set_model(model) }).catch(err => console.error(err));
   // All built in models should be listed and the only way to create a new model should be to duplicate a built in one.
-  document.getElementById("custom-model-create").addEventListener("click", e => {
-    // loadCustomModel();
-    document.getElementById("custom-model-id").value = e.target.dataset.newId;
-    document.getElementById("custom-model-dialog").showModal()
+  document.getElementById("custom-model-save").addEventListener("click", e => {
+    e.target.parentElement.parentElement.querySelectorAll(".hidden").forEach(e => e.remove());
+    let model = get_model();
+    invoke("update_model", {
+      id: Number(document.getElementById("custom-model-dialog").dataset.id),
+      name: document.getElementById("custom-model-name").value,
+      model: model
+    })
+      .then(() => { document.getElementById("custom-model-dialog").close(); updateCustomModels() })
+      .catch(error => console.error(error))
   });
+  document.getElementById("custom-model-cancel").addEventListener("click", e => {
+    invoke("delete_custom_model", { id: Number(document.getElementById("custom-model-dialog").dataset.id) });
+    document.getElementById("custom-model-dialog").close()
+  });
+  updateCustomModels();
 
   // Refresh interface for hot reload
   invoke("refresh").then((result) => {
@@ -1203,7 +1220,6 @@ window.addEventListener("DOMContentLoaded", () => {
  * @param {Element} listInput  
  * */
 function editListInput(e, listInput) {
-  console.log(e.target.dataset.value);
   let data = JSON.parse(e.target.dataset.value);
   if (listInput.classList.contains("single")) {
     populateSeparatedInput("custom-mod-single-placement-rules", data.placement_rules);
@@ -1261,6 +1277,7 @@ function updateCustomModifications() {
         duplicate_button.addEventListener("click", () =>
           invoke("duplicate_custom_modification", { id: modification[0], newId: Number(document.getElementById("custom-mod-create").dataset.newId) })
             .then(result => {
+              console.log(result);
               loadCustomModification(result);
               document.getElementById("custom-mod-dialog").showModal();
             })

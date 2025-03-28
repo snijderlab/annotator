@@ -252,40 +252,23 @@ async fn annotate_spectrum<'a>(
     })
 }
 
-fn load_custom_mods(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    let path = app
-        .path()
-        .app_config_dir()
-        .map(|dir| dir.join(CUSTOM_MODIFICATIONS_FILE));
+fn load_custom_mods_and_models(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let path = app.path().app_config_dir();
     if let Ok(path) = path {
-        let state = app.state::<Mutex<State>>();
-        if let Ok(data) = std::fs::read(path) {
+        let custom_mods = path.join(CUSTOM_MODIFICATIONS_FILE);
+        let custom_models = path.join(CUSTOM_MODELS_FILE);
+        let app_state = app.state::<Mutex<State>>();
+        let mut state = app_state
+            .lock()
+            .expect("Poisoned mutex at setup of custom mods");
+        if let Ok(data) = std::fs::read(custom_mods) {
             let mods: Vec<(Option<usize>, String, SimpleModification)> =
                 serde_json::from_slice(&data)?;
-            state
-                .lock()
-                .expect("Poisoned mutex at setup of custom mods")
-                .database = mods;
+            state.database = mods;
         }
-        Ok(())
-    } else {
-        Err("Could not find configuration file".into())
-    }
-}
-
-fn load_custom_models(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    let path = app
-        .path()
-        .app_config_dir()
-        .map(|dir| dir.join(CUSTOM_MODELS_FILE));
-    if let Ok(path) = path {
-        let state = app.state::<Mutex<State>>();
-        if let Ok(data) = std::fs::read(path) {
-            let mods: Vec<(String, Model)> = serde_json::from_slice(&data)?;
-            state
-                .lock()
-                .expect("Poisoned mutex at setup of custom models")
-                .models = mods;
+        if let Ok(data) = std::fs::read(custom_models) {
+            let models: Vec<(String, Model)> = serde_json::from_slice(&data)?;
+            state.models = models;
         }
         Ok(())
     } else {
@@ -317,8 +300,7 @@ fn main() {
             database: Vec::new(),
             models: Vec::new(),
         }))
-        .setup(load_custom_mods)
-        .setup(load_custom_models)
+        .setup(load_custom_mods_and_models)
         .invoke_handler(tauri::generate_handler![
             annotate_spectrum,
             custom_modifications::delete_custom_modification,

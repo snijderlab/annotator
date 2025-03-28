@@ -736,13 +736,15 @@ fn main() {
       <fieldset class="collapsible" data-linked-item="collapsible-custom-models" id="custom-models-collapsible">
         <legend>Custom models</legend>
         <p>Path to configuration file: <span style='-webkit-user-select:all;user-select:all;' id='custom-models-path'>Not loaded</span></p>
-        <dialog class="custom-model" id="custom-model-dialog">
-          <legend>Custom model</legend>
-          <p>Ion</p>
-          <p>Location</p>
-          <p>Neutral Loss/Gain</p>
-          <p>Charge range</p>
-          <p>Variant</p>"#).unwrap();
+        <dialog id="custom-model-dialog">
+          <h2>Custom model</h2>
+          <label>Name <input type="text" id="custom-model-name"/></label>
+          <div class='custom-model'>
+            <p>Ion</p>
+            <p>Location</p>
+            <p>Neutral Loss/Gain</p>
+            <p>Charge range</p>
+            <p>Variant</p>"#).unwrap();
     for ion in ["a", "b", "c", "d", "v", "w", "x", "y", "z"] {
         write!(writer, "<label>{ion}</label>").unwrap();
         if ["d", "v", "w"].contains(&ion) {
@@ -794,42 +796,44 @@ fn main() {
               .unwrap();
     }
     write!(writer, r#"<label>precursor</label>
-          <div class="empty"></div>
-          {}{}
-          <div class="grid-row">
-            <label>glycan</label>
-            <label><input id='model-glycan-enabled' type='checkbox' switch/>Enable fragments from structure (GNO)</label>
+            <div class="empty"></div>
             {}{}
-            <span>(Y)</span>
+            <div class="grid-row">
+              <label>glycan</label>
+              <label><input id='model-glycan-enabled' type='checkbox' switch/>Enable fragments from structure (GNO)</label>
+              {}{}
+              <span>(Y)</span>
+            </div>
+            <div class='grid-row'>
+              <label>glycan</label>
+              <span style="grid-column: span 2">Enable fragments from compositions between <input id='model-glycan-composition-min' type='number' min='0' value='0'/> — <input id='model-glycan-composition-max' type='number' min='0' value='0'/> monosaccharides</span>
+              {}
+              <span>(B)</span>
+            </div>
+            <div class="grid-row">
+              <label title="Allow modification specific diagnostic ions, as defined by the database">modification diagnostic ions</label>
+              <label><input id='model-modification-diagnostic-enabled' type='checkbox' switch/>Enable</label>
+              <span class='empty'></span>
+              {}
+            </div>
+            <div class="grid-row">
+              <label>immonium</label>
+              <label><input id='model-immonium-enabled' type='checkbox' switch/>Enable</label>
+              <span class='empty'></span>
+              {}
+            </div>
+            <div class="grid-row">
+              <label title="Allow modification specific neutral losses, as defined by the database">modification neutral losses</label>
+              <label><input id='model-modification-neutral-enabled' type='checkbox' switch/>Enable</label>
+            </div>
+            <div class="grid-row">
+              <label title="Allow MS cleavable cross-links to be cleaved">MS cleavable cross-links</label>
+              <label><input id='model-cleave-cross-links-enabled' type='checkbox' switch/>Enable</label>
+            </div>
           </div>
-          <div class='grid-row'>
-            <label>glycan</label>
-            <span style="grid-column: span 2">Enable fragments from compositions between <input id='model-glycan-composition-min' type='number' min='0' value='0'/> — <input id='model-glycan-composition-max' type='number' min='0' value='0'/> monosaccharides</span>
-            {}
-            <span>(B)</span>
-          </div>
-          <div class="grid-row">
-            <label title="Allow modification specific diagnostic ions, as defined by the database">modification diagnostic ions</label>
-            <label><input id='model-modification-diagnostic-enabled' type='checkbox' switch/>Enable</label>
-            <span class='empty'></span>
-            {}
-          </div>
-          <div class="grid-row">
-            <label>immonium</label>
-            <label><input id='model-immonium-enabled' type='checkbox' switch/>Enable</label>
-            <span class='empty'></span>
-            {}
-          </div>
-          <div class="grid-row">
-            <label title="Allow modification specific neutral losses, as defined by the database">modification neutral losses</label>
-            <label><input id='model-modification-neutral-enabled' type='checkbox' switch/>Enable</label>
-          </div>
-          <div class="grid-row">
-            <label title="Allow MS cleavable cross-links to be cleaved">MS cleavable cross-links</label>
-            <label><input id='model-cleave-cross-links-enabled' type='checkbox' switch/>Enable</label>
-          </div>
+          <button class="save" id="custom-model-save">Save</button>
+          <button class="cancel secondary" id="custom-model-cancel">Cancel</button>
         </dialog>
-        <button id="custom-model-create">Create new</button>
         <ul id="custom-models"></ul>
       </fieldset>
       <div class="grow"></div>
