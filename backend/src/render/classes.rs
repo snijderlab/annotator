@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use rustyms::{fragment::FragmentKind, Fragment};
+use rustyms::{Fragment, fragment::FragmentKind};
 
 /// Get all applicable classes for a set of annotations.
 /// These are:
@@ -18,10 +18,7 @@ pub fn get_classes(
     let mut first_peptidoform_ion_index = None;
     let mut first_peptidoform_index = None;
     for annotation in annotations {
-        output.push(annotation.ion.label().to_string());
-        if annotation.ion.label() == "z·" {
-            output.push("z".to_string());
-        }
+        output.push(annotation.ion.kind().to_string());
         output.push(format!(
             "p{}",
             annotation
@@ -94,12 +91,12 @@ pub fn get_classes(
                 pos.sequence_index
             ));
         }
-        if annotation.ion.kind() == FragmentKind::B {
-            output.push("oxonium".to_string());
-        }
-        if annotation.ion.kind() == FragmentKind::diagnostic {
-            output.push("diagnostic".to_string());
-        }
+        // if annotation.ion.kind() == FragmentKind::B {
+        //     output.push("oxonium".to_string());
+        // }
+        // if annotation.ion.kind() == FragmentKind::diagnostic {
+        //     output.push("diagnostic".to_string());
+        // }
         if !annotation.neutral_loss.is_empty() {
             output.push("neutral-loss".to_string());
         }

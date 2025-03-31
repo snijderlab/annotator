@@ -1,8 +1,8 @@
 use itertools::Itertools;
 use rustyms::{
+    AmbiguousLabel, CompoundPeptidoformIon, Fragment, Modification, SequencePosition,
     fragment::FragmentType,
     modification::{GnoComposition, SimpleModificationInner},
-    AmbiguousLabel, CompoundPeptidoformIon, Fragment, Modification, SequencePosition,
 };
 use std::fmt::Write;
 
@@ -130,7 +130,13 @@ pub fn get_label(
                 .map(|charge| format!("{:+}", charge.value))
                 .unwrap_or("*".to_string());
             let ion_str = shared_ion
-                .map(|c| c.into_owned())
+                .map(|(sup, c)| {
+                    if let Some(sup) = sup {
+                        format!("<sup>{sup}</sup>{c}")
+                    } else {
+                        c.to_string()
+                    }
+                })
                 .unwrap_or("*".to_string());
             let pos_str = shared_pos
                 .map(|pos| pos.unwrap_or_default())
@@ -205,7 +211,7 @@ pub fn get_label(
                     },
                     if multiple_peptidoform_ions && multiple_peptidoforms {
                         format!("p{}.{}", peptidoform_str, peptide_str)
-                    }else if multiple_peptidoform_ions {
+                    } else if multiple_peptidoform_ions {
                         format!("p{}", peptidoform_str)
                     } else if multiple_peptidoforms {
                         format!("p{}", peptide_str)
@@ -272,41 +278,78 @@ fn get_single_label(
     let ch = format!("{:+}", annotation.charge.value);
     format!(
         "{}<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span><span class='cross-links'>{}</span><span class='ambiguous-amino-acids'>{}</span><span class='modifications'>{}</span><span class='charge-carriers'>{}</span></span>",
-        get_glycan_figure(compound_peptidoform, annotation, Theme::Dark, glycan_footnotes).unwrap_or_default(),
-        if let FragmentType::B{b,y,..} = &annotation.ion {
-            format!("B<sub>{}</sub>",b.label())
+        get_glycan_figure(
+            compound_peptidoform,
+            annotation,
+            Theme::Dark,
+            glycan_footnotes
+        )
+        .unwrap_or_default(),
+        if let FragmentType::B { b, y, .. } = &annotation.ion {
+            format!("B<sub>{}</sub>", b.label())
                 + &y.iter()
                     .map(|b| format!("Y<sub>{}</sub>", b.label()))
                     .join("")
         } else {
-            annotation.ion.label().to_string()
+            let (sup, label) = annotation.ion.label();
+            if let Some(sup) = sup {
+                format!("<sup>{sup}</sup>{label}")
+            } else {
+                label.to_string()
+            }
         },
         ch,
         ch.len(),
-        if let FragmentType::B{..} = &annotation.ion {
+        if let FragmentType::B { .. } = &annotation.ion {
             String::new()
         } else {
             annotation.ion.position_label().unwrap_or_default()
         },
         if multiple_glycans {
-            if let FragmentType::B{b,..} = &annotation.ion {
+            if let FragmentType::B { b, .. } = &annotation.ion {
                 b.attachment()
             } else {
-                annotation.ion.glycan_position().map(|g| g.attachment()).unwrap_or_default()
+                annotation
+                    .ion
+                    .glycan_position()
+                    .map(|g| g.attachment())
+                    .unwrap_or_default()
             }
         } else {
             String::new()
         },
         if multiple_peptidoform_ions && multiple_peptidoforms {
-            format!("p{}.{}", annotation.peptidoform_ion_index.map_or("?".to_string(), |i| (i+1).to_string()), annotation.peptidoform_index.map_or("?".to_string(), |i| (i+1).to_string()))
-        }else if multiple_peptidoform_ions {
-            format!("p{}", annotation.peptidoform_ion_index.map_or("?".to_string(), |i| (i+1).to_string()))
+            format!(
+                "p{}.{}",
+                annotation
+                    .peptidoform_ion_index
+                    .map_or("?".to_string(), |i| (i + 1).to_string()),
+                annotation
+                    .peptidoform_index
+                    .map_or("?".to_string(), |i| (i + 1).to_string())
+            )
+        } else if multiple_peptidoform_ions {
+            format!(
+                "p{}",
+                annotation
+                    .peptidoform_ion_index
+                    .map_or("?".to_string(), |i| (i + 1).to_string())
+            )
         } else if multiple_peptidoforms {
-            format!("p{}", annotation.peptidoform_index.map_or("?".to_string(), |i| (i+1).to_string()))
+            format!(
+                "p{}",
+                annotation
+                    .peptidoform_index
+                    .map_or("?".to_string(), |i| (i + 1).to_string())
+            )
         } else {
             String::new()
         },
-        annotation.neutral_loss.iter().map(|n| n.hill_notation_html()).join(""),
+        annotation
+            .neutral_loss
+            .iter()
+            .map(|n| n.hill_notation_html())
+            .join(""),
         get_xl(annotation),
         get_ambiguous_amino_acids(annotation, multiple_peptidoforms),
         get_modifications(annotation, multiple_peptidoforms, compound_peptidoform),

@@ -535,6 +535,15 @@ function updateCustomModels() {
   invoke("get_custom_models")
     .then(models => {
       let container = document.getElementById("custom-models");
+      let select = document.getElementById("spectrum-model");
+      let model_built_in = document.createElement("optgroup");
+      model_built_in.label = "built-in";
+      let model_custom = document.createElement("optgroup");
+      model_custom.label = "custom";
+      for (let child of select.children) {
+        child.remove();
+      }
+
       container.innerText = "";
       for (let model of models) {
         let new_element = document.createElement("li");
@@ -583,8 +592,23 @@ function updateCustomModels() {
               })
               .catch(error => console.error(error)));
           new_element.appendChild(delete_button);
+
         }
         container.appendChild(new_element);
+        // Select item
+        let option = document.createElement("option");
+        option.value = model[1];
+        option.innerText = model[2]
+        if (model[0]) {
+          model_built_in.appendChild(option);
+        } else {
+          model_custom.appendChild(option);
+        }
+      }
+
+      select.appendChild(model_built_in);
+      if (model_custom.children.length != 0) {
+        select.appendChild(model_custom);
       }
     })
     .catch(error => console.error(error))
@@ -814,13 +838,12 @@ async function annotate_spectrum() {
   document.querySelector("#peptide").innerText = document.querySelector("#peptide").innerText.trim();
   var charge = number_or_null("spectrum-charge");
   var noise_threshold = Number(document.querySelector("#noise-filter").value);
-  var model = get_model();
   invoke("annotate_spectrum", {
     tolerance: [Number(document.querySelector("#spectrum-tolerance").value), document.querySelector("#spectrum-tolerance-unit").value],
     charge: charge,
     filter: noise_threshold,
-    model: document.querySelector("#spectrum-model").value,
-    peptide: document.querySelector("#peptide").innerText, customModel: model,
+    model: Number(document.querySelector("#spectrum-model").value),
+    peptide: document.querySelector("#peptide").innerText,
     massMode: document.querySelector("#spectrum-mass-mode").value,
     mzRange: [optional_number(document.querySelector("#model-mz-range-min").value), optional_number(document.querySelector("#model-mz-range-max").value)]
   }).then((result) => {

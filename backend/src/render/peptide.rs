@@ -1,12 +1,12 @@
 use std::{collections::HashMap, fmt::Write};
 
-use crate::{html_builder::HtmlTag, Theme};
+use crate::{Theme, html_builder::HtmlTag};
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
 use rustyms::{
+    CompoundPeptidoformIon, Linked, Modification, Peptidoform,
     fragment::*,
     modification::{CrossLinkName, GnoComposition, SimpleModificationInner},
-    CompoundPeptidoformIon, Linked, Modification, Peptidoform,
 };
 
 use super::render_full_glycan;
@@ -339,7 +339,7 @@ fn render_linear_peptidoform(
                     write!(
                         output,
                         "<span class='corner {}' style='--intensity:{intensity}'></span>",
-                        ion.label().trim_end_matches('·')
+                        ion.kind()
                     )
                     .unwrap();
                 }

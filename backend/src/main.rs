@@ -183,29 +183,31 @@ pub struct AnnotationResult {
     pub intensity_max: f64,
 }
 
-#[tauri::command]
-async fn get_model(
-    name: &str,
-    custom_model: ModelParameters,
-) -> Result<ModelParameters, CustomError> {
-    custom_model.get_model(name).map(|m| m.into())
-}
-
 #[allow(clippy::too_many_arguments)]
 #[tauri::command]
 async fn annotate_spectrum<'a>(
     tolerance: (f64, &'a str),
     charge: Option<usize>,
     filter: f32,
-    model: &'a str,
+    model: usize,
     peptide: &'a str,
-    custom_model: ModelParameters,
     state: ModifiableState<'a>,
     mass_mode: &'a str,
     mz_range: (Option<f64>, Option<f64>),
 ) -> Result<AnnotationResult, CustomError> {
     let state = state.lock().unwrap();
-    let model = custom_model.create_model(model, tolerance, mz_range)?;
+    let model = crate::model::model_inject(
+        crate::model::get_models(&state)
+            .1
+            .get(model)
+            .cloned()
+            .ok_or_else(|| {
+                CustomError::error("Invalid model", "Model does not exist", Context::None)
+            })?
+            .2,
+        tolerance,
+        mz_range,
+    )?;
     let mass_mode = match mass_mode {
         "monoisotopic" => MassMode::Monoisotopic,
         "average_weight" => MassMode::Average,
@@ -310,7 +312,6 @@ fn main() {
             custom_modifications::update_modification,
             details_formula,
             get_custom_configuration_path,
-            get_model,
             identified_peptide_details,
             identified_peptides::close_identified_peptides_file,
             identified_peptides::get_identified_peptides_files,

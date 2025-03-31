@@ -19,11 +19,11 @@ use crate::{
     },
 };
 
-fn models(state: &State) -> (usize, Vec<(bool, String, Model)>) {
+pub fn get_models(state: &State) -> (usize, Vec<(bool, String, Model)>) {
     let mut output = vec![
         (true, "All".to_string(), Model::all()),
         (true, "EtHCD/EtCAD".to_string(), Model::ethcd()),
-        (true, "Hot EACID".to_string(), Model::hot_eacid()),
+        (true, "EAciD".to_string(), Model::eacid()),
         (true, "EAD".to_string(), Model::ead()),
         (true, "CID/HCD".to_string(), Model::cid_hcd()),
         (true, "ETD".to_string(), Model::etd()),
@@ -46,7 +46,7 @@ pub fn get_custom_models(
     state: ModifiableState,
 ) -> Result<Vec<(bool, usize, String)>, &'static str> {
     let state = state.lock().map_err(|_| "Could not lock mutex")?;
-    Ok(models(&state)
+    Ok(get_models(&state)
         .1
         .iter()
         .enumerate()
@@ -60,7 +60,7 @@ pub fn duplicate_custom_model(
     state: ModifiableState,
 ) -> Result<(usize, bool, String, ModelParameters), &'static str> {
     let mut locked_state = state.lock().map_err(|_| "Could not lock mutex")?;
-    let models = models(&locked_state).1;
+    let models = get_models(&locked_state).1;
     if let Some((built_in, name, model)) = models.get(id).cloned() {
         locked_state.models.push((name.clone(), model.clone()));
         drop(locked_state);
@@ -73,7 +73,7 @@ pub fn duplicate_custom_model(
 #[tauri::command]
 pub fn delete_custom_model(id: usize, state: ModifiableState) -> Result<(), &'static str> {
     let mut state = state.lock().map_err(|_| "Could not lock mutex")?;
-    let models = models(&state);
+    let models = get_models(&state);
     if id < models.1.len() {
         let (built_in, _, _) = models.1[id];
         if built_in {
@@ -93,7 +93,7 @@ pub fn get_custom_model(
     state: ModifiableState,
 ) -> Result<(usize, String, ModelParameters), &'static str> {
     let state = state.lock().map_err(|_| "Could not lock mutex")?;
-    let models = models(&state);
+    let models = get_models(&state);
     if let Some((_, name, model)) = models.1.get(id) {
         Ok((id, name.clone(), model.clone().into()))
     } else {
@@ -111,7 +111,7 @@ pub async fn update_model(
     let model = (name, model.try_into()?);
 
     if let Ok(mut state) = app.state::<Mutex<State>>().lock() {
-        let (built_in_models_length, models) = models(&state);
+        let (built_in_models_length, models) = get_models(&state);
         let index = id.saturating_sub(built_in_models_length);
         if index < state.models.len() {
             let (built_in, _, _) = models[id];
@@ -492,51 +492,32 @@ fn parse_neutral_losses(neutral_losses: &[String]) -> Result<Vec<NeutralLoss>, C
         .collect()
 }
 
-impl ModelParameters {
-    pub fn get_model(self, name: &str) -> Result<Model, CustomError> {
-        Ok(match name {
-            "all" => Model::all(),
-            "ethcd" => Model::ethcd(),
-            "hot_eacid" => Model::hot_eacid(),
-            "ead" => Model::ead(),
-            "cidhcd" => Model::cid_hcd(),
-            "etd" => Model::etd(),
-            "td_etd" => Model::td_etd(),
-            "none" => Model::none(),
-            "custom" => self.try_into()?,
-            _ => Model::all(),
-        })
+pub fn model_inject(
+    mut model: Model,
+    tolerance: (f64, &str),
+    mz_range: (Option<f64>, Option<f64>),
+) -> Result<Model, CustomError> {
+    if tolerance.1 == "ppm" {
+        model.tolerance = Tolerance::new_ppm(tolerance.0);
+    } else if tolerance.1 == "th" {
+        model.tolerance =
+            Tolerance::new_absolute(MassOverCharge::new::<rustyms::system::mz>(tolerance.0));
+    } else {
+        return Err(CustomError::error(
+            "Invalid tolerance unit",
+            "",
+            Context::None,
+        ));
     }
-
-    pub fn create_model(
-        self,
-        name: &str,
-        tolerance: (f64, &str),
-        mz_range: (Option<f64>, Option<f64>),
-    ) -> Result<Model, CustomError> {
-        let mut model = self.get_model(name)?;
-        if tolerance.1 == "ppm" {
-            model.tolerance = Tolerance::new_ppm(tolerance.0);
-        } else if tolerance.1 == "th" {
-            model.tolerance =
-                Tolerance::new_absolute(MassOverCharge::new::<rustyms::system::mz>(tolerance.0));
-        } else {
-            return Err(CustomError::error(
-                "Invalid tolerance unit",
-                "",
-                Context::None,
-            ));
-        }
-        let min = mz_range.0.unwrap_or(0.0);
-        let max = mz_range.1.unwrap_or(f64::MAX);
-        if min > max {
-            return Err(CustomError::error(
-                "m/z range invalid",
-                "The minimal value is less then the maximal value",
-                Context::None,
-            ));
-        }
-        model.mz_range = MassOverCharge::new::<mz>(min)..=MassOverCharge::new::<mz>(max);
-        Ok(model)
+    let min = mz_range.0.unwrap_or(0.0);
+    let max = mz_range.1.unwrap_or(f64::MAX);
+    if min > max {
+        return Err(CustomError::error(
+            "m/z range invalid",
+            "The minimal value is less then the maximal value",
+            Context::None,
+        ));
     }
+    model.mz_range = MassOverCharge::new::<mz>(min)..=MassOverCharge::new::<mz>(max);
+    Ok(model)
 }

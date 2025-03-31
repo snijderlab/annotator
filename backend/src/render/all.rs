@@ -3,21 +3,21 @@ use std::{cmp::Ordering, collections::HashMap, fmt::Write};
 use itertools::Itertools;
 use mzdata::spectrum::MultiLayerSpectrum;
 use rustyms::{
+    AnnotatedSpectrum, CompoundPeptidoformIon, MassMode, Model, MolecularFormula, NeutralLoss,
     fragment::*,
     glycan::{GlycanDirection, GlycanRoot, GlycanSelection, GlycanStructure},
     model::Location,
     modification::{Ontology, SimpleModificationInner},
     placement_rule::PlacementRule,
     spectrum::{AnnotatedPeak, Fdr, PeakSpectrum, Recovered, Score},
-    system::{da, mz, Mass, MassOverCharge},
-    AnnotatedSpectrum, CompoundPeptidoformIon, MassMode, Model, MolecularFormula, NeutralLoss,
+    system::{Mass, MassOverCharge, da, mz},
 };
 
 use crate::{
+    Theme,
     html_builder::{HtmlContent, HtmlElement, HtmlTag},
     metadata_render::OptionalString,
     render::label::display_sequence_index,
-    Theme,
 };
 use ordered_float::OrderedFloat;
 
@@ -654,13 +654,13 @@ pub fn spectrum_table(
                     display_sequence_index(pos.sequence_index)
                 ),
                 pos.series_number.to_string(),
-                annotation.ion.label().to_string(),
+                annotation.ion.kind().to_string(),
             )
         } else if let Some(pos) = annotation.ion.glycan_position() {
             (
                 pos.attachment(),
                 format!("{}{}", pos.series_number, pos.branch_names()),
-                annotation.ion.label().to_string(),
+                annotation.ion.kind().to_string(),
             )
         } else if let FragmentType::B { b, y, .. } = &annotation.ion {
             (
@@ -691,7 +691,7 @@ pub fn spectrum_table(
             (
                 "-".to_string(),
                 "-".to_string(),
-                annotation.ion.label().to_string(),
+                annotation.ion.kind().to_string(),
             )
         }
     }
@@ -872,11 +872,7 @@ pub fn spectrum_table(
     for row in data {
         write!(output, "<tr class='{}'>", row.1[0]).unwrap();
         for cell in &row.1[if multiple_peptidoforms {
-            if multiple_peptidoform_ions {
-                1
-            } else {
-                2
-            }
+            if multiple_peptidoform_ions { 1 } else { 2 }
         } else {
             3
         }..]
@@ -1379,8 +1375,9 @@ fn line_graph_y(points: &[f64], min_y: f64, max_y: f64) -> String {
         )
         .unwrap();
     }
-    format!("<svg viewBox='0 {min_y} {max_x} {max_y}' style='--min:{min_y};--max:{max_y};' preserveAspectRatio='none'><g class='density'><path class='line' d='M {path}'></path><path class='volume' d='M 100 0 L {path} L {max_x} 0 Z'></path></g></svg>",
-        )
+    format!(
+        "<svg viewBox='0 {min_y} {max_x} {max_y}' style='--min:{min_y};--max:{max_y};' preserveAspectRatio='none'><g class='density'><path class='line' d='M {path}'></path><path class='volume' d='M 100 0 L {path} L {max_x} 0 Z'></path></g></svg>",
+    )
 }
 
 fn line_graph_xy(points: &[(f64, f64)], min_y: f64) -> String {
@@ -1407,11 +1404,13 @@ fn line_graph_xy(points: &[(f64, f64)], min_y: f64) -> String {
         )
         .unwrap();
     }
-    format!("<svg viewBox='-1 0 100 {}' style='--min:{min_y};--max:{max_y};' preserveAspectRatio='none'><g class='density'><path class='line' d='M {}'></path><path class='volume' d='M 100 0 L {} L {} 0 Z'></path></g></svg>",
-        points.len()-1,
+    format!(
+        "<svg viewBox='-1 0 100 {}' style='--min:{min_y};--max:{max_y};' preserveAspectRatio='none'><g class='density'><path class='line' d='M {}'></path><path class='volume' d='M 100 0 L {} L {} 0 Z'></path></g></svg>",
+        points.len() - 1,
         path,
-        path, points.len() -1
-        )
+        path,
+        points.len() - 1
+    )
 }
 
 pub fn display_masses(value: &MolecularFormula) -> HtmlElement {
@@ -1581,7 +1580,11 @@ pub fn display_placement_rule(rule: &PlacementRule, formatted: bool) -> String {
 
 pub fn link_modification(ontology: Ontology, id: Option<usize>, name: &str) -> String {
     if ontology == Ontology::Gnome {
-        format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'>{0}:{1}</a>", ontology.char(), name.to_ascii_uppercase())
+        format!(
+            "<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'>{0}:{1}</a>",
+            ontology.char(),
+            name.to_ascii_uppercase()
+        )
     } else if let Some(id) = id {
         let preview = if let Some(
             SimpleModificationInner::Database { formula, id, .. }
@@ -1597,7 +1600,16 @@ pub fn link_modification(ontology: Ontology, id: Option<usize>, name: &str) -> S
         } else {
             String::new()
         };
-        format!("<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{2}{1}\";document.getElementById(\"search-modification-button\").click()'{preview}>{0}:{2}{1}</a>", ontology.name(), id, if ontology == Ontology::Resid {"AA"} else {""})
+        format!(
+            "<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{2}{1}\";document.getElementById(\"search-modification-button\").click()'{preview}>{0}:{2}{1}</a>",
+            ontology.name(),
+            id,
+            if ontology == Ontology::Resid {
+                "AA"
+            } else {
+                ""
+            }
+        )
     } else {
         String::new()
     }

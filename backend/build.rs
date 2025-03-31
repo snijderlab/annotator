@@ -318,18 +318,8 @@ fn main() {
         <label for="noise-filter" title="Determine the noise level from the spectrum and remove everything below this factor times the noise level">Noise filter</label>
         <input id="noise-filter" type="number" value="1.0" min="0.0">
     
-        <label for="spectrum-model">Model </label>
-        <select id="spectrum-model">
-          <option value="all" title="All possible ions with single water loss from all">All</option>
-          <option value="ethcd" title="b+c+w+y+z+glycan with single water loss from all and precursor decharging">EThcD/ETcaD</option>
-          <option value="hot_eacid" title="a+b+c+d+x+w+y+z+glycan with single water loss from all and precursor decharging">Hot EACID</option>
-          <option value="ead" title="a+b+c+d+x+w+y+z+glycan with single water loss from all and precursor decharging">EAD</option>
-          <option value="cidhcd" title="a+b+d+y+precursor with single water loss">CID/HCD</option>
-          <option value="etd" title="c+y+z with single water loss and precursor with single water, ammonia, and ETD specific losses">ETD</option>
-          <option value="td_etd" title="c+z with single water, and ammonia loss and one, two, and three hydrogen gain and precursor with single water, ammonia, and ETD specific losses and one, two, and three hydrogen gain">Top-down ETD</option>
-          <option value="none" title="Only the base precursor peak, no losses">None</option>
-          <option value="custom">Custom</option>
-        </select>"#).unwrap();
+        <label for="spectrum-model">Model</label>
+        <select id="spectrum-model"></select>"#).unwrap();
 
     write!(
             writer,
