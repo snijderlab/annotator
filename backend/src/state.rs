@@ -11,7 +11,8 @@ use mzdata::{
     spectrum::MultiLayerSpectrum,
 };
 use rustyms::{
-    Model, identification::IdentifiedPeptide, ontologies::CustomDatabase, system::OrderedTime,
+    FragmentationModel, identification::IdentifiedPeptide, ontologies::CustomDatabase,
+    system::OrderedTime,
 };
 use serde::{Deserialize, Serialize};
 
@@ -19,7 +20,7 @@ pub struct State {
     pub spectra: Vec<RawFile>,
     pub identified_peptide_files: RefCell<Vec<IdentifiedPeptideFile>>,
     pub database: CustomDatabase,
-    pub models: Vec<(String, Model)>,
+    pub models: Vec<(String, FragmentationModel)>,
 }
 
 impl State {

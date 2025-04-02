@@ -3,10 +3,11 @@ use std::{cmp::Ordering, collections::HashMap, fmt::Write};
 use itertools::Itertools;
 use mzdata::spectrum::MultiLayerSpectrum;
 use rustyms::{
-    AnnotatedSpectrum, CompoundPeptidoformIon, MassMode, Model, MolecularFormula, NeutralLoss,
+    AnnotatedSpectrum, CompoundPeptidoformIon, FragmentationModel, MassMode,
+    MolecularFormula, NeutralLoss,
     fragment::*,
     glycan::{GlycanDirection, GlycanRoot, GlycanSelection, GlycanStructure},
-    model::Location,
+    model::{Location, MatchingParameters},
     modification::{Ontology, SimpleModificationInner},
     placement_rule::PlacementRule,
     spectrum::{AnnotatedPeak, Fdr, PeakSpectrum, Recovered, Score},
@@ -28,7 +29,8 @@ pub fn annotated_spectrum(
     raw: &MultiLayerSpectrum,
     _id: &str,
     fragments: &[Fragment],
-    model: &Model,
+    model: &FragmentationModel,
+    parameters: &MatchingParameters,
     mass_mode: MassMode,
 ) -> (String, Limits) {
     let mut output = String::new();
@@ -85,7 +87,7 @@ pub fn annotated_spectrum(
         multiple_glycans,
         mass_mode,
         &unique_peptide_lookup,
-        model,
+        parameters,
         &mut glycan_footnotes,
     );
     // Error graph
@@ -118,7 +120,7 @@ pub fn annotated_spectrum(
         fragments,
         multiple_peptidoform_ions,
         multiple_peptidoforms,
-        model,
+        parameters,
         mass_mode,
     );
 
@@ -226,7 +228,7 @@ fn get_data(data: &Option<RelAndAbs<(f64, Fragment)>>, ion: char) -> [(String, S
 fn get_unassigned_data(
     point: &AnnotatedPeak,
     fragments: &[Fragment],
-    model: &Model,
+    model: &FragmentationModel,
     mass_mode: MassMode,
 ) -> UnassignedData {
     let mut a = RelAndAbs {
@@ -277,7 +279,7 @@ fn get_unassigned_data(
 fn spectrum_graph_boundaries(
     spectrum: &AnnotatedSpectrum,
     fragments: &[Fragment],
-    model: &Model,
+    model: &FragmentationModel,
     mass_mode: MassMode,
 ) -> (SpectrumGraphData, Boundaries) {
     let data: SpectrumGraphData = spectrum
@@ -495,7 +497,7 @@ fn render_spectrum(
     multiple_glycans: bool,
     mass_mode: MassMode,
     unique_peptide_lookup: &[(usize, usize)],
-    model: &Model,
+    parameters: &MatchingParameters,
     glycan_footnotes: &mut Vec<String>,
 ) {
     write!(
@@ -577,7 +579,7 @@ fn render_spectrum(
     }
     for peak in fragments {
         if let Some(peak_mz) = peak.mz(mass_mode) {
-            if !model.mz_range.contains(&peak_mz) {
+            if !parameters.mz_range.contains(&peak_mz) {
                 continue;
             }
             write!(
@@ -631,267 +633,13 @@ fn render_spectrum(
     write!(output, "</div>").unwrap();
 }
 
-pub fn spectrum_table(
-    spectrum: &AnnotatedSpectrum,
-    fragments: &[Fragment],
-    multiple_peptidoform_ions: bool,
-    multiple_peptidoforms: bool,
-) -> String {
-    fn generate_text(
-        annotation: &Fragment,
-        compound_peptidoform: &CompoundPeptidoformIon,
-    ) -> (String, String, String) {
-        if let Some(pos) = annotation.ion.position() {
-            (
-                format!(
-                    "{}{}",
-                    compound_peptidoform.peptidoform_ions()
-                        [annotation.peptidoform_ion_index.unwrap_or_default()]
-                    .peptidoforms()[annotation.peptidoform_index.unwrap_or_default()]
-                        [pos.sequence_index]
-                        .aminoacid
-                        .char(),
-                    display_sequence_index(pos.sequence_index)
-                ),
-                pos.series_number.to_string(),
-                annotation.ion.kind().to_string(),
-            )
-        } else if let Some(pos) = annotation.ion.glycan_position() {
-            (
-                pos.attachment(),
-                format!("{}{}", pos.series_number, pos.branch_names()),
-                annotation.ion.kind().to_string(),
-            )
-        } else if let FragmentType::B { b, y, .. } = &annotation.ion {
-            (
-                b.attachment.map_or("-".to_string(), |_| b.attachment()),
-                format!("B<sub>{}</sub>", b.label())
-                    + &y.iter()
-                        .map(|b| format!("Y<sub>{}</sub>", b.label()))
-                        .join(""),
-                "oxonium".to_string(),
-            )
-        } else if let FragmentType::Y(bonds) = &annotation.ion {
-            (
-                bonds
-                    .first()
-                    .map(|b| b.attachment())
-                    .unwrap_or("-".to_string()),
-                bonds.iter().map(|b| b.label()).join(""),
-                "Y".to_string(),
-            )
-        } else if let FragmentType::Immonium(pos, aa) = &annotation.ion {
-            (
-                display_sequence_index(pos.sequence_index),
-                pos.series_number.to_string(),
-                format!("immonium {}", aa.aminoacid.char()),
-            )
-        } else {
-            // precursor
-            (
-                "-".to_string(),
-                "-".to_string(),
-                annotation.ion.kind().to_string(),
-            )
-        }
-    }
-    let mut output = String::new();
-    write!(
-        output,
-        "<p id='export-sequence' title='The inputted peptide written as fully compatible with the ProForma spec. So removes things like custom modifications.'>Universal ProForma definition: <span>{}</span></p>
-        <label class='show-unassigned'><input type='checkbox' switch/>Show background peaks</label>
-        <label class='show-matched'><input type='checkbox' switch checked/>Show annotated peaks</label>
-        <label class='show-missing-fragments'><input type='checkbox' switch/>Show missing fragments</label>
-        <table id='spectrum-table' class='wide-table'>
-            <thead><tr>
-                {}
-                {}
-                <th>Position</th>
-                <th>Ion type</th>
-                <th>Loss</th>
-                <th>Intensity</th>
-                <th title='Experimental mz for background and matched peaks, but theoretical mz for missing peaks'>mz</th>
-                <th>Formula</th>
-                <th>mz Error (Th)</th>
-                <th>mz Error (ppm)</th>
-                <th>Charge</th>
-                <th>Series Number</th>
-                <th>Additional label</th>
-            </tr></thead><tdata>",
-        spectrum.peptide,
-        if multiple_peptidoform_ions {
-            "<th>Peptidoform</th>"
-        } else {
-            ""
-        },
-        if multiple_peptidoforms {
-            "<th>Peptide</th>"
-        } else {
-            ""
-        }
-    )
-    .unwrap();
-    // class followed by all data
-    let mut data = Vec::new();
-    for peak in spectrum.spectrum() {
-        if peak.annotation.is_empty() {
-            data.push((
-                peak.experimental_mz.value,
-                [
-                    "unassigned".to_string(),
-                    "-".to_string(),
-                    "-".to_string(),
-                    "-".to_string(),
-                    "-".to_string(),
-                    "-".to_string(),
-                    format!("<span title='{0}'>{0:.2}</span>", peak.intensity),
-                    format!(
-                        "<span title='{0}'>{0:.2}</span>",
-                        peak.experimental_mz.value
-                    ),
-                    "-".to_string(),
-                    "-".to_string(),
-                    "-".to_string(),
-                    "-".to_string(),
-                    "-".to_string(),
-                    "-".to_string(),
-                ],
-            ));
-        } else {
-            for annotation in &peak.annotation {
-                let (sequence_index, series_number, label) =
-                    generate_text(annotation, &spectrum.peptide);
-                data.push((
-                    peak.experimental_mz.value,
-                    [
-                        "matched".to_string(),
-                        if multiple_peptidoform_ions {
-                            annotation
-                                .peptidoform_ion_index
-                                .map_or("?".to_string(), |i| (i + 1).to_string())
-                        } else {
-                            String::new()
-                        },
-                        if multiple_peptidoforms {
-                            annotation
-                                .peptidoform_index
-                                .map_or("?".to_string(), |i| (i + 1).to_string())
-                        } else {
-                            String::new()
-                        },
-                        sequence_index.to_string(),
-                        label.to_string(),
-                        annotation
-                            .neutral_loss
-                            .iter()
-                            .map(display_neutral_loss)
-                            .join(""),
-                        format!("<span title='{0}'>{0:.2}</span>", peak.intensity),
-                        format!(
-                            "<span title='{0}'>{0:.2}</span>",
-                            peak.experimental_mz.value
-                        ),
-                        annotation
-                            .formula
-                            .as_ref()
-                            .map(|f| display_formula(f, true))
-                            .to_optional_string(),
-                        annotation
-                            .mz(MassMode::Monoisotopic)
-                            .map_or("-".to_string(), |f| {
-                                format!("{:.5}", (f - peak.experimental_mz).abs().value)
-                            }),
-                        annotation
-                            .mz(MassMode::Monoisotopic)
-                            .map_or("-".to_string(), |f| {
-                                format!("{:.2}", f.ppm(peak.experimental_mz).value * 1e6)
-                            }),
-                        format!("{:+}", annotation.charge.value),
-                        series_number,
-                        String::new(), //format!("{:?}", annotation.formula.labels()),
-                    ],
-                ));
-            }
-        }
-    }
-    for fragment in fragments {
-        if !spectrum
-            .spectrum()
-            .any(|p| p.annotation.iter().any(|a| *a == *fragment))
-        {
-            let (sequence_index, series_number, label) =
-                generate_text(&fragment.clone(), &spectrum.peptide);
-            data.push((
-                fragment
-                    .mz(MassMode::Monoisotopic)
-                    .map_or(f64::NAN, |v| v.value),
-                [
-                    "fragment".to_string(),
-                    if multiple_peptidoform_ions {
-                        fragment
-                            .peptidoform_index
-                            .map_or("?".to_string(), |i| (i + 1).to_string())
-                    } else {
-                        String::new()
-                    },
-                    if multiple_peptidoforms {
-                        fragment
-                            .peptidoform_index
-                            .map_or("?".to_string(), |i| (i + 1).to_string())
-                    } else {
-                        String::new()
-                    },
-                    sequence_index.to_string(),
-                    label.to_string(),
-                    fragment
-                        .neutral_loss
-                        .iter()
-                        .map(display_neutral_loss)
-                        .join(""),
-                    "-".to_string(),
-                    fragment
-                        .mz(MassMode::Monoisotopic)
-                        .map_or("-".to_string(), |v| {
-                            format!("<span title='{0}'>{0:.2}</span>", v.value)
-                        }),
-                    fragment
-                        .formula
-                        .as_ref()
-                        .map(|f| display_formula(f, true))
-                        .to_optional_string(),
-                    "-".to_string(),
-                    "-".to_string(),
-                    format!("{:+}", fragment.charge.value),
-                    series_number,
-                    String::new(), //format!("{:?}", fragment.formula.labels()),
-                ],
-            ))
-        }
-    }
-    data.sort_unstable_by(|a, b| a.0.total_cmp(&b.0));
-    for row in data {
-        write!(output, "<tr class='{}'>", row.1[0]).unwrap();
-        for cell in &row.1[if multiple_peptidoforms {
-            if multiple_peptidoform_ions { 1 } else { 2 }
-        } else {
-            3
-        }..]
-        {
-            write!(output, "<td>{}</td>", cell).unwrap();
-        }
-        write!(output, "</tr>").unwrap();
-    }
-    write!(output, "</tdata></table>").unwrap();
-    output
-}
-
 fn general_stats(
     output: &mut String,
     spectrum: &AnnotatedSpectrum,
     fragments: &[Fragment],
     multiple_peptidoform_ions: bool,
     multiple_peptidoforms: bool,
-    model: &Model,
+    parameters: &MatchingParameters,
     mass_mode: MassMode,
 ) {
     fn format(recovered: Recovered<u32>) -> String {
@@ -960,8 +708,10 @@ fn general_stats(
     let mut fdr_peaks_row = String::new();
     let mut fdr_intensity_row = String::new();
 
-    let (combined_scores, separate_peptide_scores) = spectrum.scores(fragments, model, mass_mode);
-    let fdr = (spectrum.spectrum().len() != 0).then(|| spectrum.fdr(fragments, model, mass_mode));
+    let (combined_scores, separate_peptide_scores) =
+        spectrum.scores(fragments, parameters, mass_mode);
+    let fdr =
+        (spectrum.spectrum().len() != 0).then(|| spectrum.fdr(fragments, parameters, mass_mode));
 
     for (peptidoform_ion_index, peptidoform_ion_scores) in
         separate_peptide_scores.iter().enumerate()

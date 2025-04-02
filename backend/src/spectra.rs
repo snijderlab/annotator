@@ -2,30 +2,30 @@ use std::{ffi::OsString, io::ErrorKind, ops::RangeInclusive, path::Path, str::Fr
 
 use itertools::Itertools;
 use mzdata::{
-    io::{proxi::PROXIError, usi::USIParseError, MZFileReader, SpectrumSource},
+    Param,
+    io::{MZFileReader, SpectrumSource, proxi::PROXIError, usi::USIParseError},
     meta::DissociationMethodTerm,
     params::{ParamDescribed, Unit, Value, ValueRef},
     prelude::{IonProperties, PrecursorSelection, SpectrumLike},
     spectrum::{
-        bindata::BinaryCompressionType, ArrayType, BinaryDataArrayType, DataArray,
-        MultiLayerSpectrum, SignalContinuity, SpectrumDescription,
+        ArrayType, BinaryDataArrayType, DataArray, MultiLayerSpectrum, SignalContinuity,
+        SpectrumDescription, bindata::BinaryCompressionType,
     },
-    Param,
 };
-use mzpeaks::{peak_set::PeakSetVec, CentroidPeak, DeconvolutedPeak};
+use mzpeaks::{CentroidPeak, DeconvolutedPeak, peak_set::PeakSetVec};
 use mzsignal::PeakPicker;
 use rustyms::{
     error::{Context, CustomError},
-    system::{dalton, Mass, OrderedTime},
+    system::{Mass, OrderedTime, dalton},
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    ModifiableState,
     identified_peptides::IdentifiedPeptideSettings,
     metadata_render::OptionalString,
     render::display_mass,
     state::{RawFile, RawFileDetails},
-    ModifiableState,
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -164,8 +164,9 @@ pub async fn load_raw<'a>(
             let error = err.to_string();
 
             if err.kind() == ErrorKind::Other
-                && (error == "It was not possible to find a compatible framework version." 
-                    || error == "Feature which requires certain version of the hosting layer binaries was used on a version which doesn't support it." 
+                && (error == "It was not possible to find a compatible framework version."
+                    || error
+                        == "Feature which requires certain version of the hosting layer binaries was used on a version which doesn't support it."
                     || error == "One of the dependent libraries is missing.")
             {
                 Err("The .NET 8.0 Runtime is needed to open Thermo RAW files. <a target='_blank' href='https://dotnet.microsoft.com/en-us/download/dotnet/8.0'>Which can be downloaded here.</a> Additionally on windows you can use <code style='user-select:all'>winget install Microsoft.DotNet.Runtime.8</code> for a quick install.".to_string())
@@ -593,7 +594,7 @@ pub fn get_selected_spectra(
 }
 
 pub fn create_selected_spectrum(
-    mut state: std::sync::MutexGuard<'_, crate::State>,
+    state: &mut crate::State,
     filter: f32,
 ) -> Result<MultiLayerSpectrum, CustomError> {
     let mut spectra = Vec::new();
@@ -656,7 +657,7 @@ pub fn save_spectrum<'a>(
     model: &'a str,
     charge: Option<usize>,
 ) -> Result<(), CustomError> {
-    let state = state.lock().map_err(|e| {
+    let mut state = state.lock().map_err(|e| {
         CustomError::error(
             "Could not write file",
             "Mutex locked, are you doing too much at the same time?",
@@ -678,7 +679,7 @@ pub fn save_spectrum<'a>(
     let ext = path
         .extension()
         .map(|s| s.to_string_lossy().to_ascii_lowercase());
-    let mut spectrum = create_selected_spectrum(state, filter)?;
+    let mut spectrum = create_selected_spectrum(&mut state, filter)?;
     if !sequence.is_empty() {
         spectrum.description.params.push(Param::new_key_value(
             "sequence",

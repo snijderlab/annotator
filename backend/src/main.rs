@@ -195,19 +195,15 @@ async fn annotate_spectrum<'a>(
     mass_mode: &'a str,
     mz_range: (Option<f64>, Option<f64>),
 ) -> Result<AnnotationResult, CustomError> {
-    let state = state.lock().unwrap();
-    let model = crate::model::model_inject(
-        crate::model::get_models(&state)
-            .1
-            .get(model)
-            .cloned()
-            .ok_or_else(|| {
-                CustomError::error("Invalid model", "Model does not exist", Context::None)
-            })?
-            .2,
-        tolerance,
-        mz_range,
-    )?;
+    let mut state = state.lock().unwrap();
+    let spectrum = crate::spectra::create_selected_spectrum(&mut state, filter)?;
+    let model = crate::model::get_models(&state)
+        .1
+        .get(model)
+        .cloned()
+        .ok_or_else(|| CustomError::error("Invalid model", "Model does not exist", Context::None))?
+        .2;
+    let parameters = model::parameters(tolerance, mz_range)?;
     let mass_mode = match mass_mode {
         "monoisotopic" => MassMode::Monoisotopic,
         "average_weight" => MassMode::Average,
@@ -223,8 +219,6 @@ async fn annotate_spectrum<'a>(
         .count()
         == 1;
 
-    let spectrum = crate::spectra::create_selected_spectrum(state, filter)?;
-
     let use_charge = Charge::new::<e>(
         charge
             .or_else(|| {
@@ -236,10 +230,16 @@ async fn annotate_spectrum<'a>(
             })
             .unwrap_or(1),
     );
-    let fragments = peptide.generate_theoretical_fragments(use_charge, &model);
-    let annotated = spectrum.annotate(peptide, &fragments, &model, mass_mode);
+    let fragments = peptide.generate_theoretical_fragments(use_charge, model);
+    let annotated = spectrum.annotate(peptide, &fragments, &parameters, mass_mode);
     let (spectrum, limits) = render::annotated_spectrum(
-        &annotated, &spectrum, "spectrum", &fragments, &model, mass_mode,
+        &annotated,
+        &spectrum,
+        "spectrum",
+        &fragments,
+        model,
+        &parameters,
+        mass_mode,
     );
     Ok(AnnotationResult {
         spectrum,
@@ -269,7 +269,7 @@ fn load_custom_mods_and_models(app: &mut tauri::App) -> Result<(), Box<dyn std::
             state.database = mods;
         }
         if let Ok(data) = std::fs::read(custom_models) {
-            let models: Vec<(String, Model)> = serde_json::from_slice(&data)?;
+            let models: Vec<(String, FragmentationModel)> = serde_json::from_slice(&data)?;
             state.models = models;
         }
         Ok(())

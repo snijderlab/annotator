@@ -19,25 +19,20 @@ use crate::{
     },
 };
 
-pub fn get_models(state: &State) -> (usize, Vec<(bool, String, Model)>) {
+pub fn get_models(state: &State) -> (usize, Vec<(bool, &str, &FragmentationModel)>) {
     let mut output = vec![
-        (true, "All".to_string(), Model::all()),
-        (true, "EtHCD/EtCAD".to_string(), Model::ethcd()),
-        (true, "EAciD".to_string(), Model::eacid()),
-        (true, "EAD".to_string(), Model::ead()),
-        (true, "CID/HCD".to_string(), Model::cid_hcd()),
-        (true, "ETD".to_string(), Model::etd()),
-        (true, "Top-down ETD".to_string(), Model::td_etd()),
-        (true, "UVPD".to_string(), Model::uvpd()),
-        (true, "None".to_string(), Model::none()),
+        (true, "All", FragmentationModel::all()),
+        (true, "EtHCD/EtCAD", FragmentationModel::ethcd()),
+        (true, "EAciD", FragmentationModel::eacid()),
+        (true, "EAD", FragmentationModel::ead()),
+        (true, "CID/HCD", FragmentationModel::cid_hcd()),
+        (true, "ETD", FragmentationModel::etd()),
+        (true, "Top-down ETD", FragmentationModel::td_etd()),
+        (true, "UVPD", FragmentationModel::uvpd()),
+        (true, "None", FragmentationModel::none()),
     ];
     let built_in_length = output.len();
-    output.extend(
-        state
-            .models
-            .iter()
-            .map(|(n, m)| (false, n.clone(), m.clone())),
-    );
+    output.extend(state.models.iter().map(|(n, m)| (false, n.as_str(), m)));
     (built_in_length, output)
 }
 
@@ -50,7 +45,7 @@ pub fn get_custom_models(
         .1
         .iter()
         .enumerate()
-        .map(|(index, (built_in, name, _))| (*built_in, index, name.clone()))
+        .map(|(index, (built_in, name, _))| (*built_in, index, name.to_string()))
         .collect())
 }
 
@@ -62,9 +57,12 @@ pub fn duplicate_custom_model(
     let mut locked_state = state.lock().map_err(|_| "Could not lock mutex")?;
     let models = get_models(&locked_state).1;
     if let Some((built_in, name, model)) = models.get(id).cloned() {
+        let model = (*model).clone();
+        let name = name.to_string();
+        let models_len = models.len();
         locked_state.models.push((name.clone(), model.clone()));
         drop(locked_state);
-        Ok((models.len(), built_in, name, model.into()))
+        Ok((models_len, built_in, name, model.into()))
     } else {
         Err("Could not find specified id")
     }
@@ -73,13 +71,14 @@ pub fn duplicate_custom_model(
 #[tauri::command]
 pub fn delete_custom_model(id: usize, state: ModifiableState) -> Result<(), &'static str> {
     let mut state = state.lock().map_err(|_| "Could not lock mutex")?;
-    let models = get_models(&state);
-    if id < models.1.len() {
-        let (built_in, _, _) = models.1[id];
+    let (offset, models) = get_models(&state);
+    if id < models.len() {
+        let (built_in, _, _) = models[id];
+        drop(models);
         if built_in {
             Err("Can not delete built in model")
         } else {
-            state.models.remove(id - models.0);
+            state.models.remove(id - offset);
             Ok(())
         }
     } else {
@@ -95,7 +94,7 @@ pub fn get_custom_model(
     let state = state.lock().map_err(|_| "Could not lock mutex")?;
     let models = get_models(&state);
     if let Some((_, name, model)) = models.1.get(id) {
-        Ok((id, name.clone(), model.clone().into()))
+        Ok((id, name.to_string(), (*model).clone().into()))
     } else {
         Err("Given index does not exist")
     }
@@ -198,10 +197,11 @@ pub struct ModelParameters {
     pub glycan: GlycanParameters,
 }
 
-impl TryFrom<ModelParameters> for Model {
+impl TryFrom<ModelParameters> for FragmentationModel {
     type Error = CustomError;
     fn try_from(value: ModelParameters) -> Result<Self, Self::Error> {
-        Ok(Model::none()
+        Ok(FragmentationModel::none()
+            .clone()
             .a(value.a.try_into()?)
             .b(value.b.try_into()?)
             .c(value.c.try_into()?)
@@ -232,7 +232,7 @@ impl TryFrom<ModelParameters> for Model {
                 }),
                 value.precursor.1,
             )
-            .immonium(value.immonium.0.then_some(value.immonium.1))
+            .immonium(value.immonium.0.then_some((value.immonium.1, Vec::new())))
             .modification_specific_diagnostic_ions(
                 value
                     .modification_diagnostic
@@ -245,8 +245,8 @@ impl TryFrom<ModelParameters> for Model {
     }
 }
 
-impl From<Model> for ModelParameters {
-    fn from(value: Model) -> Self {
+impl From<FragmentationModel> for ModelParameters {
+    fn from(value: FragmentationModel) -> Self {
         ModelParameters {
             a: value.a.into(),
             b: value.b.into(),
@@ -260,7 +260,7 @@ impl From<Model> for ModelParameters {
             precursor: ((&value.precursor).into(), value.precursor.3),
             immonium: value
                 .immonium
-                .map_or((false, ChargeRange::ONE), |c| (true, c)),
+                .map_or((false, ChargeRange::ONE), |(c, _)| (true, c)),
             modification_diagnostic: value
                 .modification_specific_diagnostic_ions
                 .map_or((false, ChargeRange::ONE), |c| (true, c)),
@@ -287,6 +287,9 @@ impl TryFrom<GlycanParameters> for GlycanModel {
             allow_structural: value.allow_structural,
             compositional_range: value.compositional_range.0..=value.compositional_range.1,
             neutral_losses: parse_neutral_losses(&value.neutral_losses)?,
+            specific_neutral_losses: Vec::new(),
+            default_peptide_fragment: GlycanPeptideFragment::FREE,
+            peptide_fragment_rules: Vec::new(),
             oxonium_charge_range: value.oxonium_charge_range,
             other_charge_range: value.other_charge_range,
         })
@@ -492,15 +495,15 @@ fn parse_neutral_losses(neutral_losses: &[String]) -> Result<Vec<NeutralLoss>, C
         .collect()
 }
 
-pub fn model_inject(
-    mut model: Model,
+pub fn parameters(
     tolerance: (f64, &str),
     mz_range: (Option<f64>, Option<f64>),
-) -> Result<Model, CustomError> {
+) -> Result<MatchingParameters, CustomError> {
+    let mut parameters = MatchingParameters::default();
     if tolerance.1 == "ppm" {
-        model.tolerance = Tolerance::new_ppm(tolerance.0);
+        parameters.tolerance = Tolerance::new_ppm(tolerance.0);
     } else if tolerance.1 == "th" {
-        model.tolerance =
+        parameters.tolerance =
             Tolerance::new_absolute(MassOverCharge::new::<rustyms::system::mz>(tolerance.0));
     } else {
         return Err(CustomError::error(
@@ -518,6 +521,6 @@ pub fn model_inject(
             Context::None,
         ));
     }
-    model.mz_range = MassOverCharge::new::<mz>(min)..=MassOverCharge::new::<mz>(max);
-    Ok(model)
+    parameters.mz_range = MassOverCharge::new::<mz>(min)..=MassOverCharge::new::<mz>(max);
+    Ok(parameters)
 }

@@ -4,7 +4,7 @@ use crate::{Theme, html_builder::HtmlTag};
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
 use rustyms::{
-    CompoundPeptidoformIon, Linked, Modification, Peptidoform,
+    CompoundPeptidoformIon, IsAminoAcid, Linked, Modification, Peptidoform,
     fragment::*,
     modification::{CrossLinkName, GnoComposition, SimpleModificationInner},
 };
@@ -322,7 +322,7 @@ fn render_linear_peptidoform(
                 format!(", Cross-link{}: {}", if xl_names.len() == 1{""} else {"s"}, xl_names.iter().join(", "))
             },
             confidence.copied().unwrap_or_default(),
-            pos.aminoacid.char(),
+            pos.aminoacid.pro_forma_definition(),
         )
         .unwrap();
         if !glycans.is_empty() {

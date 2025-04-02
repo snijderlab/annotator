@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use rustyms::{
+    IsAminoAcid, MultiChemical,
     identification::{CVTerm, IdentifiedPeptide, MetaData, ReturnedPeptide, SpectrumIds},
-    MultiChemical,
 };
 
 use crate::{
@@ -203,16 +203,17 @@ impl RenderToTable for MetaData {
                 ("From Chimera", data.from_chimera.to_optional_string()),
                 ("ID", data.id.to_optional_string()),
                 ("Precursor ID", data.precursor_id.to_optional_string()),
-                ("Ion mobility", data.k0_range.as_ref().map_or("-".to_string(), |range| format!("{} — {} 1/K<sub>0</sub>", range.start(), range.end()))),
+                (
+                    "Ion mobility",
+                    data.k0_range.as_ref().map_or("-".to_string(), |range| {
+                        format!("{} — {} 1/K<sub>0</sub>", range.start(), range.end())
+                    }),
+                ),
                 (
                     "Protein",
-                        data.protein_group.and_then(|g| {
-                            data.protein_id
-                                .and_then(|i| data.unique.map(|u| (g, i, u)))
-                        })
-                        .map(|(g, i, u)| {
-                            format!("group: {g}, ID: {i}, unique: {u}")
-                        })
+                    data.protein_group
+                        .and_then(|g| data.protein_id.and_then(|i| data.unique.map(|u| (g, i, u))))
+                        .map(|(g, i, u)| format!("group: {g}, ID: {i}, unique: {u}"))
                         .to_optional_string(),
                 ),
                 (
@@ -268,8 +269,26 @@ impl RenderToTable for MetaData {
                     "Flanking residues",
                     format!(
                         "{}_(seq)_{}",
-                        data.flanking_residues.0.char(),
-                        data.flanking_residues.1.char()
+                        data.flanking_residues
+                            .0
+                            .one_letter_code()
+                            .map(|c| c.to_string())
+                            .or_else(|| data
+                                .flanking_residues
+                                .0
+                                .three_letter_code()
+                                .map(|c| c.to_string()))
+                            .unwrap_or_else(|| data.flanking_residues.0.name().to_string()),
+                        data.flanking_residues
+                            .1
+                            .one_letter_code()
+                            .map(|c| c.to_string())
+                            .or_else(|| data
+                                .flanking_residues
+                                .1
+                                .three_letter_code()
+                                .map(|c| c.to_string()))
+                            .unwrap_or_else(|| data.flanking_residues.1.name().to_string())
                     ),
                 ),
                 ("Rank", data.rank.to_string()),
@@ -707,7 +726,7 @@ impl RenderToTable for MetaData {
                         data.protein_score,
                         data.protein_fpr,
                         data.protein_sequence_coverage,
-                        curate=data.protein_auto_curate,
+                        curate = data.protein_auto_curate,
                     ),
                 ),
                 (
@@ -723,8 +742,7 @@ impl RenderToTable for MetaData {
                     "Protein matched products",
                     format!(
                         "{} (∑I: {:.3e})",
-                        data.protein_matched_products,
-                        data.protein_matched_product_intensity_sum,
+                        data.protein_matched_products, data.protein_matched_product_intensity_sum,
                     ),
                 ),
                 (
@@ -734,7 +752,7 @@ impl RenderToTable for MetaData {
                         data.peptide_score,
                         data.peptide_raw_score,
                         data.peptide_rank,
-                        curate=data.peptide_auto_curate,
+                        curate = data.peptide_auto_curate,
                     ),
                 ),
                 (
@@ -753,7 +771,9 @@ impl RenderToTable for MetaData {
                     "Peptide matched products",
                     format!(
                         "{:.2}% ({}/{}) (∑I: {:.3e})",
-                        data.peptide_matched_products as f64 / data.peptide_matched_product_theoretical * 100.0,
+                        data.peptide_matched_products as f64
+                            / data.peptide_matched_product_theoretical
+                            * 100.0,
                         data.peptide_matched_products,
                         data.peptide_matched_product_theoretical,
                         data.peptide_matched_product_intensity,
@@ -781,11 +801,11 @@ impl RenderToTable for MetaData {
                         data.precursor_touch_down_rt.value,
                     ),
                 ),
-                (
-                    "Product",
-                    {
-                        let charge = data.product_z.map_or(String::new(), |c| format!("+{}",c.value));
-                        format!(
+                ("Product", {
+                    let charge = data
+                        .product_z
+                        .map_or(String::new(), |c| format!("+{}", c.value));
+                    format!(
                             "{}{}{}{} id: {} intensity: {} charge: {}",
                             data.fragment_type.as_ref().to_optional_string(),
                             data.product_charge
@@ -803,8 +823,7 @@ impl RenderToTable for MetaData {
                                 .map(|v| format!("{v:+.2}"))
                                 .to_optional_string(),
                         )
-                    },
-                ),
+                }),
                 ("Product peak fwhm", data.product_fwhm.to_optional_string()),
                 (
                     "Product RT (min)",
@@ -813,7 +832,9 @@ impl RenderToTable for MetaData {
                         data.product_lift_off_rt
                             .map(|v| format!("{:.3}", v.value))
                             .to_optional_string(),
-                        data.product_inf_up_rt.map(|v| format!("{:.3}", v.value)).to_optional_string(),
+                        data.product_inf_up_rt
+                            .map(|v| format!("{:.3}", v.value))
+                            .to_optional_string(),
                         data.product_inf_down_rt
                             .map(|v| format!("{:.3}", v.value))
                             .to_optional_string(),
@@ -826,27 +847,39 @@ impl RenderToTable for MetaData {
             MetaData::SpectrumSequenceList(data) => vec![
                 (
                     "Retention range (min)",
-                    data.start_time.map_or("-".to_string(), |st| format!(
-                        "{:.3} — {}",
-                        st.get::<rustyms::system::time::min>(),
-                        data.end_time.map_or("-".to_string(), |c| format!("{:.3}", c.get::<rustyms::system::time::min>()))
-                    )),
+                    data.start_time.map_or("-".to_string(), |st| {
+                        format!(
+                            "{:.3} — {}",
+                            st.get::<rustyms::system::time::min>(),
+                            data.end_time.map_or("-".to_string(), |c| format!(
+                                "{:.3}",
+                                c.get::<rustyms::system::time::min>()
+                            ))
+                        )
+                    }),
                 ),
                 ("Score type", data.score_type.as_ref().to_optional_string()),
                 ("Adduct", data.adduct.as_ref().to_optional_string()),
-                ("Molecule name", data.moleculename.as_ref().to_optional_string()),
+                (
+                    "Molecule name",
+                    data.moleculename.as_ref().to_optional_string(),
+                ),
                 ("Inchikey", data.inchikey.as_ref().to_optional_string()),
                 ("Other keys", data.otherkeys.as_ref().to_optional_string()),
                 (
-                    "Ion Mobility", 
-                    data.ion_mobility.as_ref().map_or("-".to_string(), |im| format!(
-                        "{im:.3} {}",
-                        data.ion_mobility_units.as_ref().to_optional_string()
-                    ))
+                    "Ion Mobility",
+                    data.ion_mobility.as_ref().map_or("-".to_string(), |im| {
+                        format!(
+                            "{im:.3} {}",
+                            data.ion_mobility_units.as_ref().to_optional_string()
+                        )
+                    }),
                 ),
                 (
-                    "CCS", data.ccs.map_or("-".to_string(), |ccs| format!("{ccs:.3} Å²")),
-                )
+                    "CCS",
+                    data.ccs
+                        .map_or("-".to_string(), |ccs| format!("{ccs:.3} Å²")),
+                ),
             ],
             MetaData::DeepNovoFamily(_)
             | MetaData::InstaNovo(_)
