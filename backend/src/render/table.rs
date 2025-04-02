@@ -266,7 +266,7 @@ pub fn spectrum_table(
                     "-".to_string(),
                     format!("{:+}", fragment.charge.value),
                     series_number,
-                    annotation.formula.as_ref().map_or(String::new(), |f| {
+                    fragment.formula.as_ref().map_or(String::new(), |f| {
                         f.labels().iter().map(|l| l.to_string()).join(",")
                     }),
                 ],
