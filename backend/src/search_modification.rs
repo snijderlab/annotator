@@ -1,17 +1,17 @@
 use crate::{
-    html_builder,
+    ModifiableState, Theme, html_builder,
     metadata_render::OptionalString,
     render::{display_formula, display_masses, display_placement_rule, render_full_glycan},
-    ModifiableState, Theme,
 };
 use itertools::Itertools;
 use modification::ModificationId;
 use rustyms::{
+    ReturnModification,
     error::*,
     modification::{GnoComposition, LinkerSpecificity, Ontology, SimpleModificationInner},
     placement_rule::PlacementRule,
-    system::{dalton, Mass},
-    ReturnModification, *,
+    system::{Mass, dalton},
+    *,
 };
 
 use crate::{
@@ -117,6 +117,10 @@ pub async fn search_modification(
                                 false,
                                 theme,
                                 &mut glycan_footnotes,
+                                false,
+                                false,
+                                0,
+                                0,
                             )
                         } else {
                             "-".to_string()
@@ -270,6 +274,10 @@ pub fn render_modification(modification: &SimpleModificationInner, theme: Theme)
                                 false,
                                 theme,
                                 &mut glycan_footnotes,
+                                false,
+                                false,
+                                0,
+                                0,
                             ))
                             .clone(),
                     ]

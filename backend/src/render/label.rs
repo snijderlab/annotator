@@ -236,6 +236,11 @@ fn get_glycan_figure(
     theme: Theme,
     glycan_footnotes: &mut Vec<String>,
 ) -> Option<String> {
+    let multiple_peptidoform_ions = compound_peptidoform.peptidoform_ions().len() > 1;
+    let multiple_peptidoforms = compound_peptidoform
+        .peptidoform_ions()
+        .iter()
+        .any(|p| p.peptidoforms().len() > 1);
     annotation
         .ion
         .glycan_break_positions()
@@ -257,13 +262,22 @@ fn get_glycan_figure(
                                 }
                                 _ => None,
                             })
-                            .map(|s| (s, g.1))
+                            .map(|s| (s, g.1, pii, pi))
                     })
                 })
             })
         })
-        .map(|(structure, selection)| {
-            render_glycan_fragment(structure, selection, theme, glycan_footnotes)
+        .map(|(structure, selection, pii, pi)| {
+            render_glycan_fragment(
+                structure,
+                selection,
+                theme,
+                glycan_footnotes,
+                multiple_peptidoform_ions,
+                multiple_peptidoforms,
+                pii,
+                pi,
+            )
         })
 }
 

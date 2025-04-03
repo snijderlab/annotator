@@ -3,8 +3,8 @@ use std::{cmp::Ordering, collections::HashMap, fmt::Write};
 use itertools::Itertools;
 use mzdata::spectrum::MultiLayerSpectrum;
 use rustyms::{
-    AnnotatedSpectrum, CompoundPeptidoformIon, FragmentationModel, MassMode,
-    MolecularFormula, NeutralLoss,
+    AnnotatedSpectrum, CompoundPeptidoformIon, FragmentationModel, MassMode, MolecularFormula,
+    NeutralLoss,
     fragment::*,
     glycan::{GlycanDirection, GlycanRoot, GlycanSelection, GlycanStructure},
     model::{Location, MatchingParameters},
@@ -1371,13 +1371,34 @@ pub fn render_full_glycan(
     on_peptide: bool,
     theme: Theme,
     footnotes: &mut Vec<String>,
+    multiple_peptidoform_ions: bool,
+    multiple_peptidoforms: bool,
+    peptidoform_ion_index: usize,
+    peptidoform_index: usize,
 ) -> String {
     glycan
         .render(
             if on_peptide {
                 GlycanRoot::Line
             } else {
-                GlycanRoot::Symbol
+                GlycanRoot::Text(format!(
+                    "p{}{}{}",
+                    if multiple_peptidoform_ions {
+                        (peptidoform_ion_index + 1).to_string()
+                    } else {
+                        String::new()
+                    },
+                    if multiple_peptidoform_ions && multiple_peptidoforms {
+                        "."
+                    } else {
+                        ""
+                    },
+                    if multiple_peptidoforms {
+                        (peptidoform_index + 1).to_string()
+                    } else {
+                        String::new()
+                    },
+                ))
             },
             if big { 40.0 } else { 20.0 },
             if big { 20.0 } else { 10.0 },
@@ -1407,10 +1428,31 @@ pub fn render_glycan_fragment(
     selection: GlycanSelection,
     theme: Theme,
     footnotes: &mut Vec<String>,
+    multiple_peptidoform_ions: bool,
+    multiple_peptidoforms: bool,
+    peptidoform_ion_index: usize,
+    peptidoform_index: usize,
 ) -> String {
     glycan
         .render(
-            GlycanRoot::Symbol,
+            GlycanRoot::Text(format!(
+                "p{}{}{}",
+                if multiple_peptidoform_ions {
+                    (peptidoform_ion_index + 1).to_string()
+                } else {
+                    String::new()
+                },
+                if multiple_peptidoform_ions && multiple_peptidoforms {
+                    "."
+                } else {
+                    ""
+                },
+                if multiple_peptidoforms {
+                    (peptidoform_index + 1).to_string()
+                } else {
+                    String::new()
+                },
+            )),
             20.0,
             10.0,
             1.0,

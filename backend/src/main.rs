@@ -6,7 +6,6 @@
 use std::sync::Mutex;
 
 use itertools::Itertools;
-use model::ModelParameters;
 use mzdata::prelude::{IonProperties, SpectrumLike};
 use ordered_float::OrderedFloat;
 use render::{display_formula, display_mass};

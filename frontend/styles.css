@@ -1220,8 +1220,7 @@ input:not(:checked)+.collapsible {
 
         &.x,
         &.y,
-        &.z,
-        &.z· {
+        &.z {
             border-right: none;
             border-bottom: none;
             bottom: calc(var(--fragments-padding) + var(--height));
@@ -1234,8 +1233,7 @@ input:not(:checked)+.collapsible {
             width: calc(var(--width) - var(--spacing));
         }
 
-        &.z,
-        &.z· {
+        &.z {
             left: calc(2 * var(--spacing) + var(--side-spacing) + var(--pad-left));
             height: calc(var(--height) - 2 * var(--spacing));
             width: calc(var(--width) - 2 * var(--spacing));
@@ -1380,7 +1378,6 @@ input:not(:checked)+.collapsible {
 .spectrum.compact .peptide,
 #identified-peptide-details .peptide {
     --width: calc(.5em - var(--side-spacing));
-    --height: .5em;
 
     &>* {
         padding: calc(var(--fragments-padding) + var(--confidence-padding)) var(--pad-right) var(--fragments-padding) var(--pad-left);

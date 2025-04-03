@@ -255,6 +255,10 @@ fn render_linear_peptidoform(
                             true,
                             Theme::Dark,
                             glycan_footnotes,
+                            false,
+                            false,
+                            0,
+                            0,
                         );
                         glycans.push_str(&svg);
                         write!(
