@@ -791,6 +791,9 @@ function get_model() {
     glycan: {
       allow_structural: document.querySelector("#model-glycan-enabled").checked,
       compositional_range: [Number(document.querySelector("#model-glycan-composition-min").value), Number(document.querySelector("#model-glycan-composition-max").value)],
+      diagnostic_neutral_losses: loadSeparatedInput("model-glycan-specific-loss"),
+      default_glycan_peptide_fragment: { full: true, core: null },
+      specific_glycan_peptide_fragment: [],
       neutral_losses: get_losses("glycan"),
       oxonium_charge_range: get_charge_range("glycan-oxonium"),
       other_charge_range: get_charge_range("glycan-other")
@@ -800,6 +803,7 @@ function get_model() {
 }
 
 function loadCustomModelEdit(model) {
+  console.log(model);
   // Main series
   for (let ion of ["a", "b", "c", "x", "y", "z"]) {
     set_location("#model-" + ion + "-location", model[ion]["location"]);
@@ -820,6 +824,28 @@ function loadCustomModelEdit(model) {
   // Glycan
   document.getElementById("model-glycan-enabled").checked = model["glycan"]["allow_structural"];
   set_losses("glycan", model["glycan"]);
+  populateSeparatedInput("model-glycan-specific-loss", model["glycan"]["diagnostic_neutral_losses"]);
+  let def = model["glycan"]["default_glycan_peptide_fragment"];
+  document.getElementById("model-glycan-fragments").innerText = "";
+  addValueListInputGlycanPeptideFragment(
+    document.getElementById("model-glycan-fragments").parentElement,
+    [],
+    [],
+    def["full"],
+    def["core"],
+    true,
+  )
+  for (let rule of model["glycan"]["specific_glycan_peptide_fragment"]) {
+    console.log(rule);
+    addValueListInputGlycanPeptideFragment(
+      document.getElementById("model-glycan-fragments").parentElement,
+      rule[0],
+      rule[1],
+      rule[2]["full"],
+      rule[2]["core"],
+      false,
+    )
+  }
   set_charge_range("glycan-other", model["glycan"]["other_charge_range"]);
   document.getElementById("model-glycan-composition-min").value = model["glycan"]["compositional_range"][0];
   document.getElementById("model-glycan-composition-max").value = model["glycan"]["compositional_range"][1];
@@ -1101,10 +1127,11 @@ window.addEventListener("DOMContentLoaded", () => {
     t.querySelector(".create").addEventListener("click", e => {
       if (e.target.parentElement.classList.contains("glycan-fragments")) {
         document.getElementById("model-glycan-fragments-other").hidden = true;
-        document.getElementById("model-glycan-fragments-selection").parentElement.hidden = false;
+        document.getElementById("model-glycan-fragments-selection-aa").parentElement.hidden = false;
+        document.getElementById("model-glycan-fragments-selection-kind").parentElement.hidden = false;
         document.getElementById("model-glycan-fragments-selection-label").hidden = false;
-        document.getElementById("model-glycan-fragments-free").checked = false;
-        document.getElementById("model-glycan-fragments-core").checked = false;
+        document.getElementById("model-glycan-fragments-min").value = null;
+        document.getElementById("model-glycan-fragments-max").value = null;
         document.getElementById("model-glycan-fragments-full").checked = false;
       }
       e.target.parentElement.classList.add("creating");
@@ -1135,12 +1162,15 @@ window.addEventListener("DOMContentLoaded", () => {
         });
       } else if (listInput.classList.contains("glycan-fragments")) {
         allow_delete = document.getElementById("model-glycan-fragments-other").hidden;
+        let min = number_or_null("model-glycan-fragments-min");
+        let max = number_or_null("model-glycan-fragments-max");
+        let core = min == null || max == null ? null : [min, max];
         inner = await invoke("validate_glycan_fragments", {
           fallback: !document.getElementById("model-glycan-fragments-other").hidden,
-          selection: loadSeparatedInput("model-glycan-fragments-selection"),
-          free: document.getElementById("model-glycan-fragments-free").checked,
-          core: document.getElementById("model-glycan-fragments-core").checked,
+          aa: loadSeparatedInput("model-glycan-fragments-selection-aa"),
+          kind: loadSeparatedInput("model-glycan-fragments-selection-kind"),
           full: document.getElementById("model-glycan-fragments-full").checked,
+          core: core,
         }).catch(error => {
           validation_error = error;
         });
@@ -1255,19 +1285,22 @@ function editListInput(e, listInput) {
     populateSeparatedInput("custom-mod-linker-stubs", data.stubs);
     populateSeparatedInput("custom-mod-linker-diagnostic-ions", data.diagnostic_ions);
   } else if (listInput.classList.contains("glycan-fragments")) {
-    if (data.fallback) {
+    console.log(data);
+    if (data[3]) {
       document.getElementById("model-glycan-fragments-other").hidden = false;
-      document.getElementById("model-glycan-fragments-selection").parentElement.hidden = true;
+      document.getElementById("model-glycan-fragments-selection-aa").parentElement.hidden = true;
+      document.getElementById("model-glycan-fragments-selection-kind").parentElement.hidden = true;
       document.getElementById("model-glycan-fragments-selection-label").hidden = true;
     } else {
       document.getElementById("model-glycan-fragments-other").hidden = true;
-      document.getElementById("model-glycan-fragments-selection").parentElement.hidden = false;
+      document.getElementById("model-glycan-fragments-selection-aa").parentElement.hidden = false;
+      document.getElementById("model-glycan-fragments-selection-kind").parentElement.hidden = false;
       document.getElementById("model-glycan-fragments-selection-label").hidden = false;
-      populateSeparatedInput("model-glycan-fragments-selection", data.selection);
+      populateSeparatedInput("model-glycan-fragments-selection-aa", data[0]);
+      populateSeparatedInput("model-glycan-fragments-selection-kind", data[1]);
     }
-    document.getElementById("model-glycan-fragments-free").checked = data.free;
-    document.getElementById("model-glycan-fragments-core").checked = data.core;
-    document.getElementById("model-glycan-fragments-full").checked = data.full;
+    document.getElementById("model-glycan-fragments-min").checked = data[2] != null ? data[2][0] : "";
+    document.getElementById("model-glycan-fragments-max").checked = data[2] != null ? data[2][1] : "";
   }
   listInput.classList.add("creating");
   e.target.parentElement.classList.add("hidden");
@@ -1439,6 +1472,57 @@ async function addValueListInput(listInput, singlePlacementRules, singleNeutralL
   listInput.querySelector(".values").appendChild(new_element);
 }
 
+async function addValueListInputGlycanPeptideFragment(listInput, aas, kinds, full, core, fallback) {
+  listInput.classList.remove("creating");
+  let new_element = document.createElement("li");
+  new_element.classList.add("element");
+  console.log({
+    fallback: fallback,
+    aa: aas,
+    kind: kinds,
+    full: full,
+    core: core,
+  });
+  new_element.innerHTML = await invoke("validate_glycan_fragments", {
+    fallback: fallback,
+    aa: aas,
+    kind: kinds,
+    full: full,
+    core: core,
+  }).catch(error => {
+    console.error(error)
+  });
+  new_element.children[0].title = "Edit";
+  new_element.children[0].addEventListener("click", e => {
+    let data = JSON.parse(e.target.dataset.value);
+    populateSeparatedInput("model-glycan-fragments-selection-aa", data[0]);
+    populateSeparatedInput("model-glycan-fragments-selection-kind", data[1]);
+    document.getElementById("model-glycan-fragments-full").checked = data[2]["full"];
+    document.getElementById("model-glycan-fragments-min").value = data[2]["core"] == null ? null : data[2]["core"][0];
+    document.getElementById("model-glycan-fragments-max").value = data[2]["core"] == null ? null : data[2]["core"][1];
+    if (data[3]) {
+      document.getElementById("model-glycan-fragments-other").hidden = false;
+      document.getElementById("model-glycan-fragments-selection-aa").parentElement.hidden = true;
+      document.getElementById("model-glycan-fragments-selection-kind").parentElement.hidden = true;
+      document.getElementById("model-glycan-fragments-selection-label").hidden = true;
+    } else {
+      document.getElementById("model-glycan-fragments-other").hidden = true;
+      document.getElementById("model-glycan-fragments-selection-aa").parentElement.hidden = false;
+      document.getElementById("model-glycan-fragments-selection-kind").parentElement.hidden = false;
+      document.getElementById("model-glycan-fragments-selection-label").hidden = false;
+    }
+    listInput.classList.add("creating");
+    e.target.parentElement.classList.add("hidden");
+  });
+  let delete_button = document.createElement("button");
+  delete_button.classList.add("delete");
+  delete_button.appendChild(document.createTextNode("x"));
+  delete_button.addEventListener("click", e => e.target.parentElement.remove());
+  delete_button.title = "Delete";
+  new_element.appendChild(delete_button);
+  listInput.querySelector(".values").appendChild(new_element);
+}
+
 function moveCursorToEnd(contentEle) {
   const range = document.createRange();
   const selection = window.getSelection();
@@ -1503,6 +1587,20 @@ async function addValueSeparatedElement(element, value) {
       break;
     case "aa_neutral_loss":
       verified_value = await invoke("validate_aa_neutral_loss", { text: value })
+        .catch(error => {
+          input.innerHTML = showContext(error, value);
+          outer.querySelector("output.error").innerHTML = formatError(error, false);
+        });
+      break;
+    case "monosaccharide_neutral_loss":
+      verified_value = await invoke("validate_monosaccharide_neutral_loss", { text: value })
+        .catch(error => {
+          input.innerHTML = showContext(error, value);
+          outer.querySelector("output.error").innerHTML = formatError(error, false);
+        });
+      break;
+    case "fragment_kind":
+      verified_value = await invoke("validate_fragment_kind", { text: value })
         .catch(error => {
           input.innerHTML = showContext(error, value);
           outer.querySelector("output.error").innerHTML = formatError(error, false);

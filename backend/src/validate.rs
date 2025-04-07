@@ -2,9 +2,7 @@ use std::num::{IntErrorKind, ParseIntError};
 
 use itertools::Itertools;
 use rustyms::{
-    AminoAcid, MolecularFormula, NeutralLoss,
-    error::{Context, CustomError},
-    placement_rule::PlacementRule,
+    error::{Context, CustomError}, fragment::FragmentKind, glycan::MonoSaccharide, placement_rule::PlacementRule, AminoAcid, MolecularFormula, NeutralLoss
 };
 
 use crate::render::{display_formula, display_neutral_loss, display_placement_rule, display_stubs};
@@ -32,6 +30,27 @@ pub fn parse_amino_acid(text: &str) -> Result<AminoAcid, CustomError> {
 #[tauri::command]
 pub fn validate_amino_acid(text: String) -> Result<String, CustomError> {
     parse_amino_acid(&text).map(|f| f.to_string())
+}
+
+pub fn parse_fragment_kind(text: &str) -> Result<FragmentKind, CustomError> {
+    match text {
+        "a" => Ok(FragmentKind::a),
+        "b" => Ok(FragmentKind::b),
+        "c" => Ok(FragmentKind::c),
+        "d" => Ok(FragmentKind::d),
+        "v" => Ok(FragmentKind::v),
+        "w" => Ok(FragmentKind::w),
+        "x" => Ok(FragmentKind::x),
+        "y" => Ok(FragmentKind::y),
+        "z" => Ok(FragmentKind::z),
+        "immonium" => Ok(FragmentKind::immonium),
+        _ => Err(CustomError::error("Invalid fragment kind", "Use any of a/b/c/d/v/w/x/y/z/immonium, notice that this is case sensitive.", Context::None))
+    }
+}
+
+#[tauri::command]
+pub fn validate_fragment_kind(text: String) -> Result<String, CustomError> {
+    parse_fragment_kind(&text).map(|f| f.to_string())
 }
 
 #[tauri::command]
@@ -77,6 +96,41 @@ pub fn display_aa_neutral_loss(aa: &[AminoAcid], loss: &[NeutralLoss]) -> String
 #[tauri::command]
 pub fn validate_aa_neutral_loss(text: String) -> Result<String, CustomError> {
     parse_aa_neutral_loss(&text).map(|s| display_aa_neutral_loss(&s.0, &s.1))
+}
+
+pub fn parse_monosaccharide_neutral_loss(text: &str) -> Result<(MonoSaccharide, bool, Vec<NeutralLoss>), CustomError> {
+    let (monosaccharide, losses, specific) = text.split_once(':').map(|(a, b)| (a, b, false)).or(text.split_once('=').map(|(a, b)| (a, b, true))).ok_or_else(|| CustomError::error("Invalid monosaccharide neutral loss", "The monosaccharide neutral loss has the be in the form of 'sugar:loss,loss' or 'sugar=loss,loss' bot neither ':' not '=' are found in the text.", Context::None))?;
+
+    let mut pos = monosaccharide.len() + 1;
+    let mut found_losses = Vec::new();
+    for loss in losses.split(',') {
+        found_losses.push(loss.parse::<NeutralLoss>().map_err(|err| {
+            err.with_context(Context::Line {
+                line_index: None,
+                line: text.to_string(),
+                offset: pos,
+                length: loss.len(),
+            })
+        })?);
+        pos += loss.len() + 1;
+    }
+
+    Ok((MonoSaccharide::from_short_iupac(monosaccharide, 0, 0).and_then(|(sugar, amount_parsed)| 
+        if amount_parsed == monosaccharide.len() {
+            Ok(sugar.with_name(monosaccharide))
+        } else {
+            Err(CustomError::error("Could not parse monosaccharide", format!("The monosaccharide was interpreted to mean '{sugar}' but this left text unaccounted for"), Context::line_range(None, text, amount_parsed..monosaccharide.len())))
+        }
+    )?, specific, found_losses))
+}
+
+pub fn display_monosaccharide_neutral_loss(rule: (MonoSaccharide, bool, Vec<NeutralLoss>)) -> String {
+    format!("{}{}{}", rule.0, if rule.1 {"="} else {":"}, rule.2.iter().join(","))
+}
+
+#[tauri::command]
+pub fn validate_monosaccharide_neutral_loss(text: String) -> Result<String, CustomError> {
+    parse_monosaccharide_neutral_loss(&text).map(display_monosaccharide_neutral_loss)
 }
 
 pub fn parse_aa_list(text: &str) -> Result<Vec<AminoAcid>, CustomError> {
@@ -319,14 +373,18 @@ pub fn validate_custom_linker_specificity(
 #[tauri::command]
 pub fn validate_glycan_fragments(
     fallback: bool,
-    selection: Vec<String>,
-    free: bool,
-    core: bool,
+    aa: Vec<String>,
+    kind: Vec<String>,
     full: bool,
+    core: Option<(u8, u8)>,
 ) -> Result<String, CustomError> {
-    let aas = selection
+    let aas = aa
         .iter()
         .map(|aa| parse_amino_acid(aa))
+        .collect::<Result<Vec<_>, _>>()?;
+    let kind = kind
+        .iter()
+        .map(|v| parse_fragment_kind(v))
         .collect::<Result<Vec<_>, _>>()?;
 
     if !fallback && aas.is_empty() {
@@ -335,26 +393,26 @@ pub fn validate_glycan_fragments(
             "At least one amino acid has to be provided for the selection",
             Context::None,
         ))
-    } else if !(free || core || full) {
+    } else if !full && core.is_none() {
         Err(CustomError::error(
             "Invalid glycan fragments",
-            "At least one fragment type has to be specified (one of free/core/full)",
+            "At least one fragment type has to be specified (one of full or core)",
             Context::None,
         ))
     } else {
         Ok(format!(
-            "<span data-value='{{\"fallback\": {fallback}, \"selection\": [{}], \"free\": {free}, \"core\": {core}, \"full\": {full} }}'>{}, Fragments: {}{}{}{}{}",
+            "<span data-value='[[{}], [{}], {{\"full\": {full}, \"core\": {} }}, {fallback}]'>{}, Full glycan: {full}, Core: {}",
             aas.iter().map(|aa| format!("\"{aa}\"")).join(","),
+            kind.iter().map(|value| format!("\"{value}\"")).join(","),
+            core.map_or("null".to_string(), |(min, max)| format!("[{min}, {max}]")),
             if fallback {
                 "All undefined".to_string()
             } else {
-                format!("Attachment: {}", aas.iter().join(", "),)
+                format!("Attachment: {}", aas.iter().join(", "),) + &if kind.is_empty() {String::new()} else {
+                    format!(", Fragments: {}", kind.iter().join(", "),)
+                }
             },
-            if free { "free" } else { "" },
-            if free && (core || full) { ", " } else { "" },
-            if core { "core" } else { "" },
-            if core && full { ", " } else { "" },
-            if full { "full" } else { "" },
+            core.map_or("false".to_string(), |(min, max)| format!("{min}—{max}")),
         ))
     }
 }

@@ -2184,7 +2184,8 @@ input:not(:checked)+.collapsible {
     & .cross-links,
     & .ambiguous-amino-acids,
     & .modifications,
-    & .charge-carriers {
+    & .charge-carriers,
+    & .glycan-peptide-fragment {
         display: none;
     }
 }
@@ -2250,7 +2251,8 @@ input:not(:checked)+.collapsible {
 .spectrum.show-cross-links .cross-links,
 .spectrum.show-ambiguous-amino-acids .ambiguous-amino-acids,
 .spectrum.show-modifications .modifications,
-.spectrum.show-charge-carriers .charge-carriers {
+.spectrum.show-charge-carriers .charge-carriers,
+.spectrum.show-glycan-peptide-fragments .glycan-peptide-fragment {
     display: inline;
 }
 

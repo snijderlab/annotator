@@ -46,6 +46,8 @@ pub fn get_label(
             compound_peptidoform,
         ));
         let mut shared_charge_carriers = Some(get_charge_carriers(&annotations[0]));
+        let mut shared_glycan_peptide_fragments =
+            Some(get_glycan_peptide_fragments(&annotations[0]));
 
         for a in annotations {
             if let Some(charge) = shared_charge {
@@ -110,6 +112,11 @@ pub fn get_label(
                     shared_charge_carriers = None;
                 }
             }
+            if let Some(cc) = &shared_glycan_peptide_fragments {
+                if *cc != get_glycan_peptide_fragments(a) {
+                    shared_glycan_peptide_fragments = None;
+                }
+            }
         }
 
         if shared_charge.is_none()
@@ -123,6 +130,7 @@ pub fn get_label(
             && shared_ambiguous_amino_acids.is_none()
             && shared_modifications.is_none()
             && shared_charge_carriers.is_none()
+            && shared_glycan_peptide_fragments.is_none()
         {
             "*".to_string()
         } else {
@@ -162,6 +170,8 @@ pub fn get_label(
             let aaa_str = shared_ambiguous_amino_acids.unwrap_or("*".to_string());
             let sm_str = shared_modifications.unwrap_or("*".to_string());
             let cc_str = shared_charge_carriers.unwrap_or("*".to_string());
+            let glycan_peptide_fragments_str =
+                shared_glycan_peptide_fragments.unwrap_or("*".to_string());
 
             let multi = if annotations.len() > 1 {
                 let mut multi = String::new();
@@ -198,7 +208,7 @@ pub fn get_label(
                 )
             } else {
                 format!(
-                    "{}<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span><span class='cross-links'>{}</span><span class='ambiguous-amino-acids'>{}</span><span class='modifications'>{}</span><span class='charge-carriers'>{}</span></span>{}",
+                    "{}<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span><span class='cross-links'>{}</span><span class='ambiguous-amino-acids'>{}</span><span class='modifications'>{}</span><span class='charge-carriers'>{}</span><span class='glycan-peptide-fragment'>{}</span></span>{}",
                     glycan_figure_str,
                     ion_str,
                     charge_str,
@@ -223,6 +233,7 @@ pub fn get_label(
                     aaa_str,
                     sm_str,
                     cc_str,
+                    glycan_peptide_fragments_str,
                     multi,
                 )
             }
@@ -248,21 +259,32 @@ fn get_glycan_figure(
             annotation.peptidoform_ion_index.and_then(|pii| {
                 annotation.peptidoform_index.and_then(|pi| {
                     g.0.and_then(|index| {
-                        compound_peptidoform.peptidoform_ions()[pii].peptidoforms()[pi].sequence()
-                            [index]
-                            .modifications
-                            .iter()
-                            .find_map(|m| match m.simple().map(|m| m.as_ref()) {
-                                Some(SimpleModificationInner::Gno {
-                                    composition: GnoComposition::Topology(structure),
-                                    ..
-                                }) => Some(structure),
-                                Some(SimpleModificationInner::GlycanStructure(structure)) => {
-                                    Some(structure)
-                                }
-                                _ => None,
-                            })
-                            .map(|s| (s, g.1, pii, pi))
+                        match index {
+                            SequencePosition::NTerm => compound_peptidoform.peptidoform_ions()[pii]
+                                .peptidoforms()[pi]
+                                .get_n_term(),
+                            SequencePosition::Index(i) => {
+                                compound_peptidoform.peptidoform_ions()[pii].peptidoforms()[pi]
+                                    .sequence()[i]
+                                    .modifications
+                                    .as_slice()
+                            }
+                            SequencePosition::CTerm => compound_peptidoform.peptidoform_ions()[pii]
+                                .peptidoforms()[pi]
+                                .get_c_term(),
+                        }
+                        .iter()
+                        .find_map(|m| match m.simple().map(|m| m.as_ref()) {
+                            Some(SimpleModificationInner::Gno {
+                                composition: GnoComposition::Topology(structure),
+                                ..
+                            }) => Some(structure),
+                            Some(SimpleModificationInner::GlycanStructure(structure)) => {
+                                Some(structure)
+                            }
+                            _ => None,
+                        })
+                        .map(|s| (s, g.1, pii, pi))
                     })
                 })
             })
@@ -291,7 +313,7 @@ fn get_single_label(
 ) -> String {
     let ch = format!("{:+}", annotation.charge.value);
     format!(
-        "{}<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span><span class='cross-links'>{}</span><span class='ambiguous-amino-acids'>{}</span><span class='modifications'>{}</span><span class='charge-carriers'>{}</span></span>",
+        "{}<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span><span class='cross-links'>{}</span><span class='ambiguous-amino-acids'>{}</span><span class='modifications'>{}</span><span class='charge-carriers'>{}</span><span class='glycan-peptide-fragment'>{}</span></span>",
         get_glycan_figure(
             compound_peptidoform,
             annotation,
@@ -368,6 +390,7 @@ fn get_single_label(
         get_ambiguous_amino_acids(annotation, multiple_peptidoforms),
         get_modifications(annotation, multiple_peptidoforms, compound_peptidoform),
         get_charge_carriers(annotation),
+        get_glycan_peptide_fragments(annotation),
     )
 }
 
@@ -517,6 +540,24 @@ fn get_charge_carriers(annotation: &Fragment) -> String {
     } else {
         format!("[{str}]")
     }
+}
+
+fn get_glycan_peptide_fragments(annotation: &Fragment) -> String {
+    annotation
+        .formula
+        .iter()
+        .flat_map(|f| f.labels())
+        .flat_map(|label| {
+            if matches!(
+                label,
+                AmbiguousLabel::GlycanFragment(_) | AmbiguousLabel::GlycanFragmentComposition(_)
+            ) {
+                Some(format!("+{label}"))
+            } else {
+                None
+            }
+        })
+        .join("")
 }
 
 pub fn display_sequence_index(sequence_index: SequencePosition) -> String {

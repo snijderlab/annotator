@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use rustyms::{
     error::*,
+    fragment::FragmentKind,
     model::*,
     system::{MassOverCharge, mz},
     *,
@@ -14,7 +15,8 @@ use crate::{
     ModifiableState,
     state::State,
     validate::{
-        display_aa_neutral_loss, display_satellite_ion, parse_aa_neutral_loss, parse_amino_acid,
+        display_aa_neutral_loss, display_monosaccharide_neutral_loss, display_satellite_ion,
+        parse_aa_neutral_loss, parse_amino_acid, parse_monosaccharide_neutral_loss,
         parse_satellite_ion,
     },
 };
@@ -178,7 +180,7 @@ pub async fn update_model(
     }
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct ModelParameters {
     pub a: PrimarySeriesParameters,
     pub b: PrimarySeriesParameters,
@@ -271,11 +273,14 @@ impl From<FragmentationModel> for ModelParameters {
     }
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct GlycanParameters {
     allow_structural: bool,
     compositional_range: (usize, usize),
     neutral_losses: Vec<String>,
+    diagnostic_neutral_losses: Vec<String>,
+    default_glycan_peptide_fragment: GlycanPeptideFragment,
+    specific_glycan_peptide_fragment: Vec<(Vec<char>, Vec<FragmentKind>, GlycanPeptideFragment)>,
     oxonium_charge_range: ChargeRange,
     other_charge_range: ChargeRange,
 }
@@ -287,9 +292,25 @@ impl TryFrom<GlycanParameters> for GlycanModel {
             allow_structural: value.allow_structural,
             compositional_range: value.compositional_range.0..=value.compositional_range.1,
             neutral_losses: parse_neutral_losses(&value.neutral_losses)?,
-            specific_neutral_losses: Vec::new(),
-            default_peptide_fragment: GlycanPeptideFragment::FREE,
-            peptide_fragment_rules: Vec::new(),
+            specific_neutral_losses: value
+                .diagnostic_neutral_losses
+                .into_iter()
+                .map(|v| parse_monosaccharide_neutral_loss(&v))
+                .collect::<Result<Vec<_>, _>>()?,
+            default_peptide_fragment: value.default_glycan_peptide_fragment,
+            peptide_fragment_rules: value
+                .specific_glycan_peptide_fragment
+                .into_iter()
+                .map(|(aas, fragments, settings)| {
+                    (
+                        aas.iter()
+                            .filter_map(|aa| AminoAcid::try_from(*aa).ok())
+                            .collect(),
+                        fragments,
+                        settings,
+                    )
+                })
+                .collect(),
             oxonium_charge_range: value.oxonium_charge_range,
             other_charge_range: value.other_charge_range,
         })
@@ -305,6 +326,23 @@ impl From<GlycanModel> for GlycanParameters {
                 *value.compositional_range.end(),
             ),
             neutral_losses: value.neutral_losses.iter().map(|l| l.to_string()).collect(),
+            diagnostic_neutral_losses: value
+                .specific_neutral_losses
+                .into_iter()
+                .map(display_monosaccharide_neutral_loss)
+                .collect(),
+            default_glycan_peptide_fragment: value.default_peptide_fragment,
+            specific_glycan_peptide_fragment: value
+                .peptide_fragment_rules
+                .into_iter()
+                .map(|(aas, fragments, settings)| {
+                    (
+                        aas.iter().filter_map(|aa| aa.one_letter_code()).collect(),
+                        fragments,
+                        settings,
+                    )
+                })
+                .collect(),
             oxonium_charge_range: value.oxonium_charge_range,
             other_charge_range: value.other_charge_range,
         }

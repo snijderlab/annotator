@@ -67,20 +67,24 @@ fn create_loss_modal(id: &str) -> HtmlElement {
     ];
     if id == "glycan" {
         dialog.extend(
-        [HtmlTag::h2.new().content("Glycan attachment to fragments").clone(),
-            HtmlTag::p.new().content("Glycans can be attached to amino acid in different ways and each of these ways can result in different fragmentation behaviour. Here rules on the behaviour can be defined that determine which part of a glycan can be attached to any fragment with a glycan. Free indicates that the entire glycan is removed. Core indicates that the core, the first HexNAc possibly with some fucoses, remains attached to the fragment. Full indicates that the full glycan is present on all glycan containing fragments. If multiple options are checked all options will be generated.").clone()
+          [HtmlTag::h2.new().content("Diagnostic ion monosaccharide specific neutral losses").clone(),
+            HtmlTag::p.new().content("Single monosaccharides will be generated as diagnostic ions. With the settings below the neutral losses for each of these diagnostic ions can be controlled. If a colon is used the rule will apply to any monosaccharide that is equivalent when isomeric state is disregarded, while when equals '=' is used the isomeric state has to be identical as well.").clone(),
+            HtmlElement::separated_input(format!("model-{id}-specific-loss"), "Monosaccharide followed by a colon or equals and the losses separated by commas", "monosaccharide_neutral_loss"),
+            HtmlTag::h2.new().content("Glycan attachment to fragments").clone(),
+            HtmlTag::p.new().content("Glycans can be attached to amino acid in different ways and each of these ways can result in different fragmentation behaviour. Here rules on the behaviour can be defined that determine which part of a glycan can be attached to any fragment with a glycan. Full indicates that the full glycan is present on all glycan containing fragments. Core indicates the maximum depth in the glycan structure that remains on the peptide fragment, fucoses are not counted in the depth but always generated both with and without. If any of the core fields is left empty no core fragments are generated.").clone()
           ].into_iter().chain([
             HtmlTag::div.new().class("list-input glycan-fragments").content(
-              HtmlTag::ul.new().class("values").id("model-glycan-fragments").content(r#"<li class="element"><span data-value='{"fallback": true, "selection": [], "free": false, "core": false, "full": true }' title="Edit">All undefined, Fragments: full</span></li>"#))
+              HtmlTag::ul.new().class("values").id("model-glycan-fragments").content(r#"<li class="element"><span data-value='[[], [], {"full": true, "core": null }, true]' title="Edit">All undefined, Fragments: full</span></li>"#))
               .content(HtmlTag::button.new().class("create").id("model-glycan-fragments-create").content("New rule"))
               .content(HtmlTag::div.new().class("modal").id("model-glycan-fragments-create").children([
                 HtmlTag::label.new().id("model-glycan-fragments-selection-label").header("for", "model-glycan-fragments-selection").content("Amino acid location of a glycan").clone(),
-                HtmlElement::separated_input("model-glycan-fragments-selection", "Amino acid code", "amino_acid"),
+                HtmlElement::separated_input("model-glycan-fragments-selection-aa", "Amino acid code", "amino_acid"),
+                HtmlElement::separated_input("model-glycan-fragments-selection-kind", "Fragment kind", "fragment_kind"),
                 HtmlTag::label.new().id("model-glycan-fragments-other").content("All undefined attachment locations").clone(),
                 HtmlTag::label.new().header("for", "model-glycan-fragments-form").content("Allowed glycan forms on fragments").clone(),
-                HtmlTag::label.new().content(HtmlTag::input.new().header("name", "model-glycan-fragments-form").header("type", "checkbox").id("model-glycan-fragments-free")).content("Free").clone(),
-                HtmlTag::label.new().content(HtmlTag::input.new().header("name", "model-glycan-fragments-form").header("type", "checkbox").id("model-glycan-fragments-core")).content("Core").clone(),
-                HtmlTag::label.new().content(HtmlTag::input.new().header("name", "model-glycan-fragments-form").header("type", "checkbox").id("model-glycan-fragments-full")).content("Full").clone(),
+                HtmlTag::label.new().content("Full glycan").content(HtmlTag::input.new().header("name", "model-glycan-fragments-form").header("type", "checkbox").id("model-glycan-fragments-full")).clone(),
+                HtmlTag::label.new().content("Core minimum").content(HtmlTag::input.new().header("name", "model-glycan-fragments-form").header("type", "number").id("model-glycan-fragments-min")).clone(),
+                HtmlTag::label.new().content("Core maximum").content(HtmlTag::input.new().header("name", "model-glycan-fragments-form").header("type", "number").id("model-glycan-fragments-max")).clone(),
                 HtmlTag::button.new().class("save").id("model-glycan-fragments-save").content("Save").clone(),
                 HtmlTag::button.new().class("cancel secondary").id("model-glycan-fragments-cancel").content("Cancel").clone(),
               ])).content(HtmlTag::output.new().class("error").header2("hidden")).clone()
@@ -333,7 +337,7 @@ fn main() {
           </svg>
         </div>
       <output id="spectrum-error" class="hidden error"></output>
-      <div id='spectrum-wrapper' class="spectrum show-unassigned legend-ion hidden show-charge show-series show-glycan-id show-peptide-id show-neutral-losses show-cross-links show-ambiguous-amino-acids show-modifications" onload='SpectrumSetUp()'>
+      <div id='spectrum-wrapper' class="spectrum show-unassigned legend-ion hidden show-charge show-series show-glycan-id show-peptide-id show-neutral-losses show-cross-links show-ambiguous-amino-acids show-modifications show-glycan-peptide-fragments" onload='SpectrumSetUp()'>
         <div class='legend'>
           <span class='title'>Ion legend</span>
           <div class='ion-series'>
@@ -518,6 +522,7 @@ fn main() {
                   <label><input checked id='spectrum-label-ambiguous-amino-acids' type='checkbox'/>Ambiguous amino acids</label>
                   <label><input checked id='spectrum-label-modifications' type='checkbox'/>Modifications of unknown position</label>
                   <label><input id='spectrum-label-charge-carriers' type='checkbox'/>Charge carriers</label>
+                  <label><input checked id='spectrum-label-glycan-peptide-fragments' type='checkbox'/>Glycan peptide fragments</label>
                 </div>
             </div>
 

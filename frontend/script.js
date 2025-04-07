@@ -625,6 +625,8 @@ function SpectrumSettings(event) {
         spectrum_wrapper.classList.toggle("show-modifications", t.checked);
     } else if (t.id == "spectrum-label-charge-carriers") {
         spectrum_wrapper.classList.toggle("show-charge-carriers", t.checked);
+    } else if (t.id == "spectrum-label-glycan-peptide-fragments") {
+        spectrum_wrapper.classList.toggle("show-glycan-peptide-fragments", t.checked);
     } else if (t.id == "rotate-label") {
         spectrum_wrapper.classList.toggle("rotate-label", t.checked);
     } else if (t.id == "spectrum-mz-min") {
