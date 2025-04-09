@@ -8,7 +8,6 @@ use crate::{
     spectrum::PeakSpectrum,
 };
 use itertools::Itertools;
-use rustyms::AmbiguousLabel;
 
 pub fn spectrum_table(
     spectrum: &AnnotatedSpectrum,

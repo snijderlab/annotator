@@ -1,4 +1,4 @@
-use std::{ffi::OsString, io::ErrorKind, ops::RangeInclusive, path::Path, str::FromStr};
+use std::{io::ErrorKind, ops::RangeInclusive, path::Path, str::FromStr};
 
 use itertools::Itertools;
 use mzdata::{
@@ -9,10 +9,10 @@ use mzdata::{
     prelude::{IonProperties, PrecursorSelection, SpectrumLike},
     spectrum::{
         ArrayType, BinaryDataArrayType, DataArray, MultiLayerSpectrum, SignalContinuity,
-        SpectrumDescription, bindata::BinaryCompressionType,
+        bindata::BinaryCompressionType,
     },
 };
-use mzpeaks::{CentroidPeak, DeconvolutedPeak, peak_set::PeakSetVec};
+use mzpeaks::{CentroidPeak, peak_set::PeakSetVec};
 use mzsignal::{ArrayPairLike, PeakPicker};
 use rustyms::{
     error::{Context, CustomError},
@@ -601,7 +601,7 @@ pub fn create_selected_spectrum(
     for file in state.spectra.iter_mut() {
         spectra.extend(file.get_selected_spectra());
     }
-    let mut spectrum = if spectra.is_empty() {
+    let spectrum = if spectra.is_empty() {
         return Err(CustomError::error(
             "No selected spectra",
             "Select a spectrum from an open raw file, or open a raw file if none are opened yet",

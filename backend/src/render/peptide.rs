@@ -129,6 +129,7 @@ fn render_linear_peptidoform(
         let mut possible_modifications = Vec::new();
         let mut cross_link = Vec::new();
         let mut modifications = Vec::new();
+        let mut glycans = String::new();
         for m in peptidoform.get_n_term() {
             match m {
                 Modification::Ambiguous {
@@ -160,14 +161,42 @@ fn render_linear_peptidoform(
                         composition: GnoComposition::Topology(structure),
                         id,
                         ..
-                    } => (),
+                    } => {
+                        let svg = render_full_glycan(
+                            structure,
+                            false,
+                            true,
+                            Theme::Dark,
+                            glycan_footnotes,
+                            false,
+                            false,
+                            0,
+                            0,
+                        );
+                        glycans.push_str(&svg);
+                        modifications.push(id.to_string());
+                    }
+                    SimpleModificationInner::GlycanStructure(structure) => {
+                        let svg = render_full_glycan(
+                            structure,
+                            false,
+                            true,
+                            Theme::Dark,
+                            glycan_footnotes,
+                            false,
+                            false,
+                            0,
+                            0,
+                        );
+                        glycans.push_str(&svg);
+                    }
                     other => modifications.push(other.to_string()),
                 },
             }
         }
         write!(
             output,
-            "<span class='{} term' data-cross-links='{}' data-cross-links-compact='{}' title='N-term {}{}{}{}{}{}{}{}'></span>", 
+            "<span class='{} term' data-cross-links='{}' data-cross-links-compact='{}' title='N-term {}{}{}{}{}{}{}{}'>{}</span>", 
             (!possible_modifications.is_empty()).then_some("possible-modification").into_iter()
                 .chain((!cross_link.is_empty()).then_some("cross-link").into_iter())
                 .chain((!modifications.is_empty()).then_some("modification").into_iter())
@@ -182,6 +211,9 @@ fn render_linear_peptidoform(
                 if (!modifications.is_empty() || !possible_modifications.is_empty()) && !cross_link.is_empty() {", "} else {""},
                 if cross_link.is_empty() {""} else {"Cross-link: "}, 
                 cross_link.iter().map(|c| c.3.as_str()).join(", "),
+                if !glycans.is_empty() {
+                    format!("<div class='glycans'>{glycans}</div>")
+                } else {String::new()},
         )
         .unwrap();
     }
@@ -267,6 +299,20 @@ fn render_linear_peptidoform(
                             if !modifications.is_empty() { ", " } else { "" },
                         )
                         .unwrap()
+                    }
+                    SimpleModificationInner::GlycanStructure(structure) => {
+                        let svg = render_full_glycan(
+                            structure,
+                            false,
+                            true,
+                            Theme::Dark,
+                            glycan_footnotes,
+                            false,
+                            false,
+                            0,
+                            0,
+                        );
+                        glycans.push_str(&svg);
                     }
                     other => {
                         modification = true;
@@ -355,6 +401,7 @@ fn render_linear_peptidoform(
         let mut possible_modifications = Vec::new();
         let mut cross_link = Vec::new();
         let mut modifications = Vec::new();
+        let mut glycans = String::new();
         for m in peptidoform.get_c_term() {
             match m {
                 Modification::Ambiguous {
@@ -381,12 +428,47 @@ fn render_linear_peptidoform(
                         format!("{name}"),
                     ));
                 }
-                Modification::Simple(m) => modifications.push(m.to_string()),
+                Modification::Simple(m) => match &**m {
+                    SimpleModificationInner::Gno {
+                        composition: GnoComposition::Topology(structure),
+                        id,
+                        ..
+                    } => {
+                        let svg = render_full_glycan(
+                            structure,
+                            false,
+                            true,
+                            Theme::Dark,
+                            glycan_footnotes,
+                            false,
+                            false,
+                            0,
+                            0,
+                        );
+                        glycans.push_str(&svg);
+                        modifications.push(id.to_string());
+                    }
+                    SimpleModificationInner::GlycanStructure(structure) => {
+                        let svg = render_full_glycan(
+                            structure,
+                            false,
+                            true,
+                            Theme::Dark,
+                            glycan_footnotes,
+                            false,
+                            false,
+                            0,
+                            0,
+                        );
+                        glycans.push_str(&svg);
+                    }
+                    other => modifications.push(other.to_string()),
+                },
             }
         }
         write!(
             output,
-            "<span class='{} term' data-cross-links='{}' data-cross-links-compact='{}' title='C-term {}{}{}{}{}{}{}{}'></span>", 
+            "<span class='{} term' data-cross-links='{}' data-cross-links-compact='{}' title='C-term {}{}{}{}{}{}{}{}'>{}</span>", 
             (!possible_modifications.is_empty()).then_some("possible-modification").into_iter()
                 .chain((!cross_link.is_empty()).then_some("cross-link").into_iter())
                 .chain((!modifications.is_empty()).then_some("modification").into_iter())
@@ -401,6 +483,9 @@ fn render_linear_peptidoform(
                 if (!modifications.is_empty() || !possible_modifications.is_empty()) && !cross_link.is_empty() {", "} else {""},
                 if cross_link.is_empty() {""} else {"Cross-link: "}, 
                 cross_link.iter().map(|c| c.3.as_str()).join(", "),
+                if !glycans.is_empty() {
+                    format!("<div class='glycans'>{glycans}</div>")
+                } else {String::new()},
         )
         .unwrap();
     }

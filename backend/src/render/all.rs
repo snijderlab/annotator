@@ -3,8 +3,7 @@ use std::{cmp::Ordering, collections::HashMap, fmt::Write};
 use itertools::Itertools;
 use mzdata::spectrum::MultiLayerSpectrum;
 use rustyms::{
-    AnnotatedSpectrum, CompoundPeptidoformIon, FragmentationModel, MassMode, MolecularFormula,
-    NeutralLoss,
+    AnnotatedSpectrum, FragmentationModel, MassMode, MolecularFormula, NeutralLoss,
     fragment::*,
     glycan::{GlycanDirection, GlycanRoot, GlycanSelection, GlycanStructure},
     model::{Location, MatchingParameters},
@@ -18,7 +17,6 @@ use crate::{
     Theme,
     html_builder::{HtmlContent, HtmlElement, HtmlTag},
     metadata_render::OptionalString,
-    render::label::display_sequence_index,
 };
 use ordered_float::OrderedFloat;
 
