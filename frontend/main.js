@@ -567,6 +567,7 @@ function updateCustomModels() {
                 document.getElementById("custom-model-name").value = result[1];
                 loadCustomModelEdit(result[2]);
                 document.getElementById("custom-model-dialog").showModal();
+                document.getElementById("custom-model-dialog").dataset.duplicate = "false";
               })
               .catch(error => console.error(error)));
           new_element.appendChild(edit_button);
@@ -582,6 +583,7 @@ function updateCustomModels() {
               document.getElementById("custom-model-name").value = result[2];
               loadCustomModelEdit(result[3]);
               document.getElementById("custom-model-dialog").showModal();
+              document.getElementById("custom-model-dialog").dataset.duplicate = "true";
             })
             .catch(error => console.error(error)));
         new_element.appendChild(duplicate_button);
@@ -808,7 +810,6 @@ function get_model() {
 }
 
 function loadCustomModelEdit(model) {
-  console.log(model);
   // Main series
   for (let ion of ["a", "b", "c", "x", "y", "z"]) {
     set_location("#model-" + ion + "-location", model[ion]["location"]);
@@ -876,7 +877,8 @@ async function annotate_spectrum() {
     model: Number(document.querySelector("#spectrum-model").value),
     peptide: document.querySelector("#peptide").innerText,
     massMode: document.querySelector("#spectrum-mass-mode").value,
-    mzRange: [optional_number(document.querySelector("#model-mz-range-min").value), optional_number(document.querySelector("#model-mz-range-max").value)]
+    mzRange: [optional_number(document.querySelector("#model-mz-range-min").value), optional_number(document.querySelector("#model-mz-range-max").value)],
+    precursorMass: optional_number(document.querySelector("#spectrum-mass").value)
   }).then((result) => {
     document.querySelector("#spectrum-results-wrapper").innerHTML = result.spectrum;
     document.querySelector("#spectrum-fragment-table").innerHTML = result.fragment_table;
@@ -1252,10 +1254,14 @@ window.addEventListener("DOMContentLoaded", () => {
       .then(() => { document.getElementById("custom-model-dialog").close(); updateCustomModels() })
       .catch(error => console.error(error))
   });
-  document.getElementById("custom-model-cancel").addEventListener("click", e => {
-    invoke("delete_custom_model", { id: Number(document.getElementById("custom-model-dialog").dataset.id) });
-    document.getElementById("custom-model-dialog").close()
-  });
+  let cancel_custom_model_dialog = () => {
+    console.log(dialog.dataset.duplicate)
+    if (dialog.dataset.duplicate == "true")
+      invoke("delete_custom_model", { id: Number(dialog.dataset.id) });
+    dialog.close()
+  };
+  document.getElementById("custom-model-dialog").addEventListener("cancel", cancel_custom_model_dialog);
+  document.getElementById("custom-model-cancel").addEventListener("click", cancel_custom_model_dialog);
   updateCustomModels();
 
   // Refresh interface for hot reload
@@ -1327,8 +1333,10 @@ function updateCustomModifications() {
         edit_button.addEventListener("click", () =>
           invoke("get_custom_modification", { id: modification[0] })
             .then(result => {
+              console.log(current_custom_modal_is_duplicate);
               loadCustomModification(result);
               document.getElementById("custom-mod-dialog").showModal();
+              document.getElementById("custom-mod-dialog").dataset.duplicate = "false";
             })
             .catch(error => console.error(error)));
         new_element.appendChild(edit_button);
@@ -1338,9 +1346,10 @@ function updateCustomModifications() {
         duplicate_button.addEventListener("click", () =>
           invoke("duplicate_custom_modification", { id: modification[0], newId: Number(document.getElementById("custom-mod-create").dataset.newId) })
             .then(result => {
-              console.log(result);
+              console.log(current_custom_modal_is_duplicate);
               loadCustomModification(result);
               document.getElementById("custom-mod-dialog").showModal();
+              document.getElementById("custom-mod-dialog").dataset.duplicate = "true";
             })
             .catch(error => console.error(error)));
         new_element.appendChild(duplicate_button);
@@ -1481,13 +1490,6 @@ async function addValueListInputGlycanPeptideFragment(listInput, aas, kinds, ful
   listInput.classList.remove("creating");
   let new_element = document.createElement("li");
   new_element.classList.add("element");
-  console.log({
-    fallback: fallback,
-    aa: aas,
-    kind: kinds,
-    full: full,
-    core: core,
-  });
   new_element.innerHTML = await invoke("validate_glycan_fragments", {
     fallback: fallback,
     aa: aas,

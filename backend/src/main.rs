@@ -187,6 +187,7 @@ pub struct AnnotationResult {
 async fn annotate_spectrum<'a>(
     tolerance: (f64, &'a str),
     charge: Option<usize>,
+    precursor_mass: Option<f64>,
     filter: f32,
     model: usize,
     peptide: &'a str,
@@ -196,6 +197,16 @@ async fn annotate_spectrum<'a>(
 ) -> Result<AnnotationResult, CustomError> {
     let mut state = state.lock().unwrap();
     let spectrum = crate::spectra::create_selected_spectrum(&mut state, filter)?;
+    let masses = precursor_mass
+        .map(|m| vec![m])
+        .or_else(|| {
+            spectrum
+                .description
+                .precursor
+                .as_ref()
+                .map(|p| p.ions.iter().map(|i| i.neutral_mass()).collect())
+        })
+        .unwrap_or_default();
     let model = crate::model::get_models(&state)
         .1
         .get(model)
@@ -239,6 +250,7 @@ async fn annotate_spectrum<'a>(
         model,
         &parameters,
         mass_mode,
+        &masses,
     );
     Ok(AnnotationResult {
         spectrum,

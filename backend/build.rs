@@ -313,6 +313,9 @@ fn main() {
 
         <label for="spectrum-charge">Max charge </label>
         <input type="number" id="spectrum-charge" value="" placeholder="Empty takes peptide charge from raw data" />
+
+        <label for="spectrum-mass">Precursor mass</label>
+        <input type="number" id="spectrum-mass" value="" placeholder="Empty takes precursor mass from raw data" />
         
         <label for="model-mz-range-min">m/z range</label>
         <div class="row">

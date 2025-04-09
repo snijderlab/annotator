@@ -609,7 +609,8 @@ pub fn create_selected_spectrum(
         ));
     } else if spectra.len() == 1 {
         let mut spectrum = spectra.pop().unwrap();
-        if filter != 0.0 {
+        if filter != 0.0 && spectrum.arrays.is_some() {
+            // TODO: When centroided data is loaded denoising is not applied
             spectrum.denoise(filter).map_err(|err| {
                 CustomError::error(
                     "Spectrum could not be denoised",
