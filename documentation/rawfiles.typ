@@ -2,13 +2,13 @@
 
 = Rawfiles
 
-The annotator supports mgf, mzML, IndexedMzML, mzMLb, and Thermo raw files (needs setup see @thermo-raw). Rawfiles can be loaded using the button #button[Load raw data file] or by dragging in a file from the file explorer. Any number of files can be loaded at the same time. Once opened the file will be added to the list of opened files as 'RX:filename' with two input fields to select spectra and a #button[Close file] button to close the file. Spectra can be selected on index, 0 based index of the spectrum in the file, or on native id. Native id is the vendor specific textual identifier for the spectrum, #link("https://docs.rs/mzdata/latest/mzdata/meta/enum.NativeSpectrumIdentifierFormatTerm.html#variants")[for more detailed info see the documentation in mzdata].
+The annotator supports mgf, mzML, IndexedMzML, Bruker .tdf, and Thermo raw files (needs setup see @thermo-raw). Rawfiles can be loaded using the button #button[Load raw data file] or by dragging in a file from the file explorer. Any number of files can be loaded at the same time. Once opened the file will be added to the list of opened files as 'RX:filename' with two input fields to select spectra and a #button[Close file] button to close the file. Spectra can be selected on index, 0 based index of the spectrum in the file, or on native id. Native id is the vendor specific textual identifier for the spectrum, #link("https://docs.rs/mzdata/latest/mzdata/meta/enum.NativeSpectrumIdentifierFormatTerm.html#variants")[for more detailed info see the documentation in mzdata].
 
-Files in profile mode can be loaded and centroided in the annotator. For top and middle down data it is recommended to deconvolute the data before loading it in the annotator.
+Files in profile mode can be loaded and automatically peak picked in the annotator. For top and middle down data it is recommended to deconvolute the data before loading it in the annotator.
 
 == Other formats
 
-Other raw file formats can be converted using available converters. For convenience common converters are listed below.
+Other raw file formats can be converted using available converters. For convenience some common converters are listed below.
 
 #table(
   columns: (auto, auto),
@@ -37,11 +37,11 @@ The .NET 8.0 runtime is needed to open Thermo raw files, #link("https://dotnet.m
 
 Some programs allow copying a spectrum into the clipboard, use the #button[Load Clipboard] button to load such a spectrum from the clipboard. Currently spectra from selected Bruker, Stitch, Sciex, and Thermo programs are supported. 
 
-#aside[If you find another program that allows this behaviour please open an issue on gitHub for the annotator, with the name and version of the program in question along with an example of the format.]
+#aside[If you find another program that allows this behaviour please open an issue on GitHub for the Annotator, with the name and version of the program in question along with an example of the format.]
 
 == Universal Spectrum Identifier (USI)
 
-A #link("https://www.psidev.info/usi")[USI] is a text based format that identifies any spectrum in any publicly accesible dataset. It is build using the following parts.
+A #link("https://www.psidev.info/usi")[USI] is a text based format that identifies any spectrum in any publicly accessible dataset. It is build using the following parts.
 
 #table(columns: (auto, auto, auto),
 table.header([*Part*], [*Example*], [*Comment*]),

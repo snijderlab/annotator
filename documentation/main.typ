@@ -27,7 +27,7 @@
     image("../backend/icons/annotator_icon_export.svg"),
     [= Annotator
 
-    A simple tool to help you manually discover the depths of your (complex) spectra, one spectrum at a time. Load your rawfiles, select a spectrum and add you annotation with full control over theoretical fragments. Use the interactive spectrum to discover what your spectrum means and to export gorgeous images.
+    #crate.package.description
 
     GitHub: #link(crate.package.repository)[#crate.package.repository] \
     License: #crate.package.license \

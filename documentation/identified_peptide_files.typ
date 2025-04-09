@@ -18,6 +18,8 @@ There are quite some programs that export peptides with metadata based on spectr
 #table(
   columns: (auto, auto),
   table.header([*Software*], [*Versions/Formats*]),
+  [Basic CSV],
+  [A CSV file with the following columns: 'raw_file', 'sequence' (in ProForma format), 'z', 'scan_index', and possibly 'mode' with the fragmentation mode, this ignores any other columns.],
   [DeepNovoFamily],
   [DeepNovo, PointNovo, BiatNovo, PGPointNovo],
   [InstaNovo],

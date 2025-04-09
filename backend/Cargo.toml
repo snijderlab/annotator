@@ -1,7 +1,7 @@
 [package]
 name = "annotator"
 version = "1.0.0"
-description = "Spectrum annotator"
+description = "A simple tool to help you manually discover the depths of your (complex) spectra, one spectrum at a time. Load your rawfiles, select a spectrum and add you annotation with full control over theoretical fragments. Use the interactive spectrum to discover what your spectrum means and to export gorgeous images."
 authors = ["Douwe Schulte <d.schulte@uu.nl>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/snijderlab/annotator"

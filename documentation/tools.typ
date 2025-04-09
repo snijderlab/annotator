@@ -19,7 +19,3 @@ This can be used to find modifications in any of the ontologies (modification da
 == Isotopic distribution
 
 Here the isotopic distribution for any molecular formula can be generated. All weights of the formula will be displayed as well as a graph with all isotopic peaks. Hovering over the peaks gives additional details on that specific peak. For the generation of the isotopic distribution an averagine model is used that slightly overestimates the prevalence of higher weight isotopes, especially for elements with multiple isotopes. Any element with a defined monoisotopic weight, so any element that is stable and naturally occurring, can be used in the formula.
-
-== GNOme structure browser
-
-The GNOme structure browser is a tool developed by GlyCosmos to find GNOme structures based on glycan composition. This tools is embeded into the Annotator for ease of use. Find more information on this tool here: #link("https://glycosmos.org/glycans/gnome")[https://glycosmos.org/glycans/gnome].
