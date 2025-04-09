@@ -884,7 +884,8 @@ impl RenderToTable for MetaData {
             MetaData::DeepNovoFamily(_)
             | MetaData::InstaNovo(_)
             | MetaData::PowerNovo(_)
-            | MetaData::PepNet(_) => Vec::new(),
+            | MetaData::PepNet(_)
+            | MetaData::BasicCSV(_) => Vec::new(),
         }
     }
 }

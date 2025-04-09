@@ -262,6 +262,8 @@ fn main() {
               <input id="search-peptide-minimal-match" type="number" min="0" max="1" value="0"></input>
               <label for="search-peptide-minimal-peptide">Minimal peptide score</label>
               <input id="search-peptide-minimal-peptide" type="number" min="0" max="1" value="0"></input>
+              <label for="search-peptide-amount">Number of results</label>
+              <input id="search-peptide-amount" type="number" min="0" value="25"></input>
               <button id="search-peptide">Search</button>
             </div>
             <div id="resulting-peptides">Go and search!</div>

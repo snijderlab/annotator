@@ -13,7 +13,7 @@ use mzdata::{
     },
 };
 use mzpeaks::{CentroidPeak, DeconvolutedPeak, peak_set::PeakSetVec};
-use mzsignal::PeakPicker;
+use mzsignal::{ArrayPairLike, PeakPicker};
 use rustyms::{
     error::{Context, CustomError},
     system::{Mass, OrderedTime, dalton},
@@ -608,17 +608,7 @@ pub fn create_selected_spectrum(
             Context::None,
         ));
     } else if spectra.len() == 1 {
-        spectra.pop().unwrap()
-    } else {
-        let data = mzdata::spectrum::average_spectra(&spectra, 0.001);
-        MultiLayerSpectrum::<CentroidPeak, DeconvolutedPeak>::new(
-            SpectrumDescription::default(),
-            Some(data.into()),
-            None,
-            None,
-        )
-    };
-    if spectrum.peaks.is_none() {
+        let mut spectrum = spectra.pop().unwrap();
         if filter != 0.0 {
             spectrum.denoise(filter).map_err(|err| {
                 CustomError::error(
@@ -643,7 +633,32 @@ pub fn create_selected_spectrum(
         {
             spectrum.peaks = spectrum.arrays.as_ref().map(|a| a.into());
         }
-    }
+        spectrum
+    } else {
+        let description = spectra
+            .first()
+            .map(|s| s.description.clone())
+            .unwrap_or_default();
+        let averaged = mzdata::spectrum::average_spectra(&spectra, 0.001);
+        let mut binding = averaged.intensity_array().to_owned();
+        let picked = if filter != 0.0 {
+            let denoised =
+                mzsignal::denoise::denoise(&averaged.mz_array, &mut binding, filter).unwrap();
+            mzsignal::peak_picker::pick_peaks(&averaged.mz_array, denoised).unwrap()
+        } else {
+            mzsignal::peak_picker::pick_peaks(&averaged.mz_array, &averaged.intensity_array)
+                .unwrap()
+        };
+
+        MultiLayerSpectrum::new(
+            description,
+            None,
+            Some(PeakSetVec::new(
+                picked.into_iter().map(Into::into).collect(),
+            )),
+            None,
+        )
+    };
 
     Ok(spectrum)
 }

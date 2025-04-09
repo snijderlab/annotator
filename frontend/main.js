@@ -437,7 +437,12 @@ async function identified_peptide_details() {
 async function search_peptide() {
   if (document.querySelector("#search-peptide-input").value != "") {
     document.querySelector("#search-peptide").classList.add("loading");
-    invoke("search_peptide", { text: document.querySelector("#search-peptide-input").value, minimalMatchScore: Number(document.querySelector("#search-peptide-minimal-match").value), minimalPeptideScore: Number(document.querySelector("#search-peptide-minimal-peptide").value) }).then((result) => {
+    invoke("search_peptide", {
+      text: document.querySelector("#search-peptide-input").value,
+      minimalMatchScore: Number(document.querySelector("#search-peptide-minimal-match").value),
+      minimalPeptideScore: Number(document.querySelector("#search-peptide-minimal-peptide").value),
+      amount: Number(document.querySelector("#search-peptide-amount").value)
+    }).then((result) => {
       document.querySelector("#resulting-peptides").innerHTML = result;
       document.querySelector("#search-peptide").classList.remove("loading");
       clearError("spectrum-error");

@@ -1130,8 +1130,8 @@ input:not(:checked)+.collapsible {
     }
 
     &>span {
-        --pad-left: 0px;
-        --pad-right: 0px;
+        --pad-left: 1px;
+        --pad-right: 1px;
         margin: 0 2px 0 -2px;
         background-color: color-mix(in oklab, var(--color-highlight) 20%, var(--color-background));
         position: relative;

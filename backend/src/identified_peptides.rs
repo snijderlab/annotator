@@ -1,4 +1,4 @@
-use crate::{html_builder, state::IdentifiedPeptideFile, ModifiableState};
+use crate::{ModifiableState, html_builder, state::IdentifiedPeptideFile};
 use align::AlignScoring;
 use itertools::Itertools;
 use rayon::prelude::*;
@@ -15,7 +15,7 @@ pub async fn load_identified_peptides_file<'a>(
 ) -> Result<Option<CustomError>, CustomError> {
     let state = state.lock().unwrap();
     let mut peptide_errors = Vec::new();
-    let peptides = open_identified_peptides_file(path, state.database())?;
+    let peptides = open_identified_peptides_file(path, state.database(), false)?;
     state
         .identified_peptide_files_mut()
         .push(IdentifiedPeptideFile::new(
@@ -93,6 +93,7 @@ pub async fn search_peptide<'a>(
     text: &'a str,
     minimal_match_score: f64,
     minimal_peptide_score: f64,
+    amount: usize,
     state: ModifiableState<'a>,
 ) -> Result<String, CustomError> {
     let state = state.lock().map_err(|_| {
@@ -121,21 +122,27 @@ pub async fn search_peptide<'a>(
                 .map(|(index, p)| (file.id, index, p))
         })
         .filter(|(_, _, p)| {
-            p.score.map_or(true, |score| {
-                score >= minimal_peptide_score && p.peptide().is_some()
-            })
+            p.score
+                .is_none_or(|score| score >= minimal_peptide_score && p.peptide().is_some())
         })
         .par_bridge()
         .filter_map(|p| {
+            // Take the peptide if it is a single peptide, or if it is a compound peptidoform ion but only contains one peptide take that
             p.2.peptide()
                 .and_then(|p| p.peptide())
-                .and_then(|p| p.into_owned().into_semi_ambiguous())
+                .and_then(|p| p.into_owned().into_simple_linear())
+                .or(p.2.peptide().and_then(|p| {
+                    p.compound_peptidoform()
+                        .into_owned()
+                        .singular_peptide()
+                        .and_then(|p| p.into_simple_linear())
+                }))
                 .map(|simple| (p.0, p.1, p.2, simple))
         })
         .map(|(id, index, peptide, simple)| {
             (
                 index,
-                align::<4, SemiAmbiguous, SimpleLinear>(
+                align::<4, SimpleLinear, SimpleLinear>(
                     &simple,
                     &search,
                     AlignScoring::default(),
@@ -149,13 +156,13 @@ pub async fn search_peptide<'a>(
         .filter(|(_, alignment, _, _)| alignment.normalised_score() >= minimal_match_score)
         .collect::<Vec<_>>()
         .into_iter()
-        .k_largest_by(25, |a, b| {
+        .k_largest_by(amount, |a, b| {
             a.1.score().normalised.cmp(&b.1.score().normalised)
         })
         .map(|(index, alignment, peptide, id)| {
             let start = alignment.start_a();
             let end = alignment.start_a() + alignment.len_a();
-            let sequence = peptide.peptide().unwrap().peptide().unwrap().clone();
+            let sequence = alignment.seq_a();
             vec![
                 format!(
                     "<a onclick=\"load_peptide({id}, {index})\">F{}:{index}</a>",
