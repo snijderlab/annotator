@@ -30,4 +30,4 @@ dist-ssr
 
 # Auto generated files
 /frontend/index.html
-*.pdf
+/documentation/*.pdf

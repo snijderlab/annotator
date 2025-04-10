@@ -202,7 +202,7 @@ h1 {
     padding-top: 1rem;
 }
 
-a {
+a:not(.button) {
     color: var(--color-primary);
     cursor: pointer;
 
@@ -299,6 +299,7 @@ dialog {
         border-radius: 1000px;
         font-size: 1rem;
         padding: .25rem;
+        text-decoration: none;
 
         &:hover {
             border-color: var(--_clr-hover);

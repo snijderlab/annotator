@@ -254,7 +254,8 @@ fn main() {
     
     <body class="theme-auto" id="body">
       <div class='header'>
-        <button print" onclick="window.print()">Export</button>
+        <button class="print" onclick="window.print()">Export</button>
+        <a target="_blank" class="button secondary" href="/assets/Annotator-manual.pdf">Manual</a>
         <button class="cancel-drop" onclick='document.querySelector("html").classList.remove("file-drop-hover")'>Cancel drop</button>
         <div class="theme">
           <span>Theme</span>

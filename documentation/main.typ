@@ -37,6 +37,8 @@
 
 #outline(indent: auto, depth: 2)
 
+#pagebreak()
+
 = Formatting guide
 
 Buttons are displayed as #button[Button]. Keys used in key combinations as #key[Key].
@@ -45,7 +47,7 @@ Buttons are displayed as #button[Button]. Keys used in key combinations as #key[
 
 #set heading(numbering: "1.1", outlined: true)
 
-#pagebreak()
+
 #include "installing.typ"
 #include "rawfiles.typ"
 #include "identified_peptide_files.typ"
@@ -53,3 +55,11 @@ Buttons are displayed as #button[Button]. Keys used in key combinations as #key[
 #include "spectrum.typ"
 #include "tools.typ"
 #include "exporting.typ"
+
+#{
+  show heading: none
+  heading()[Amino acids cheat sheet]
+  page(header: none, margin: 0pt, image(width: 100%, height: 100%, "amino_acids_cheat_sheet_1.2_print.svg"))
+  heading()[Fragmentation cheat sheet]
+  page(header: none, margin: 0pt, image(width: 100%, height: 100%, "fragmentation_cheat_sheet_1.1_print.svg"))
+}

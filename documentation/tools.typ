@@ -1,6 +1,6 @@
 = Tools
 
-== Search modification
+== Search modifications
 
 This can be used to find modifications in any of the ontologies (modification databases) or find more information on a single modification. The search box can be used as follows:
 
