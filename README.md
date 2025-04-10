@@ -1,8 +1,12 @@
-A simple tool to help you manually discover the depths of your spectra one spectrum at a time. It can load MGF/mzML and thermo raw (see note at the end) files (only in centroid mode, also deconvolution must be done separately if needed). Once loaded you can select a scan and add you annotation while tweaking the exact settings for generating the annotation. The annotation itself is interactive to help you discover what the spectrum means. Which you can then export as nice images for use in other environments. 
+# Annotator
+
+A simple tool to help you manually discover the depths of your (complex) spectra, one spectrum at a time. Load your rawfiles, select a spectrum and add you annotation with full control over theoretical fragments. Use the interactive spectrum to discover what your spectrum means and to export gorgeous images.
+
+![Figure 1](images/figure_1.svg)
 
 ## Peptide sequence
 
-It uses the [ProForma](https://github.com/HUPO-PSI/ProForma) specification to specify the sequence. Here are some examples of valid sequences:
+It uses the [ProForma 2.0](https://github.com/HUPO-PSI/ProForma) specification to specify the sequence. Here are some examples of valid sequences:
 
 * `VAEINPSNGGTTFNEKFKGGKATJ` Normal aminoacids
 * `EM[L-methionine sulfoxide]EVEES[UNIMOD:21]PEK` Modifications using [unimod](http://www.unimod.org) and [PSI-MOD](https://www.ebi.ac.uk/ols/ontologies/mod)
@@ -16,7 +20,6 @@ It uses the [ProForma](https://github.com/HUPO-PSI/ProForma) specification to sp
 * `TFNEKFC[UNIMOD:374#g1]KGGC[#g1]KATJ` (identical to the one above)
 * `TFNEKF(CKGGCK)[UNIMOD:374#g1]ATJ` (identical to the one above)
 * `VAEINPSNGGTT+FNEKFKGGKATJ` Multimeric spectra, meaning two separate peptides are in your spectrum at the same time
-* `VAEINPSNGGTT/2[1Na+,1H+]` Defined charge and adduct ions
 * `VAEINK[X:DSSO#XL1]SNGGTT//WAK[#XL1]INK` A DSSO cross-link between two lysines on two peptides (note the use of `//` versus `+` to indicate cross-linked peptides)
 * `VAEINK[X:DSSO#XL1]SNGGTT` A hydrolysed DSSO cross-linker
 

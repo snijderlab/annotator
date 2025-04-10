@@ -1510,7 +1510,7 @@ input:not(:checked)+.collapsible {
         --color: var(--color-yellow);
     }
 
-    & .p {
+    & .precursor {
         --color: var(--color-purple-dark);
     }
 
