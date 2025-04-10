@@ -249,6 +249,7 @@ pub async fn load_identified_peptide(
                             for scan in scans {
                                 let _ = match scan {
                                     SpectrumId::Index(i) => state.spectra[index].select_index(i),
+                                    SpectrumId::Number(i) => state.spectra[index].select_index(i-1),
                                     SpectrumId::Native(n) => state.spectra[index].select_native_id(n),
                                     SpectrumId::RetentionTime(rt) => state.spectra[index].select_retention_time(rt),
                                 };
@@ -294,6 +295,7 @@ pub async fn load_identified_peptide(
                                 for scan in scans {
                                     let _ = match scan {
                                         SpectrumId::Index(i) => state.spectra[index].select_index(i),
+                                        SpectrumId::Number(i) => state.spectra[index].select_index(i-1),
                                         SpectrumId::Native(n) => state.spectra[index].select_native_id(n),
                                         SpectrumId::RetentionTime(rt) => state.spectra[index].select_retention_time(rt),
                                     };

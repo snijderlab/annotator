@@ -877,8 +877,7 @@ async function annotate_spectrum() {
     model: Number(document.querySelector("#spectrum-model").value),
     peptide: document.querySelector("#peptide").innerText,
     massMode: document.querySelector("#spectrum-mass-mode").value,
-    mzRange: [optional_number(document.querySelector("#model-mz-range-min").value), optional_number(document.querySelector("#model-mz-range-max").value)],
-    precursorMass: optional_number(document.querySelector("#spectrum-mass").value)
+    mzRange: [optional_number(document.querySelector("#model-mz-range-min").value), optional_number(document.querySelector("#model-mz-range-max").value)]
   }).then((result) => {
     document.querySelector("#spectrum-results-wrapper").innerHTML = result.spectrum;
     document.querySelector("#spectrum-fragment-table").innerHTML = result.fragment_table;
@@ -1255,7 +1254,7 @@ window.addEventListener("DOMContentLoaded", () => {
       .catch(error => console.error(error))
   });
   let cancel_custom_model_dialog = () => {
-    console.log(dialog.dataset.duplicate)
+    let dialog = document.getElementById("custom-model-dialog");
     if (dialog.dataset.duplicate == "true")
       invoke("delete_custom_model", { id: Number(dialog.dataset.id) });
     dialog.close()

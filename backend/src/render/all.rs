@@ -30,7 +30,6 @@ pub fn annotated_spectrum(
     model: &FragmentationModel,
     parameters: &MatchingParameters,
     mass_mode: MassMode,
-    masses: &[f64],
 ) -> (String, Limits) {
     let mut output = String::new();
     let (limits, overview) = get_overview(spectrum);
@@ -121,7 +120,6 @@ pub fn annotated_spectrum(
         multiple_peptidoforms,
         parameters,
         mass_mode,
-        masses,
     );
 
     //write!(output, "</div>").unwrap();
@@ -641,7 +639,6 @@ fn general_stats(
     multiple_peptidoforms: bool,
     parameters: &MatchingParameters,
     mass_mode: MassMode,
-    masses: &[f64],
 ) {
     fn format(recovered: Recovered<u32>) -> String {
         format!(
@@ -723,33 +720,13 @@ fn general_stats(
                 .clone()
                 .into_linear()
                 .map_or("Part of peptidoform ion".to_string(), |p| {
-                    let theoretical_masses =
-                        p.formulas().iter().map(|f| f.mass(mass_mode)).collect_vec();
-                    dbg!(p.get_charge_carriers());
-                    if theoretical_masses.len() == 1 {
-                        let mass = theoretical_masses[0];
-                        display_mass(mass, Some(mass_mode))
-                            .content(
-                                if let Some(min) = masses
-                                    .iter()
-                                    .min_by(|a, b| {
-                                        (**a - mass.value)
-                                            .abs()
-                                            .total_cmp(&(**b - mass.value).abs())
-                                    })
-                                    .map(|min| mass.value - min)
-                                {
-                                    format!(" Δ{min:+.3}Da")
-                                } else {
-                                    String::new()
-                                },
-                            )
-                            .clone()
-                            .to_string()
+                    let formulas = p.formulas();
+                    if formulas.len() == 1 {
+                        display_masses(&formulas[0]).to_string()
                     } else {
-                        theoretical_masses
+                        formulas
                             .iter()
-                            .map(|mass| display_mass(*mass, Some(mass_mode)))
+                            .map(|f| display_mass(f.mass(mass_mode), Some(mass_mode)))
                             .join(", ")
                     }
                 });
