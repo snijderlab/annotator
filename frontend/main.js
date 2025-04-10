@@ -521,7 +521,7 @@ async function load_identified_peptide() {
     document.querySelector("#peptide").innerText = result.peptide;
     document.querySelector("#spectrum-charge").value = result.charge;
     if (result.mode != null) {
-      document.querySelector("#spectrum-model").value = result.mode.toLowerCase();
+      document.querySelector("#spectrum-model").value = result.mode;
     }
     if (result.warning != null) {
       showError("spectrum-error", result.warning);
@@ -703,6 +703,7 @@ function get_losses(ion) {
 }
 
 function set_losses(ion, losses) {
+  document.querySelectorAll("#model-" + ion + "-loss-selection-dialog input[type=checkbox]").forEach(c => c.checked = false);
   let custom = [];
   for (let loss of losses["neutral_losses"]) {
     if (["-H1O1", "-H2O1", "-H4O2", "-H6O3", "-H1", "-H2", "-H3", "-H3N1", "-C1O1"].includes(loss)) {
@@ -726,7 +727,6 @@ function set_losses(ion, losses) {
   populateSeparatedInput("model-" + ion + "-aa-loss", custom_aa);
   document.getElementById("model-" + ion + "-aa-side-chain-loss-number").value = losses["amino_acid_side_chain_losses"];
   populateSeparatedInput("model-" + ion + "-aa-side-chain-loss-selection", losses["amino_acid_side_chain_losses_selection"]);
-  // TODO:  Refresh the counter behind the button (also make it so that the counter works for the new complex types)
 }
 
 function get_variants(ion) {
@@ -779,6 +779,13 @@ function number_or_null(id) {
   return value == "" ? null : Number(value);
 }
 
+function update_neutral_losses_selection_count(element) {
+  var num = 0;
+  element.querySelectorAll("input[type=checkbox]").forEach(e => num += e.checked);
+  num += element.querySelectorAll(".separated-input>.values>.element").length;
+  element.previousSibling.innerText = num + " selected";
+};
+
 function get_model() {
   var model = {
     a: { location: get_location("#model-a-location"), charge_range: get_charge_range("a"), variants: get_variants("a"), ...get_losses("a") },
@@ -791,7 +798,7 @@ function get_model() {
     y: { location: get_location("#model-y-location"), charge_range: get_charge_range("y"), variants: get_variants("y"), ...get_losses("y") },
     z: { location: get_location("#model-z-location"), charge_range: get_charge_range("z"), variants: get_variants("z"), ...get_losses("z") },
     precursor: [get_losses("precursor"), get_charge_range("precursor")],
-    immonium: [document.querySelector("#model-immonium-enabled").checked, get_charge_range("immonium")],
+    immonium: [document.querySelector("#model-immonium-enabled").checked, get_charge_range("immonium"), loadSeparatedInput("model-immonium-aa-loss")],
     modification_neutral: document.querySelector("#model-modification-neutral-enabled").checked,
     modification_diagnostic: [document.querySelector("#model-modification-diagnostic-enabled").checked, get_charge_range("diagnostic")],
     cleave_cross_links: document.querySelector("#model-cleave-cross-links-enabled").checked,
@@ -861,8 +868,14 @@ function loadCustomModelEdit(model) {
   set_charge_range("diagnostic", model["modification_diagnostic"][1]);
   document.getElementById("model-immonium-enabled").checked = model["immonium"][0];
   set_charge_range("immonium", model["immonium"][1]);
+  populateSeparatedInput("model-immonium-aa-loss", model["immonium"][2]);
   document.getElementById("model-modification-neutral-enabled").checked = model["modification_neutral"];
   document.getElementById("model-cleave-cross-links-enabled").checked = model["cleave_cross_links"];
+
+  // Selected neutral losses number
+  document.querySelectorAll("dialog.neutral-loss").forEach(c => {
+    update_neutral_losses_selection_count(c);
+  })
 }
 
 async function annotate_spectrum() {
@@ -1261,6 +1274,9 @@ window.addEventListener("DOMContentLoaded", () => {
   };
   document.getElementById("custom-model-dialog").addEventListener("cancel", cancel_custom_model_dialog);
   document.getElementById("custom-model-cancel").addEventListener("click", cancel_custom_model_dialog);
+  document.querySelectorAll("dialog.neutral-loss").forEach(c => {
+    c.addEventListener("close", e => update_neutral_losses_selection_count(e.target))
+  })
   updateCustomModels();
 
   // Refresh interface for hot reload

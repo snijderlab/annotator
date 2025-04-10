@@ -90,7 +90,7 @@ pub fn parse_aa_neutral_loss(
 }
 
 pub fn display_aa_neutral_loss(aa: &[AminoAcid], loss: &[NeutralLoss]) -> String {
-    aa.iter().join(",") + ":" + &loss.iter().map(display_neutral_loss).join(",")
+    aa.iter().join(",") + ":" + &loss.iter().map(|l| l.hill_notation()).join(",")
 }
 
 #[tauri::command]

@@ -1,4 +1,7 @@
-use crate::{ModifiableState, html_builder, state::IdentifiedPeptideFile};
+use crate::{
+    ModifiableState, html_builder,
+    state::{IdentifiedPeptideFile, State},
+};
 use align::AlignScoring;
 use itertools::Itertools;
 use rayon::prelude::*;
@@ -198,12 +201,12 @@ pub async fn search_peptide<'a>(
 pub struct IdentifiedPeptideSettings {
     pub peptide: String,
     pub charge: Option<usize>,
-    pub mode: Option<String>,
+    pub mode: Option<usize>,
     pub warning: Option<String>,
 }
 
 impl IdentifiedPeptideSettings {
-    fn from_peptide(peptide: &IdentifiedPeptide, warning: Option<String>) -> Self {
+    fn from_peptide(state: &State, peptide: &IdentifiedPeptide, warning: Option<String>) -> Self {
         let mut str_peptide = String::new();
         if let Some(peptide) = peptide.peptide() {
             peptide.display(&mut str_peptide, true, false).unwrap()
@@ -213,14 +216,7 @@ impl IdentifiedPeptideSettings {
             charge: peptide.charge().map(|v| v.value),
             mode: peptide
                 .mode()
-                .map(|mode| {
-                    if mode.to_lowercase() == "hcd" || mode.to_lowercase() == "cid" {
-                        "CidHcd"
-                    } else {
-                        mode
-                    }
-                })
-                .map(|mode| mode.to_string()),
+                .and_then(|mode| crate::model::get_model_index(state, mode)),
             warning,
         }
     }
@@ -307,7 +303,7 @@ pub async fn load_identified_peptide(
                     },
                 }
 
-                IdentifiedPeptideSettings::from_peptide(&peptide, message)
+                IdentifiedPeptideSettings::from_peptide(&state, &peptide, message)
             })
             .ok_or("The identified peptide could not be found")
     } else {

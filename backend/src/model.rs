@@ -38,6 +38,32 @@ pub fn get_models(state: &State) -> (usize, Vec<(bool, &str, &FragmentationModel
     (built_in_length, output)
 }
 
+const BUILT_IN_MODELS: &[&[&str]] = &[
+    &["all"],
+    &["ethcd", "etcid", "etcad"],
+    &["eacid"],
+    &["ead"],
+    &["cid", "hcd"],
+    &["etd"],
+    &["td_etd"],
+    &["uvpd"],
+    &["none"],
+];
+
+pub fn get_model_index(state: &State, name: &str) -> Option<usize> {
+    for (index, options) in BUILT_IN_MODELS.iter().enumerate() {
+        if options.iter().any(|o| o.eq_ignore_ascii_case(name)) {
+            return Some(index);
+        }
+    }
+    for (index, option) in state.models.iter().enumerate() {
+        if option.0.eq_ignore_ascii_case(name) {
+            return Some(index);
+        }
+    }
+    None
+}
+
 #[tauri::command]
 pub fn get_custom_models(
     state: ModifiableState,
@@ -192,7 +218,7 @@ pub struct ModelParameters {
     pub y: PrimarySeriesParameters,
     pub z: PrimarySeriesParameters,
     pub precursor: (PrecursorLosses, ChargeRange),
-    pub immonium: (bool, ChargeRange),
+    pub immonium: (bool, ChargeRange, Vec<String>),
     pub modification_diagnostic: (bool, ChargeRange),
     pub modification_neutral: bool,
     pub cleave_cross_links: bool,
@@ -234,7 +260,17 @@ impl TryFrom<ModelParameters> for FragmentationModel {
                 }),
                 value.precursor.1,
             )
-            .immonium(value.immonium.0.then_some((value.immonium.1, Vec::new())))
+            .immonium(
+                value.immonium.0.then_some((
+                    value.immonium.1,
+                    value
+                        .immonium
+                        .2
+                        .iter()
+                        .map(|rule| parse_aa_neutral_loss(rule))
+                        .collect::<Result<Vec<_>, _>>()?,
+                )),
+            )
             .modification_specific_diagnostic_ions(
                 value
                     .modification_diagnostic
@@ -260,9 +296,19 @@ impl From<FragmentationModel> for ModelParameters {
             y: value.y.into(),
             z: value.z.into(),
             precursor: ((&value.precursor).into(), value.precursor.3),
-            immonium: value
-                .immonium
-                .map_or((false, ChargeRange::ONE), |(c, _)| (true, c)),
+            immonium: value.immonium.map_or(
+                (false, ChargeRange::ONE, Vec::new()),
+                |(c, losses)| {
+                    (
+                        true,
+                        c,
+                        losses
+                            .iter()
+                            .map(|(aa, loss)| display_aa_neutral_loss(aa, loss))
+                            .collect(),
+                    )
+                },
+            ),
             modification_diagnostic: value
                 .modification_specific_diagnostic_ions
                 .map_or((false, ChargeRange::ONE), |c| (true, c)),

@@ -7,66 +7,73 @@ mod html_builder;
 use html_builder::*;
 
 fn create_loss_modal(id: &str) -> HtmlElement {
-    let mut dialog = vec![
-        HtmlTag::h2.new().content("Normal losses and gains").clone(),
-        HtmlTag::div
-            .new()
-            .class("col-2")
-            .children([
-                HtmlTag::div
-                    .new()
-                    .children(
-                        std::iter::once(HtmlTag::h3.new().content("Losses").clone()).chain(
-                            HtmlElement::input_list(
-                                format!("model-{id}-loss-selection"),
-                                "checkbox",
-                                "block",
-                                [
-                                    ("-H1O1", "OH"),
-                                    ("-H2O1", "Water"),
-                                    ("-H4O2", "Double water"),
-                                    ("-H6O3", "Triple water"),
-                                    ("-H1", "Hydrogen"),
-                                    ("-H2", "Double hydrogen"),
-                                    ("-H3", "Triple hydrogen"),
-                                    ("-H3N1", "Ammonia"),
-                                    ("-C1O1", "Carbon monoxide"),
-                                ],
+    let mut dialog = if id == "immonium" {
+        vec![
+          HtmlTag::h2.new().content("Immonium ion specific neutral losses").clone(),
+          HtmlTag::p.new().content("Immonium ions commonly undergo exstensive neutral losses and gains. Here these losses can be defined specifically for each amino acid.").clone(),
+          HtmlElement::separated_input(format!("model-{id}-aa-loss"), "Amino acid codes followed by a colon and the losses separated by commas", "aa_neutral_loss"),
+         ]
+    } else {
+        let mut dialog = vec![
+            HtmlTag::h2.new().content("Normal losses and gains").clone(),
+            HtmlTag::div
+                .new()
+                .class("col-2")
+                .children([
+                    HtmlTag::div
+                        .new()
+                        .children(
+                            std::iter::once(HtmlTag::h3.new().content("Losses").clone()).chain(
+                                HtmlElement::input_list(
+                                    format!("model-{id}-loss-selection"),
+                                    "checkbox",
+                                    "block",
+                                    [
+                                        ("-H1O1", "OH"),
+                                        ("-H2O1", "Water"),
+                                        ("-H4O2", "Double water"),
+                                        ("-H6O3", "Triple water"),
+                                        ("-H1", "Hydrogen"),
+                                        ("-H2", "Double hydrogen"),
+                                        ("-H3", "Triple hydrogen"),
+                                        ("-H3N1", "Ammonia"),
+                                        ("-C1O1", "Carbon monoxide"),
+                                    ],
+                                ),
                             ),
-                        ),
-                    )
-                    .clone(),
-                HtmlTag::div
-                    .new()
-                    .children(
-                        std::iter::once(HtmlTag::h3.new().content("Gains").clone()).chain(
-                            HtmlElement::input_list(
-                                format!("model-{id}-gain-selection"),
-                                "checkbox",
-                                "block",
-                                [
-                                    ("+H2O1", "Water"),
-                                    ("+H4O2", "Double water"),
-                                    ("+H6O3", "Triple water"),
-                                    ("+H1", "Hydrogen"),
-                                    ("+H2", "Double hydrogen"),
-                                    ("+H3", "Triple hydrogen"),
-                                ],
+                        )
+                        .clone(),
+                    HtmlTag::div
+                        .new()
+                        .children(
+                            std::iter::once(HtmlTag::h3.new().content("Gains").clone()).chain(
+                                HtmlElement::input_list(
+                                    format!("model-{id}-gain-selection"),
+                                    "checkbox",
+                                    "block",
+                                    [
+                                        ("+H2O1", "Water"),
+                                        ("+H4O2", "Double water"),
+                                        ("+H6O3", "Triple water"),
+                                        ("+H1", "Hydrogen"),
+                                        ("+H2", "Double hydrogen"),
+                                        ("+H3", "Triple hydrogen"),
+                                    ],
+                                ),
                             ),
-                        ),
-                    )
-                    .clone(),
-            ])
-            .clone(),
-        HtmlTag::h3.new().content("Custom").clone(),
-        HtmlElement::separated_input(
-            format!("model-{id}-loss"),
-            "Add molecular formula or mass preceded by '+' or '-'",
-            "neutral_loss",
-        ),
-    ];
-    if id == "glycan" {
-        dialog.extend(
+                        )
+                        .clone(),
+                ])
+                .clone(),
+            HtmlTag::h3.new().content("Custom").clone(),
+            HtmlElement::separated_input(
+                format!("model-{id}-loss"),
+                "Add molecular formula or mass preceded by '+' or '-'",
+                "neutral_loss",
+            ),
+        ];
+        if id == "glycan" {
+            dialog.extend(
           [HtmlTag::h2.new().content("Diagnostic ion monosaccharide specific neutral losses").clone(),
             HtmlTag::p.new().content("Single monosaccharides will be generated as diagnostic ions. With the settings below the neutral losses for each of these diagnostic ions can be controlled. If a colon is used the rule will apply to any monosaccharide that is equivalent when isomeric state is disregarded, while when equals '=' is used the isomeric state has to be identical as well.").clone(),
             HtmlElement::separated_input(format!("model-{id}-specific-loss"), "Monosaccharide followed by a colon or equals and the losses separated by commas", "monosaccharide_neutral_loss"),
@@ -89,8 +96,8 @@ fn create_loss_modal(id: &str) -> HtmlElement {
                 HtmlTag::button.new().class("cancel secondary").id("model-glycan-fragments-cancel").content("Cancel").clone(),
               ])).content(HtmlTag::output.new().class("error").header2("hidden")).clone()
         ]))
-    } else {
-        dialog.extend(
+        } else {
+            dialog.extend(
         [HtmlTag::h2.new().content("Amino acid specific losses and gains").clone(),
           HtmlTag::p.new().content("Some losses are only seen from certain amino acids, so all losses specified here will only be generated if the indicated amino acid is present in the fragment. When defining rules multiple amino acids can be combined with multiple losses, for example <code>N,D:-C1H4,-C1H4O1</code> indicates that N and D can both lose either C<sub>1</sub>H<sub>4</sub> or C<sub>1</sub>H<sub>4</sub>O<sub>1</sub>.").clone()
         ].into_iter().chain(
@@ -104,6 +111,8 @@ fn create_loss_modal(id: &str) -> HtmlElement {
             HtmlTag::label.new().content(HtmlTag::input.new().id(format!("model-{id}-aa-side-chain-loss-number")).header("type", "number").header("min", "0").header("value", "0").header("max", "255").clone()).content("Maximal number of lost side chains").clone(),
             HtmlElement::separated_input(format!("model-{id}-aa-side-chain-loss-selection"), "Add amino acid code", "amino_acid"),])
           )
+        };
+        dialog
     };
     dialog.push(
         HtmlTag::button
@@ -113,11 +122,30 @@ fn create_loss_modal(id: &str) -> HtmlElement {
             .content("Close")
             .clone(),
     );
-    HtmlTag::div.new().children([
-    HtmlTag::button.new().header("onclick", format!("document.getElementById('model-{id}-loss-selection-dialog').showModal();")).content("Select"),
-    HtmlTag::output.new().id(format!("model-{id}-loss-selection-output")).class("selected-neutral-loss").content("0 selected"),
-    HtmlTag::dialog.new().class("neutral-loss").id(format!("model-{id}-loss-selection-dialog")).header("onclose", format!(r##"var num = 0; document.getElementsByName("model-{id}-loss-selection").forEach(e=>num += e.checked); num += document.querySelectorAll("#model-{id}-loss-selection-dialog .element").length;document.getElementById("model-{id}-loss-selection-output").innerText = num + " selected";"##)).children(dialog)
-  ]).clone()
+    HtmlTag::div
+        .new()
+        .children([
+            HtmlTag::button
+                .new()
+                .header(
+                    "onclick",
+                    format!(
+                        "document.getElementById('model-{id}-loss-selection-dialog').showModal();"
+                    ),
+                )
+                .content("Select"),
+            HtmlTag::output
+                .new()
+                .id(format!("model-{id}-loss-selection-output"))
+                .class("selected-neutral-loss")
+                .content("0 selected"),
+            HtmlTag::dialog
+                .new()
+                .class("neutral-loss")
+                .id(format!("model-{id}-loss-selection-dialog"))
+                .children(dialog),
+        ])
+        .clone()
 }
 
 #[derive(Copy, Clone)]
@@ -816,7 +844,7 @@ fn main() {
             <div class="grid-row">
               <label>immonium</label>
               <label><input id='model-immonium-enabled' type='checkbox' switch/>Enable</label>
-              <span class='empty'></span>
+              {}
               {}
             </div>
             <div class="grid-row">
@@ -849,6 +877,7 @@ fn main() {
     create_charge_range_fields("glycan-other", ChargeRange::OneToPrecursor),
     create_charge_range_fields("glycan-oxonium", ChargeRange::One),
     create_charge_range_fields("diagnostic", ChargeRange::One),
+    create_loss_modal("immonium"),
     create_charge_range_fields("immonium", ChargeRange::One),
     version
         )
