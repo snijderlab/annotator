@@ -16,6 +16,9 @@ It can even make nice pictures from glycans as seen below.
 
 ## Features
 
+> [!TIP]
+> Do you have some very complex feature in your spectra? It is extremely likely the Annotator can annotate it.
+
 * Open raw files (mgf, mzML, Thermo RAW, Bruker .tdf)
 * Full ProForma 2.0 support:
     - Complex modifications, from Unimod, PSI-MOD, Resid, and XLMOD, but also masses and formula
@@ -51,17 +54,14 @@ It uses the [ProForma 2.0](https://github.com/HUPO-PSI/ProForma) specification t
 * `VAEINK[X:DSSO#XL1]SNGGTT//WAK[#XL1]INK` A DSSO cross-link between two lysines on two peptides (note the use of `//` versus `+` to indicate cross-linked peptides)
 * `VAEINK[X:DSSO#XL1]SNGGTT` A hydrolysed DSSO cross-linker
 
-## Note on custom modifications and models
-
-Custom modifications can be defined, these allow diagnostic ions and neutral losses to be defined. Additionally custom cross-linkers can be defined to have certain cleavage patterns that can then be searched for in the annotator. The custom modifications are stored in a separate json file on your computer. Updating the Annotator will not remove any previously defined modifications. Additionally copying this file to another computer will copy the whole database to that computer. This can be used to move all your definitions to a new computer when upgrading or to aid a colleague with your definitions.
-
-For custom models much of the same is true. These allow highly advanced fragmentation rules to be set. These models will also not be removed when updating and can be shared and backed up in the same way.
-
 ## Installing
 
 ### Using winget
 
-On windows use `winget install --id Snijderlab.Annotator`.
+On windows use:
+
+> [!NOTE]  
+> `winget install --id Snijderlab.Annotator`.
 
 ### From binary 
 
@@ -74,3 +74,9 @@ To build from source. Clone the repository. And build with `cargo tauri dev`. Ma
 ## Thermo RAW files
 
 The .NET 8.0 runtime is needed to open Thermo RAW files. [Which can be downloaded here.](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) Additionally on windows you can use `winget install Microsoft.DotNet.Runtime.8` for a quick install.
+
+## Note on custom modifications and models
+
+Custom modifications can be defined, these allow diagnostic ions and neutral losses to be defined. Additionally custom cross-linkers can be defined to have certain cleavage patterns that can then be searched for in the annotator. The custom modifications are stored in a separate json file on your computer. Updating the Annotator will not remove any previously defined modifications. Additionally copying this file to another computer will copy the whole database to that computer. This can be used to move all your definitions to a new computer when upgrading or to aid a colleague with your definitions.
+
+For custom models much of the same is true. These allow highly advanced fragmentation rules to be set. These models will also not be removed when updating and can be shared and backed up in the same way.
