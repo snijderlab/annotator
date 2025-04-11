@@ -1111,6 +1111,7 @@ input:not(:checked)+.collapsible {
     --side-spacing: calc(var(--stroke-peptide) * 0.5);
     --width: .6em;
     --height: .8em;
+    --aa-height: .8em;
     --fragments-padding: 0px;
     --confidence-padding: 0px;
 
@@ -1224,7 +1225,7 @@ input:not(:checked)+.collapsible {
         &.z {
             border-right: none;
             border-bottom: none;
-            bottom: calc(var(--fragments-padding) + var(--height));
+            bottom: calc(var(--fragments-padding) + var(--aa-height));
             left: calc(var(--side-spacing) + var(--pad-left));
         }
 
@@ -1245,7 +1246,7 @@ input:not(:checked)+.collapsible {
             border-width: calc(var(--stroke-peptide) * 0.5);
             left: calc(3 * var(--spacing) + var(--side-spacing) + var(--pad-left));
             right: calc(3 * var(--spacing) + var(--side-spacing) + var(--pad-right));
-            bottom: calc(var(--fragments-padding) + var(--height) + var(--spacing) + 2 * var(--stroke-peptide));
+            bottom: calc(var(--fragments-padding) + var(--aa-height) + var(--spacing) + 2 * var(--stroke-peptide));
             width: auto;
         }
 
@@ -1379,6 +1380,7 @@ input:not(:checked)+.collapsible {
 .spectrum.compact .peptide,
 #identified-peptide-details .peptide {
     --width: calc(.5em - var(--side-spacing));
+    --height: 0.5em;
 
     &>* {
         padding: calc(var(--fragments-padding) + var(--confidence-padding)) var(--pad-right) var(--fragments-padding) var(--pad-left);
@@ -1402,15 +1404,29 @@ input:not(:checked)+.collapsible {
         }
     }
 
-    .corner.d {
-        left: unset;
-        height: var(--side-spacing);
-    }
+    .corner {
 
-    .corner.w {
-        height: var(--side-spacing);
-    }
+        &.x,
+        &.y,
+        &.z,
+        &.w {
+            bottom: calc(var(--fragments-padding) + var(--aa-height) + 2 * var(--spacing));
+        }
 
+        &.d {
+            left: unset;
+            height: var(--side-spacing);
+        }
+
+        &.w {
+            height: var(--side-spacing);
+        }
+
+        &.v {
+            left: var(--side-spacing);
+            right: calc(2 * var(--side-spacing));
+        }
+    }
 }
 
 .spectrum.peptide-intensity-ion {
