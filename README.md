@@ -27,6 +27,7 @@ It can even make nice pictures from glycans as seen below.
     - Chimeric spectra, which includes DIA
     - Glycans, both structures and compositions
 * Supports complex and highly customizable fragmentation models
+    - Has built in models for: HCD, CID, ETD, top-down ETD, EtHCD, EtCAD, EAD, EAciD, UVPD
 * Supports custom modifications
 * Supports loading and searching in 20+ identified peptides file formats
     - Amongst others: msFragger, PEAKS, mzTAB, SSL
