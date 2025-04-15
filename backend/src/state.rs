@@ -33,6 +33,9 @@ impl State {
     pub fn identified_peptide_files_mut(&self) -> RefMut<Vec<IdentifiedPeptideFile>> {
         self.identified_peptide_files.borrow_mut()
     }
+    pub fn spectra_and_models(&mut self) -> (&mut [RawFile], &[(String, FragmentationModel)]) {
+        (&mut self.spectra, &self.models)
+    }
 }
 
 pub struct IdentifiedPeptideFile {

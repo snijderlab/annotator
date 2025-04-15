@@ -1,5 +1,6 @@
 use std::{io::BufWriter, sync::Mutex};
 
+use mzdata::meta::DissociationMethodTerm;
 use serde::{Deserialize, Serialize};
 
 use rustyms::{
@@ -20,6 +21,77 @@ use crate::{
         parse_satellite_ion,
     },
 };
+
+/// Get the corresponding model (index + mzdata name) if the model is built in or could be matched to a custom model or shorthand name if not
+pub fn get_mzdata_model(
+    methods: &[DissociationMethodTerm],
+    custom_models: &[(String, FragmentationModel)],
+) -> Result<(usize, String), String> {
+    let lookup = |method: &DissociationMethodTerm| match method {
+        DissociationMethodTerm::BeamTypeCollisionInducedDissociation => Ok((HCD, "BeamCID")),
+        DissociationMethodTerm::BlackbodyInfraredRadiativeDissociation => {
+            Err("BlackbodyInfraredRadiativeDissociation")
+        }
+        DissociationMethodTerm::CollisionInducedDissociation => Ok((HCD, "CID")),
+        DissociationMethodTerm::DissociationMethod => Err("Dissociation"),
+        DissociationMethodTerm::ElectronActivatedDissociation => Ok((EAD, "EAD")),
+        DissociationMethodTerm::ElectronCaptureDissociation => Ok((ETD, "ECD")),
+        DissociationMethodTerm::ElectronTransferDissociation => Ok((ETD, "ETD")),
+        DissociationMethodTerm::HigherEnergyBeamTypeCollisionInducedDissociation => {
+            Ok((HCD, "BeamHCD"))
+        }
+        DissociationMethodTerm::InfraredMultiphotonDissociation => {
+            Err("InfraredMultiphotonDissociation")
+        }
+        DissociationMethodTerm::InSourceCollisionInducedDissociation => Ok((HCD, "isCID")),
+        DissociationMethodTerm::LIFT => Err("LIFT"),
+        DissociationMethodTerm::LowEnergyCollisionInducedDissociation => Ok((HCD, "lowCID")),
+        DissociationMethodTerm::NegativeElectronTransferDissociation => Ok((ETD, "nETD")),
+        DissociationMethodTerm::Photodissociation => Err("PD"),
+        DissociationMethodTerm::PlasmaDesorption => Err("PlasmaDesorption"),
+        DissociationMethodTerm::PostSourceDecay => Err("PostSourceDecay"),
+        DissociationMethodTerm::PulsedQDissociation => Err("PulsedDissociation"),
+        DissociationMethodTerm::SupplementalBeamTypeCollisionInducedDissociation => {
+            Ok((HCD, "sBeamCID"))
+        }
+        DissociationMethodTerm::SupplementalCollisionInducedDissociation => Ok((HCD, "sCID")),
+        DissociationMethodTerm::SurfaceInducedDissociation => Err("SurfaceInducedDissocation"),
+        DissociationMethodTerm::SustainedOffResonanceIrradiation => {
+            Err("SustainedOffResonanceIrradiation")
+        }
+        DissociationMethodTerm::TrapTypeCollisionInducedDissociation => Ok((HCD, "trapCID")),
+        DissociationMethodTerm::UltravioletPhotodissociation => Ok((UVPD, "UVPD")),
+    };
+
+    #[allow(clippy::manual_try_fold)]
+    methods
+        .iter()
+        .fold(Ok((NONE, "-".to_string())), |acc, method| {
+            match (acc, lookup(method)) {
+                (Ok((NONE, _)), Ok((a, b))) => Ok((a, b.to_string())),
+                (Ok((model1, first)), Ok((model2, second))) if model1 == model2 => {
+                    Ok((model1, format!("{first}+{second}")))
+                }
+                (Ok((ETD, etd)), Ok((HCD, hcd))) => Ok((ETHCD, format!("{etd}+{hcd}"))),
+                (Ok((HCD, hcd)), Ok((ETD, etd))) => Ok((ETHCD, format!("{etd}+{hcd}"))),
+                (Ok((ETHCD, first)), Ok((HCD, second))) => Ok((ETHCD, format!("{first}+{second}"))),
+                (Ok((ETHCD, first)), Ok((ETD, second))) => Ok((ETHCD, format!("{first}+{second}"))),
+                (Ok((EAD, ead)), Ok((HCD, hcd))) => Ok((EACID, format!("{ead}+{hcd}"))),
+                (Ok((HCD, hcd)), Ok((EAD, ead))) => Ok((EACID, format!("{ead}+{hcd}"))),
+                (Ok((EACID, first)), Ok((HCD, second))) => Ok((EACID, format!("{first}+{second}"))),
+                (Ok((EACID, first)), Ok((EAD, second))) => Ok((EACID, format!("{first}+{second}"))),
+                (Ok((_, first)), Ok((_, second))) => Ok((ALL, format!("{first}+{second}"))),
+                (Err(first), Ok((_, second))) => Err(format!("{first}+{second}")),
+                (Ok((_, first)), Err(second)) => Err(format!("{first}+{second}")),
+                (Err(first), Err(second)) => Err(format!("{first}+{second}")),
+            }
+        })
+        .or_else(|n| {
+            get_model_index(custom_models, &n)
+                .map(|i| (i, n.clone()))
+                .ok_or(n)
+        })
+}
 
 pub fn get_models(state: &State) -> (usize, Vec<(bool, &str, &FragmentationModel)>) {
     let mut output = vec![
@@ -49,14 +121,25 @@ const BUILT_IN_MODELS: &[&[&str]] = &[
     &["uvpd"],
     &["none"],
 ];
+const ALL: usize = 0;
+const ETHCD: usize = 1;
+const EACID: usize = 2;
+const EAD: usize = 3;
+const HCD: usize = 4;
+const ETD: usize = 5;
+const UVPD: usize = 7;
+pub const NONE: usize = 8;
 
-pub fn get_model_index(state: &State, name: &str) -> Option<usize> {
+pub fn get_model_index(
+    custom_models: &[(String, FragmentationModel)],
+    name: &str,
+) -> Option<usize> {
     for (index, options) in BUILT_IN_MODELS.iter().enumerate() {
         if options.iter().any(|o| o.eq_ignore_ascii_case(name)) {
             return Some(index);
         }
     }
-    for (index, option) in state.models.iter().enumerate() {
+    for (index, option) in custom_models.iter().enumerate() {
         if option.0.eq_ignore_ascii_case(name) {
             return Some(index);
         }

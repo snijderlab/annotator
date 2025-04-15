@@ -216,7 +216,7 @@ impl IdentifiedPeptideSettings {
             charge: peptide.charge().map(|v| v.value),
             mode: peptide
                 .mode()
-                .and_then(|mode| crate::model::get_model_index(state, mode)),
+                .and_then(|mode| crate::model::get_model_index(&state.models, mode)),
             warning,
         }
     }

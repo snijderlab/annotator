@@ -168,7 +168,7 @@ async function load_usi() {
     document.querySelector("#peptide").innerText = result.peptide;
     document.querySelector("#spectrum-charge").value = result.charge;
     if (result.mode != null) {
-      document.querySelector("#spectrum-model").value = result.mode.toLowerCase();
+      document.querySelector("#spectrum-model").value = result.mode;
     }
     if (result.warning != null) {
       showError("spectrum-error", result.warning);

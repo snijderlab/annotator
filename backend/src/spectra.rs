@@ -3,9 +3,13 @@ use std::{io::ErrorKind, ops::RangeInclusive, path::Path, str::FromStr};
 use itertools::Itertools;
 use mzdata::{
     Param,
-    io::{MZFileReader, SpectrumSource, proxi::PROXIError, usi::USIParseError},
+    io::{
+        MZFileReader, SpectrumSource,
+        proxi::{PROXIError, PROXIParam},
+        usi::{Identifier, USIParseError},
+    },
     meta::DissociationMethodTerm,
-    params::{ParamDescribed, Unit, Value, ValueRef},
+    params::{CURIE, ParamDescribed, Unit, Value, ValueRef},
     prelude::{IonProperties, PrecursorSelection, SpectrumLike},
     spectrum::{
         ArrayType, BinaryDataArrayType, DataArray, MultiLayerSpectrum, SignalContinuity,
@@ -24,6 +28,7 @@ use crate::{
     ModifiableState,
     identified_peptides::IdentifiedPeptideSettings,
     metadata_render::OptionalString,
+    model::get_mzdata_model,
     render::display_mass,
     state::{RawFile, RawFileDetails},
 };
@@ -40,7 +45,7 @@ pub async fn load_usi<'a>(
     usi: &'a str,
     state: ModifiableState<'a>,
 ) -> Result<IdentifiedPeptideSettings, CustomError> {
-    let usi = mzdata::io::usi::USI::from_str(usi).map_err(|e| match e {
+    let mut usi = mzdata::io::usi::USI::from_str(usi).map_err(|e| match e {
         USIParseError::MalformedIndex(index, e, full) => CustomError::error(
             "Invalid USI: Invalid index",
             format!("The index is not valid: {e}"),
@@ -83,6 +88,14 @@ pub async fn load_usi<'a>(
         ),
     })?;
 
+    // Remove the user added interpretation and add a fake entry.
+    // The original peptide will be added back later after downloading.
+    // This is done because the PROXI servers do not necessarily support
+    // the full ProForma spec and this decoy approach allows the user to
+    // still use the full spec in the Annotator.
+    let peptide = usi.interpretation.take();
+    usi.interpretation = Some("A/1".to_string());
+
     let (backend, spectra) =
         usi.download_spectrum_async(None, None)
             .await
@@ -114,7 +127,7 @@ pub async fn load_usi<'a>(
                 ),
             })?;
 
-    let spectrum = spectra
+    let mut spectrum = spectra
         .into_iter()
         .find(|s| {
             s.status
@@ -123,15 +136,54 @@ pub async fn load_usi<'a>(
         .unwrap();
 
     if let Ok(mut state) = state.lock() {
+        // Fix the stored sequence after the decoy shuffling
+        if let Some(peptide) = peptide.clone() {
+            let param = PROXIParam::new(
+                CURIE::new(mzdata::params::ControlledVocabulary::Unknown, 0),
+                "sequence",
+                Value::String(peptide),
+            );
+            if let Some(index) = spectrum
+                .attributes
+                .iter()
+                .position(|p| p.name.eq_ignore_ascii_case("sequence"))
+            {
+                spectrum.attributes[index] = param;
+            } else {
+                spectrum.attributes.push(param);
+            }
+        } else {
+            spectrum
+                .attributes
+                .retain(|p| !p.name.eq_ignore_ascii_case("sequence"));
+        }
+        let mut spectrum: MultiLayerSpectrum = spectrum.into();
+        spectrum.description.id = format!(
+            "{}:{}:{}",
+            usi.dataset,
+            usi.run_name,
+            usi.identifier.map_or("-".to_string(), |i| match i {
+                Identifier::Scan(s) => format!("scan:{s}"),
+                Identifier::Index(s) => format!("index:{s}"),
+                Identifier::NativeID(s) => format!("nativeId:{}", s.iter().join(",")),
+            })
+        );
+        let mode = spectrum.precursor().and_then(|p| {
+            get_mzdata_model(p.activation.methods(), &state.models)
+                .map(|(i, _)| i)
+                .ok()
+                .filter(|i| *i != crate::model::NONE)
+        });
+
         state.spectra.push(RawFile::new_single(
-            spectrum.into(),
+            spectrum,
             format!("{backend} {} {}", usi.dataset, usi.run_name),
         ));
 
         Ok(IdentifiedPeptideSettings {
-            peptide: usi.interpretation.unwrap_or_default(),
+            peptide: peptide.unwrap_or_default(),
             charge: None,
-            mode: None,
+            mode,
             warning: None,
         })
     } else {
@@ -507,10 +559,9 @@ pub fn get_open_raw_files(state: ModifiableState) -> Vec<RawFileDetails> {
 pub fn get_selected_spectra(
     state: ModifiableState,
 ) -> Vec<(usize, bool, Vec<SelectedSpectrumDetails>)> {
-    state
-        .lock()
-        .unwrap()
-        .spectra
+    if let Ok(mut state) = state.lock() {
+        let (spectra, models) = state.spectra_and_models();
+        spectra
         .iter_mut()
         .map(|file| {
             let id = file.id();
@@ -551,34 +602,7 @@ pub fn get_selected_spectra(
                                 i.target,
                                 i.lower_bound,
                                 i.upper_bound,
-                                p.activation
-                                    .methods()
-                                    .iter()
-                                    .map(|m| match m {
-                                        DissociationMethodTerm::BeamTypeCollisionInducedDissociation => "BeamCID",
-                                        DissociationMethodTerm::BlackbodyInfraredRadiativeDissociation => "BlackbodyInfraredRadiativeDissociation",
-                                        DissociationMethodTerm::CollisionInducedDissociation => "CID",
-                                        DissociationMethodTerm::DissociationMethod => "Dissociation",
-                                        DissociationMethodTerm::ElectronActivatedDissociation => "EAD",
-                                        DissociationMethodTerm::ElectronCaptureDissociation => "ECD",
-                                        DissociationMethodTerm::ElectronTransferDissociation => "ETD",
-                                        DissociationMethodTerm::HigherEnergyBeamTypeCollisionInducedDissociation => "BeamHCD",
-                                        DissociationMethodTerm::InfraredMultiphotonDissociation => "InfraredMultiphotonDissociation",
-                                        DissociationMethodTerm::InSourceCollisionInducedDissociation => "isCID",
-                                        DissociationMethodTerm::LIFT => "LIFT",
-                                        DissociationMethodTerm::LowEnergyCollisionInducedDissociation => "lowCID",
-                                        DissociationMethodTerm::NegativeElectronTransferDissociation => "nETD",
-                                        DissociationMethodTerm::Photodissociation => "PD",
-                                        DissociationMethodTerm::PlasmaDesorption => "PlasmaDesorption",
-                                        DissociationMethodTerm::PostSourceDecay => "PostSourceDecay",
-                                        DissociationMethodTerm::PulsedQDissociation => "PulsedDissociation",
-                                        DissociationMethodTerm::SupplementalBeamTypeCollisionInducedDissociation => "sBeamCID",
-                                        DissociationMethodTerm::SupplementalCollisionInducedDissociation => "sCID",
-                                        DissociationMethodTerm::SurfaceInducedDissociation => "SurfaceInducedDissocation",
-                                        DissociationMethodTerm::SustainedOffResonanceIrradiation => "SustainedOffResonanceIrradiation",
-                                        DissociationMethodTerm::TrapTypeCollisionInducedDissociation => "trapCID",
-                                        DissociationMethodTerm::UltravioletPhotodissociation => "UVPD",
-                                    }).join("+"),
+                                get_mzdata_model(p.activation.methods(), models).map_or_else(|n| n, |(_, n)| n),
                                 p.activation.energy,
                             )
                         }),
@@ -591,6 +615,9 @@ pub fn get_selected_spectra(
                 }
             }).collect_vec())
         }).collect_vec()
+    } else {
+        Vec::new()
+    }
 }
 
 pub fn create_selected_spectrum(
@@ -619,6 +646,7 @@ pub fn create_selected_spectrum(
                 )
             })?;
         }
+
         if spectrum.signal_continuity() == SignalContinuity::Profile {
             spectrum
                 .pick_peaks_with(&PeakPicker::default())
@@ -629,9 +657,8 @@ pub fn create_selected_spectrum(
                         Context::None,
                     )
                 })?;
-        } else if spectrum.signal_continuity() == SignalContinuity::Unknown
-            && spectrum.arrays.is_some()
-        {
+        } else if spectrum.arrays.is_some() && spectrum.peaks.is_none() {
+            // USI spectra are mostly loaded as the binary array maps instead of peaks regardless of the signal continuity level
             spectrum.peaks = spectrum.arrays.as_ref().map(|a| a.into());
         }
         spectrum
