@@ -59,11 +59,6 @@ listen('tauri://drag-leave', event => {
 
 document.addEventListener("dragend", () => document.querySelector("html").classList.remove("file-drop-hover"));
 
-// function abort() {
-//   console.log(controller);
-//   controller.abort("User manual abort");
-// }
-
 /**
 * @param e: Element
 */
@@ -849,7 +844,6 @@ function loadCustomModelEdit(model) {
     true,
   )
   for (let rule of model["glycan"]["specific_glycan_peptide_fragment"]) {
-    console.log(rule);
     addValueListInputGlycanPeptideFragment(
       document.getElementById("model-glycan-fragments").parentElement,
       rule[0],
@@ -883,7 +877,6 @@ async function annotate_spectrum() {
   document.querySelector("#peptide").innerText = document.querySelector("#peptide").innerText.trim();
   var charge = number_or_null("spectrum-charge");
   var noise_threshold = Number(document.querySelector("#noise-filter").value);
-  console.log(Theme);
   invoke("annotate_spectrum", {
     tolerance: [Number(document.querySelector("#spectrum-tolerance").value), document.querySelector("#spectrum-tolerance-unit").value],
     charge: charge,
@@ -1313,7 +1306,6 @@ function editListInput(e, listInput) {
     populateSeparatedInput("custom-mod-linker-stubs", data.stubs);
     populateSeparatedInput("custom-mod-linker-diagnostic-ions", data.diagnostic_ions);
   } else if (listInput.classList.contains("glycan-fragments")) {
-    console.log(data);
     if (data[3]) {
       document.getElementById("model-glycan-fragments-other").hidden = false;
       document.getElementById("model-glycan-fragments-selection-aa").parentElement.hidden = true;
@@ -1350,7 +1342,6 @@ function updateCustomModifications() {
         edit_button.addEventListener("click", () =>
           invoke("get_custom_modification", { id: modification[0] })
             .then(result => {
-              console.log(current_custom_modal_is_duplicate);
               loadCustomModification(result);
               document.getElementById("custom-mod-dialog").showModal();
               document.getElementById("custom-mod-dialog").dataset.duplicate = "false";
@@ -1363,7 +1354,6 @@ function updateCustomModifications() {
         duplicate_button.addEventListener("click", () =>
           invoke("duplicate_custom_modification", { id: modification[0], newId: Number(document.getElementById("custom-mod-create").dataset.newId) })
             .then(result => {
-              console.log(current_custom_modal_is_duplicate);
               loadCustomModification(result);
               document.getElementById("custom-mod-dialog").showModal();
               document.getElementById("custom-mod-dialog").dataset.duplicate = "true";
