@@ -17,6 +17,7 @@ pub fn get_label(
     multiple_peptidoforms: bool,
     multiple_glycans: bool,
     glycan_footnotes: &mut Vec<String>,
+    theme: Theme,
 ) -> String {
     if annotations.is_empty() {
         String::new()
@@ -30,7 +31,7 @@ pub fn get_label(
         let first_glycan_image = get_glycan_figure(
             compound_peptidoform,
             &annotations[0],
-            Theme::Dark,
+            theme,
             glycan_footnotes,
         );
         let mut shared_glycan_figures = Some(first_glycan_image.clone());
@@ -81,9 +82,7 @@ pub fn get_label(
                 }
             }
             if let Some(glycan) = &shared_glycan_figures {
-                if *glycan
-                    != get_glycan_figure(compound_peptidoform, a, Theme::Dark, glycan_footnotes)
-                {
+                if *glycan != get_glycan_figure(compound_peptidoform, a, theme, glycan_footnotes) {
                     shared_glycan_figures = None;
                 }
             }
@@ -186,6 +185,7 @@ pub fn get_label(
                             multiple_glycans,
                             compound_peptidoform,
                             glycan_footnotes,
+                            theme,
                         )
                     )
                     .unwrap();
@@ -205,6 +205,7 @@ pub fn get_label(
                     multiple_glycans,
                     compound_peptidoform,
                     glycan_footnotes,
+                    theme,
                 )
             } else {
                 format!(
@@ -310,17 +311,13 @@ fn get_single_label(
     multiple_glycans: bool,
     compound_peptidoform: &CompoundPeptidoformIon,
     glycan_footnotes: &mut Vec<String>,
+    theme: Theme,
 ) -> String {
     let ch = format!("{:+}", annotation.charge.value);
     format!(
         "{}<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span><span class='cross-links'>{}</span><span class='ambiguous-amino-acids'>{}</span><span class='modifications'>{}</span><span class='charge-carriers'>{}</span><span class='glycan-peptide-fragment'>{}</span></span>",
-        get_glycan_figure(
-            compound_peptidoform,
-            annotation,
-            Theme::Dark,
-            glycan_footnotes
-        )
-        .unwrap_or_default(),
+        get_glycan_figure(compound_peptidoform, annotation, theme, glycan_footnotes)
+            .unwrap_or_default(),
         if let FragmentType::B { b, y, .. } = &annotation.ion {
             format!("B<sub>{}</sub>", b.label())
                 + &y.iter()

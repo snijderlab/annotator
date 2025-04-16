@@ -423,7 +423,7 @@ async function identified_peptide_details() {
   let file_id = Number(select.options[select.selectedIndex].value);
   let index = Number(document.querySelector("#details-identified-peptide-index").value);
   if (displayed_identified_peptide != [file_id, index]) {
-    invoke("identified_peptide_details", { file: file_id, index: index }).then((result) => {
+    invoke("identified_peptide_details", { file: file_id, index: index, theme: Theme }).then((result) => {
       document.querySelector("#identified-peptide-details").innerHTML = result;
       displayed_identified_peptide = [file_id, index];
       clearError("spectrum-error");
@@ -883,6 +883,7 @@ async function annotate_spectrum() {
   document.querySelector("#peptide").innerText = document.querySelector("#peptide").innerText.trim();
   var charge = number_or_null("spectrum-charge");
   var noise_threshold = Number(document.querySelector("#noise-filter").value);
+  console.log(Theme);
   invoke("annotate_spectrum", {
     tolerance: [Number(document.querySelector("#spectrum-tolerance").value), document.querySelector("#spectrum-tolerance-unit").value],
     charge: charge,
@@ -890,7 +891,8 @@ async function annotate_spectrum() {
     model: Number(document.querySelector("#spectrum-model").value),
     peptide: document.querySelector("#peptide").innerText,
     massMode: document.querySelector("#spectrum-mass-mode").value,
-    mzRange: [optional_number(document.querySelector("#model-mz-range-min").value), optional_number(document.querySelector("#model-mz-range-max").value)]
+    mzRange: [optional_number(document.querySelector("#model-mz-range-min").value), optional_number(document.querySelector("#model-mz-range-max").value)],
+    theme: Theme
   }).then((result) => {
     document.querySelector("#spectrum-results-wrapper").innerHTML = result.spectrum;
     document.querySelector("#spectrum-fragment-table").innerHTML = result.fragment_table;

@@ -1323,7 +1323,7 @@ input:not(:checked)+.collapsible {
             content: "";
             display: block;
             position: absolute;
-            top: calc(var(--fragments-padding) + 1.25 * var(--spacing));
+            bottom: calc(var(--height) + var(--fragments-padding) + 2 * var(--spacing));
             left: calc(50% - 0.5 * var(--spacing));
             width: var(--spacing);
             height: calc(0.5 * var(--spacing));
@@ -1426,6 +1426,12 @@ input:not(:checked)+.collapsible {
             left: var(--side-spacing);
             right: calc(2 * var(--side-spacing));
         }
+    }
+
+    &>.modification::before,
+    &.possible-modification::before {
+        left: 50%;
+        bottom: calc(var(--height) + var(--fragments-padding) + 3 * var(--spacing));
     }
 }
 

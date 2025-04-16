@@ -5,20 +5,21 @@ use rustyms::{
 };
 
 use crate::{
+    Theme,
     html_builder::{HtmlContent, HtmlElement, HtmlTag},
     render::{display_mass, display_masses, render_peptide},
 };
 
 pub trait RenderToHtml {
-    fn to_html(&self) -> HtmlElement;
+    fn to_html(&self, theme: Theme) -> HtmlElement;
 }
 
 pub trait RenderToTable {
-    fn to_table(&self) -> Vec<(&'static str, String)>;
+    fn to_table(&self, theme: Theme) -> Vec<(&'static str, String)>;
 }
 
 impl RenderToHtml for IdentifiedPeptide {
-    fn to_html(&self) -> HtmlElement {
+    fn to_html(&self, theme: Theme) -> HtmlElement {
         // Render the peptide with its local confidence
         let peptide = if let Some(peptide) = self.peptide() {
             let mut glycan_footnotes = Vec::new();
@@ -31,6 +32,7 @@ impl RenderToHtml for IdentifiedPeptide {
                     .as_ref()
                     .map(|lc| vec![vec![lc.clone()]]),
                 &mut glycan_footnotes,
+                theme,
             );
             for (index, footnote) in glycan_footnotes.into_iter().enumerate() {
                 buffer.push_str(&format!(
@@ -117,7 +119,7 @@ impl RenderToHtml for IdentifiedPeptide {
                 {
                     HtmlElement::table::<HtmlContent, String>(
                         None,
-                        self.metadata.to_table().into_iter().map(|(h,v)| [h.to_string(), v]),
+                        self.metadata.to_table(theme).into_iter().map(|(h,v)| [h.to_string(), v]),
                     )
                 }
             ])
@@ -126,7 +128,7 @@ impl RenderToHtml for IdentifiedPeptide {
 }
 
 impl RenderToTable for MetaData {
-    fn to_table(&self) -> Vec<(&'static str, String)> {
+    fn to_table(&self, theme: Theme) -> Vec<(&'static str, String)> {
         match self {
             MetaData::Peaks(data) => vec![
                 ("Fraction", data.fraction.to_optional_string()),
@@ -619,9 +621,9 @@ impl RenderToTable for MetaData {
                         .map(|(engine, score, score_type)| {
                             format!(
                                 "{} score: {} ({})",
-                                engine.to_html(),
+                                engine.to_html(theme),
                                 score.to_optional_string(),
-                                score_type.to_html(),
+                                score_type.to_html(theme),
                             )
                         })
                         .join("|"),
@@ -901,7 +903,7 @@ impl<T: ToString> OptionalString for Option<T> {
 }
 
 impl RenderToHtml for CVTerm {
-    fn to_html(&self) -> HtmlElement {
+    fn to_html(&self, _theme: Theme) -> HtmlElement {
         HtmlTag::span
             .new()
             .content(self.term.clone())

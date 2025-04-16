@@ -30,6 +30,7 @@ pub fn annotated_spectrum(
     model: &FragmentationModel,
     parameters: &MatchingParameters,
     mass_mode: MassMode,
+    theme: Theme,
 ) -> (String, Limits) {
     let mut output = String::new();
     let (limits, overview) = get_overview(spectrum);
@@ -71,6 +72,7 @@ pub fn annotated_spectrum(
         Some(overview),
         None,
         &mut glycan_footnotes,
+        theme,
     );
     render_spectrum(
         &mut output,
@@ -87,6 +89,7 @@ pub fn annotated_spectrum(
         &unique_peptide_lookup,
         parameters,
         &mut glycan_footnotes,
+        theme,
     );
     // Error graph
     render_error_graph(
@@ -497,6 +500,7 @@ fn render_spectrum(
     unique_peptide_lookup: &[(usize, usize)],
     parameters: &MatchingParameters,
     glycan_footnotes: &mut Vec<String>,
+    theme: Theme,
 ) {
     write!(
         output,
@@ -571,6 +575,7 @@ fn render_spectrum(
                 multiple_peptides,
                 multiple_glycans,
                 glycan_footnotes,
+                theme,
             ),
         )
         .unwrap();
@@ -593,6 +598,7 @@ fn render_spectrum(
                     multiple_peptides,
                     multiple_glycans,
                     glycan_footnotes,
+                    theme,
                 ),
             )
             .unwrap();

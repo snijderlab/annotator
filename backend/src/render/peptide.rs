@@ -18,6 +18,7 @@ pub fn render_peptide(
     overview: Option<super::PositionCoverage>,
     local_confidence: Option<Vec<Vec<Vec<f64>>>>,
     glycan_footnotes: &mut Vec<String>,
+    theme: Theme,
 ) -> Vec<(usize, usize)> {
     let mut unique_peptide_lookup = Vec::new();
     let multiple_peptidoforms = compound_peptidoform.peptidoform_ions().len() > 1;
@@ -76,6 +77,7 @@ pub fn render_peptide(
                 multiple_peptides,
                 &mut cross_link_lookup,
                 glycan_footnotes,
+                theme,
             );
             unique_peptide_lookup.push((peptidoform_ion_index, peptidoform_index));
         }
@@ -96,6 +98,7 @@ fn render_linear_peptidoform(
     multiple_peptidoforms: bool,
     cross_link_lookup: &mut Vec<CrossLinkName>,
     glycan_footnotes: &mut Vec<String>,
+    theme: Theme,
 ) {
     write!(
         output,
@@ -166,7 +169,7 @@ fn render_linear_peptidoform(
                             structure,
                             false,
                             true,
-                            Theme::Dark,
+                            theme,
                             glycan_footnotes,
                             false,
                             false,
@@ -181,7 +184,7 @@ fn render_linear_peptidoform(
                             structure,
                             false,
                             true,
-                            Theme::Dark,
+                            theme,
                             glycan_footnotes,
                             false,
                             false,
@@ -285,7 +288,7 @@ fn render_linear_peptidoform(
                             structure,
                             false,
                             true,
-                            Theme::Dark,
+                            theme,
                             glycan_footnotes,
                             false,
                             false,
@@ -305,7 +308,7 @@ fn render_linear_peptidoform(
                             structure,
                             false,
                             true,
-                            Theme::Dark,
+                            theme,
                             glycan_footnotes,
                             false,
                             false,
@@ -438,7 +441,7 @@ fn render_linear_peptidoform(
                             structure,
                             false,
                             true,
-                            Theme::Dark,
+                            theme,
                             glycan_footnotes,
                             false,
                             false,
@@ -453,7 +456,7 @@ fn render_linear_peptidoform(
                             structure,
                             false,
                             true,
-                            Theme::Dark,
+                            theme,
                             glycan_footnotes,
                             false,
                             false,

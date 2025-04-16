@@ -147,7 +147,12 @@ async fn details_formula(text: &str) -> Result<String, CustomError> {
 }
 
 #[tauri::command]
-fn identified_peptide_details(file: usize, index: usize, state: ModifiableState) -> String {
+fn identified_peptide_details(
+    file: usize,
+    index: usize,
+    state: ModifiableState,
+    theme: Theme,
+) -> String {
     state
         .lock()
         .unwrap()
@@ -159,7 +164,7 @@ fn identified_peptide_details(file: usize, index: usize, state: ModifiableState)
             |file| {
                 file.peptides.get(index).map_or(
                     "Identified peptide index not valid".to_string(),
-                    |peptide| peptide.to_html().to_string(),
+                    |peptide| peptide.to_html(theme).to_string(),
                 )
             },
         )
@@ -193,6 +198,7 @@ async fn annotate_spectrum<'a>(
     state: ModifiableState<'a>,
     mass_mode: &'a str,
     mz_range: (Option<f64>, Option<f64>),
+    theme: Theme,
 ) -> Result<AnnotationResult, CustomError> {
     let mut state = state.lock().unwrap();
     let spectrum = crate::spectra::create_selected_spectrum(&mut state, filter)?;
@@ -239,6 +245,7 @@ async fn annotate_spectrum<'a>(
         model,
         &parameters,
         mass_mode,
+        theme,
     );
     Ok(AnnotationResult {
         spectrum,
