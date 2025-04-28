@@ -1,3 +1,8 @@
+# Version 1.1.1
+
+ - Fixed USI related bugs
+ - Fixed theme related bugs
+
 # Version 1.1.0 - Glycan visualisation & more complex fragmentation
 
  - Added glycan visualisations both full structures and fragments, in the spectrum, on peptides, and when searching / displaying modifications
