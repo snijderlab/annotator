@@ -33,7 +33,7 @@ use crate::{
     state::{RawFile, RawFileDetails},
 };
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SelectedSpectrumDetails {
     id: usize,
     short: String,

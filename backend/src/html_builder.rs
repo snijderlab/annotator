@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use std::fmt::Display;
 
-#[derive(Debug, Hash, Clone)]
+#[derive(Clone, Debug, Hash)]
 pub struct HtmlElement {
     tag: HtmlTag,
     header: Vec<(String, Option<String>)>,
@@ -234,7 +234,7 @@ impl<T: IntoIterator<Item = T2>, T2: Into<HtmlContent>> ToHtmlContent for T {
 //    }
 //}
 
-#[derive(Debug, Hash, Clone)]
+#[derive(Clone, Debug, Hash)]
 pub enum HtmlContent {
     Text(String),
     Html(HtmlElement),
@@ -281,7 +281,7 @@ impl Display for HtmlContent {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[allow(non_camel_case_types)]
 pub enum HtmlTag {
     /// Inline text semantics - The <a> HTML element (or anchor element), with its href attribute, creates a hyperlink to web pages, files, email addresses, locations in the same page, or anything else a URL can address.

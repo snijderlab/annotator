@@ -148,7 +148,7 @@ fn create_loss_modal(id: &str) -> HtmlElement {
         .clone()
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone, Copy)]
 enum ChargeRange {
     One,
     OneToPrecursor,

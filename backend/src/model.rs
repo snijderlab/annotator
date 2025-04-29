@@ -293,7 +293,7 @@ pub async fn update_model(
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct ModelParameters {
     pub a: PrimarySeriesParameters,
     pub b: PrimarySeriesParameters,
@@ -406,7 +406,7 @@ impl From<FragmentationModel> for ModelParameters {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct GlycanParameters {
     allow_structural: bool,
     compositional_range: (usize, usize),
@@ -482,7 +482,7 @@ impl From<GlycanModel> for GlycanParameters {
     }
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
 pub struct PrecursorLosses {
     neutral_losses: Vec<String>,
     amino_acid_neutral_losses: Vec<String>,
@@ -524,7 +524,7 @@ impl
     }
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
 pub struct PrimarySeriesParameters {
     location: Location,
     neutral_losses: Vec<String>,
@@ -584,7 +584,7 @@ impl From<PrimaryIonSeries> for PrimarySeriesParameters {
     }
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
 pub struct SatelliteSeriesParameters {
     location_rules: Vec<String>,
     location_base: Option<u8>,

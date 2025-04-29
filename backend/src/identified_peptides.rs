@@ -202,7 +202,7 @@ pub async fn search_peptide<'a>(
     .to_string())
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct IdentifiedPeptideSettings {
     pub peptide: String,
     pub charge: Option<usize>,

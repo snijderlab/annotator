@@ -77,7 +77,7 @@ pub enum RawFile {
     },
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RawFileDetails {
     pub id: usize,
     pub path: String,

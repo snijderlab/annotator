@@ -31,7 +31,7 @@ mod validate;
 
 use crate::{metadata_render::RenderToHtml, state::State};
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub enum Theme {
     Light,
     Dark,
@@ -169,7 +169,7 @@ fn identified_peptide_details(
         )
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Deserialize, PartialEq, PartialOrd, Serialize)]
 pub enum NoiseFilter {
     #[default]
     None,
@@ -178,7 +178,7 @@ pub enum NoiseFilter {
     TopX(f64, usize),
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Deserialize, PartialEq, PartialOrd, Serialize)]
 pub struct AnnotationResult {
     pub spectrum: String,
     pub fragment_table: String,
