@@ -4,9 +4,9 @@ use crate::{Theme, html_builder::HtmlTag};
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
 use rustyms::{
-    CompoundPeptidoformIon, IsAminoAcid, Linked, Modification, Peptidoform,
     fragment::*,
-    modification::{CrossLinkName, GnoComposition, SimpleModificationInner},
+    prelude::*,
+    sequence::{CrossLinkName, GnoComposition, Linked, Modification, SimpleModificationInner},
 };
 
 use super::render_full_glycan;

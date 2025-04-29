@@ -11,10 +11,9 @@ use ordered_float::OrderedFloat;
 use render::{display_formula, display_mass};
 use rustyms::{
     error::*,
-    modification::SimpleModification,
-    spectrum::*,
+    prelude::*,
+    sequence::SimpleModification,
     system::{e, usize::Charge},
-    *,
 };
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
@@ -215,7 +214,7 @@ async fn annotate_spectrum<'a>(
         "most_abundant" => MassMode::MostAbundant,
         _ => return Err(CustomError::error("Invalid mass mode", "", Context::None)),
     };
-    let peptide = rustyms::CompoundPeptidoformIon::pro_forma(peptide, Some(&state.database))?;
+    let peptide = CompoundPeptidoformIon::pro_forma(peptide, Some(&state.database))?;
     let multiple_peptidoforms = peptide.peptidoform_ions().len() == 1;
     let multiple_peptides = peptide
         .peptidoform_ions()

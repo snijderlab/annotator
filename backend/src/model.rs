@@ -4,11 +4,15 @@ use mzdata::meta::DissociationMethodTerm;
 use serde::{Deserialize, Serialize};
 
 use rustyms::{
+    annotation::model::{
+        ChargeRange, GlycanModel, GlycanPeptideFragment, Location, PrimaryIonSeries,
+        SatelliteIonSeries, SatelliteLocation,
+    },
     error::*,
-    fragment::FragmentKind,
-    model::*,
+    fragment::{FragmentKind, NeutralLoss},
+    prelude::*,
+    quantities::Tolerance,
     system::{MassOverCharge, mz},
-    *,
 };
 use tauri::Manager;
 

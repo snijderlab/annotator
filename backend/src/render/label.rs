@@ -1,8 +1,9 @@
 use itertools::Itertools;
 use rustyms::{
-    AmbiguousLabel, CompoundPeptidoformIon, Fragment, Modification, SequencePosition,
+    chemistry::AmbiguousLabel,
     fragment::FragmentType,
-    modification::{GnoComposition, SimpleModificationInner},
+    prelude::*,
+    sequence::{GnoComposition, Modification, SimpleModificationInner},
 };
 use std::fmt::Write;
 

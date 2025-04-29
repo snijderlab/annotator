@@ -3,13 +3,13 @@ use std::{cmp::Ordering, collections::HashMap, fmt::Write};
 use itertools::Itertools;
 use mzdata::spectrum::MultiLayerSpectrum;
 use rustyms::{
-    AnnotatedSpectrum, FragmentationModel, MassMode, MolecularFormula, NeutralLoss,
+    annotation::{AnnotatedPeak, AnnotatedSpectrum, Fdr, Recovered, Score, model::Location},
     fragment::*,
     glycan::{GlycanDirection, GlycanRoot, GlycanSelection, GlycanStructure},
-    model::{Location, MatchingParameters},
-    modification::{Ontology, SimpleModificationInner},
-    placement_rule::PlacementRule,
-    spectrum::{AnnotatedPeak, Fdr, PeakSpectrum, Recovered, Score},
+    ontology::Ontology,
+    prelude::*,
+    sequence::{PlacementRule, SimpleModificationInner},
+    spectrum::PeakSpectrum,
     system::{Mass, MassOverCharge, da, mz},
 };
 
@@ -462,7 +462,7 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
                         (fragment.peptidoform_ion_index, fragment.peptidoform_index)
                     {
                         *output[pii][pi][match i.sequence_index {
-                            rustyms::SequencePosition::Index(i) => i,
+                            SequencePosition::Index(i) => i,
                             _ => unreachable!(), // TODO: handle better
                         }]
                         .entry(fragment.ion.clone())

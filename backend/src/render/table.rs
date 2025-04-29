@@ -1,13 +1,13 @@
 use std::fmt::Write;
 
 use crate::{
-    AnnotatedSpectrum, CompoundPeptidoformIon, Fragment, IsAminoAcid, MassMode,
-    fragment::FragmentType,
     metadata_render::OptionalString,
     render::{display_formula, display_neutral_loss, label::display_sequence_index},
-    spectrum::PeakSpectrum,
 };
 use itertools::Itertools;
+use rustyms::{
+    annotation::AnnotatedSpectrum, fragment::FragmentType, prelude::*, spectrum::PeakSpectrum,
+};
 
 pub fn spectrum_table(
     spectrum: &AnnotatedSpectrum,

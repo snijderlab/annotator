@@ -6,18 +6,19 @@ use std::{
 use ordered_float::OrderedFloat;
 use rustyms::{
     error::{Context, CustomError},
-    modification::{LinkerSpecificity, ModificationId, Ontology, SimpleModificationInner},
-    placement_rule::PlacementRule,
-    DiagnosticIon, MolecularFormula, NeutralLoss,
+    fragment::{DiagnosticIon, NeutralLoss},
+    ontology::Ontology,
+    prelude::*,
+    sequence::{LinkerSpecificity, ModificationId, PlacementRule, SimpleModificationInner},
 };
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 use crate::{
+    ModifiableState, Theme,
     render::{display_placement_rule, display_stubs},
     state::State,
     validate::parse_stub,
-    ModifiableState, Theme,
 };
 
 #[tauri::command]

@@ -11,14 +11,14 @@ use mzdata::{
     spectrum::MultiLayerSpectrum,
 };
 use rustyms::{
-    FragmentationModel, identification::IdentifiedPeptide, ontologies::CustomDatabase,
+    identification::IdentifiedPeptidoform, ontology::CustomDatabase, prelude::*,
     system::OrderedTime,
 };
 use serde::{Deserialize, Serialize};
 
 pub struct State {
     pub spectra: Vec<RawFile>,
-    pub identified_peptide_files: RefCell<Vec<IdentifiedPeptideFile>>,
+    pub identified_peptide_files: RefCell<Vec<IdentifiedPeptidoformFile>>,
     pub database: CustomDatabase,
     pub models: Vec<(String, FragmentationModel)>,
 }
@@ -27,10 +27,10 @@ impl State {
     pub fn database(&self) -> Option<&CustomDatabase> {
         (!self.database.is_empty()).then_some(&self.database)
     }
-    pub fn identified_peptide_files(&self) -> Ref<Vec<IdentifiedPeptideFile>> {
+    pub fn identified_peptide_files(&self) -> Ref<Vec<IdentifiedPeptidoformFile>> {
         self.identified_peptide_files.borrow()
     }
-    pub fn identified_peptide_files_mut(&self) -> RefMut<Vec<IdentifiedPeptideFile>> {
+    pub fn identified_peptide_files_mut(&self) -> RefMut<Vec<IdentifiedPeptidoformFile>> {
         self.identified_peptide_files.borrow_mut()
     }
     pub fn spectra_and_models(&mut self) -> (&mut [RawFile], &[(String, FragmentationModel)]) {
@@ -38,13 +38,13 @@ impl State {
     }
 }
 
-pub struct IdentifiedPeptideFile {
+pub struct IdentifiedPeptidoformFile {
     pub id: usize,
     pub path: String,
-    pub peptides: Vec<IdentifiedPeptide>,
+    pub peptides: Vec<IdentifiedPeptidoform>,
 }
 
-impl IdentifiedPeptideFile {
+impl IdentifiedPeptidoformFile {
     pub fn file_name(&self) -> String {
         std::path::Path::new(&self.path)
             .file_name()
@@ -53,7 +53,7 @@ impl IdentifiedPeptideFile {
             .to_string()
     }
 
-    pub fn new(path: String, peptides: Vec<IdentifiedPeptide>) -> Self {
+    pub fn new(path: String, peptides: Vec<IdentifiedPeptidoform>) -> Self {
         Self {
             id: IDENTIFIED_PEPTIDE_FILE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
             path,

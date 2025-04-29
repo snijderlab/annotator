@@ -4,14 +4,17 @@ use crate::{
     render::{display_formula, display_masses, display_placement_rule, render_full_glycan},
 };
 use itertools::Itertools;
-use modification::ModificationId;
 use rustyms::{
-    ReturnModification,
     error::*,
-    modification::{GnoComposition, LinkerSpecificity, Ontology, SimpleModificationInner},
-    placement_rule::PlacementRule,
+    ontology::Ontology,
+    prelude::*,
+    quantities::Tolerance,
+    sequence::{
+        GnoComposition, LinkerSpecificity, ModificationId, PlacementRule, ReturnModification,
+        SimpleModificationInner, modification_search_formula, modification_search_glycan,
+        modification_search_mass,
+    },
     system::{Mass, dalton},
-    *,
 };
 
 use crate::{
@@ -35,7 +38,7 @@ pub async fn search_modification(
             Context::None,
         ))
     } else {
-        SimpleModificationInner::try_from(
+        SimpleModificationInner::parse_pro_forma(
             text,
             0..text.len(),
             &mut Vec::new(),
@@ -154,7 +157,7 @@ pub fn render_modification(modification: &SimpleModificationInner, theme: Theme)
         display_masses(&modification.formula()),
     )));
 
-    if let modification::SimpleModificationInner::Database {
+    if let SimpleModificationInner::Database {
         specificities, id, ..
     } = &modification
     {
@@ -208,7 +211,7 @@ pub fn render_modification(modification: &SimpleModificationInner, theme: Theme)
                 .new()
                 .content(format!(
                     "Motif: {name} {}",
-                    link_modification(modification::Ontology::Gnome, None, id)
+                    link_modification(Ontology::Gnome, None, id)
                 ))
                 .clone()
         }));

@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use rustyms::{
-    IsAminoAcid, MultiChemical,
-    identification::{CVTerm, IdentifiedPeptide, MetaData, ReturnedPeptide, SpectrumIds},
+    identification::{CVTerm, IdentifiedPeptidoform, MetaData, ReturnedPeptidoform, SpectrumIds},
+    prelude::*,
 };
 
 use crate::{
@@ -18,15 +18,15 @@ pub trait RenderToTable {
     fn to_table(&self, theme: Theme) -> Vec<(&'static str, String)>;
 }
 
-impl RenderToHtml for IdentifiedPeptide {
+impl RenderToHtml for IdentifiedPeptidoform {
     fn to_html(&self, theme: Theme) -> HtmlElement {
         // Render the peptide with its local confidence
-        let peptide = if let Some(peptide) = self.peptide() {
+        let peptide = if let Some(peptide) = self.peptidoform() {
             let mut glycan_footnotes = Vec::new();
             let mut buffer = String::new();
             render_peptide(
                 &mut buffer,
-                &peptide.compound_peptidoform(),
+                &peptide.compound_peptidoform_ion(),
                 None,
                 self.local_confidence
                     .as_ref()
@@ -47,7 +47,7 @@ impl RenderToHtml for IdentifiedPeptide {
             HtmlContent::Html(HtmlTag::p.new().content("No peptide").clone())
         };
 
-        let formula = self.peptide().map(|p| p.formulas()[0].clone());
+        let formula = self.peptidoform().map(|p| p.formulas()[0].clone());
         HtmlTag::div.new()
             .children([
                 HtmlTag::p.new()
@@ -55,12 +55,12 @@ impl RenderToHtml for IdentifiedPeptide {
                         "Score:&nbsp;{}, ALC:&nbsp;{}, Length:&nbsp;{}, Mass:&nbsp;{}, Charge:&nbsp;{}, m/z:&nbsp;{}, Mode:&nbsp;{}, RT:&nbsp;{}",
                         self.score.map_or(String::from("-"), |s| format!("{s:.3}")),
                         self.local_confidence.as_ref().map_or(String::from("-"), |lc| format!("{:.3}", lc.iter().sum::<f64>() / lc.len() as f64)),
-                        self.peptide()
+                        self.peptidoform()
                             .map(|p| format!("{}&nbsp;AA", match p {
-                                ReturnedPeptide::LinearSemiAmbiguous(p) => p.len().to_string(),
-                                ReturnedPeptide::LinearSimpleLinear(p) => p.len().to_string(),
-                                ReturnedPeptide::Peptidoform(p) => p.peptidoforms().iter().map(|p| p.len()).join("&nbsp;+&nbsp;"),
-                                ReturnedPeptide::CompoundPeptidoform(p) => p.peptidoforms().map(|p| p.len()).join("&nbsp;+&nbsp;"),
+                                ReturnedPeptidoform::PeptidoformSemiAmbiguous(p) => p.len().to_string(),
+                                ReturnedPeptidoform::PeptidoformSimpleLinear(p) => p.len().to_string(),
+                                ReturnedPeptidoform::PeptidoformIon(p) => p.peptidoforms().iter().map(|p| p.len()).join("&nbsp;+&nbsp;"),
+                                ReturnedPeptidoform::CompoundPeptidoformIon(p) => p.peptidoforms().map(|p| p.len()).join("&nbsp;+&nbsp;"),
                             }))
                             .to_optional_string(),
                         formula
@@ -115,7 +115,7 @@ impl RenderToHtml for IdentifiedPeptide {
                     SpectrumIds::FileKnown(scans) => scans.iter().map(|(file, scans)| HtmlTag::li.new().content("File: ").content(HtmlTag::span.new().title(file.to_string_lossy()).content(file.file_name().map_or(String::new(), |s| s.to_string_lossy().to_string())).content(" Scans: ").content(scans.iter().join(";"))).clone()).collect(),
                 }).clone(),]
             ).content(peptide).children([
-                HtmlTag::p.new().content(format!("Additional MetaData {} {} ID: {}", self.format_name(), self.format_version(), self.id())).clone(),
+                HtmlTag::p.new().content(format!("Additional MetaData {} ID: {}", self.format(), self.id())).clone(),
                 {
                     HtmlElement::table::<HtmlContent, String>(
                         None,

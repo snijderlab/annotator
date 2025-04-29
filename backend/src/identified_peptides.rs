@@ -1,11 +1,16 @@
 use crate::{
     ModifiableState, html_builder,
-    state::{IdentifiedPeptideFile, State},
+    state::{IdentifiedPeptidoformFile, State},
 };
-use align::AlignScoring;
 use itertools::Itertools;
 use rayon::prelude::*;
-use rustyms::{align::align, error::*, identification::*, *};
+use rustyms::{
+    align::{AlignScoring, AlignType, align},
+    error::*,
+    identification::*,
+    prelude::*,
+    sequence::{Linked, SimpleLinear},
+};
 use serde::{Deserialize, Serialize};
 
 /// Open a file and get all individual peptide errors.
@@ -21,7 +26,7 @@ pub async fn load_identified_peptides_file<'a>(
     let peptides = open_identified_peptides_file(path, state.database(), false)?;
     state
         .identified_peptide_files_mut()
-        .push(IdentifiedPeptideFile::new(
+        .push(IdentifiedPeptidoformFile::new(
             path.to_string(),
             peptides
                 .filter_map(|p| match p {
@@ -126,16 +131,16 @@ pub async fn search_peptide<'a>(
         })
         .filter(|(_, _, p)| {
             p.score
-                .is_none_or(|score| score >= minimal_peptide_score && p.peptide().is_some())
+                .is_none_or(|score| score >= minimal_peptide_score && p.peptidoform().is_some())
         })
         .par_bridge()
         .filter_map(|p| {
             // Take the peptide if it is a single peptide, or if it is a compound peptidoform ion but only contains one peptide take that
-            p.2.peptide()
-                .and_then(|p| p.peptide())
+            p.2.peptidoform()
+                .and_then(|p| p.peptidoform())
                 .and_then(|p| p.into_owned().into_simple_linear())
-                .or(p.2.peptide().and_then(|p| {
-                    p.compound_peptidoform()
+                .or(p.2.peptidoform().and_then(|p| {
+                    p.compound_peptidoform_ion()
                         .into_owned()
                         .singular_peptide()
                         .and_then(|p| p.into_simple_linear())
@@ -149,7 +154,7 @@ pub async fn search_peptide<'a>(
                     &simple,
                     &search,
                     AlignScoring::default(),
-                    align::AlignType::GLOBAL_B,
+                    AlignType::GLOBAL_B,
                 )
                 .to_owned(),
                 peptide,
@@ -206,9 +211,13 @@ pub struct IdentifiedPeptideSettings {
 }
 
 impl IdentifiedPeptideSettings {
-    fn from_peptide(state: &State, peptide: &IdentifiedPeptide, warning: Option<String>) -> Self {
+    fn from_peptide(
+        state: &State,
+        peptide: &IdentifiedPeptidoform,
+        warning: Option<String>,
+    ) -> Self {
         let mut str_peptide = String::new();
-        if let Some(peptide) = peptide.peptide() {
+        if let Some(peptide) = peptide.peptidoform() {
             peptide.display(&mut str_peptide, true, false).unwrap()
         }
         Self {

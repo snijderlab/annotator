@@ -1,3 +1,9 @@
+# Version 1.1.2
+
+ - Fixed glycan related bugs
+   - Naming of Y ions was inverted, meaning Y6 instead of Y1
+   - The composition listed for Y composition ions was inverted, listing `Hex1` when 1 hexose was lost instead of when 1 hexose was retained
+
 # Version 1.1.1
 
  - Fixed USI related bugs

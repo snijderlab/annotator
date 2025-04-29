@@ -2,8 +2,7 @@ use std::num::{IntErrorKind, ParseIntError};
 
 use itertools::Itertools;
 use rustyms::{
-    error::{Context, CustomError}, fragment::FragmentKind, glycan::MonoSaccharide, placement_rule::PlacementRule, AminoAcid, MolecularFormula, NeutralLoss
-};
+    error::{Context, CustomError}, fragment::{FragmentKind, NeutralLoss}, glycan::MonoSaccharide, prelude::*, sequence::PlacementRule};
 
 use crate::render::{display_formula, display_neutral_loss, display_placement_rule, display_stubs};
 
