@@ -1,6 +1,9 @@
 use itertools::Itertools;
 use rustyms::{
-    identification::{CVTerm, IdentifiedPeptidoform, MetaData, ReturnedPeptidoform, SpectrumIds},
+    identification::{
+        CVTerm, IdentifiedPeptidoform, MSFraggerOpenModification, MetaData, ReturnedPeptidoform,
+        SpectrumIds,
+    },
     prelude::*,
 };
 
@@ -105,7 +108,7 @@ impl RenderToHtml for IdentifiedPeptidoform {
                     .content(format!(
                         "Protein&nbsp;id:&nbsp;{}, Name:&nbsp;{}, Location:&nbsp;{}",
                         self.protein_id().to_optional_string(),
-                        self.protein_name().to_optional_string(),
+                        self.protein_name().map(|n| n.name().clone()).to_optional_string(),
                         self.protein_location().map(|s| format!("{} — {}", s.start, s.end)).to_optional_string(),
                     ))
                     .clone(),
@@ -559,47 +562,106 @@ impl RenderToTable for MetaData {
             MetaData::MSFragger(data) => vec![
                 (
                     "Extended Peptide",
-                    format!(
-                        "{}_(seq)_{}",
-                        data.extended_peptide[0]
-                            .as_ref()
-                            .map_or("Terminal".to_string(), |p| p.to_string()),
-                        data.extended_peptide[2]
-                            .as_ref()
-                            .map_or("Terminal".to_string(), |p| p.to_string())
-                    ),
+                    data.extended_peptide
+                        .as_ref()
+                        .map(|e| {
+                            format!(
+                                "{}_(seq)_{}",
+                                e[0].as_ref()
+                                    .map_or("Terminal".to_string(), |p| p.to_string()),
+                                e[2].as_ref()
+                                    .map_or("Terminal".to_string(), |p| p.to_string())
+                            )
+                        })
+                        .to_optional_string(),
                 ),
                 (
-                    "Assigned modifications",
-                    data.assigned_modifications.to_string(),
+                    "Open modification",
+                    match &data.open_search_modification {
+                        Some(MSFraggerOpenModification::Glycan(composition)) => composition
+                            .iter()
+                            .fold(String::new(), |acc, m| acc + &format!("{}{}", m.0, m.1)),
+                        Some(MSFraggerOpenModification::Other(other)) => other.to_string(),
+                        None => "-".to_string(),
+                    },
                 ),
                 (
                     "Calibrated experimental mass",
-                    display_mass(data.calibrated_experimental_mass, None).to_string(),
+                    data.calibrated_experimental_mass
+                        .map(|m| display_mass(m, None))
+                        .to_optional_string(),
                 ),
                 (
                     "Calibrated experimental m/z",
-                    data.calibrated_experimental_mz.value.to_string(),
+                    data.calibrated_experimental_mz
+                        .map(|m| m.value)
+                        .to_optional_string(),
                 ),
-                ("Expectation", data.expectation.to_string()),
-                ("Hyperscore", data.hyperscore.to_string()),
+                ("Expectation score", format!("{:e}", data.expectation_score)),
+                ("Hyper score", data.hyper_score.to_string()),
                 ("Next score", data.next_score.to_string()),
                 (
                     "Peptide Prophet probability",
-                    data.peptide_prophet_probability.to_string(),
+                    data.peptide_prophet_probability.to_optional_string(),
                 ),
                 ("Missed cleavages", data.missed_cleavages.to_string()),
                 (
                     "Number of enzymatic termini",
-                    data.enzymatic_termini.to_string(),
+                    data.enzymatic_termini.to_optional_string(),
                 ),
-                ("Intensity", format!("{:e}", data.intensity)),
-                ("Purity", data.purity.to_string()),
-                ("Is unique", data.is_unique.to_string()),
-                ("Gene", data.gene.to_string()),
-                ("Protein description", data.protein_description.to_string()),
-                ("Mapped genes", data.mapped_genes.join(",")),
-                ("Mapped proteins", data.mapped_proteins.join(",")),
+                (
+                    "Intensity",
+                    data.intensity
+                        .map(|i| format!("{:e}", i))
+                        .to_optional_string(),
+                ),
+                (
+                    "Glycan",
+                    format!(
+                        "composition: {}, score: {}, q-value: {}",
+                        data.total_glycan_composition
+                            .as_ref()
+                            .or(match data.open_search_modification.as_ref() {
+                                Some(MSFraggerOpenModification::Glycan(composition)) =>
+                                    Some(composition),
+                                _ => None,
+                            })
+                            .map(|composition| composition
+                                .iter()
+                                .fold(String::new(), |acc, m| acc + &format!("{}{}", m.0, m.1)))
+                            .to_optional_string(),
+                        data.glycan_score.to_optional_string(),
+                        data.glycan_q_value.to_optional_string(),
+                    ),
+                ),
+                (
+                    "Modification position scores",
+                    data.open_search_position_scores
+                        .as_ref()
+                        .map(|v| v.iter().join(","))
+                        .to_optional_string(),
+                ),
+                ("Purity", data.purity.to_optional_string()),
+                ("Is unique", data.is_unique.to_optional_string()),
+                ("Gene", data.gene.as_ref().to_optional_string()),
+                (
+                    "Protein description",
+                    data.protein_description.as_ref().to_optional_string(),
+                ),
+                (
+                    "Mapped genes",
+                    data.mapped_genes
+                        .as_ref()
+                        .map(|g| g.join(","))
+                        .to_optional_string(),
+                ),
+                (
+                    "Mapped proteins",
+                    data.mapped_proteins
+                        .as_ref()
+                        .map(|p| p.join(","))
+                        .to_optional_string(),
+                ),
                 ("Condition", data.condition.as_ref().to_optional_string()),
                 ("Group", data.group.as_ref().to_optional_string()),
             ],

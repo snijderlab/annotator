@@ -1428,10 +1428,16 @@ input:not(:checked)+.collapsible {
         }
     }
 
-    &>.modification::before,
-    &.possible-modification::before {
+    &>.modification:not(.term)::before,
+    &>.possible-modification:not(.term)::before {
         left: 50%;
         bottom: calc(var(--height) + var(--fragments-padding) + 3 * var(--spacing));
+    }
+
+    &>.modification.term::before,
+    &>.possible-modification.term::before {
+        bottom: calc(var(--height) / 2 + var(--fragments-padding) + 2 * var(--spacing));
+        top: unset;
     }
 }
 
