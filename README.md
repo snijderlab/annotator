@@ -34,7 +34,8 @@ It can even make nice pictures from glycans as seen below.
 * Extensive control over the visualisation
 * Export to PDF (do not forget to turn on background graphics in the advanced settings while printing)
 
-[There is also a more comprehensive guide](frontend/assets/Annotator-manual.pdf)
+> [!TIP]
+> [There is also a more comprehensive guide](frontend/assets/Annotator-manual.pdf)
 
 ## Peptidoform sequence
 
