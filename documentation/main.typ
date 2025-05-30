@@ -62,4 +62,6 @@ Buttons are displayed as #button[Button]. Keys used in key combinations as #key[
   page(header: none, margin: 0pt, image(width: 100%, height: 100%, "amino_acids_cheat_sheet_1.2_print.svg"))
   heading()[Fragmentation cheat sheet]
   page(header: none, margin: 0pt, image(width: 100%, height: 100%, "fragmentation_cheat_sheet_1.1_print.svg"))
+  heading()[ProForma cheat sheet]
+  page(header: none, margin: 0pt, image(width: 100%, height: 100%, "proforma_cheat_sheet_1.0_print.svg"))
 }

@@ -7,8 +7,8 @@
    viewBox="0 0 210 297"
    version="1.1"
    id="svg5"
-   inkscape:version="1.4 (86a8ad7, 2024-10-11)"
-   sodipodi:docname="amino_acids_cheat_sheet_1.2_print.svg"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   sodipodi:docname="amino_acids_cheatsheet_1.2_print.svg"
    inkscape:export-filename="amino_acids_cheatsheet_v1.2_print.pdf"
    inkscape:export-xdpi="300"
    inkscape:export-ydpi="300"
@@ -26,9 +26,9 @@
      inkscape:pagecheckerboard="0"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="1"
-     inkscape:cx="248.5"
-     inkscape:cy="467.5"
+     inkscape:zoom="0.70710678"
+     inkscape:cx="280.72139"
+     inkscape:cy="574.17071"
      inkscape:window-width="1920"
      inkscape:window-height="1177"
      inkscape:window-x="1912"
@@ -5510,6 +5510,28 @@
    id="tspan62444">O</tspan><tspan
    style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:65%;font-family:Roboto;-inkscape-font-specification:Roboto;baseline-shift:sub;fill:#a33c29;fill-opacity:1"
    id="tspan60420">1</tspan></tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;font-family:'Roboto Flex';-inkscape-font-specification:'Roboto Flex, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;text-anchor:start;fill:#4e4e4e;fill-opacity:1;stroke:none;stroke-width:0.585142;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:0.292571, 0.292571;stroke-dashoffset:0;stop-color:#000000"
+       x="137.63968"
+       y="128.44411"
+       id="text79129"><tspan
+         sodipodi:role="line"
+         id="tspan79127"
+         style="text-align:start;text-anchor:start;fill:#4e4e4e;fill-opacity:1;stroke-width:0.585141"
+         x="137.63968"
+         y="128.44411">Base amino acid</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.16914px;font-family:'Roboto Flex';-inkscape-font-specification:'Roboto Flex, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;text-anchor:start;fill:#ffffff;fill-opacity:0.993505;stroke:none;stroke-width:0.768359;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:0.384179, 0.384179;stroke-dashoffset:0;stop-color:#000000"
+       x="139.23102"
+       y="138.35266"
+       id="text84963"><tspan
+         sodipodi:role="line"
+         id="tspan84961"
+         style="fill:#ffffff;fill-opacity:1;stroke-width:0.768358"
+         x="139.23102"
+         y="138.35266">X</tspan></text>
     <path
        d="m 21.299002,189.86478 h 12.588045 c 0,-2.0775 0,-4.15466 0,-6.2308 H 21.299002 c 0,2.07614 0,4.1533 0,6.2308 z"
        style="fill:#ffffff;fill-opacity:0.993505;fill-rule:nonzero;stroke:#4ec9b0;stroke-width:0.2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1.0"
@@ -5768,21 +5790,5 @@
          x="150.42136"
          y="180.16289"
          id="tspan39649">in ProForma </tspan></text>
-    <path
-       d="m 139.57245,135.24278 h 0.43202 l 0.65562,1.14843 0.6578,-1.14843 h 0.40814 l -0.84884,1.37638 0.95087,1.613 h -0.43202 l -0.74463,-1.35032 -0.75332,1.35032 h -0.40596 l 0.93784,-1.59347 z"
-       id="text3"
-       style="font-size:4.23333px;font-family:'Fira Code';-inkscape-font-specification:'Fira Code';text-align:center;text-anchor:middle;fill:#ffffff;stroke-width:0.25;stroke-miterlimit:10;paint-order:stroke fill markers"
-       aria-label="X" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.38667px;font-family:'Fira Code';-inkscape-font-specification:'Fira Code';text-align:center;writing-mode:lr-tb;direction:ltr;text-anchor:middle;fill:#4e4e4e;stroke:none;stroke-width:0.25;stroke-miterlimit:10;paint-order:stroke fill markers"
-       x="150.20821"
-       y="128.35893"
-       id="text4"><tspan
-         sodipodi:role="line"
-         id="tspan3"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.38667px;font-family:Roboto;-inkscape-font-specification:Roboto;fill:#4e4e4e;stroke-width:0.25"
-         x="150.20821"
-         y="128.35893">Base amino acid</tspan></text>
   </g>
 </svg>
