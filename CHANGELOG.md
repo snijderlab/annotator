@@ -1,3 +1,9 @@
+# Version 1.1.3
+
+ - Fixed errors in parsing FragPipe files + added support for MSFragger
+ - Updated mzdata containing fixes for Bruker data
+ - Fixed some more smaller bugs
+
 # Version 1.1.2
 
  - Fixed glycan related bugs
