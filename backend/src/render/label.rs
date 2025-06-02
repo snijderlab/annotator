@@ -543,7 +543,7 @@ fn get_modifications(
                             None
                         }
                     )
-                    .unwrap(),
+                    .unwrap(), // Can crash
                     display_sequence_index(*sequence_index),
                     if multiple_peptidoforms && multiple_peptidoform_ions {
                         format!(
