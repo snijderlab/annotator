@@ -67,8 +67,10 @@ pub fn spectrum_table(
             )
         } else if let FragmentType::Immonium(pos, aa) = &annotation.ion {
             (
-                display_sequence_index(pos.sequence_index),
-                pos.series_number.to_string(),
+                pos.map_or("-".to_string(), |p| {
+                    display_sequence_index(p.sequence_index)
+                }),
+                pos.map_or("-".to_string(), |p| p.series_number.to_string()),
                 format!(
                     "immonium {}",
                     aa.aminoacid

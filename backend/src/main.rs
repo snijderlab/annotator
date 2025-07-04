@@ -12,8 +12,7 @@ use render::{display_formula, display_mass};
 use rustyms::{
     error::*,
     prelude::*,
-    sequence::SimpleModification,
-    system::{e, usize::Charge},
+    system::{e, isize::Charge},
 };
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
@@ -76,7 +75,7 @@ async fn details_formula(text: &str) -> Result<String, CustomError> {
             Context::None,
         ))
     } else {
-        MolecularFormula::from_pro_forma(text, .., false, true, true)
+        MolecularFormula::from_pro_forma(text, .., false, true, true, false)
     }?;
     let isotopes = formula.isotopic_distribution(0.001);
     let (max, max_occurrence) = isotopes
@@ -190,7 +189,7 @@ pub struct AnnotationResult {
 #[tauri::command]
 async fn annotate_spectrum<'a>(
     tolerance: (f64, &'a str),
-    charge: Option<usize>,
+    charge: Option<isize>,
     filter: f32,
     model: usize,
     peptide: &'a str,
@@ -226,11 +225,9 @@ async fn annotate_spectrum<'a>(
     let use_charge = Charge::new::<e>(
         charge
             .or_else(|| {
-                spectrum.precursor().and_then(|p| {
-                    p.charge().map(|c| {
-                        usize::try_from(c).expect("Can not handle negative mode mass spectrometry")
-                    })
-                })
+                spectrum
+                    .precursor()
+                    .and_then(|p| p.charge().map(|c| c as isize))
             })
             .unwrap_or(1),
     );
@@ -268,15 +265,11 @@ fn load_custom_mods_and_models(app: &mut tauri::App) -> Result<(), Box<dyn std::
         let mut state = app_state
             .lock()
             .expect("Poisoned mutex at setup of custom mods");
-        if let Ok(data) = std::fs::read(custom_mods) {
-            let mods: Vec<(Option<usize>, String, SimpleModification)> =
-                serde_json::from_slice(&data)?;
-            state.database = mods;
-        }
-        if let Ok(data) = std::fs::read(custom_models) {
-            let models: Vec<(String, FragmentationModel)> = serde_json::from_slice(&data)?;
-            state.models = models;
-        }
+
+        state.database = rustyms::sequence::parse_custom_modifications(&custom_mods)?;
+
+        state.models = rustyms::annotation::model::parse_custom_models(&custom_models)?;
+
         Ok(())
     } else {
         Err("Could not find configuration file".into())

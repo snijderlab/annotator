@@ -130,28 +130,25 @@ pub async fn search_peptide<'a>(
                 .map(|(index, p)| (file.id, index, p))
         })
         .filter(|(_, _, p)| {
-            p.score
-                .is_none_or(|score| score >= minimal_peptide_score && p.peptidoform().is_some())
+            p.score.is_none_or(|score| {
+                score >= minimal_peptide_score && p.compound_peptidoform_ion().is_some()
+            })
         })
         .par_bridge()
         .filter_map(|p| {
             // Take the peptide if it is a single peptide, or if it is a compound peptidoform ion but only contains one peptide take that
-            p.2.peptidoform()
-                .and_then(|p| p.peptidoform())
-                .and_then(|p| p.into_owned().into_simple_linear())
-                .or(p.2.peptidoform().and_then(|p| {
-                    p.compound_peptidoform_ion()
-                        .into_owned()
-                        .singular_peptide()
-                        .and_then(|p| p.into_simple_linear())
-                }))
+            p.2.compound_peptidoform_ion()
+                .and_then(|p| {
+                    p.singular_peptidoform_ref()
+                        .and_then(|p| p.as_simple_linear().cloned())
+                })
                 .map(|simple| (p.0, p.1, p.2, simple))
         })
         .map(|(id, index, peptide, simple)| {
             (
                 index,
-                align::<4, SimpleLinear, SimpleLinear>(
-                    &simple,
+                align::<4, Peptidoform<SimpleLinear>, &Peptidoform<SimpleLinear>>(
+                    simple,
                     &search,
                     AlignScoring::default(),
                     AlignType::GLOBAL_B,
@@ -205,20 +202,20 @@ pub async fn search_peptide<'a>(
 #[derive(Deserialize, Serialize)]
 pub struct IdentifiedPeptideSettings {
     pub peptide: String,
-    pub charge: Option<usize>,
+    pub charge: Option<isize>,
     pub mode: Option<usize>,
     pub warning: Option<String>,
 }
 
 impl IdentifiedPeptideSettings {
-    fn from_peptide(
+    fn from_peptide<C, A>(
         state: &State,
-        peptide: &IdentifiedPeptidoform,
+        peptide: &IdentifiedPeptidoform<C, A>,
         warning: Option<String>,
     ) -> Self {
         let mut str_peptide = String::new();
-        if let Some(peptide) = peptide.peptidoform() {
-            peptide.display(&mut str_peptide, true, false).unwrap()
+        if let Some(peptide) = peptide.compound_peptidoform_ion() {
+            peptide.display(&mut str_peptide, true).unwrap()
         }
         Self {
             peptide: str_peptide,

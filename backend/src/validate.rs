@@ -10,7 +10,7 @@ use crate::render::{display_formula, display_neutral_loss, display_placement_rul
 pub fn validate_molecular_formula(text: String) -> Result<String, CustomError> {
     text.parse::<f64>()
         .map(MolecularFormula::with_additional_mass)
-        .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true))
+        .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true, false))
         .map(|f| display_formula(&f, true))
 }
 
@@ -73,6 +73,7 @@ pub fn parse_aa_neutral_loss(
                     line: text.to_string(),
                     offset: pos,
                     length: loss.len(),
+                    comment: None
                 })
             })?);
             pos += loss.len() + 1;
@@ -109,6 +110,7 @@ pub fn parse_monosaccharide_neutral_loss(text: &str) -> Result<(MonoSaccharide, 
                 line: text.to_string(),
                 offset: pos,
                 length: loss.len(),
+                comment: None
             })
         })?);
         pos += loss.len() + 1;
@@ -142,6 +144,7 @@ pub fn parse_aa_list(text: &str) -> Result<Vec<AminoAcid>, CustomError> {
                 line: text.to_string(),
                 offset: pos,
                 length: aa.len(),
+                comment: None
             })
         })?);
         pos += aa.len() + 1;
@@ -162,6 +165,7 @@ pub fn parse_satellite_ion(text: &str) -> Result<(Vec<AminoAcid>, u8), CustomErr
                     line: text.to_string(),
                     offset: index + 1,
                     length: text[index + 1..].len(),
+                    comment: None,
                 },
             )
         })?;
@@ -196,11 +200,11 @@ pub fn parse_stub(text: &str) -> Result<(MolecularFormula, MolecularFormula), Cu
         let f1 = text[..index]
             .parse::<f64>()
             .map(MolecularFormula::with_additional_mass)
-            .or_else(|_| MolecularFormula::from_pro_forma(text, ..index, true, true, true))?;
+            .or_else(|_| MolecularFormula::from_pro_forma(text, ..index, true, true, true, false))?;
         let f2 = text[index + 1..]
             .parse::<f64>()
             .map(MolecularFormula::with_additional_mass)
-            .or_else(|_| MolecularFormula::from_pro_forma(text, index + 1.., true, true, true))?;
+            .or_else(|_| MolecularFormula::from_pro_forma(text, index + 1.., true, true, true, false))?;
         Ok((f1, f2))
     } else {
         Err(CustomError::error(
@@ -242,7 +246,7 @@ pub fn validate_custom_single_specificity(
         .map(|text| {
             text.parse::<f64>()
                 .map(MolecularFormula::with_additional_mass)
-                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true))
+                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true, false))
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(
@@ -318,7 +322,7 @@ pub fn validate_custom_linker_specificity(
         .map(|text| {
             text.parse::<f64>()
                 .map(MolecularFormula::with_additional_mass)
-                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true))
+                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true, false))
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(

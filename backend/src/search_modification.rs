@@ -317,21 +317,35 @@ pub fn render_modification(modification: &SimpleModificationInner, theme: Theme)
 
         for specificity in specificities {
             match specificity {
-                LinkerSpecificity::Symmetric(places, stubs, diagnostic_ions) => {
+                LinkerSpecificity::Symmetric {
+                    rules,
+                    stubs,
+                    neutral_losses,
+                    diagnostic,
+                } => {
                     ul.content(
                         HtmlTag::li
                             .new()
-                            .content(format!("Positions: {}", render_places(places)))
+                            .content(format!("Positions: {}", render_places(rules)))
                             .maybe_content((!stubs.is_empty()).then(|| {
                                 format!(
                                     ", Breakages: {}",
                                     stubs.iter().map(|s| display_stubs(s, true)).join(", ")
                                 )
                             }))
-                            .maybe_content((!diagnostic_ions.is_empty()).then(|| {
+                            .maybe_content((!stubs.is_empty()).then(|| {
+                                format!(
+                                    ", Neutral losses: {}",
+                                    neutral_losses
+                                        .iter()
+                                        .map(|s| display_neutral_loss(s))
+                                        .join(", ")
+                                )
+                            }))
+                            .maybe_content((!diagnostic.is_empty()).then(|| {
                                 format!(
                                     ", Diagnostic ions: {}",
-                                    diagnostic_ions
+                                    diagnostic
                                         .iter()
                                         .map(|d| display_formula(&d.0, true))
                                         .join(", ")
@@ -339,11 +353,12 @@ pub fn render_modification(modification: &SimpleModificationInner, theme: Theme)
                             })),
                     );
                 }
-                LinkerSpecificity::Asymmetric(
-                    (left_places, right_places),
+                LinkerSpecificity::Asymmetric {
+                    rules: (left_places, right_places),
                     stubs,
-                    diagnostic_ions,
-                ) => {
+                    neutral_losses,
+                    diagnostic,
+                } => {
                     ul.content(
                         HtmlTag::li
                             .new()
@@ -358,10 +373,19 @@ pub fn render_modification(modification: &SimpleModificationInner, theme: Theme)
                                     stubs.iter().map(|s| display_stubs(s, true)).join(", ")
                                 )
                             }))
-                            .maybe_content((!diagnostic_ions.is_empty()).then(|| {
+                            .maybe_content((!stubs.is_empty()).then(|| {
+                                format!(
+                                    ", Neutral losses: {}",
+                                    neutral_losses
+                                        .iter()
+                                        .map(|s| display_neutral_loss(s))
+                                        .join(", ")
+                                )
+                            }))
+                            .maybe_content((!diagnostic.is_empty()).then(|| {
                                 format!(
                                     ", Diagnostic ions: {}",
-                                    diagnostic_ions
+                                    diagnostic
                                         .iter()
                                         .map(|d| display_formula(&d.0, true))
                                         .join(", ")

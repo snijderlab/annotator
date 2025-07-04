@@ -11,7 +11,10 @@ use mzdata::{
     spectrum::MultiLayerSpectrum,
 };
 use rustyms::{
-    identification::IdentifiedPeptidoform, ontology::CustomDatabase, prelude::*,
+    identification::{IdentifiedPeptidoform, MaybePeptidoform},
+    ontology::CustomDatabase,
+    prelude::*,
+    sequence::Linked,
     system::OrderedTime,
 };
 use serde::{Deserialize, Serialize};
@@ -41,7 +44,7 @@ impl State {
 pub struct IdentifiedPeptidoformFile {
     pub id: usize,
     pub path: String,
-    pub peptides: Vec<IdentifiedPeptidoform>,
+    pub peptides: Vec<IdentifiedPeptidoform<Linked, MaybePeptidoform>>,
 }
 
 impl IdentifiedPeptidoformFile {
@@ -53,7 +56,10 @@ impl IdentifiedPeptidoformFile {
             .to_string()
     }
 
-    pub fn new(path: String, peptides: Vec<IdentifiedPeptidoform>) -> Self {
+    pub fn new(
+        path: String,
+        peptides: Vec<IdentifiedPeptidoform<Linked, MaybePeptidoform>>,
+    ) -> Self {
         Self {
             id: IDENTIFIED_PEPTIDE_FILE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
             path,

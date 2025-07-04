@@ -1,8 +1,8 @@
 use itertools::Itertools;
 use rustyms::{
     identification::{
-        CVTerm, IdentifiedPeptidoform, MSFraggerOpenModification, MetaData, ReturnedPeptidoform,
-        SpectrumIds,
+        CVTerm, IdentifiedPeptidoform, IdentifiedPeptidoformData, MSFraggerOpenModification,
+        MetaData, SpectrumIds,
     },
     prelude::*,
 };
@@ -21,15 +21,15 @@ pub trait RenderToTable {
     fn to_table(&self, theme: Theme) -> Vec<(&'static str, String)>;
 }
 
-impl RenderToHtml for IdentifiedPeptidoform {
+impl<C, A> RenderToHtml for IdentifiedPeptidoform<C, A> {
     fn to_html(&self, theme: Theme) -> HtmlElement {
         // Render the peptide with its local confidence
-        let peptide = if let Some(peptide) = self.peptidoform() {
+        let peptide = if let Some(peptide) = self.compound_peptidoform_ion() {
             let mut glycan_footnotes = Vec::new();
             let mut buffer = String::new();
             render_peptide(
                 &mut buffer,
-                &peptide.compound_peptidoform_ion(),
+                &peptide,
                 None,
                 self.local_confidence
                     .as_ref()
@@ -50,7 +50,9 @@ impl RenderToHtml for IdentifiedPeptidoform {
             HtmlContent::Html(HtmlTag::p.new().content("No peptide").clone())
         };
 
-        let formula = self.peptidoform().map(|p| p.formulas()[0].clone());
+        let formula = self
+            .compound_peptidoform_ion()
+            .map(|p| p.formulas()[0].clone());
         HtmlTag::div.new()
             .children([
                 HtmlTag::p.new()
@@ -58,13 +60,7 @@ impl RenderToHtml for IdentifiedPeptidoform {
                         "Score:&nbsp;{}, ALC:&nbsp;{}, Length:&nbsp;{}, Mass:&nbsp;{}, Charge:&nbsp;{}, m/z:&nbsp;{}, Mode:&nbsp;{}, RT:&nbsp;{}",
                         self.score.map_or(String::from("-"), |s| format!("{s:.3}")),
                         self.local_confidence.as_ref().map_or(String::from("-"), |lc| format!("{:.3}", lc.iter().sum::<f64>() / lc.len() as f64)),
-                        self.peptidoform()
-                            .map(|p| format!("{}&nbsp;AA", match p {
-                                ReturnedPeptidoform::PeptidoformSemiAmbiguous(p) => p.len().to_string(),
-                                ReturnedPeptidoform::PeptidoformSimpleLinear(p) => p.len().to_string(),
-                                ReturnedPeptidoform::PeptidoformIon(p) => p.peptidoforms().iter().map(|p| p.len()).join("&nbsp;+&nbsp;"),
-                                ReturnedPeptidoform::CompoundPeptidoformIon(p) => p.peptidoforms().map(|p| p.len()).join("&nbsp;+&nbsp;"),
-                            }))
+                        self.compound_peptidoform_ion().and_then(|p| p.singular_peptidoform_ref().map(|p| p.len()))
                             .to_optional_string(),
                         formula
                             .as_ref()
@@ -122,7 +118,7 @@ impl RenderToHtml for IdentifiedPeptidoform {
                 {
                     HtmlElement::table::<HtmlContent, String>(
                         None,
-                        self.metadata.to_table(theme).into_iter().map(|(h,v)| [h.to_string(), v]),
+                        self.data.to_table(theme).into_iter().map(|(h,v)| [h.to_string(), v]),
                     )
                 }
             ])
@@ -130,10 +126,10 @@ impl RenderToHtml for IdentifiedPeptidoform {
     }
 }
 
-impl RenderToTable for MetaData {
+impl RenderToTable for IdentifiedPeptidoformData {
     fn to_table(&self, theme: Theme) -> Vec<(&'static str, String)> {
         match self {
-            MetaData::Peaks(data) => vec![
+            IdentifiedPeptidoformData::Peaks(data) => vec![
                 ("Fraction", data.fraction.to_optional_string()),
                 (
                     "Feature",
@@ -242,7 +238,7 @@ impl RenderToTable for MetaData {
                         .to_optional_string(),
                 ),
             ],
-            MetaData::Novor(data) => vec![
+            IdentifiedPeptidoformData::Novor(data) => vec![
                 ("Score", data.score.to_string()),
                 ("ID", data.id.to_optional_string()),
                 ("Spectra ID", data.spectra_id.to_optional_string()),
@@ -261,7 +257,7 @@ impl RenderToTable for MetaData {
                     data.database_sequence.as_ref().to_optional_string(),
                 ),
             ],
-            MetaData::Opair(data) => vec![
+            IdentifiedPeptidoformData::Opair(data) => vec![
                 (
                     "Precursor scan number",
                     data.precursor_scan_number.to_string(),
@@ -368,7 +364,7 @@ impl RenderToTable for MetaData {
                         .to_string(),
                 ),
             ],
-            MetaData::MaxQuant(data) => vec![
+            IdentifiedPeptidoformData::MaxQuant(data) => vec![
                 ("Scan index", data.scan_index.to_optional_string()),
                 ("Modifications", data.modifications.to_string()),
                 ("Proteins", data.proteins.to_string()),
@@ -514,7 +510,7 @@ impl RenderToTable for MetaData {
                 ("Experiment", data.experiment.as_ref().to_optional_string()),
                 ("Labeling state", data.labeling_state.to_optional_string()),
             ],
-            MetaData::Sage(data) => vec![
+            IdentifiedPeptidoformData::Sage(data) => vec![
                 ("Proteins", data.proteins.join(";")),
                 ("Rank", data.rank.to_string()),
                 ("Decoy", data.decoy.to_string()),
@@ -559,7 +555,7 @@ impl RenderToTable for MetaData {
                 ("Protein q", data.protein_q.to_string()),
                 ("MS2 intensity", data.ms2_intensity.to_string()),
             ],
-            MetaData::MSFragger(data) => vec![
+            IdentifiedPeptidoformData::MSFragger(data) => vec![
                 (
                     "Extended Peptide",
                     data.extended_peptide
@@ -665,7 +661,7 @@ impl RenderToTable for MetaData {
                 ("Condition", data.condition.as_ref().to_optional_string()),
                 ("Group", data.group.as_ref().to_optional_string()),
             ],
-            MetaData::MZTab(data) => vec![
+            IdentifiedPeptidoformData::MZTab(data) => vec![
                 ("Accession", data.accession.as_ref().to_optional_string()),
                 ("Unique", data.unique.to_optional_string()),
                 (
@@ -711,7 +707,7 @@ impl RenderToTable for MetaData {
                         .to_optional_string(),
                 ),
             ],
-            MetaData::PLink(data) => vec![
+            IdentifiedPeptidoformData::PLink(data) => vec![
                 ("Peptide type", data.peptide_type.to_string()),
                 ("Score", format!("{:e}", data.score)),
                 ("Refined score", data.refined_score.to_string()),
@@ -742,7 +738,7 @@ impl RenderToTable for MetaData {
                 ("In filter", data.is_filter_in.to_string()),
                 ("Title", data.title.clone()),
             ],
-            MetaData::Fasta(data) => vec![
+            IdentifiedPeptidoformData::Fasta(data) => vec![
                 ("Description", data.description().to_string()),
                 (
                     "Tags",
@@ -757,7 +753,7 @@ impl RenderToTable for MetaData {
                 ),
                 ("Full header", data.header().to_string()),
             ],
-            MetaData::NovoB(data) => vec![
+            IdentifiedPeptidoformData::NovoB(data) => vec![
                 (
                     "Score",
                     format!(
@@ -782,7 +778,7 @@ impl RenderToTable for MetaData {
                     data.peptide_reverse.as_ref().to_optional_string(),
                 ),
             ],
-            MetaData::PLGS(data) => vec![
+            IdentifiedPeptidoformData::PLGS(data) => vec![
                 (
                     "Protein score",
                     format!(
@@ -908,7 +904,7 @@ impl RenderToTable for MetaData {
                     ),
                 ),
             ],
-            MetaData::SpectrumSequenceList(data) => vec![
+            IdentifiedPeptidoformData::SpectrumSequenceList(data) => vec![
                 (
                     "Retention range (min)",
                     data.start_time.map_or("-".to_string(), |st| {
@@ -945,11 +941,11 @@ impl RenderToTable for MetaData {
                         .map_or("-".to_string(), |ccs| format!("{ccs:.3} Å²")),
                 ),
             ],
-            MetaData::DeepNovoFamily(_)
-            | MetaData::InstaNovo(_)
-            | MetaData::PowerNovo(_)
-            | MetaData::PepNet(_)
-            | MetaData::BasicCSV(_) => Vec::new(),
+            IdentifiedPeptidoformData::DeepNovoFamily(_)
+            | IdentifiedPeptidoformData::InstaNovo(_)
+            | IdentifiedPeptidoformData::PowerNovo(_)
+            | IdentifiedPeptidoformData::PepNet(_)
+            | IdentifiedPeptidoformData::BasicCSV(_) => Vec::new(),
         }
     }
 }

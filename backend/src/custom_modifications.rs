@@ -16,7 +16,7 @@ use tauri::Manager;
 
 use crate::{
     ModifiableState, Theme,
-    render::{display_placement_rule, display_stubs},
+    render::{display_neutral_loss, display_placement_rule, display_stubs},
     state::State,
     validate::parse_stub,
 };
@@ -194,11 +194,12 @@ pub fn get_custom_modification(
                 linker_specificities: specificities
                     .iter()
                     .map(|spec| match spec {
-                        LinkerSpecificity::Asymmetric(
-                            (rules, secondary_rules),
+                        LinkerSpecificity::Asymmetric {
+                            rules: (rules, secondary_rules),
                             stubs,
-                            diagnostic_ions,
-                        ) => (
+                            neutral_losses,
+                            diagnostic,
+                        } => (
                             true,
                             rules
                                 .iter()
@@ -209,12 +210,18 @@ pub fn get_custom_modification(
                                 .map(|p| display_placement_rule(p, false))
                                 .collect(),
                             stubs.iter().map(|s| display_stubs(s, false)).collect(),
-                            diagnostic_ions
+                            neutral_losses
                                 .iter()
-                                .map(|n| n.0.hill_notation())
+                                .map(|s| display_neutral_loss(s))
                                 .collect(),
+                            diagnostic.iter().map(|n| n.0.hill_notation()).collect(),
                         ),
-                        LinkerSpecificity::Symmetric(rules, stubs, diagnostic_ions) => (
+                        LinkerSpecificity::Symmetric {
+                            rules,
+                            stubs,
+                            neutral_losses,
+                            diagnostic,
+                        } => (
                             false,
                             rules
                                 .iter()
@@ -222,10 +229,11 @@ pub fn get_custom_modification(
                                 .collect(),
                             Vec::new(),
                             stubs.iter().map(|s| display_stubs(s, false)).collect(),
-                            diagnostic_ions
+                            neutral_losses
                                 .iter()
-                                .map(|n| n.0.hill_notation())
+                                .map(|s| display_neutral_loss(s))
                                 .collect(),
+                            diagnostic.iter().map(|n| n.0.hill_notation()).collect(),
                         ),
                     })
                     .collect(),
@@ -250,7 +258,14 @@ pub struct CustomModification {
     cross_ids: Vec<String>,
     linker: bool,
     single_specificities: Vec<(Vec<String>, Vec<String>, Vec<String>)>,
-    linker_specificities: Vec<(bool, Vec<String>, Vec<String>, Vec<String>, Vec<String>)>,
+    linker_specificities: Vec<(
+        bool,
+        Vec<String>,
+        Vec<String>,
+        Vec<String>,
+        Vec<String>,
+        Vec<String>,
+    )>,
     linker_length: Option<f64>,
 }
 
@@ -264,7 +279,14 @@ pub async fn update_modification(
         .parse::<f64>()
         .map(MolecularFormula::with_additional_mass)
         .or_else(|_| {
-            MolecularFormula::from_pro_forma(&custom_modification.formula, .., true, true, true)
+            MolecularFormula::from_pro_forma(
+                &custom_modification.formula,
+                ..,
+                true,
+                true,
+                true,
+                false,
+            )
         })?;
     let id = ModificationId {
         ontology: Ontology::Custom,
@@ -293,13 +315,18 @@ pub async fn update_modification(
                             placement_rules,
                             secondary_placement_rules,
                             stubs,
-                            diagnostic_ions,
+                            neutral_losses,
+                            diagnostic,
                         )| {
                             let stubs = stubs
                                 .iter()
                                 .map(|text| parse_stub(text))
                                 .collect::<Result<Vec<_>, _>>()?;
-                            let diagnostic_ions = diagnostic_ions
+                            let neutral_losses = neutral_losses
+                                .iter()
+                                .map(|text| text.parse())
+                                .collect::<Result<Vec<_>, _>>()?;
+                            let diagnostic = diagnostic
                                 .iter()
                                 .map(|d| {
                                     d.parse::<f64>()
@@ -311,14 +338,15 @@ pub async fn update_modification(
                                                 true,
                                                 true,
                                                 true,
+                                                false,
                                             )
                                         })
                                         .map(DiagnosticIon)
                                 })
                                 .collect::<Result<Vec<_>, _>>()?;
                             if *asymmetric {
-                                Ok(LinkerSpecificity::Asymmetric(
-                                    (
+                                Ok(LinkerSpecificity::Asymmetric {
+                                    rules: (
                                         placement_rules
                                             .iter()
                                             .map(|r| r.parse::<PlacementRule>())
@@ -329,17 +357,19 @@ pub async fn update_modification(
                                             .collect::<Result<Vec<_>, _>>()?,
                                     ),
                                     stubs,
-                                    diagnostic_ions,
-                                ))
+                                    neutral_losses,
+                                    diagnostic,
+                                })
                             } else {
-                                Ok(LinkerSpecificity::Symmetric(
-                                    placement_rules
+                                Ok(LinkerSpecificity::Symmetric {
+                                    rules: placement_rules
                                         .iter()
                                         .map(|r| r.parse::<PlacementRule>())
                                         .collect::<Result<Vec<_>, _>>()?,
                                     stubs,
-                                    diagnostic_ions,
-                                ))
+                                    neutral_losses,
+                                    diagnostic,
+                                })
                             }
                         },
                     )
@@ -375,6 +405,7 @@ pub async fn update_modification(
                                                 true,
                                                 true,
                                                 true,
+                                                false,
                                             )
                                         })
                                         .map(DiagnosticIon)
