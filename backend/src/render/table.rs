@@ -186,7 +186,7 @@ pub fn spectrum_table(
                         annotation
                             .neutral_loss
                             .iter()
-                            .map(display_neutral_loss)
+                            .map(|n| display_neutral_loss(n, true))
                             .join(""),
                         format!("<span title='{0}'>{0:.2}</span>", peak.intensity),
                         format!(
@@ -219,10 +219,7 @@ pub fn spectrum_table(
         }
     }
     for fragment in fragments {
-        if !spectrum
-            .spectrum()
-            .any(|p| p.annotation.iter().any(|a| *a == *fragment))
-        {
+        if !spectrum.spectrum().any(|p| p.annotation.contains(fragment)) {
             let (sequence_index, series_number, label) =
                 generate_text(&fragment.clone(), &spectrum.peptide);
             data.push((
@@ -250,7 +247,7 @@ pub fn spectrum_table(
                     fragment
                         .neutral_loss
                         .iter()
-                        .map(display_neutral_loss)
+                        .map(|n| display_neutral_loss(n, true))
                         .join(""),
                     "-".to_string(),
                     fragment
@@ -283,7 +280,7 @@ pub fn spectrum_table(
             3
         }..]
         {
-            write!(output, "<td>{}</td>", cell).unwrap();
+            write!(output, "<td>{cell}</td>").unwrap();
         }
         write!(output, "</tr>").unwrap();
     }

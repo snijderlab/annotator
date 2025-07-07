@@ -174,7 +174,7 @@ pub fn render_modification(modification: &SimpleModificationInner, theme: Theme)
                 } else {
                     ", Neutral losses: "
                 },
-                rule.1.iter().map(display_neutral_loss).join(", "),
+                rule.1.iter().map(|n| display_neutral_loss(n, true)).join(", "),
                 if rule.2.is_empty() {
                     ""
                 } else {
@@ -333,12 +333,12 @@ pub fn render_modification(modification: &SimpleModificationInner, theme: Theme)
                                     stubs.iter().map(|s| display_stubs(s, true)).join(", ")
                                 )
                             }))
-                            .maybe_content((!stubs.is_empty()).then(|| {
+                            .maybe_content((!neutral_losses.is_empty()).then(|| {
                                 format!(
                                     ", Neutral losses: {}",
                                     neutral_losses
                                         .iter()
-                                        .map(|s| display_neutral_loss(s))
+                                        .map(|n| display_neutral_loss(n, true))
                                         .join(", ")
                                 )
                             }))
@@ -373,12 +373,12 @@ pub fn render_modification(modification: &SimpleModificationInner, theme: Theme)
                                     stubs.iter().map(|s| display_stubs(s, true)).join(", ")
                                 )
                             }))
-                            .maybe_content((!stubs.is_empty()).then(|| {
+                            .maybe_content((!neutral_losses.is_empty()).then(|| {
                                 format!(
                                     ", Neutral losses: {}",
                                     neutral_losses
                                         .iter()
-                                        .map(|s| display_neutral_loss(s))
+                                        .map(|n| display_neutral_loss(n, true))
                                         .join(", ")
                                 )
                             }))

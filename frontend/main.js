@@ -701,22 +701,49 @@ function set_losses(ion, losses) {
   document.querySelectorAll("#model-" + ion + "-loss-selection-dialog input[type=checkbox]").forEach(c => c.checked = false);
   let custom = [];
   for (let loss of losses["neutral_losses"]) {
-    if (["-H1O1", "-H2O1", "-H4O2", "-H6O3", "-H1", "-H2", "-H3", "-H3N1", "-C1O1"].includes(loss)) {
+    if (["-H1O1", "-H2O1", "-2H2O1", "-3H2O1", "-H1", "-2H1", "-3H1", "-H3N1", "-C1O1"].includes(loss)) {
       document.getElementById("model-" + ion + "-loss-selection" + loss).checked = true;
-    } else if (["+H2O1", "+H4O2", "+H6O3", "+H1", "+H2", "+H3",].includes(loss)) {
+    } else if (["+H2O1", "+2H2O1", "+3H2O1", "+H1", "+2H1", "+3H1",].includes(loss)) {
       document.getElementById("model-" + ion + "-gain-selection" + loss).checked = true;
     } else {
-      custom.push(loss)
+      switch (loss) {
+        case "-H4O2":
+          document.getElementById("model-" + ion + "-loss-selection-2H2O1").checked = true;
+          break;
+        case "-H6O3":
+          document.getElementById("model-" + ion + "-loss-selection-3H2O1").checked = true;
+          break;
+        case "-H2":
+          document.getElementById("model-" + ion + "-loss-selection-2H1").checked = true;
+          break;
+        case "-H3":
+          document.getElementById("model-" + ion + "-loss-selection-3H1").checked = true;
+          break;
+        case "+H4O2":
+          document.getElementById("model-" + ion + "-gain-selection+2H2O1").checked = true;
+          break;
+        case "+H6O3":
+          document.getElementById("model-" + ion + "-gain-selection+3H2O1").checked = true;
+          break;
+        case "+H2":
+          document.getElementById("model-" + ion + "-gain-selection+2H1").checked = true;
+          break;
+        case "+H3":
+          document.getElementById("model-" + ion + "-gain-selection+3H1").checked = true;
+          break;
+        default:
+          custom.push(loss)
+      }
     }
   }
   populateSeparatedInput("model-" + ion + "-loss", custom);
   if (ion == "glycan") return;
   let custom_aa = [];
   for (let loss of losses["amino_acid_neutral_losses"]) {
-    if (["N:-COOH", "Q:-C2H3O2"].includes(loss)) {
+    if (["N:-C1H1O2", "Q:-C2H3O2", "C:-H1S1"].includes(loss)) {
       document.getElementById("model-" + ion + "-aa-loss-selection" + loss).checked = true;
     } else {
-      custom.push(loss)
+      custom_aa.push(loss)
     }
   }
   populateSeparatedInput("model-" + ion + "-aa-loss", custom_aa);
@@ -782,6 +809,7 @@ function update_neutral_losses_selection_count(element) {
 };
 
 function get_model() {
+  let glycan_peptide_fragments = getValueListInputGlycanPeptideFragment(document.getElementById("model-glycan-fragments").parentElement);
   var model = {
     a: { location: get_location("#model-a-location"), charge_range: get_charge_range("a"), variants: get_variants("a"), ...get_losses("a") },
     b: { location: get_location("#model-b-location"), charge_range: get_charge_range("b"), variants: get_variants("b"), ...get_losses("b") },
@@ -801,8 +829,8 @@ function get_model() {
       allow_structural: document.querySelector("#model-glycan-enabled").checked,
       compositional_range: [Number(document.querySelector("#model-glycan-composition-min").value), Number(document.querySelector("#model-glycan-composition-max").value)],
       diagnostic_neutral_losses: loadSeparatedInput("model-glycan-specific-loss"),
-      default_glycan_peptide_fragment: { full: true, core: null },
-      specific_glycan_peptide_fragment: [],
+      default_glycan_peptide_fragment: glycan_peptide_fragments[0],
+      specific_glycan_peptide_fragment: glycan_peptide_fragments[1],
       neutral_losses: get_losses("glycan"),
       oxonium_charge_range: get_charge_range("glycan-oxonium"),
       other_charge_range: get_charge_range("glycan-other")
@@ -1170,6 +1198,7 @@ window.addEventListener("DOMContentLoaded", () => {
           placementRules: loadSeparatedInput("custom-mod-linker-placement-rules"),
           secondaryPlacementRules: loadSeparatedInput("custom-mod-linker-secondary-placement-rules"),
           stubs: loadSeparatedInput("custom-mod-linker-stubs"),
+          neutralLosses: loadSeparatedInput("custom-mod-linker-neutral-losses"),
           diagnosticIons: loadSeparatedInput("custom-mod-linker-diagnostic-ions")
         }).catch(error => {
           validation_error = error;
@@ -1415,7 +1444,7 @@ function loadCustomModification(modification = null) {
         specificity[0],
         specificity[1],
         specificity[2],
-        false, [], [], [], []
+        false, [], [], [], [], []
       )
     }
     document.getElementById("custom-mod-linker-length").value = modification.linker_length;
@@ -1429,6 +1458,7 @@ function loadCustomModification(modification = null) {
         specificity[2],
         specificity[3],
         specificity[4],
+        specificity[5],
       )
     }
   }
@@ -1440,11 +1470,11 @@ function loadListInput(id) {
   if (listInput.classList.contains("single")) {
     return values.map(v => [v.placement_rules, v.neutral_losses, v.diagnostic_ions]);
   } else if (listInput.classList.contains("linker")) {
-    return values.map(v => [v.asymmetric, v.placement_rules, v.secondary_placement_rules, v.stubs, v.diagnostic_ions]);
+    return values.map(v => [v.asymmetric, v.placement_rules, v.secondary_placement_rules, v.stubs, v.neutral_losses, v.diagnostic_ions]);
   }
 }
 
-async function addValueListInput(listInput, singlePlacementRules, singleNeutralLosses, singleDiagnosticIons, linkerAsymmetric, linkerPlacementRules, linkerSecondaryPlacementRules, linkerStubs, linkerDiagnosticIons) {
+async function addValueListInput(listInput, singlePlacementRules, singleNeutralLosses, singleDiagnosticIons, linkerAsymmetric, linkerPlacementRules, linkerSecondaryPlacementRules, linkerStubs, linkerNeutralLosses, linkerDiagnosticIons) {
   listInput.classList.remove("creating");
   let new_element = document.createElement("li");
   new_element.classList.add("element");
@@ -1462,6 +1492,7 @@ async function addValueListInput(listInput, singlePlacementRules, singleNeutralL
       placementRules: linkerPlacementRules,
       secondaryPlacementRules: linkerSecondaryPlacementRules,
       stubs: linkerStubs,
+      neutralLosses: linkerNeutralLosses,
       diagnosticIons: linkerDiagnosticIons,
     }).catch(error => {
       console.error(error)
@@ -1479,6 +1510,7 @@ async function addValueListInput(listInput, singlePlacementRules, singleNeutralL
       populateSeparatedInput("custom-mod-linker-placement-rules", data.placement_rules);
       populateSeparatedInput("custom-mod-linker-secondary-placement-rules", data.secondary_placement_rules);
       populateSeparatedInput("custom-mod-linker-stubs", data.stubs);
+      populateSeparatedInput("custom-mod-linker-neutral-losses", data.neutral_losses);
       populateSeparatedInput("custom-mod-linker-diagnostic-ions", data.diagnostic_ions);
     }
     listInput.classList.add("creating");
@@ -1535,6 +1567,20 @@ async function addValueListInputGlycanPeptideFragment(listInput, aas, kinds, ful
   delete_button.title = "Delete";
   new_element.appendChild(delete_button);
   listInput.querySelector(".values").appendChild(new_element);
+}
+
+function getValueListInputGlycanPeptideFragment(listInput) {
+  let def = { full: true, core: null };
+  let rules = [];
+  for (let child of listInput.querySelector(".values").children) {
+    let value = JSON.parse(child.children[0].dataset.value);
+    if (value[3]) {
+      def = { full: value[2]["full"], core: value[2]["core"] };
+    } else {
+      rules.push([value[0], value[1], value[2]]);
+    }
+  }
+  return [def, rules];
 }
 
 function moveCursorToEnd(contentEle) {

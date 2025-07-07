@@ -4141,7 +4141,6 @@ checksum = "8a0d197bd2c9dc6e53b84da9556a69ba4cdfab8619eb41a8bd1cc2027a0f6b1d"
 [[package]]
 name = "rustyms"
 version = "0.10.0"
-source = "git+https://github.com/rusteomics/mzcore#dee2e0bc053a3942b1ede77ef5f8c6311f281fcb"
 dependencies = [
  "bincode",
  "flate2",

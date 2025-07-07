@@ -175,7 +175,7 @@ impl HtmlElement {
         data: impl IntoIterator<Item = (impl Display, impl Into<String>)>,
     ) -> &mut Self {
         for (name, value) in data {
-            self.header(format!("data-{}", name), value);
+            self.header(format!("data-{name}"), value);
         }
         self
     }
@@ -564,6 +564,7 @@ pub enum HtmlTag {
 
 impl HtmlTag {
     /// Convenience method to create a new empty element
+    #[expect(clippy::new_ret_no_self, clippy::wrong_self_convention)]
     pub const fn new(self) -> HtmlElement {
         HtmlElement {
             tag: self,

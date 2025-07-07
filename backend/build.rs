@@ -31,11 +31,11 @@ fn create_loss_modal(id: &str) -> HtmlElement {
                                     [
                                         ("-H1O1", "OH"),
                                         ("-H2O1", "Water"),
-                                        ("-H4O2", "Double water"),
-                                        ("-H6O3", "Triple water"),
+                                        ("-2H2O1", "Double water"),
+                                        ("-3H2O1", "Triple water"),
                                         ("-H1", "Hydrogen"),
-                                        ("-H2", "Double hydrogen"),
-                                        ("-H3", "Triple hydrogen"),
+                                        ("-2H1", "Double hydrogen"),
+                                        ("-3H1", "Triple hydrogen"),
                                         ("-H3N1", "Ammonia"),
                                         ("-C1O1", "Carbon monoxide"),
                                     ],
@@ -53,11 +53,11 @@ fn create_loss_modal(id: &str) -> HtmlElement {
                                     "block",
                                     [
                                         ("+H2O1", "Water"),
-                                        ("+H4O2", "Double water"),
-                                        ("+H6O3", "Triple water"),
+                                        ("+2H2O1", "Double water"),
+                                        ("+3H2O1", "Triple water"),
                                         ("+H1", "Hydrogen"),
-                                        ("+H2", "Double hydrogen"),
-                                        ("+H3", "Triple hydrogen"),
+                                        ("+2H1", "Double hydrogen"),
+                                        ("+3H1", "Triple hydrogen"),
                                     ],
                                 ),
                             ),
@@ -104,6 +104,7 @@ fn create_loss_modal(id: &str) -> HtmlElement {
           HtmlElement::input_list(format!("model-{id}-aa-loss-selection"), "checkbox", "block", [
             ("N:-C1H1O2", "N: COOH"),
             ("Q:-C2H3O2", "Q: C<sub>2</sub>H<sub>3</sub>O<sub>2</sub>"),
+            ("C:-H1S1", "C: SH"),
           ])).chain([
             HtmlElement::separated_input(format!("model-{id}-aa-loss"), "Amino acid codes followed by a colon and the losses separated by commas", "aa_neutral_loss"),
             HtmlTag::h2.new().content("Amino acid side chain losses").clone(),
@@ -732,6 +733,14 @@ fn main() {
                 <div class="separated-input">
                   <div class="values" id="custom-mod-linker-stubs">
                     <div class="input context" placeholder="Add breakage with a mass or molecular formula as 'formula1:formula2'." data-type="stub" contentEditable="plaintext-only"></div>
+                    <button class="clear">Clear</button>
+                  </div>
+                  <output class="error"></output>
+                </div>
+                <label for="custom-mod-linker-neutral-losses">Neutral losses</label>
+                <div class="separated-input">
+                  <div class="values" id="custom-mod-linker-neutral-losses">
+                    <div class="input context" placeholder="Add molecular formula or mass preceded by '+' or '-'" data-type="neutral_loss" contentEditable="plaintext-only"></div>
                     <button class="clear">Clear</button>
                   </div>
                   <output class="error"></output>

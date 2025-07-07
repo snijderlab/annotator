@@ -237,11 +237,11 @@ pub fn get_label(
                         String::new()
                     },
                     if multiple_peptidoform_ions && multiple_peptidoforms {
-                        format!("p{}.{}", peptidoform_str, peptide_str)
+                        format!("p{peptidoform_str}.{peptide_str}")
                     } else if multiple_peptidoform_ions {
-                        format!("p{}", peptidoform_str)
+                        format!("p{peptidoform_str}")
                     } else if multiple_peptidoforms {
-                        format!("p{}", peptide_str)
+                        format!("p{peptide_str}")
                     } else {
                         String::new()
                     },

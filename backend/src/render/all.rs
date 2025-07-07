@@ -369,7 +369,7 @@ fn render_error_graph(
     write!(output, "<div id='error-graph' class='error-graph canvas'>",).unwrap();
     write!(output, "<div class='x-axis'>").unwrap();
     write!(output, "<span class='min'>0</span>").unwrap();
-    write!(output, "<span class='max'>{:.2}</span>", x_max).unwrap();
+    write!(output, "<span class='max'>{x_max:.2}</span>").unwrap();
     write!(output, "</div>").unwrap();
     write!(
         output,
@@ -1221,14 +1221,14 @@ pub fn display_mass(value: Mass, kind: Option<MassMode>) -> HtmlElement {
                 format!("{kind}{} {}Da\n{} Da", full, suf, value.value)
             },
         )
-        .content(format!("{} {}Da", num, suf))
+        .content(format!("{num} {suf}Da"))
         .clone()
 }
 
 pub fn display_mass_unformatted(value: Mass) -> String {
     let (num, suf, _) = engineering_notation(value.value, 3);
     let suf = suf.map_or(String::new(), |suf| suf.to_string());
-    format!("{} {}Da", num, suf)
+    format!("{num} {suf}Da")
 }
 
 /// Display the given value in engineering notation eg `1000` -> `10 k`, with the given number of decimal points and returns the suffix separately.
@@ -1290,14 +1290,11 @@ pub fn display_formula(formula: &MolecularFormula, formatted: bool) -> String {
     }
 }
 
-pub fn display_neutral_loss(formula: &NeutralLoss) -> String {
-    if formula.is_empty() {
-        "<span class='formula empty'>(empty)</span>".to_string()
+pub fn display_neutral_loss(loss: &NeutralLoss, formatted: bool) -> String {
+    if formatted {
+        format!("<span class='formula'>{}</span>", loss.hill_notation_html())
     } else {
-        format!(
-            "<span class='formula'>{}</span>",
-            formula.hill_notation_html()
-        )
+        loss.hill_notation()
     }
 }
 

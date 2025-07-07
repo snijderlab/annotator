@@ -182,7 +182,7 @@ pub async fn search_peptide<'a>(
                 format!("{:.3}", alignment.normalised_score()),
                 peptide
                     .score
-                    .map(|score| format!("{:.3}", score))
+                    .map(|score| format!("{score:.3}"))
                     .unwrap_or_default(),
             ]
         })

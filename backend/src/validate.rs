@@ -55,7 +55,7 @@ pub fn validate_fragment_kind(text: String) -> Result<String, CustomError> {
 #[tauri::command]
 pub fn validate_neutral_loss(text: String) -> Result<String, CustomError> {
     text.parse::<NeutralLoss>()
-        .map(|f| display_neutral_loss(&f))
+        .map(|f| display_neutral_loss(&f, false))
 }
 
 pub fn parse_aa_neutral_loss(
@@ -271,7 +271,7 @@ pub fn validate_custom_single_specificity(
             String::new()
         } else {
             ", Neutral losses: ".to_string()
-                + &neutral_losses.iter().map(display_neutral_loss).join(", ")
+                + &neutral_losses.iter().map(|n| display_neutral_loss(n, true)).join(", ")
         },
         if diagnostic_ions.is_empty() {
             String::new()
@@ -291,6 +291,7 @@ pub fn validate_custom_linker_specificity(
     placement_rules: Vec<String>,
     secondary_placement_rules: Vec<String>,
     stubs: Vec<String>,
+    neutral_losses: Vec<String>,
     diagnostic_ions: Vec<String>,
 ) -> Result<String, CustomError> {
     let rules1 = placement_rules
@@ -317,6 +318,11 @@ pub fn validate_custom_linker_specificity(
         .map(|text| parse_stub(&text))
         .collect::<Result<Vec<_>, _>>()?;
 
+    let neutral_losses = neutral_losses
+        .into_iter()
+        .map(|text| text.parse::<NeutralLoss>())
+        .collect::<Result<Vec<_>, _>>()?;
+
     let diagnostic_ions = diagnostic_ions
         .into_iter()
         .map(|text| {
@@ -326,7 +332,7 @@ pub fn validate_custom_linker_specificity(
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(
-        "<span data-value='{{\"asymmetric\":{asymmetric},\"placement_rules\":[{}],\"secondary_placement_rules\":[{}],\"stubs\":[{}],\"diagnostic_ions\":[{}]}}'>Placement rules: {}{}{}{}</span>",
+        "<span data-value='{{\"asymmetric\":{asymmetric},\"placement_rules\":[{}],\"secondary_placement_rules\":[{}],\"stubs\":[{}],\"neutral_losses\":[{}],\"diagnostic_ions\":[{}]}}'>Placement rules: {}{}{}{}{}</span>",
         rules1
             .iter()
             .map(|r| format!("\"{}\"", display_placement_rule(r, false)))
@@ -338,6 +344,10 @@ pub fn validate_custom_linker_specificity(
         stubs
             .iter()
             .map(|s| format!("\"{}\"", display_stubs(s, false)))
+            .join(","),
+        neutral_losses
+            .iter()
+            .map(|s| format!("\"{}\"", display_neutral_loss(s, false)))
             .join(","),
         diagnostic_ions
             .iter()
@@ -360,6 +370,11 @@ pub fn validate_custom_linker_specificity(
             String::new()
         } else {
             ", Breakage: ".to_string() + &stubs.iter().map(|s| display_stubs(s, true)).join(", ")
+        },
+        if neutral_losses.is_empty() {
+            String::new()
+        } else {
+            ", Neutral losses: ".to_string() + &neutral_losses.iter().map(|n| display_neutral_loss(n, true)).join(", ")
         },
         if diagnostic_ions.is_empty() {
             String::new()

@@ -608,7 +608,7 @@ impl RenderToTable for IdentifiedPeptidoformData {
                 (
                     "Intensity",
                     data.intensity
-                        .map(|i| format!("{:e}", i))
+                        .map(|i| format!("{i:e}"))
                         .to_optional_string(),
                 ),
                 (
@@ -722,9 +722,9 @@ impl RenderToTable for IdentifiedPeptidoformData {
                         .map(|(p1, pos1, p2, pos2)| {
                             format!(
                                 "{p1}{}{}{}",
-                                pos1.map_or(String::new(), |p| format!("({})", p)),
-                                p2.as_ref().map_or(String::new(), |p| format!("-{}", p)),
-                                pos2.map_or(String::new(), |p| format!("({})", p))
+                                pos1.map_or(String::new(), |p| format!("({p})")),
+                                p2.as_ref().map_or(String::new(), |p| format!("-{p}")),
+                                pos2.map_or(String::new(), |p| format!("({p})"))
                             )
                         })
                         .join("/"),

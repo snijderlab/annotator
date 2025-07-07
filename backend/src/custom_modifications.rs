@@ -212,7 +212,7 @@ pub fn get_custom_modification(
                             stubs.iter().map(|s| display_stubs(s, false)).collect(),
                             neutral_losses
                                 .iter()
-                                .map(|s| display_neutral_loss(s))
+                                .map(|n| display_neutral_loss(n, false))
                                 .collect(),
                             diagnostic.iter().map(|n| n.0.hill_notation()).collect(),
                         ),
@@ -231,7 +231,7 @@ pub fn get_custom_modification(
                             stubs.iter().map(|s| display_stubs(s, false)).collect(),
                             neutral_losses
                                 .iter()
-                                .map(|s| display_neutral_loss(s))
+                                .map(|n| display_neutral_loss(n, false))
                                 .collect(),
                             diagnostic.iter().map(|n| n.0.hill_notation()).collect(),
                         ),
