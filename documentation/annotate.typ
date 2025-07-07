@@ -66,4 +66,4 @@ Immonium ions are internal fragments that break on both sides of a single amino 
 
 If there are cross-links in the peptidoform it can be controlled if these are allowed to cleave in theoretical fragmentation. This only work for cross-link modifications that have defined cleavage rules, see @custom-modifications.
 
-#aside[There are some reference sheets available and the end of this manual to help keep on overview of all fragmentation chemistry. #link("https://github.com/douweschulte/reference-sheets")[Or see douweschulte/reference-sheets on GitHub.]]
+#aside[There are some reference sheets available and the end of this manual to help keep an overview of all fragmentation chemistry. #link("https://github.com/douweschulte/reference-sheets")[Or see douweschulte/reference-sheets on GitHub.]]
