@@ -1,5 +1,5 @@
 use std::{
-    cell::{Cell, OnceCell, Ref, RefCell, RefMut},
+    cell::{Ref, RefCell, RefMut},
     fs::File,
     ops::RangeInclusive,
     sync::{Arc, OnceLock, atomic::AtomicUsize},
@@ -11,9 +11,8 @@ use mzdata::{
     spectrum::MultiLayerSpectrum,
 };
 use ordered_float::OrderedFloat;
-use rayon::prelude::*;
 use rustyms::{
-    align::{AlignIndex, AlignScoring},
+    align::AlignIndex,
     identification::{IdentifiedPeptidoform, MaybePeptidoform, MetaData},
     ontology::CustomDatabase,
     prelude::*,
@@ -109,7 +108,7 @@ impl IdentifiedPeptidoformFile {
                     }),
                 MassMode::Monoisotopic,
             );
-            self.index.set(index);
+            let _ = self.index.set(index);
             self.index.get().unwrap()
         }
     }

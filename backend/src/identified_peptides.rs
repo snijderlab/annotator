@@ -1,5 +1,3 @@
-use std::{cmp::Reverse, collections::BinaryHeap};
-
 use crate::{
     ModifiableState, html_builder,
     state::{IdentifiedPeptidoformFile, State},

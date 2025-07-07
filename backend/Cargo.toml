@@ -40,6 +40,7 @@ mzpeaks = "1.0"
 mzsignal = "1.0"
 tauri-plugin-dialog = "2"
 thin-vec = { version = "0.2", features = ["serde"] }
+tauri-plugin-opener = "2.4.0"
 
 [features]
 default = ["custom-protocol"]

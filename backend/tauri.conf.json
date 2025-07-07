@@ -27,7 +27,22 @@
             "core:window:allow-set-title",
             "core:webview:default",
             "dialog:allow-open",
-            "dialog:allow-save"
+            "dialog:allow-save",
+            "opener:default",
+            {
+              "identifier": "opener:allow-open-path",
+              "allow": [
+                {
+                  "path": "**/assets/*.pdf"
+                },
+                {
+                  "path": "https://www.psidev.info/**"
+                },
+                {
+                  "path": "https://github.com/snijderlab/*"
+                }
+              ]
+            }
           ]
         }
       ],

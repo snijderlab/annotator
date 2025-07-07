@@ -294,6 +294,7 @@ fn get_custom_configuration_path(app: tauri::AppHandle) -> (String, String) {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .manage(Mutex::new(State {
             spectra: Vec::new(),
             identified_peptide_files: std::cell::RefCell::new(Vec::new()),

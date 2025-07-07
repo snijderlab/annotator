@@ -250,13 +250,14 @@ fn main() {
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Annotator</title>
       <script type="module" src="/main.js" defer></script>
+      <script type="module" src="/open.js" defer></script>
       <script src="script.js"></script>
     </head>
     
     <body class="theme-auto" id="body">
       <div class='header'>
         <button class="print" onclick="window.print()">Export</button>
-        <a target="_blank" class="button secondary" href="/assets/Annotator-manual.pdf">Manual</a>
+        <a target="_blank" class="button secondary" data-href="../frontend/assets/Annotator-manual.pdf">Manual</a>
         <button class="cancel-drop" onclick='document.querySelector("html").classList.remove("file-drop-hover")'>Cancel drop</button>
         <div class="theme">
           <span>Theme</span>
