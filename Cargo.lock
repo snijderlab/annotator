@@ -4150,6 +4150,7 @@ dependencies = [
  "ordered-float",
  "paste",
  "probability",
+ "rayon",
  "regex",
  "serde",
  "serde_json",

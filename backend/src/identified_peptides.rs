@@ -1,3 +1,5 @@
+use std::{cmp::Reverse, collections::BinaryHeap};
+
 use crate::{
     ModifiableState, html_builder,
     state::{IdentifiedPeptidoformFile, State},
@@ -5,11 +7,11 @@ use crate::{
 use itertools::Itertools;
 use rayon::prelude::*;
 use rustyms::{
-    align::{AlignScoring, AlignType, align},
+    align::{AlignScoring, AlignType, Alignment},
     error::*,
     identification::*,
     prelude::*,
-    sequence::{Linked, SimpleLinear},
+    sequence::Linked,
 };
 use serde::{Deserialize, Serialize};
 
@@ -104,6 +106,12 @@ pub async fn search_peptide<'a>(
     amount: usize,
     state: ModifiableState<'a>,
 ) -> Result<String, CustomError> {
+    if amount == 0 {
+        return Ok(
+            "Amount of peptides asked for is 0, so here are 0 peptides that match the query."
+                .to_string(),
+        );
+    }
     let state = state.lock().map_err(|_| {
         CustomError::error(
             "Cannot search",
@@ -111,67 +119,76 @@ pub async fn search_peptide<'a>(
             Context::None,
         )
     })?;
-    let search = Peptidoform::<Linked>::pro_forma(text, Some(&state.database))?
-        .into_simple_linear()
-        .ok_or_else(|| {
-            CustomError::error(
-                "Invalid search peptide",
-                "A search peptide should be simple",
-                Context::None,
-            )
-        })?;
+    let query = std::sync::Arc::new(
+        Peptidoform::<Linked>::pro_forma(text, Some(&state.database))?
+            .into_simple_linear()
+            .ok_or_else(|| {
+                CustomError::error(
+                    "Invalid search peptide",
+                    "A search peptide should be simple",
+                    Context::None,
+                )
+            })?,
+    );
     let data = state
         .identified_peptide_files()
-        .iter()
+        .par_iter()
         .flat_map(|file| {
-            file.peptides
-                .iter()
-                .enumerate()
-                .map(|(index, p)| (file.id, index, p))
-        })
-        .filter(|(_, _, p)| {
-            p.score.is_none_or(|score| {
-                score >= minimal_peptide_score && p.compound_peptidoform_ion().is_some()
-            })
-        })
-        .par_bridge()
-        .filter_map(|p| {
-            // Take the peptide if it is a single peptide, or if it is a compound peptidoform ion but only contains one peptide take that
-            p.2.compound_peptidoform_ion()
-                .and_then(|p| {
-                    p.singular_peptidoform_ref()
-                        .and_then(|p| p.as_simple_linear().cloned())
-                })
-                .map(|simple| (p.0, p.1, p.2, simple))
-        })
-        .map(|(id, index, peptide, simple)| {
-            (
-                index,
-                align::<4, Peptidoform<SimpleLinear>, &Peptidoform<SimpleLinear>>(
-                    simple,
-                    &search,
+            file.index()
+                .par_align_one_filtered(
+                    query.clone(),
+                    |p| p.score.is_none_or(|score| score.0 >= minimal_peptide_score),
                     AlignScoring::default(),
                     AlignType::GLOBAL_B,
                 )
-                .to_owned(),
-                peptide,
-                id,
-            )
+                .filter(|alignment| alignment.normalised_score() >= minimal_match_score)
         })
-        .filter(|(_, alignment, _, _)| alignment.normalised_score() >= minimal_match_score)
-        .collect::<Vec<_>>()
+        .fold(
+            || Vec::with_capacity(amount),
+            |mut acc, x| {
+                if acc.len() < amount {
+                    let index = acc
+                        .binary_search_by(|a: &Alignment<_, _>| a.cmp(&x).reverse())
+                        .unwrap_or_else(|v| v);
+                    acc.insert(index, x);
+                } else if acc.last().is_some_and(|v| *v < x) {
+                    acc.pop();
+                    let index = acc
+                        .binary_search_by(|a: &Alignment<_, _>| a.cmp(&x).reverse())
+                        .unwrap_or_else(|v| v);
+                    acc.insert(index, x);
+                }
+                acc
+            },
+        )
+        .reduce(Vec::new, |mut acc, h2| {
+            for x in h2 {
+                if acc.len() < amount {
+                    let index = acc
+                        .binary_search_by(|a: &Alignment<_, _>| a.cmp(&x).reverse())
+                        .unwrap_or_else(|v| v);
+                    acc.insert(index, x);
+                } else if acc.last().is_some_and(|v| *v < x) {
+                    acc.pop();
+                    let index = acc
+                        .binary_search_by(|a: &Alignment<_, _>| a.cmp(&x).reverse())
+                        .unwrap_or_else(|v| v);
+                    acc.insert(index, x);
+                }
+            }
+            acc
+        })
         .into_iter()
-        .k_largest_by(amount, |a, b| {
-            a.1.score().normalised.cmp(&b.1.score().normalised)
-        })
-        .map(|(index, alignment, peptide, id)| {
+        .map(|alignment| {
             let start = alignment.start_a();
             let end = alignment.start_a() + alignment.len_a();
-            let sequence = alignment.seq_a();
+            let sequence = alignment.seq_a().peptidoform();
             vec![
                 format!(
-                    "<a onclick=\"load_peptide({id}, {index})\">F{}:{index}</a>",
-                    id + 1
+                    "<a onclick=\"load_peptide({0}, {1})\">F{2}:{1}</a>",
+                    alignment.seq_a().id,
+                    alignment.seq_a().index,
+                    alignment.seq_a().id + 1
                 ),
                 format!(
                     "{}<span class='match'>{}</span>{}",
@@ -180,7 +197,8 @@ pub async fn search_peptide<'a>(
                     sequence.sub_peptide(end..).to_string(),
                 ),
                 format!("{:.3}", alignment.normalised_score()),
-                peptide
+                alignment
+                    .seq_a()
                     .score
                     .map(|score| format!("{score:.3}"))
                     .unwrap_or_default(),

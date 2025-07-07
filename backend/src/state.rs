@@ -1,8 +1,8 @@
 use std::{
-    cell::{Ref, RefCell, RefMut},
+    cell::{Cell, OnceCell, Ref, RefCell, RefMut},
     fs::File,
     ops::RangeInclusive,
-    sync::atomic::AtomicUsize,
+    sync::{Arc, OnceLock, atomic::AtomicUsize},
 };
 
 use mzdata::{
@@ -10,11 +10,14 @@ use mzdata::{
     prelude::SpectrumLike,
     spectrum::MultiLayerSpectrum,
 };
+use ordered_float::OrderedFloat;
+use rayon::prelude::*;
 use rustyms::{
-    identification::{IdentifiedPeptidoform, MaybePeptidoform},
+    align::{AlignIndex, AlignScoring},
+    identification::{IdentifiedPeptidoform, MaybePeptidoform, MetaData},
     ontology::CustomDatabase,
     prelude::*,
-    sequence::Linked,
+    sequence::{Linked, SimpleLinear},
     system::OrderedTime,
 };
 use serde::{Deserialize, Serialize};
@@ -41,10 +44,26 @@ impl State {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct IndexSequence {
+    pub sequence: Arc<Peptidoform<SimpleLinear>>,
+    pub score: Option<OrderedFloat<f64>>,
+    pub id: usize,
+    pub index: usize,
+}
+
+impl HasPeptidoformImpl for IndexSequence {
+    type Complexity = SimpleLinear;
+    fn peptidoform(&self) -> &Peptidoform<Self::Complexity> {
+        &self.sequence
+    }
+}
+
 pub struct IdentifiedPeptidoformFile {
     pub id: usize,
     pub path: String,
     pub peptides: Vec<IdentifiedPeptidoform<Linked, MaybePeptidoform>>,
+    pub index: OnceLock<AlignIndex<4, IndexSequence>>,
 }
 
 impl IdentifiedPeptidoformFile {
@@ -64,6 +83,34 @@ impl IdentifiedPeptidoformFile {
             id: IDENTIFIED_PEPTIDE_FILE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
             path,
             peptides,
+            index: OnceLock::default(),
+        }
+    }
+
+    pub fn index(&self) -> &AlignIndex<4, IndexSequence> {
+        if let Some(index) = self.index.get() {
+            index
+        } else {
+            let index = AlignIndex::new(
+                self.peptides
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, identified)| {
+                        identified
+                            .compound_peptidoform_ion()
+                            .and_then(|p| p.into_owned().singular_peptidoform())
+                            .and_then(|p| p.into_simple_linear())
+                            .map(|p| IndexSequence {
+                                sequence: Arc::new(p),
+                                score: identified.score.map(OrderedFloat),
+                                id: self.id,
+                                index,
+                            })
+                    }),
+                MassMode::Monoisotopic,
+            );
+            self.index.set(index);
+            self.index.get().unwrap()
         }
     }
 }

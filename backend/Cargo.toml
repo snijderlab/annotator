@@ -23,6 +23,7 @@ rustyms = { version = "0.10.0", default-features = false, features = [
     "isotopes",
     "mzdata",
     "glycan-render",
+    "rayon",
 ] }
 ordered-float = { version = "5.0", features = ["serde"] }
 rayon = "1.10"
