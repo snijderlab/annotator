@@ -110,7 +110,12 @@ pub fn get_models(state: &State) -> (usize, Vec<(bool, &str, &FragmentationModel
         (true, "None", FragmentationModel::none()),
     ];
     let built_in_length = output.len();
-    output.extend(state.models.iter().map(|(n, m)| (false, n.as_str(), m)));
+    output.extend(
+        state
+            .custom_models
+            .iter()
+            .map(|(n, m)| (false, n.as_str(), m)),
+    );
     (built_in_length, output)
 }
 
@@ -154,14 +159,23 @@ pub fn get_model_index(
 #[tauri::command]
 pub fn get_custom_models(
     state: ModifiableState,
-) -> Result<Vec<(bool, usize, String)>, &'static str> {
+) -> Result<
+    (
+        Vec<(bool, usize, String)>,
+        Option<(CustomError, Vec<String>)>,
+    ),
+    &'static str,
+> {
     let state = state.lock().map_err(|_| "Could not lock mutex")?;
-    Ok(get_models(&state)
-        .1
-        .iter()
-        .enumerate()
-        .map(|(index, (built_in, name, _))| (*built_in, index, name.to_string()))
-        .collect())
+    Ok((
+        get_models(&state)
+            .1
+            .iter()
+            .enumerate()
+            .map(|(index, (built_in, name, _))| (*built_in, index, name.to_string()))
+            .collect(),
+        state.custom_models_error.clone(),
+    ))
 }
 
 #[tauri::command]
@@ -175,7 +189,9 @@ pub fn duplicate_custom_model(
         let model = (*model).clone();
         let name = name.to_string();
         let models_len = models.len();
-        locked_state.models.push((name.clone(), model.clone()));
+        locked_state
+            .custom_models
+            .push((name.clone(), model.clone()));
         drop(locked_state);
         Ok((models_len, built_in, name, model.into()))
     } else {
@@ -193,7 +209,7 @@ pub fn delete_custom_model(id: usize, state: ModifiableState) -> Result<(), &'st
         if built_in {
             Err("Can not delete built in model")
         } else {
-            state.models.remove(id - offset);
+            state.custom_models.remove(id - offset);
             Ok(())
         }
     } else {
@@ -227,7 +243,7 @@ pub async fn update_model(
     if let Ok(mut state) = app.state::<Mutex<State>>().lock() {
         let (built_in_models_length, models) = get_models(&state);
         let index = id.saturating_sub(built_in_models_length);
-        if index < state.models.len() {
+        if index < state.custom_models.len() {
             let (built_in, _, _) = models[id];
             if built_in {
                 return Err(CustomError::error(
@@ -236,10 +252,10 @@ pub async fn update_model(
                     Context::None,
                 ));
             } else {
-                state.models[index] = model;
+                state.custom_models[index] = model;
             }
         } else {
-            state.models.push(model);
+            state.custom_models.push(model);
         }
 
         // Store mods config file
@@ -275,7 +291,7 @@ pub async fn update_model(
                 Context::show(path.to_string_lossy()),
             )
         })?);
-        serde_json::to_writer_pretty(file, &state.models).map_err(|err| {
+        serde_json::to_writer_pretty(file, &state.custom_models).map_err(|err| {
             CustomError::error(
                 "Could not write custom models to configuration file",
                 err,

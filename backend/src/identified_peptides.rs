@@ -118,7 +118,7 @@ pub async fn search_peptide<'a>(
         )
     })?;
     let query = std::sync::Arc::new(
-        Peptidoform::<Linked>::pro_forma(text, Some(&state.database))?
+        Peptidoform::<Linked>::pro_forma(text, Some(&state.custom_modifications))?
             .into_simple_linear()
             .ok_or_else(|| {
                 CustomError::error(
@@ -238,7 +238,7 @@ impl IdentifiedPeptideSettings {
             charge: peptide.charge().map(|v| v.value),
             mode: peptide
                 .mode()
-                .and_then(|mode| crate::model::get_model_index(&state.models, mode)),
+                .and_then(|mode| crate::model::get_model_index(&state.custom_models, mode)),
             warning,
         }
     }

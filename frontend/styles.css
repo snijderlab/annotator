@@ -2635,6 +2635,18 @@ input:not(:checked)+.collapsible {
     justify-content: space-evenly;
     flex-wrap: wrap;
 
+    label {
+        break-inside: avoid;
+        display: inline-flex;
+        align-items: baseline;
+
+        input,
+        select,
+        div {
+            margin-left: .5rem;
+        }
+    }
+
     & .usi {
         background: var(--color-secondary);
         border-radius: 100000px;
@@ -2724,6 +2736,7 @@ output.error,
 output.warning {
     margin: .5rem;
     padding-left: .5rem;
+    padding-bottom: .5rem;
     border: 2px solid var(--color-red);
     color: var(--color-foreground);
     display: block;

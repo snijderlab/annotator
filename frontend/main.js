@@ -533,7 +533,15 @@ async function load_identified_peptide() {
 
 function updateCustomModels() {
   invoke("get_custom_models")
-    .then(models => {
+    .then((result) => {
+      let models = result[0];
+      if (result[1] != null) {
+        showError("custom-models-error", result[1][0], true);
+        for (let error of result[1][1]) {
+          document.getElementById("custom-models-error-2").innerHTML += "</br>" + error;
+        }
+        document.getElementById("custom-models-error").parentElement.classList.remove("hidden");
+      }
       let container = document.getElementById("custom-models");
       let select = document.getElementById("spectrum-model");
       let model_built_in = document.createElement("optgroup");
@@ -1357,7 +1365,15 @@ function editListInput(e, listInput) {
 
 function updateCustomModifications() {
   invoke("get_custom_modifications", { theme: Theme })
-    .then(modifications => {
+    .then((result) => {
+      let modifications = result[0];
+      if (result[1] != null) {
+        showError("custom-modifications-error", result[1][0], true);
+        for (let error of result[1][1]) {
+          document.getElementById("custom-modifications-error-2").innerHTML += "</br>" + error;
+        }
+        document.getElementById("custom-modifications-error").parentElement.classList.remove("hidden");
+      }
       let container = document.getElementById("custom-mods");
       container.innerText = "";
       let highest_id = -1;

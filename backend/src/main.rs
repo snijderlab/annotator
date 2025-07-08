@@ -213,7 +213,7 @@ async fn annotate_spectrum<'a>(
         "most_abundant" => MassMode::MostAbundant,
         _ => return Err(CustomError::error("Invalid mass mode", "", Context::None)),
     };
-    let peptide = CompoundPeptidoformIon::pro_forma(peptide, Some(&state.database))?;
+    let peptide = CompoundPeptidoformIon::pro_forma(peptide, Some(&state.custom_modifications))?;
     let multiple_peptidoforms = peptide.peptidoform_ions().len() == 1;
     let multiple_peptides = peptide
         .peptidoform_ions()
@@ -265,10 +265,61 @@ fn load_custom_mods_and_models(app: &mut tauri::App) -> Result<(), Box<dyn std::
         let mut state = app_state
             .lock()
             .expect("Poisoned mutex at setup of custom mods");
-
-        state.database = rustyms::sequence::parse_custom_modifications(&custom_mods)?;
-
-        state.models = rustyms::annotation::model::parse_custom_models(&custom_models)?;
+        let now = chrono::Local::now().format("%Y%m%d%H%M%S%.3f");
+        if custom_mods.exists() {
+            match rustyms::sequence::parse_custom_modifications(&custom_mods) {
+                Ok(modifications) => state.custom_modifications = modifications,
+                Err(error) => {
+                    eprintln!("Error while parsing custom modifications:\n{error}");
+                    let mut combined_error = (error.clone(), Vec::new());
+                    if let Err(err) = std::fs::rename(
+                        &custom_mods,
+                        custom_mods
+                            .with_file_name(format!("{CUSTOM_MODELS_FILE}_backup_{now}.json",)),
+                    ) {
+                        combined_error
+                            .1
+                            .push(format!("Could not rename modifications file: {err}"));
+                    }
+                    if let Err(err) = std::fs::write(
+                        custom_mods.with_file_name(format!("error_{now}.txt")),
+                        error.to_string().as_bytes(),
+                    ) {
+                        combined_error.1.push(format!(
+                            "Could not save modifications parse error file: {err}"
+                        ));
+                    }
+                    state.custom_modifications_error = Some(combined_error);
+                }
+            }
+        }
+        if custom_models.exists() {
+            match rustyms::annotation::model::parse_custom_models(&custom_models) {
+                Ok(models) => state.custom_models = models,
+                Err(error) => {
+                    eprintln!("Error while parsing custom models:\n{error}");
+                    let mut combined_error = (error.clone(), Vec::new());
+                    if let Err(err) = std::fs::rename(
+                        &custom_models,
+                        custom_models
+                            .with_file_name(format!("{CUSTOM_MODELS_FILE}_backup_{now}.json")),
+                    ) {
+                        combined_error
+                            .1
+                            .push(format!("Could not rename models file: {err}"));
+                    }
+                    if let Err(err) = std::fs::write(
+                        custom_models.with_file_name(format!("error_{now}.txt")),
+                        error.to_string().as_bytes(),
+                    ) {
+                        combined_error
+                            .1
+                            .push(format!("Could not save models parse error file: {err}"));
+                    }
+                    state.custom_models_error = Some(combined_error);
+                }
+            }
+        }
 
         Ok(())
     } else {
@@ -298,8 +349,10 @@ fn main() {
         .manage(Mutex::new(State {
             spectra: Vec::new(),
             identified_peptide_files: std::cell::RefCell::new(Vec::new()),
-            database: Vec::new(),
-            models: Vec::new(),
+            custom_modifications: Vec::new(),
+            custom_modifications_error: None,
+            custom_models: Vec::new(),
+            custom_models_error: None,
         }))
         .setup(load_custom_mods_and_models)
         .invoke_handler(tauri::generate_handler![

@@ -36,7 +36,7 @@
   h(3pt)
 }
 
-#let peptide(it) = {
+#let peptidoform(it) = {
   h(3pt)
   box(
     fill: color.linear-rgb(lightgrey, lightgrey, lightgrey, 255),

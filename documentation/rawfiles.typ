@@ -1,4 +1,4 @@
-#import "functions.typ": aside, button, peptide
+#import "functions.typ": aside, button, peptidoform
 
 = Rawfiles
 
@@ -56,6 +56,6 @@ table.header([*Part*], [*Example*], [*Comment*]),
 
 These parts have to be strung together using colons ':', resulting in the following string:
 
-#h(12pt)#peptide[mzspec:-?PXD043489:-?20201103_F1_UM5_Peng0013_SA_139H2_InS_Elastase.raw:-?scan:-?11809:-?VSLFPPSSEQLTSNASVV]
+#h(12pt)#peptidoform[mzspec:-?PXD043489:-?20201103_F1_UM5_Peng0013_SA_139H2_InS_Elastase.raw:-?scan:-?11809:-?VSLFPPSSEQLTSNASVV]
 
-Pasting a USI into the Annotator downloads that spectrum from the internet and loads the interpretation (if given) into the peptide field.
+Pasting a USI into the Annotator downloads that spectrum from the internet and loads the interpretation (if given) into the peptidoform field.

@@ -169,7 +169,7 @@ pub async fn load_usi<'a>(
             })
         );
         let mode = spectrum.precursor().and_then(|p| {
-            get_mzdata_model(p.activation.methods(), &state.models)
+            get_mzdata_model(p.activation.methods(), &state.custom_models)
                 .map(|(i, _)| i)
                 .ok()
                 .filter(|i| *i != crate::model::NONE)

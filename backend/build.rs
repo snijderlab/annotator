@@ -78,7 +78,7 @@ fn create_loss_modal(id: &str) -> HtmlElement {
             HtmlTag::p.new().content("Single monosaccharides will be generated as diagnostic ions. With the settings below the neutral losses for each of these diagnostic ions can be controlled. If a colon is used the rule will apply to any monosaccharide that is equivalent when isomeric state is disregarded, while when equals '=' is used the isomeric state has to be identical as well.").clone(),
             HtmlElement::separated_input(format!("model-{id}-specific-loss"), "Monosaccharide followed by a colon or equals and the losses separated by commas", "monosaccharide_neutral_loss"),
             HtmlTag::h2.new().content("Glycan attachment to fragments").clone(),
-            HtmlTag::p.new().content("Glycans can be attached to amino acid in different ways and each of these ways can result in different fragmentation behaviour. Here rules on the behaviour can be defined that determine which part of a glycan can be attached to any fragment with a glycan. Full indicates that the full glycan is present on all glycan containing fragments. Core indicates the maximum depth in the glycan structure that remains on the peptide fragment, fucoses are not counted in the depth but always generated both with and without. If any of the core fields is left empty no core fragments are generated.").clone()
+            HtmlTag::p.new().content("Glycans can be attached to amino acid in different ways and each of these ways can result in different fragmentation behaviour. Here rules on the behaviour can be defined that determine which part of a glycan can be attached to any fragment with a glycan. Full indicates that the full glycan is present on all glycan containing fragments. Core indicates the maximum depth in the glycan structure that remains on the peptidoform fragment, fucoses are not counted in the depth but always generated both with and without. If any of the core fields is left empty no core fragments are generated.").clone()
           ].into_iter().chain([
             HtmlTag::div.new().class("list-input glycan-fragments").content(
               HtmlTag::ul.new().class("values").id("model-glycan-fragments").content(r#"<li class="element"><span data-value='[[], [], {"full": true, "core": null }, true]' title="Edit">All undefined, Fragments: full</span></li>"#))
@@ -271,7 +271,7 @@ fn main() {
       <div class="input-flex">
         <div class="joined-button" id="load-raw-path"><button type="button" id="load-raw-file">Load raw data file</button><button type="button" id="load-raw-folder" title="Open a Bruker TDF .d directory">folder</button></div>
         <button type="button" id="load-clipboard">Load Clipboard</button>
-        <button type="button" id="load-identified-peptides">Load identified peptides file</button>
+        <button type="button" id="load-identified-peptides">Load identified peptidoforms file</button>
       </div>
       <div class="input-flex">
         <div class="usi">
@@ -283,18 +283,14 @@ fn main() {
       <output class="wrap" id="open-files-error"></output>
       
       <div id="peptides" style="display:none">
-        <h2>Peptide details</h2>
+        <h2>Peptidoform details</h2>
         <div class="resize-wrapper">
           <div>
             <div class="input-flex">
-              <label for="search-peptide-input">Search peptide</label>
-              <input id="search-peptide-input" type="text"></input>
-              <label for="search-peptide-minimal-match">Minimal match score</label>
-              <input id="search-peptide-minimal-match" type="number" min="0" max="1" value="0"></input>
-              <label for="search-peptide-minimal-peptide">Minimal peptide score</label>
-              <input id="search-peptide-minimal-peptide" type="number" min="0" max="1" value="0"></input>
-              <label for="search-peptide-amount">Number of results</label>
-              <input id="search-peptide-amount" type="number" min="0" value="25"></input>
+              <label for="search-peptide-input">Search peptidoform<input id="search-peptide-input" type="text"></input></label>
+              <label for="search-peptide-minimal-match">Minimal match score<input id="search-peptide-minimal-match" type="number" min="0" max="1" value="0"></input></label>
+              <label for="search-peptide-minimal-peptide">Minimal peptidoform score<input id="search-peptide-minimal-peptide" type="number" min="0" max="1" value="0"></input></label>
+              <label for="search-peptide-amount">Number of results<input id="search-peptide-amount" type="number" min="0" value="25"></input></label>
               <button id="search-peptide">Search</button>
             </div>
             <div id="resulting-peptides">Go and search!</div>
@@ -302,16 +298,16 @@ fn main() {
           <div class="resize"></div>
           <div>
             <div class="input-flex">
-              <label for="details-identified-peptide-files">File</label>
-              <select id="details-identified-peptide-files"></select>
+              <label for="details-identified-peptide-files">File<select id="details-identified-peptide-files"></select></label>
               <button id="close-identified-peptide-file" type="button">Close file</button>
-              <label for="details-identified-peptide-index">Peptide index</label>
-              <div class="combined-input">
-                <input type="number" id="details-identified-peptide-index" value="0" min="0" />
-                <span>/</span>
-                <span id="number-of-identified-peptides">0</span>
-              </div>
-              <button id="load-identified-peptide" title="Find this peptide in the raw data file and populate all setting fields with this peptide's data" type="button">Load</button>
+              <label for="details-identified-peptide-index">Peptidoform index
+                <div class="combined-input">
+                  <input type="number" id="details-identified-peptide-index" value="0" min="0" />
+                  <span>/</span>
+                  <span id="number-of-identified-peptides">0</span>
+                </div>
+              </label>
+              <button id="load-identified-peptide" title="Find this peptidoform in the raw data file and populate all setting fields with this peptidoform's data" type="button">Load</button>
             </div>
             <div id="identified-peptide-details"></div>
           </div>
@@ -343,7 +339,7 @@ fn main() {
         </select>
 
         <label for="spectrum-charge">Max charge </label>
-        <input type="number" id="spectrum-charge" value="" placeholder="Empty takes peptide charge from raw data" />
+        <input type="number" id="spectrum-charge" value="" placeholder="Empty takes peptidoform charge from raw data" />
         
         <label for="model-mz-range-min">m/z range</label>
         <div class="row">
@@ -360,7 +356,7 @@ fn main() {
 
     write!(
             writer,
-            r#"<label class="wide" for="peptide">Peptide sequence </label>
+            r#"<label class="wide" for="peptide">Peptidoform sequence </label>
           <div class="peptide-input wide context" id="peptide" contentEditable="plaintext-only"></div>
           <button id="annotate-button" type="button" class="col-2 center">Annotate</button>
           <button id="save-spectrum" type="button" class="secondary center" title="Save the (merged) selected spectrum, with the noise filter applied.">Save selected spectrum</button>
@@ -410,8 +406,8 @@ fn main() {
             <legend>Graphics settings</legend>
             <label class='row align' for='spectrum-width'><span>Width</span><input id='spectrum-width' class='width' type='text' value='100%'/></label>
             <label class='row align' for='spectrum-height'><span>Height</span><input id='spectrum-height' class='height' type='text' value='250px'/></label>
-            <label class='row align' for='spectrum-fs-peptide'><span>Peptide font size</span><input id='spectrum-fs-peptide' class='fs-peptide' type='text' value='1.25rem'/></label>
-            <label class='row align' for='spectrum-peptide-stroke'><span>Peptide stroke width</span><input id='spectrum-peptide-stroke' class='stroke-peptide' type='text' value='2px'/></label>
+            <label class='row align' for='spectrum-fs-peptide'><span>Peptidoform font size</span><input id='spectrum-fs-peptide' class='fs-peptide' type='text' value='1.25rem'/></label>
+            <label class='row align' for='spectrum-peptide-stroke'><span>Peptidoform stroke width</span><input id='spectrum-peptide-stroke' class='stroke-peptide' type='text' value='2px'/></label>
             <label class='row align' for='spectrum-fs-spectrum'><span>Spectrum font size</span><input id='spectrum-fs-spectrum' class='fs-spectrum' type='text' value='1rem'/></label>
             <label class='row align' for='spectrum-spectrum-stroke'><span>Spectrum stroke width</span><input id='spectrum-spectrum-stroke' class='stroke-spectrum' type='text' value='2px'/></label>
             <label class='row align' for='spectrum-spectrum-stroke-unassigned'><span>Spectrum unassigned stroke width</span><input id='spectrum-spectrum-stroke-unassigned' class='stroke-spectrum-unassigned' type='text' value='1px'/></label>
@@ -467,22 +463,22 @@ fn main() {
           </fieldset>
     
           <fieldset class='settings peptide-settings'>
-            <legend>Peptide settings</legend>
-            <label for='spectrum-compact' title='Display the peptide ion support in a more compact way'><input id='spectrum-compact' class='compact' type='checkbox' switch/>Compact peptide</label>
-            <label for='peptide-intensities' title='Display the intensities in the peptide support'><input id='peptide-intensities' class='compact' type='checkbox' switch/>Display intensities</label>
+            <legend>Peptidoform settings</legend>
+            <label for='spectrum-compact' title='Display the peptidoform ion support in a more compact way'><input id='spectrum-compact' class='compact' type='checkbox' switch/>Compact peptidoform</label>
+            <label for='peptide-intensities' title='Display the intensities in the peptidoform support'><input id='peptide-intensities' class='compact' type='checkbox' switch/>Display intensities</label>
     
             <div class='row'>
               <span class='title'>Highlight</span>
               <div class='select-box' id='highlight'>
-                <label title='Highlight a region in a peptide, while not overriding the ion colours' tabindex='0'><input type='radio' name='highlight' value='default' id='highlight-default' checked>Default</label>
-                <label title='Annotate regions in a peptide in red' class='colour' tabindex='0'><input type='radio' name='highlight' value='red' id='highlight-red'></label>
-                <label title='Annotate regions in a peptide in green' class='colour' tabindex='0'><input type='radio' name='highlight' value='green' id='highlight-green'></label>
-                <label title='Annotate regions in a peptide in blue' class='colour' tabindex='0'><input type='radio' name='highlight' value='blue' id='highlight-blue'></label>
-                <label title='Annotate regions in a peptide in yellow' class='colour' tabindex='0'><input type='radio' name='highlight' value='yellow' id='highlight-yellow'></label>
-                <label title='Annotate regions in a peptide in purple' class='colour' tabindex='0'><input type='radio' name='highlight' value='purple' id='highlight-purple'></label>
-                <label title='Remove the annotation for regions in a peptide' tabindex='0'><input type='radio' name='highlight' value='remove' id='highlight-remove'>X</label>
+                <label title='Highlight a region in a peptidoform, while not overriding the ion colours' tabindex='0'><input type='radio' name='highlight' value='default' id='highlight-default' checked>Default</label>
+                <label title='Annotate regions in a peptidoform in red' class='colour' tabindex='0'><input type='radio' name='highlight' value='red' id='highlight-red'></label>
+                <label title='Annotate regions in a peptidoform in green' class='colour' tabindex='0'><input type='radio' name='highlight' value='green' id='highlight-green'></label>
+                <label title='Annotate regions in a peptidoform in blue' class='colour' tabindex='0'><input type='radio' name='highlight' value='blue' id='highlight-blue'></label>
+                <label title='Annotate regions in a peptidoform in yellow' class='colour' tabindex='0'><input type='radio' name='highlight' value='yellow' id='highlight-yellow'></label>
+                <label title='Annotate regions in a peptidoform in purple' class='colour' tabindex='0'><input type='radio' name='highlight' value='purple' id='highlight-purple'></label>
+                <label title='Remove the annotation for regions in a peptidoform' tabindex='0'><input type='radio' name='highlight' value='remove' id='highlight-remove'>X</label>
               </div>
-              <button id='clear-colour' class='clear-colour' title='Remove all annotations on all peptides' tabindex='0'>Clear</button>
+              <button id='clear-colour' class='clear-colour' title='Remove all annotations on all peptidoforms' tabindex='0'>Clear</button>
             </div>
     
           </fieldset>
@@ -490,7 +486,7 @@ fn main() {
           <fieldset class='settings spectrum-settings peaks-settings'>
             <legend>Peaks settings</legend>
             
-            <label for='theoretical' title='Show the theoretical peptide spectrum on the x axis'><input id='theoretical' class='theoretical' type='checkbox' switch/>Show theoretical spectrum</label>
+            <label for='theoretical' title='Show the theoretical peptidoform spectrum on the x axis'><input id='theoretical' class='theoretical' type='checkbox' switch/>Show theoretical spectrum</label>
             
             <label for='unassigned' title='Show the unassigned peaks in the spectrum'><input id='unassigned' class='unassigned' type='checkbox' switch checked/>Show unassigned peaks</label>
     
@@ -498,8 +494,8 @@ fn main() {
               <span class='title'>Ion colour mode</span>
               <div class='select-box' id='peak-colour'>
                 <label for='peak-colour-ion' tabindex='0'><input type='radio' name='peak-colour' value='ion' id='peak-colour-ion' checked>Ion</label>
-                <label for='peak-colour-peptide' tabindex='0'><input type='radio' name='peak-colour' value='peptide' id='peak-colour-peptide'>Peptide</label>
-                <label for='peak-colour-peptidoform' tabindex='0'><input type='radio' name='peak-colour' value='peptidoform' id='peak-colour-peptidoform'>Peptidoform</label>
+                <label for='peak-colour-peptide' tabindex='0'><input type='radio' name='peak-colour' value='peptide' id='peak-colour-peptide'>Peptidoform</label>
+                <label for='peak-colour-peptidoform' tabindex='0'><input type='radio' name='peak-colour' value='peptidoform' id='peak-colour-peptidoform' title='Colour by peptidoform ion, these are the cross-linked clusters of peptidoforms'>Peptidoform Ion</label>
                 <label for='peak-colour-none' tabindex='0'><input type='radio' name='peak-colour' value='none' id='peak-colour-none'>None</label>
               </div>
             </div>
@@ -549,13 +545,13 @@ fn main() {
                   <label><input checked id='spectrum-label-charge' type='checkbox'/>Charge</label>
                   <label><input checked id='spectrum-label-series' type='checkbox'/>Series number</label>
                   <label><input checked id='spectrum-label-glycan-id' type='checkbox'/>Glycan position</label>
-                  <label><input checked id='spectrum-label-peptide-id' type='checkbox'/>Peptide number</label>
+                  <label><input checked id='spectrum-label-peptide-id' type='checkbox'/>Peptidoform number</label>
                   <label><input checked id='spectrum-label-neutral-losses' type='checkbox'/>Neutral losses</label>
                   <label><input checked id='spectrum-label-cross-links' type='checkbox'/>Cross-links</label>
                   <label><input checked id='spectrum-label-ambiguous-amino-acids' type='checkbox'/>Ambiguous amino acids</label>
                   <label><input checked id='spectrum-label-modifications' type='checkbox'/>Modifications of unknown position</label>
                   <label><input id='spectrum-label-charge-carriers' type='checkbox'/>Charge carriers</label>
-                  <label><input checked id='spectrum-label-glycan-peptide-fragments' type='checkbox'/>Glycan peptide fragments</label>
+                  <label><input checked id='spectrum-label-glycan-peptide-fragments' type='checkbox'/>Glycan peptidoform fragments</label>
                 </div>
             </div>
 
@@ -628,6 +624,11 @@ fn main() {
       <fieldset class="collapsible" data-linked-item="collapsible-custom-mods" id="custom-modifications">
         <legend>Custom modifications</legend>
         <p>Path to configuration file: <span style='-webkit-user-select:all;user-select:all;' id='custom-modifications-path'>Not loaded</span></p>
+        <div class="hidden loading-error">
+          <p>While reading the custom modifications JSON file an error occured. The original file has been renamed to prevent accidental overwriting. The error is shown below and stored in a file next in the same folder.</p>
+          <output class="error" id="custom-modifications-error"></output>
+          <p id="custom-modifications-error-2"></p>
+        </dev>
         <dialog id="custom-mod-dialog">
           <h1>Custom modification</h1>
 
@@ -772,6 +773,11 @@ fn main() {
       <fieldset class="collapsible" data-linked-item="collapsible-custom-models" id="custom-models-collapsible">
         <legend>Custom models</legend>
         <p>Path to configuration file: <span style='-webkit-user-select:all;user-select:all;' id='custom-models-path'>Not loaded</span></p>
+        <div class="hidden loading-error">
+          <p>While reading the custom models JSON file an error occured. The original file has been renamed to prevent accidental overwriting. The error is shown below and stored in a file next in the same folder.</p>
+          <output class="error" id="custom-models-error"></output>
+          <p id="custom-models-error-2"></p>
+        </dev>
         <dialog id="custom-model-dialog">
           <h2>Custom model</h2>
           <label>Name <input type="text" id="custom-model-name"/></label>

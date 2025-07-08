@@ -1,3 +1,19 @@
+# Version 1.2.0 - Neutral losses & bug hunting
+
+- Fixed manual not opening & updated manual
+- Fixed links to open in the default browser
+- Fixed some identified peptidoform issues (amongst other handle MSFragger files with missing columns)
+- Fixed custom modification neutral losses not being shown (they were always applied)
+- Fixed EAD glycan fragmentation
+- Fixed custom glycan peptide fragments not being saved
+- Improved peptide search speed, first search still takes a while but every subsequent search will be a lot quicker
+- Improved handling of error in custom modifications and models files (errors are shown at the top of the list)
+- Added support for PEAKS v13 Dia _de novo_
+- Added support for factors for neutral losses (-2H<sub>2</sub>O instead of -H<sub>4</sub>O<sub>2</sub>)
+- Added support for neutral losses from cross-linkers
+ 
+Because of these last two the custom modifications and models JSON files have changed. The old files will still be read fine, but once edited the files will change to the updated JSON format. This is the reason why this update is listed as a minor release.
+
 # Version 1.1.3
 
  - Fixed errors in parsing FragPipe files + added support for MSFragger

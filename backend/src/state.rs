@@ -13,6 +13,7 @@ use mzdata::{
 use ordered_float::OrderedFloat;
 use rustyms::{
     align::AlignIndex,
+    error::CustomError,
     identification::{IdentifiedPeptidoform, MaybePeptidoform, MetaData},
     ontology::CustomDatabase,
     prelude::*,
@@ -24,13 +25,15 @@ use serde::{Deserialize, Serialize};
 pub struct State {
     pub spectra: Vec<RawFile>,
     pub identified_peptide_files: RefCell<Vec<IdentifiedPeptidoformFile>>,
-    pub database: CustomDatabase,
-    pub models: Vec<(String, FragmentationModel)>,
+    pub custom_modifications: CustomDatabase,
+    pub custom_modifications_error: Option<(CustomError, Vec<String>)>,
+    pub custom_models: Vec<(String, FragmentationModel)>,
+    pub custom_models_error: Option<(CustomError, Vec<String>)>,
 }
 
 impl State {
     pub fn database(&self) -> Option<&CustomDatabase> {
-        (!self.database.is_empty()).then_some(&self.database)
+        (!self.custom_modifications.is_empty()).then_some(&self.custom_modifications)
     }
     pub fn identified_peptide_files(&self) -> Ref<Vec<IdentifiedPeptidoformFile>> {
         self.identified_peptide_files.borrow()
@@ -39,7 +42,7 @@ impl State {
         self.identified_peptide_files.borrow_mut()
     }
     pub fn spectra_and_models(&mut self) -> (&mut [RawFile], &[(String, FragmentationModel)]) {
-        (&mut self.spectra, &self.models)
+        (&mut self.spectra, &self.custom_models)
     }
 }
 

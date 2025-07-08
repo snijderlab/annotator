@@ -25,18 +25,22 @@ use crate::{
 pub fn get_custom_modifications(
     state: ModifiableState,
     theme: Theme,
-) -> Result<Vec<(usize, String)>, &'static str> {
+) -> Result<(Vec<(usize, String)>, Option<(CustomError, Vec<String>)>), &'static str> {
     let state = state.lock().map_err(|_| "Could not lock mutex")?;
-    Ok(state
-        .database
-        .iter()
-        .map(|(index, _, modification)| {
-            (
-                index.unwrap_or_default(),
-                crate::search_modification::render_modification(modification, theme).to_string(),
-            )
-        })
-        .collect())
+    Ok((
+        state
+            .custom_modifications
+            .iter()
+            .map(|(index, _, modification)| {
+                (
+                    index.unwrap_or_default(),
+                    crate::search_modification::render_modification(modification, theme)
+                        .to_string(),
+                )
+            })
+            .collect(),
+        state.custom_modifications_error.clone(),
+    ))
 }
 
 #[tauri::command]
@@ -47,11 +51,11 @@ pub fn duplicate_custom_modification(
 ) -> Result<CustomModification, &'static str> {
     let mut locked_state = state.lock().map_err(|_| "Could not lock mutex")?;
     if let Some(index) = locked_state
-        .database
+        .custom_modifications
         .iter()
         .position(|p| p.0.is_some_and(|i| i == id))
     {
-        let mut modification = locked_state.database[index].clone();
+        let mut modification = locked_state.custom_modifications[index].clone();
         modification.0 = Some(new_id);
         modification.2 = match modification.2.as_ref().clone() {
             SimpleModificationInner::Database {
@@ -103,7 +107,7 @@ pub fn duplicate_custom_modification(
             full => full,
         }
         .into();
-        locked_state.database.push(modification);
+        locked_state.custom_modifications.push(modification);
         drop(locked_state);
         get_custom_modification(new_id, state)
     } else {
@@ -115,11 +119,11 @@ pub fn duplicate_custom_modification(
 pub fn delete_custom_modification(id: usize, state: ModifiableState) -> Result<(), &'static str> {
     let mut state = state.lock().map_err(|_| "Could not lock mutex")?;
     if let Some(index) = state
-        .database
+        .custom_modifications
         .iter()
         .position(|p| p.0.is_some_and(|i| i == id))
     {
-        state.database.remove(index);
+        state.custom_modifications.remove(index);
         Ok(())
     } else {
         Err("Could not find specified id")
@@ -133,11 +137,11 @@ pub fn get_custom_modification(
 ) -> Result<CustomModification, &'static str> {
     let state = state.lock().map_err(|_| "Could not lock mutex")?;
     if let Some(index) = state
-        .database
+        .custom_modifications
         .iter()
         .position(|p| p.0.is_some_and(|i| i == id))
     {
-        match &*state.database[index].2 {
+        match &*state.custom_modifications[index].2 {
             SimpleModificationInner::Database {
                 specificities,
                 formula,
@@ -422,10 +426,14 @@ pub async fn update_modification(
 
     if let Ok(mut state) = app.state::<Mutex<State>>().lock() {
         // Update state
-        if let Some(index) = state.database.iter().position(|p| p.0 == modification.0) {
-            state.database[index] = modification;
+        if let Some(index) = state
+            .custom_modifications
+            .iter()
+            .position(|p| p.0 == modification.0)
+        {
+            state.custom_modifications[index] = modification;
         } else {
-            state.database.push(modification);
+            state.custom_modifications.push(modification);
         }
 
         // Store mods config file
@@ -461,7 +469,7 @@ pub async fn update_modification(
                 Context::show(path.to_string_lossy()),
             )
         })?);
-        serde_json::to_writer_pretty(file, &state.database).map_err(|err| {
+        serde_json::to_writer_pretty(file, &state.custom_modifications).map_err(|err| {
             CustomError::error(
                 "Could not write custom modifications to configuration file",
                 err,

@@ -50,7 +50,7 @@ Buttons are displayed as #button[Button]. Keys used in key combinations as #key[
 
 #include "installing.typ"
 #include "rawfiles.typ"
-#include "identified_peptide_files.typ"
+#include "identified_peptidoform_files.typ"
 #include "annotate.typ"
 #include "spectrum.typ"
 #include "tools.typ"

@@ -43,7 +43,7 @@ pub async fn search_modification(
             0..text.len(),
             &mut Vec::new(),
             &mut Vec::new(),
-            Some(&state.database),
+            Some(&state.custom_modifications),
         )
         .map(|(m, _)| match m {
             ReturnModification::Defined(d) => Ok(d),
@@ -73,7 +73,7 @@ pub async fn search_modification(
                 tolerance,
                 None,
                 MassMode::Monoisotopic,
-                Some(&state.database),
+                Some(&state.custom_modifications),
             )
             .map(|(ontology, id, name, modification)| {
                 [
@@ -87,7 +87,7 @@ pub async fn search_modification(
         .to_string()),
         SimpleModificationInner::Formula(f) => Ok(html_builder::HtmlElement::table(
             Some(&["Name", "Id"]),
-            modification_search_formula(f, Some(&state.database)).map(
+            modification_search_formula(f, Some(&state.custom_modifications)).map(
                 |(ontology, id, name, modification)| {
                     [
                         modification.to_string(),
