@@ -753,6 +753,38 @@ impl RenderToTable for IdentifiedPeptidoformData {
                 ),
                 ("Full header", data.header().to_string()),
             ],
+            IdentifiedPeptidoformData::Proteoscape(data) => vec![
+                (
+                    "Extended peptide",
+                    format!(
+                        "{}_(seq)_{}",
+                        data.peptide
+                            .0
+                            .as_ref()
+                            .map_or("Terminal".to_string(), |p| p.to_string()),
+                        data.peptide
+                            .2
+                            .as_ref()
+                            .map_or("Terminal".to_string(), |p| p.to_string())
+                    ),
+                ),
+                (
+                    "O/k0",
+                    format!(
+                        "Corrected: {:.3}, predicted: {:.3}",
+                        data.corrected_o_over_k0, data.predicted_o_over_k0
+                    ),
+                ),
+                (
+                    "Scores",
+                    format!(
+                        "Xcorr: {:.3}, Delta CN: {:.3}, TIM: {:.3}",
+                        data.xcorr_score, data.delta_cn_score, data.tim_score
+                    ),
+                ),
+                ("Matched ions", data.matched_ions.to_string()),
+                ("Unique", data.is_unique.to_string()),
+            ],
             IdentifiedPeptidoformData::NovoB(data) => vec![
                 (
                     "Score",
@@ -832,7 +864,7 @@ impl RenderToTable for IdentifiedPeptidoformData {
                     format!(
                         "{:.2}% ({}/{}) (∑I: {:.3e})",
                         data.peptide_matched_products as f64
-                            / data.peptide_matched_product_theoretical
+                            / data.peptide_matched_product_theoretical as f64
                             * 100.0,
                         data.peptide_matched_products,
                         data.peptide_matched_product_theoretical,
@@ -841,7 +873,7 @@ impl RenderToTable for IdentifiedPeptidoformData {
                 ),
                 (
                     "Peptide matched products",
-                    data.peptide_matched_product_string.clone(),
+                    data.peptide_matched_product_string.to_string(),
                 ),
                 ("Precursor id", data.precursor_le_id.to_string()),
                 (

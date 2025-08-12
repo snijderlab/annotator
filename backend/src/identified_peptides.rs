@@ -23,7 +23,7 @@ pub async fn load_identified_peptides_file<'a>(
 ) -> Result<Option<CustomError>, CustomError> {
     let state = state.lock().unwrap();
     let mut peptide_errors = Vec::new();
-    let peptides = open_identified_peptides_file(path, state.database(), false)?;
+    let peptides = open_identified_peptidoforms_file(path, state.database(), false)?;
     state
         .identified_peptide_files_mut()
         .push(IdentifiedPeptidoformFile::new(
