@@ -8,8 +8,8 @@ resolver = "2"
 # hdf5 rust crate needs a new version
 hdf5 = { git = "https://github.com/aldanor/hdf5-rust.git" }
 hdf5-sys = { git = "https://github.com/aldanor/hdf5-rust.git" }
-#rustyms = {path = "../mzcore/rustyms"}
-rustyms = {git = "https://github.com/rusteomics/mzcore"}
+rustyms = {path = "../mzcore/rustyms"}
+#rustyms = {git = "https://github.com/rusteomics/mzcore"}
 
 [profile.release]
 debug = true

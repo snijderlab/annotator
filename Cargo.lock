@@ -883,7 +883,6 @@ checksum = "b365fabc795046672053e29c954733ec3b05e4be654ab130fe8f1f94d7051f35"
 [[package]]
 name = "custom_error"
 version = "0.1.0"
-source = "git+https://github.com/douweschulte/custom_error#2fe3d441c23dd4bb8e84b7d5c83e27456c2497cd"
 dependencies = [
  "serde",
 ]
@@ -4370,7 +4369,6 @@ checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 [[package]]
 name = "rustyms"
 version = "0.10.0"
-source = "git+https://github.com/rusteomics/mzcore#711dbc52f3756aeb2abe8c911e799a52cbe4d44b"
 dependencies = [
  "bincode",
  "custom_error",

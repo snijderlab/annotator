@@ -1,4 +1,4 @@
-use custom_error::{BoxedError, Context, CustomErrorTrait};
+use custom_error::{BoxedError, Context, CustomErrorTrait, ToHtml, combine_error};
 use itertools::Itertools;
 use rayon::prelude::*;
 use rustyms::{
@@ -21,10 +21,11 @@ use crate::{
 pub async fn load_identified_peptides_file<'a>(
     path: &'a str,
     state: ModifiableState<'a>,
-) -> Result<Option<BoxedError<'static>>, BoxedError<'static>> {
+) -> Result<Option<String>, String> {
     let state = state.lock().unwrap();
     let mut peptide_errors = Vec::new();
-    let peptides = open_identified_peptidoforms_file(path, state.database(), false)?;
+    let peptides = open_identified_peptidoforms_file(path, state.database(), false)
+        .map_err(|e| e.to_html())?;
     state
         .identified_peptide_files_mut()
         .push(IdentifiedPeptidoformFile::new(
@@ -33,7 +34,7 @@ pub async fn load_identified_peptides_file<'a>(
                 .filter_map(|p| match p {
                     Ok(p) => Some(p),
                     Err(e) => {
-                        peptide_errors.push(e);
+                        combine_error(&mut peptide_errors, e);
                         None
                     }
                 })
@@ -45,13 +46,11 @@ pub async fn load_identified_peptides_file<'a>(
         Ok(Some(
             BoxedError::warning(
                 "Could not parse all peptides",
-                format!(
-                    "Out of all peptides {} gave rise to errors while parsing",
-                    peptide_errors.len()
-                ),
-                Context::show(path).to_owned(),
+                "All peptides with an error are ignored",
+                Context::default().source(path).to_owned(),
             )
-            .add_underlying_errors(peptide_errors),
+            .add_underlying_errors(peptide_errors)
+            .to_html(),
         ))
     }
 }
@@ -60,13 +59,13 @@ pub async fn load_identified_peptides_file<'a>(
 pub async fn close_identified_peptides_file(
     file: usize,
     state: ModifiableState<'_>,
-) -> Result<(), BoxedError> {
+) -> Result<(), String> {
     state.lock().map_err(|_| {
         BoxedError::error(
             "Could not lock mutex",
             "You are likely doing too many things in parallel",
             Context::none(),
-        )
+        ).to_html()
     }).and_then(|state| {
             let pos = state
             .identified_peptide_files()
@@ -77,7 +76,7 @@ pub async fn close_identified_peptides_file(
                 state.identified_peptide_files_mut().remove(pos);
                 Ok(())
             } else {
-                Err(BoxedError::error("File does not exist", "This selected file could not be closed as it does not exist, did you already close it?", Context::none()))
+                Err(BoxedError::error("File does not exist", "This selected file could not be closed as it does not exist, did you already close it?", Context::none()).to_html())
             }
         }
     )
@@ -104,7 +103,7 @@ pub async fn search_peptide<'a>(
     minimal_peptide_score: f64,
     amount: usize,
     state: ModifiableState<'a>,
-) -> Result<String, BoxedError<'static>> {
+) -> Result<String, String> {
     if amount == 0 {
         return Ok(
             "Amount of peptides asked for is 0, so here are 0 peptides that match the query."
@@ -117,10 +116,11 @@ pub async fn search_peptide<'a>(
             "The state is locked, are you trying to do many things at the same time?",
             Context::none(),
         )
+        .to_html()
     })?;
     let query = std::sync::Arc::new(
         Peptidoform::<Linked>::pro_forma(text, Some(&state.custom_modifications))
-            .map_err(BoxedError::to_owned)?
+            .map_err(|e| e.to_html())?
             .into_simple_linear()
             .ok_or_else(|| {
                 BoxedError::error(
@@ -128,6 +128,7 @@ pub async fn search_peptide<'a>(
                     "A search peptide should be simple",
                     Context::none(),
                 )
+                .to_html()
             })?,
     );
     let data = state

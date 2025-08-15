@@ -1788,13 +1788,9 @@ function createElement(element, settings = undefined) {
 
 function showError(id, error, showContext = true) {
   let node = document.getElementById(id);
-  if (error.warning) {
-    node.classList.add("warning");
-  } else {
-    node.classList.add("error");
-  }
+  node.classList.add("error");
   node.classList.remove("hidden");
-  node.innerHTML = formatError(error, showContext);
+  node.innerHTML = error;
 }
 
 function clearError(id) {

@@ -280,7 +280,7 @@ fn main() {
           <button type="button" id="load-usi">Load</button>
         </div>
       </div>
-      <output class="wrap" id="open-files-error"></output>
+      <output class="" id="open-files-error"></output>
       
       <div id="peptides" style="display:none">
         <h2>Peptidoform details</h2>

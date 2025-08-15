@@ -133,15 +133,15 @@ fn render_linear_peptidoform(
         .unwrap();
     }
     if let Some((n_flanking, _)) = flanking_sequences {
+        let (symbol, title) = match n_flanking {
+            FlankingSequence::Unknown => ("?".to_string(), "Flanking sequence unknown"),
+            FlankingSequence::Terminal => ("-".to_string(), "Flanks the terminus"),
+            FlankingSequence::AminoAcid(aa) => (aa.to_string(), "Flanking sequence"),
+            FlankingSequence::Sequence(seq) => (seq.to_string(), "Flanking sequence"),
+        };
         write!(
             output,
-            "<span class='flanking'>{}</span>",
-            match n_flanking {
-                FlankingSequence::Unknown => "?".to_string(),
-                FlankingSequence::Terminal => "Terminus".to_string(),
-                FlankingSequence::AminoAcid(aa) => aa.to_string(),
-                FlankingSequence::Sequence(seq) => seq.to_string(),
-            }
+            "<span class='flanking' title='{title}'>{symbol}</span>",
         )
         .unwrap();
     }
