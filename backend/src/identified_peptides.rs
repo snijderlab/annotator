@@ -1,17 +1,18 @@
-use crate::{
-    ModifiableState, html_builder,
-    state::{IdentifiedPeptidoformFile, State},
-};
+use custom_error::{BoxedError, Context, CustomErrorTrait};
 use itertools::Itertools;
 use rayon::prelude::*;
 use rustyms::{
     align::{AlignScoring, AlignType, Alignment},
-    error::*,
     identification::*,
     prelude::*,
     sequence::Linked,
 };
 use serde::{Deserialize, Serialize};
+
+use crate::{
+    ModifiableState, html_builder,
+    state::{IdentifiedPeptidoformFile, State},
+};
 
 /// Open a file and get all individual peptide errors.
 /// # Errors
@@ -20,7 +21,7 @@ use serde::{Deserialize, Serialize};
 pub async fn load_identified_peptides_file<'a>(
     path: &'a str,
     state: ModifiableState<'a>,
-) -> Result<Option<CustomError>, CustomError> {
+) -> Result<Option<BoxedError<'static>>, BoxedError<'static>> {
     let state = state.lock().unwrap();
     let mut peptide_errors = Vec::new();
     let peptides = open_identified_peptidoforms_file(path, state.database(), false)?;
@@ -42,15 +43,15 @@ pub async fn load_identified_peptides_file<'a>(
         Ok(None)
     } else {
         Ok(Some(
-            CustomError::warning(
+            BoxedError::warning(
                 "Could not parse all peptides",
                 format!(
                     "Out of all peptides {} gave rise to errors while parsing",
                     peptide_errors.len()
                 ),
-                Context::show(path),
+                Context::show(path).to_owned(),
             )
-            .with_underlying_errors(peptide_errors),
+            .add_underlying_errors(peptide_errors),
         ))
     }
 }
@@ -59,9 +60,9 @@ pub async fn load_identified_peptides_file<'a>(
 pub async fn close_identified_peptides_file(
     file: usize,
     state: ModifiableState<'_>,
-) -> Result<(), CustomError> {
+) -> Result<(), BoxedError> {
     state.lock().map_err(|_| {
-        CustomError::error(
+        BoxedError::error(
             "Could not lock mutex",
             "You are likely doing too many things in parallel",
             Context::none(),
@@ -76,7 +77,7 @@ pub async fn close_identified_peptides_file(
                 state.identified_peptide_files_mut().remove(pos);
                 Ok(())
             } else {
-                Err(CustomError::error("File does not exist", "This selected file could not be closed as it does not exist, did you already close it?", Context::none()))
+                Err(BoxedError::error("File does not exist", "This selected file could not be closed as it does not exist, did you already close it?", Context::none()))
             }
         }
     )
@@ -103,7 +104,7 @@ pub async fn search_peptide<'a>(
     minimal_peptide_score: f64,
     amount: usize,
     state: ModifiableState<'a>,
-) -> Result<String, CustomError> {
+) -> Result<String, BoxedError<'static>> {
     if amount == 0 {
         return Ok(
             "Amount of peptides asked for is 0, so here are 0 peptides that match the query."
@@ -111,20 +112,21 @@ pub async fn search_peptide<'a>(
         );
     }
     let state = state.lock().map_err(|_| {
-        CustomError::error(
+        BoxedError::error(
             "Cannot search",
             "The state is locked, are you trying to do many things at the same time?",
-            Context::None,
+            Context::none(),
         )
     })?;
     let query = std::sync::Arc::new(
-        Peptidoform::<Linked>::pro_forma(text, Some(&state.custom_modifications))?
+        Peptidoform::<Linked>::pro_forma(text, Some(&state.custom_modifications))
+            .map_err(BoxedError::to_owned)?
             .into_simple_linear()
             .ok_or_else(|| {
-                CustomError::error(
+                BoxedError::error(
                     "Invalid search peptide",
                     "A search peptide should be simple",
-                    Context::None,
+                    Context::none(),
                 )
             })?,
     );

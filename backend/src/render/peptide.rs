@@ -5,6 +5,7 @@ use itertools::Itertools;
 use ordered_float::OrderedFloat;
 use rustyms::{
     fragment::*,
+    identification::FlankingSequence,
     prelude::*,
     sequence::{CrossLinkName, GnoComposition, Linked, Modification, SimpleModificationInner},
 };
@@ -17,6 +18,7 @@ pub fn render_peptide(
     compound_peptidoform: &CompoundPeptidoformIon,
     overview: Option<super::PositionCoverage>,
     local_confidence: Option<Vec<Vec<Vec<f64>>>>,
+    flanking_sequences: Option<(&FlankingSequence, &FlankingSequence)>,
     glycan_footnotes: &mut Vec<String>,
     theme: Theme,
 ) -> Vec<(usize, usize)> {
@@ -75,6 +77,7 @@ pub fn render_peptide(
                 unique_peptide_lookup.len(),
                 multiple_peptidoforms,
                 multiple_peptides,
+                flanking_sequences.filter(|_| !multiple_peptidoforms && !multiple_peptides),
                 &mut cross_link_lookup,
                 glycan_footnotes,
                 theme,
@@ -96,6 +99,7 @@ fn render_linear_peptidoform(
     unique_peptidoform_index: usize,
     multiple_peptidoform_ions: bool,
     multiple_peptidoforms: bool,
+    flanking_sequences: Option<(&FlankingSequence, &FlankingSequence)>,
     cross_link_lookup: &mut Vec<CrossLinkName>,
     glycan_footnotes: &mut Vec<String>,
     theme: Theme,
@@ -125,6 +129,19 @@ fn render_linear_peptidoform(
                 } else {
                     String::new()
                 })
+        )
+        .unwrap();
+    }
+    if let Some((n_flanking, _)) = flanking_sequences {
+        write!(
+            output,
+            "<span class='flanking'>{}</span>",
+            match n_flanking {
+                FlankingSequence::Unknown => "?".to_string(),
+                FlankingSequence::Terminal => "Terminus".to_string(),
+                FlankingSequence::AminoAcid(aa) => aa.to_string(),
+                FlankingSequence::Sequence(seq) => seq.to_string(),
+            }
         )
         .unwrap();
     }
@@ -496,6 +513,19 @@ fn render_linear_peptidoform(
         write!(
             output,
             "<span class='charge-carriers'>/{charge_carriers}</span>",
+        )
+        .unwrap();
+    }
+    if let Some((_, c_flanking_)) = flanking_sequences {
+        write!(
+            output,
+            "<span class='flanking'>{}</span>",
+            match c_flanking_ {
+                FlankingSequence::Unknown => "?".to_string(),
+                FlankingSequence::Terminal => "Terminus".to_string(),
+                FlankingSequence::AminoAcid(aa) => aa.to_string(),
+                FlankingSequence::Sequence(seq) => seq.to_string(),
+            }
         )
         .unwrap();
     }

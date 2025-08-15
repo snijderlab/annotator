@@ -1,10 +1,7 @@
 use itertools::Itertools;
-use rustyms::{
-    identification::{
-        CVTerm, IdentifiedPeptidoform, IdentifiedPeptidoformData, MSFraggerOpenModification,
-        MetaData, SpectrumIds,
-    },
-    prelude::*,
+use rustyms::identification::{
+    CVTerm, IdentifiedPeptidoform, IdentifiedPeptidoformData, MSFraggerOpenModification, MetaData,
+    SpectrumIds,
 };
 
 use crate::{
@@ -34,6 +31,7 @@ impl<C, A> RenderToHtml for IdentifiedPeptidoform<C, A> {
                 self.local_confidence
                     .as_ref()
                     .map(|lc| vec![vec![lc.clone()]]),
+                Some(self.flanking_sequences()),
                 &mut glycan_footnotes,
                 theme,
             );
@@ -102,9 +100,10 @@ impl<C, A> RenderToHtml for IdentifiedPeptidoform<C, A> {
                     .clone(),
                 HtmlTag::p.new()
                     .content(format!(
-                        "Protein&nbsp;id:&nbsp;{}, Name:&nbsp;{}, Location:&nbsp;{}",
+                        "Protein&nbsp;id:&nbsp;{}, Name:&nbsp;{}, Database:&nbsp;{}, Location:&nbsp;{}",
                         self.protein_id().to_optional_string(),
                         self.protein_name().map(|n| n.name().clone()).to_optional_string(),
+                        self.database().map(|(db, version)| format!("{db}{}", version.map(|v| format!(" ({v})")).unwrap_or_default())).to_optional_string(),
                         self.protein_location().map(|s| format!("{} — {}", s.start, s.end)).to_optional_string(),
                     ))
                     .clone(),
@@ -217,26 +216,6 @@ impl RenderToTable for IdentifiedPeptidoformData {
                         .map(|(g, i, u)| format!("group: {g}, ID: {i}, unique: {u}"))
                         .to_optional_string(),
                 ),
-                (
-                    "Flanking residues",
-                    data.peptide
-                        .0
-                        .or(data.peptide.2)
-                        .map(|_| {
-                            format!(
-                                "{}_(seq)_{}",
-                                data.peptide
-                                    .0
-                                    .as_ref()
-                                    .map_or("Terminal".to_string(), |p| p.to_string()),
-                                data.peptide
-                                    .2
-                                    .as_ref()
-                                    .map_or("Terminal".to_string(), |p| p.to_string())
-                            )
-                        })
-                        .to_optional_string(),
-                ),
             ],
             IdentifiedPeptidoformData::Novor(data) => vec![
                 ("Score", data.score.to_string()),
@@ -266,32 +245,6 @@ impl RenderToTable for IdentifiedPeptidoformData {
                 ("Accession", data.accession.to_string()),
                 ("Organism", data.organism.to_string()),
                 ("Protein name", data.protein_name.to_string()),
-                (
-                    "Flanking residues",
-                    format!(
-                        "{}_(seq)_{}",
-                        data.flanking_residues
-                            .0
-                            .one_letter_code()
-                            .map(|c| c.to_string())
-                            .or_else(|| data
-                                .flanking_residues
-                                .0
-                                .three_letter_code()
-                                .map(|c| c.to_string()))
-                            .unwrap_or_else(|| data.flanking_residues.0.name().to_string()),
-                        data.flanking_residues
-                            .1
-                            .one_letter_code()
-                            .map(|c| c.to_string())
-                            .or_else(|| data
-                                .flanking_residues
-                                .1
-                                .three_letter_code()
-                                .map(|c| c.to_string()))
-                            .unwrap_or_else(|| data.flanking_residues.1.name().to_string())
-                    ),
-                ),
                 ("Rank", data.rank.to_string()),
                 ("Matched ion series", data.matched_ion_series.to_string()),
                 (
@@ -557,21 +510,6 @@ impl RenderToTable for IdentifiedPeptidoformData {
             ],
             IdentifiedPeptidoformData::MSFragger(data) => vec![
                 (
-                    "Extended Peptide",
-                    data.extended_peptide
-                        .as_ref()
-                        .map(|e| {
-                            format!(
-                                "{}_(seq)_{}",
-                                e[0].as_ref()
-                                    .map_or("Terminal".to_string(), |p| p.to_string()),
-                                e[2].as_ref()
-                                    .map_or("Terminal".to_string(), |p| p.to_string())
-                            )
-                        })
-                        .to_optional_string(),
-                ),
-                (
                     "Open modification",
                     match &data.open_search_modification {
                         Some(MSFraggerOpenModification::Glycan(composition)) => composition
@@ -665,14 +603,6 @@ impl RenderToTable for IdentifiedPeptidoformData {
                 ("Accession", data.accession.as_ref().to_optional_string()),
                 ("Unique", data.unique.to_optional_string()),
                 (
-                    "Database",
-                    format!(
-                        "db: {}, version: {}",
-                        data.database.as_ref().to_optional_string(),
-                        data.database_version.as_ref().to_optional_string()
-                    ),
-                ),
-                (
                     "Search engine",
                     data.search_engine
                         .iter()
@@ -691,10 +621,6 @@ impl RenderToTable for IdentifiedPeptidoformData {
                     data.reliability.as_ref().to_optional_string(),
                 ),
                 ("Uri", data.uri.as_ref().to_optional_string()),
-                (
-                    "Flanking residues",
-                    format!("{}_(seq)_{}", data.preceding_aa, data.following_aa),
-                ),
                 (
                     "Other columns",
                     (!data.additional.is_empty())
@@ -754,20 +680,6 @@ impl RenderToTable for IdentifiedPeptidoformData {
                 ("Full header", data.header().to_string()),
             ],
             IdentifiedPeptidoformData::Proteoscape(data) => vec![
-                (
-                    "Extended peptide",
-                    format!(
-                        "{}_(seq)_{}",
-                        data.peptide
-                            .0
-                            .as_ref()
-                            .map_or("Terminal".to_string(), |p| p.to_string()),
-                        data.peptide
-                            .2
-                            .as_ref()
-                            .map_or("Terminal".to_string(), |p| p.to_string())
-                    ),
-                ),
                 (
                     "O/k0",
                     format!(
@@ -977,7 +889,9 @@ impl RenderToTable for IdentifiedPeptidoformData {
             | IdentifiedPeptidoformData::InstaNovo(_)
             | IdentifiedPeptidoformData::PowerNovo(_)
             | IdentifiedPeptidoformData::PepNet(_)
-            | IdentifiedPeptidoformData::BasicCSV(_) => Vec::new(),
+            | IdentifiedPeptidoformData::BasicCSV(_)
+            | IdentifiedPeptidoformData::PiHelixNovo(_)
+            | IdentifiedPeptidoformData::PiPrimeNovo(_) => Vec::new(),
         }
     }
 }

@@ -71,6 +71,7 @@ pub fn annotated_spectrum(
         &spectrum.peptide,
         Some(overview),
         None,
+        None,
         &mut glycan_footnotes,
         theme,
     );

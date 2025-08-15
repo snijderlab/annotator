@@ -5,12 +5,12 @@
 
 use std::sync::Mutex;
 
+use custom_error::{BoxedError, Context, CustomErrorTrait};
 use itertools::Itertools;
 use mzdata::prelude::{IonProperties, SpectrumLike};
 use ordered_float::OrderedFloat;
 use render::{display_formula, display_mass};
 use rustyms::{
-    error::*,
     prelude::*,
     system::{e, isize::Charge},
 };
@@ -67,12 +67,12 @@ fn refresh(state: ModifiableState) -> (usize, usize) {
 }
 
 #[tauri::command]
-async fn details_formula(text: &str) -> Result<String, CustomError> {
+async fn details_formula(text: &str) -> Result<String, BoxedError> {
     let formula = if text.is_empty() {
-        Err(CustomError::error(
+        Err(BoxedError::error(
             "Invalid molecular formula",
             "The test is empty",
-            Context::None,
+            Context::none(),
         ))
     } else {
         MolecularFormula::from_pro_forma(text, .., false, true, true, false)
@@ -197,23 +197,25 @@ async fn annotate_spectrum<'a>(
     mass_mode: &'a str,
     mz_range: (Option<f64>, Option<f64>),
     theme: Theme,
-) -> Result<AnnotationResult, CustomError> {
+) -> Result<AnnotationResult, BoxedError<'static>> {
     let mut state = state.lock().unwrap();
-    let spectrum = crate::spectra::create_selected_spectrum(&mut state, filter)?;
+    let spectrum = crate::spectra::create_selected_spectrum(&mut state, filter)
+        .map_err(BoxedError::to_owned)?;
     let model = crate::model::get_models(&state)
         .1
         .get(model)
         .cloned()
-        .ok_or_else(|| CustomError::error("Invalid model", "Model does not exist", Context::None))?
+        .ok_or_else(|| BoxedError::error("Invalid model", "Model does not exist", Context::none()))?
         .2;
-    let parameters = model::parameters(tolerance, mz_range)?;
+    let parameters = model::parameters(tolerance, mz_range).map_err(BoxedError::to_owned)?;
     let mass_mode = match mass_mode {
         "monoisotopic" => MassMode::Monoisotopic,
         "average_weight" => MassMode::Average,
         "most_abundant" => MassMode::MostAbundant,
-        _ => return Err(CustomError::error("Invalid mass mode", "", Context::None)),
+        _ => return Err(BoxedError::error("Invalid mass mode", "", Context::none())),
     };
-    let peptide = CompoundPeptidoformIon::pro_forma(peptide, Some(&state.custom_modifications))?;
+    let peptide = CompoundPeptidoformIon::pro_forma(peptide, Some(&state.custom_modifications))
+        .map_err(BoxedError::to_owned)?;
     let multiple_peptidoforms = peptide.peptidoform_ions().len() == 1;
     let multiple_peptides = peptide
         .peptidoform_ions()

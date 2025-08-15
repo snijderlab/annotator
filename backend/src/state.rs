@@ -5,6 +5,7 @@ use std::{
     sync::{Arc, OnceLock, atomic::AtomicUsize},
 };
 
+use custom_error::BoxedError;
 use mzdata::{
     io::{MZReaderType, RandomAccessSpectrumIterator, SpectrumSource},
     prelude::SpectrumLike,
@@ -13,7 +14,6 @@ use mzdata::{
 use ordered_float::OrderedFloat;
 use rustyms::{
     align::AlignIndex,
-    error::CustomError,
     identification::{IdentifiedPeptidoform, MaybePeptidoform, MetaData},
     ontology::CustomDatabase,
     prelude::*,
@@ -26,9 +26,9 @@ pub struct State {
     pub spectra: Vec<RawFile>,
     pub identified_peptide_files: RefCell<Vec<IdentifiedPeptidoformFile>>,
     pub custom_modifications: CustomDatabase,
-    pub custom_modifications_error: Option<(CustomError, Vec<String>)>,
+    pub custom_modifications_error: Option<(BoxedError<'static>, Vec<String>)>,
     pub custom_models: Vec<(String, FragmentationModel)>,
-    pub custom_models_error: Option<(CustomError, Vec<String>)>,
+    pub custom_models_error: Option<(BoxedError<'static>, Vec<String>)>,
 }
 
 impl State {

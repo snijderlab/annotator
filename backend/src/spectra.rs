@@ -1,5 +1,6 @@
 use std::{io::ErrorKind, ops::RangeInclusive, path::Path, str::FromStr};
 
+use custom_error::{BoxedError, Context, CustomErrorTrait};
 use itertools::Itertools;
 use mzdata::{
     Param,
@@ -18,10 +19,7 @@ use mzdata::{
 };
 use mzpeaks::{CentroidPeak, peak_set::PeakSetVec};
 use mzsignal::{ArrayPairLike, PeakPicker};
-use rustyms::{
-    error::{Context, CustomError},
-    system::{Mass, OrderedTime, dalton},
-};
+use rustyms::system::{Mass, OrderedTime, dalton};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -44,9 +42,9 @@ pub struct SelectedSpectrumDetails {
 pub async fn load_usi<'a>(
     usi: &'a str,
     state: ModifiableState<'a>,
-) -> Result<IdentifiedPeptideSettings, CustomError> {
+) -> Result<IdentifiedPeptideSettings, BoxedError<'static>> {
     let mut usi = mzdata::io::usi::USI::from_str(usi).map_err(|e| match e {
-        USIParseError::MalformedIndex(index, e, full) => CustomError::error(
+        USIParseError::MalformedIndex(index, e, full) => BoxedError::error(
             "Invalid USI: Invalid index",
             format!("The index is not valid: {e}"),
             Context::line(
@@ -54,19 +52,20 @@ pub async fn load_usi<'a>(
                 &full,
                 full.find(&index).unwrap_or_default(),
                 index.len(),
-            ),
+            )
+            .to_owned(),
         ),
-        USIParseError::MissingDataset(full) => CustomError::error(
+        USIParseError::MissingDataset(full) => BoxedError::error(
             "Invalid USI: Missing dataset",
             "The dataset section of the USI is missing",
             Context::show(full),
         ),
-        USIParseError::MissingRun(full) => CustomError::error(
+        USIParseError::MissingRun(full) => BoxedError::error(
             "Invalid USI: Missing run",
             "The run section of the USI is missing",
             Context::show(full),
         ),
-        USIParseError::UnknownIndexType(index, full) => CustomError::error(
+        USIParseError::UnknownIndexType(index, full) => BoxedError::error(
             "Invalid USI: Unknown index type",
             "The index has to be one of 'index', 'scan', or 'nativeId'",
             Context::line(
@@ -74,9 +73,10 @@ pub async fn load_usi<'a>(
                 &full,
                 full.find(&index).unwrap_or_default(),
                 index.len(),
-            ),
+            )
+            .to_owned(),
         ),
-        USIParseError::UnknownProtocol(protocol, full) => CustomError::error(
+        USIParseError::UnknownProtocol(protocol, full) => BoxedError::error(
             "Invalid USI: Unknown protocol",
             "The protocol has to be 'mzspec'",
             Context::line(
@@ -84,7 +84,8 @@ pub async fn load_usi<'a>(
                 &full,
                 full.find(&protocol).unwrap_or_default(),
                 protocol.len(),
-            ),
+            )
+            .to_owned(),
         ),
     })?;
 
@@ -100,30 +101,30 @@ pub async fn load_usi<'a>(
         usi.download_spectrum_async(None, None)
             .await
             .map_err(|e| match e {
-                PROXIError::IO(backend, error) => CustomError::error(
+                PROXIError::IO(backend, error) => BoxedError::error(
                     format!("Error while retrieving USI from {backend}"),
-                    error,
-                    Context::None,
+                    error.to_string(),
+                    Context::none(),
                 ),
                 PROXIError::Error {
                     backend,
                     title,
                     detail,
                     ..
-                } => CustomError::error(
+                } => BoxedError::error(
                     format!("Error while retrieving USI from {backend}: {title}"),
                     detail,
-                    Context::None,
+                    Context::none(),
                 ),
-                PROXIError::PeakUnavailable(backend, _) => CustomError::error(
+                PROXIError::PeakUnavailable(backend, _) => BoxedError::error(
                     format!("Error while retrieving USI from {backend}"),
                     "The peak data is not available for this dataset",
-                    Context::None,
+                    Context::none(),
                 ),
-                PROXIError::NotFound => CustomError::error(
+                PROXIError::NotFound => BoxedError::error(
                     "Error while retrieving USI",
                     "No PROXI server responded to the request",
-                    Context::None,
+                    Context::none(),
                 ),
             })?;
 
@@ -187,10 +188,10 @@ pub async fn load_usi<'a>(
             warning: None,
         })
     } else {
-        Err(CustomError::error(
+        Err(BoxedError::error(
             "Could not lock mutext",
             "Are you doing too many things at once?",
-            Context::None,
+            Context::none(),
         ))
     }
 }
@@ -623,26 +624,26 @@ pub fn get_selected_spectra(
 pub fn create_selected_spectrum(
     state: &mut crate::State,
     filter: f32,
-) -> Result<MultiLayerSpectrum, CustomError> {
+) -> Result<MultiLayerSpectrum, BoxedError> {
     let mut spectra = Vec::new();
     for file in state.spectra.iter_mut() {
         spectra.extend(file.get_selected_spectra());
     }
     let spectrum = if spectra.is_empty() {
-        return Err(CustomError::error(
+        return Err(BoxedError::error(
             "No selected spectra",
             "Select a spectrum from an open raw file, or open a raw file if none are opened yet",
-            Context::None,
+            Context::none(),
         ));
     } else if spectra.len() == 1 {
         let mut spectrum = spectra.pop().unwrap();
         if filter != 0.0 && spectrum.arrays.is_some() {
             // TODO: When centroided data is loaded denoising is not applied
             spectrum.denoise(filter).map_err(|err| {
-                CustomError::error(
+                BoxedError::error(
                     "Spectrum could not be denoised",
                     err.to_string(),
-                    Context::None,
+                    Context::none(),
                 )
             })?;
         }
@@ -651,10 +652,10 @@ pub fn create_selected_spectrum(
             spectrum
                 .pick_peaks_with(&PeakPicker::default())
                 .map_err(|err| {
-                    CustomError::error(
+                    BoxedError::error(
                         "Spectrum could not be peak picked",
                         err.to_string(),
-                        Context::None,
+                        Context::none(),
                     )
                 })?;
         } else if spectrum.arrays.is_some() && spectrum.peaks.is_none() {
@@ -699,12 +700,12 @@ pub fn save_spectrum<'a>(
     sequence: &'a str,
     model: &'a str,
     charge: Option<usize>,
-) -> Result<(), CustomError> {
+) -> Result<(), BoxedError<'static>> {
     let mut state = state.lock().map_err(|e| {
-        CustomError::error(
+        BoxedError::error(
             "Could not write file",
             "Mutex locked, are you doing too much at the same time?",
-            Context::show(e),
+            Context::show(e.to_string()),
         )
     })?;
     let file = std::fs::OpenOptions::new()
@@ -713,16 +714,17 @@ pub fn save_spectrum<'a>(
         .write(true)
         .open(path)
         .map_err(|e| {
-            CustomError::error(
+            BoxedError::error(
                 "Could not write file",
                 "File could not be opened for writing",
-                Context::show(e),
+                Context::show(e.to_string()),
             )
         })?;
     let ext = path
         .extension()
         .map(|s| s.to_string_lossy().to_ascii_lowercase());
-    let mut spectrum = create_selected_spectrum(&mut state, filter)?;
+    let mut spectrum =
+        create_selected_spectrum(&mut state, filter).map_err(BoxedError::to_owned)?;
     if !sequence.is_empty() {
         spectrum.description.params.push(Param::new_key_value(
             "sequence",
@@ -759,27 +761,27 @@ pub fn save_spectrum<'a>(
         Some("mgf") => {
             let mut writer = mzdata::MGFWriter::new(file);
             writer.write(&spectrum).map(|_| ()).map_err(|e| {
-                CustomError::error(
+                BoxedError::error(
                     "Could not write file",
                     "Could not write MGF",
-                    Context::show(e),
+                    Context::show(e.to_string()),
                 )
             })
         }
         Some("mzml") => {
             let mut writer = mzdata::MzMLWriter::new(file);
             writer.write_spectrum(&spectrum).map_err(|e| {
-                CustomError::error(
+                BoxedError::error(
                     "Could not write file",
                     "Could not write mzML",
-                    Context::show(e),
+                    Context::show(e.to_string()),
                 )
             })
         }
-        _ => Err(CustomError::error(
+        _ => Err(BoxedError::error(
             "Could not write file",
             "Invalid path, use mgf or mzml as extension",
-            Context::show(path.to_string_lossy()),
+            Context::show(path.to_string_lossy()).to_owned(),
         )),
     }
 }

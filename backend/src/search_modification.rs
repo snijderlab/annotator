@@ -3,9 +3,9 @@ use crate::{
     metadata_render::OptionalString,
     render::{display_formula, display_masses, display_placement_rule, render_full_glycan},
 };
+use custom_error::{BoxedError, Context, CustomErrorTrait};
 use itertools::Itertools;
 use rustyms::{
-    error::*,
     ontology::Ontology,
     prelude::*,
     quantities::Tolerance,
@@ -28,14 +28,14 @@ pub async fn search_modification(
     tolerance: f64,
     state: ModifiableState<'_>,
     theme: Theme,
-) -> Result<String, CustomError> {
+) -> Result<String, BoxedError<'static>> {
     let state = state.lock().unwrap();
     let mut glycan_footnotes = Vec::new();
     let modification = if text.is_empty() {
-        Err(CustomError::error(
+        Err(BoxedError::error(
             "Invalid modification",
             "The modification is empty",
-            Context::None,
+            Context::none(),
         ))
     } else {
         SimpleModificationInner::parse_pro_forma(
@@ -47,12 +47,13 @@ pub async fn search_modification(
         )
         .map(|(m, _)| match m {
             ReturnModification::Defined(d) => Ok(d),
-            _ => Err(CustomError::error(
+            _ => Err(BoxedError::error(
                 "Invalid modification",
                 "Can not define ambiguous modifications for the modifications parameter",
-                Context::None,
+                Context::none(),
             )),
         })
+        .map_err(BoxedError::to_owned)
     }??;
     let tolerance = Tolerance::new_absolute(Mass::new::<dalton>(tolerance));
 

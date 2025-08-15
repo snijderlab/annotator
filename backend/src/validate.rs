@@ -1,37 +1,36 @@
 use std::num::{IntErrorKind, ParseIntError};
 
+    use custom_error::{BoxedError, Context, CustomErrorTrait};
 use itertools::Itertools;
-use rustyms::{
-    error::{Context, CustomError}, fragment::{FragmentKind, NeutralLoss}, glycan::MonoSaccharide, prelude::*, sequence::PlacementRule};
+use rustyms::{ fragment::{FragmentKind, NeutralLoss}, glycan::MonoSaccharide, prelude::*, sequence::PlacementRule};
 
 use crate::render::{display_formula, display_neutral_loss, display_placement_rule, display_stubs};
 
 #[tauri::command]
-pub fn validate_molecular_formula(text: String) -> Result<String, CustomError> {
+pub fn validate_molecular_formula(text: String) -> Result<String, BoxedError<'static>> {
     text.parse::<f64>()
         .map(MolecularFormula::with_additional_mass)
         .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true, false))
         .map(|f| display_formula(&f, true))
+        .map_err(BoxedError::to_owned)
 }
 
-pub fn parse_amino_acid(text: &str) -> Result<AminoAcid, CustomError> {
+pub fn parse_amino_acid(text: &str) -> Result<AminoAcid, BoxedError<'_>> {
     text.parse::<AminoAcid>().map_err(|()| {
-        CustomError::error(
+        BoxedError::error(
             "Invalid amino acid",
             "This is not a valid amino acid code, use `A` not `Ala` or `Alanine`",
-            Context::Show {
-                line: text.to_string(),
-            },
+            Context::show(text.to_string()),
         )
     })
 }
 
 #[tauri::command]
-pub fn validate_amino_acid(text: String) -> Result<String, CustomError> {
-    parse_amino_acid(&text).map(|f| f.to_string())
+pub fn validate_amino_acid(text: String) -> Result<String, BoxedError<'static>> {
+    parse_amino_acid(&text).map(|f| f.to_string()).map_err(BoxedError::to_owned)
 }
 
-pub fn parse_fragment_kind(text: &str) -> Result<FragmentKind, CustomError> {
+pub fn parse_fragment_kind(text: &str) -> Result<FragmentKind, BoxedError> {
     match text {
         "a" => Ok(FragmentKind::a),
         "b" => Ok(FragmentKind::b),
@@ -43,24 +42,24 @@ pub fn parse_fragment_kind(text: &str) -> Result<FragmentKind, CustomError> {
         "y" => Ok(FragmentKind::y),
         "z" => Ok(FragmentKind::z),
         "immonium" => Ok(FragmentKind::immonium),
-        _ => Err(CustomError::error("Invalid fragment kind", "Use any of a/b/c/d/v/w/x/y/z/immonium, notice that this is case sensitive.", Context::None))
+        _ => Err(BoxedError::error("Invalid fragment kind", "Use any of a/b/c/d/v/w/x/y/z/immonium, notice that this is case sensitive.", Context::none()))
     }
 }
 
 #[tauri::command]
-pub fn validate_fragment_kind(text: String) -> Result<String, CustomError> {
-    parse_fragment_kind(&text).map(|f| f.to_string())
+pub fn validate_fragment_kind(text: String) -> Result<String, BoxedError<'static>> {
+    parse_fragment_kind(&text).map(|f| f.to_string()).map_err(BoxedError::to_owned)
 }
 
 #[tauri::command]
-pub fn validate_neutral_loss(text: String) -> Result<String, CustomError> {
+pub fn validate_neutral_loss(text: String) -> Result<String, BoxedError<'static>> {
     text.parse::<NeutralLoss>()
         .map(|f| display_neutral_loss(&f, false))
 }
 
 pub fn parse_aa_neutral_loss(
     text: &str,
-) -> Result<(Vec<AminoAcid>, Vec<NeutralLoss>), CustomError> {
+) -> Result<(Vec<AminoAcid>, Vec<NeutralLoss>), BoxedError<'_>> {
     if let Some(index) = text.find(':') {
         let aas = parse_aa_list(&text[..index])?;
 
@@ -68,20 +67,19 @@ pub fn parse_aa_neutral_loss(
         let mut losses = Vec::new();
         for loss in text[index + 1..].split(',') {
             losses.push(loss.parse::<NeutralLoss>().map_err(|err| {
-                err.with_context(Context::Line {
-                    line_index: None,
-                    line: text.to_string(),
-                    offset: pos,
-                    length: loss.len(),
-                    comment: None
-                })
+                err.add_context(Context::line(
+                    None,
+                    text.to_string(),
+                    pos,
+                    loss.len(),
+                ))
             })?);
             pos += loss.len() + 1;
         }
 
         Ok((aas, losses))
     } else {
-        Err(CustomError::error(
+        Err(BoxedError::error(
             "Invalid amino acid neutral loss",
             "An amino acid neutral loss should be specified with 'A,C:-O1H2,+H2'",
             Context::full_line(0, text),
@@ -94,24 +92,23 @@ pub fn display_aa_neutral_loss(aa: &[AminoAcid], loss: &[NeutralLoss]) -> String
 }
 
 #[tauri::command]
-pub fn validate_aa_neutral_loss(text: String) -> Result<String, CustomError> {
-    parse_aa_neutral_loss(&text).map(|s| display_aa_neutral_loss(&s.0, &s.1))
+pub fn validate_aa_neutral_loss(text: String) -> Result<String, BoxedError<'static>> {
+    parse_aa_neutral_loss(&text).map(|s| display_aa_neutral_loss(&s.0, &s.1)).map_err(BoxedError::to_owned)
 }
 
-pub fn parse_monosaccharide_neutral_loss(text: &str) -> Result<(MonoSaccharide, bool, Vec<NeutralLoss>), CustomError> {
-    let (monosaccharide, losses, specific) = text.split_once(':').map(|(a, b)| (a, b, false)).or(text.split_once('=').map(|(a, b)| (a, b, true))).ok_or_else(|| CustomError::error("Invalid monosaccharide neutral loss", "The monosaccharide neutral loss has the be in the form of 'sugar:loss,loss' or 'sugar=loss,loss' bot neither ':' not '=' are found in the text.", Context::None))?;
+pub fn parse_monosaccharide_neutral_loss(text: &str) -> Result<(MonoSaccharide, bool, Vec<NeutralLoss>), BoxedError<'_>> {
+    let (monosaccharide, losses, specific) = text.split_once(':').map(|(a, b)| (a, b, false)).or(text.split_once('=').map(|(a, b)| (a, b, true))).ok_or_else(|| BoxedError::error("Invalid monosaccharide neutral loss", "The monosaccharide neutral loss has the be in the form of 'sugar:loss,loss' or 'sugar=loss,loss' bot neither ':' not '=' are found in the text.", Context::none()))?;
 
     let mut pos = monosaccharide.len() + 1;
     let mut found_losses = Vec::new();
     for loss in losses.split(',') {
         found_losses.push(loss.parse::<NeutralLoss>().map_err(|err| {
-            err.with_context(Context::Line {
-                line_index: None,
-                line: text.to_string(),
-                offset: pos,
-                length: loss.len(),
-                comment: None
-            })
+            err.add_context(Context::line(
+                None,
+                text.to_string(),
+                pos,
+                loss.len(),
+            ))
         })?);
         pos += loss.len() + 1;
     }
@@ -120,7 +117,7 @@ pub fn parse_monosaccharide_neutral_loss(text: &str) -> Result<(MonoSaccharide, 
         if amount_parsed == monosaccharide.len() {
             Ok(sugar.with_name(monosaccharide))
         } else {
-            Err(CustomError::error("Could not parse monosaccharide", format!("The monosaccharide was interpreted to mean '{sugar}' but this left text unaccounted for"), Context::line_range(None, text, amount_parsed..monosaccharide.len())))
+            Err(BoxedError::error("Could not parse monosaccharide", format!("The monosaccharide was interpreted to mean '{sugar}' but this left text unaccounted for"), Context::line_range(None, text, amount_parsed..monosaccharide.len())))
         }
     )?, specific, found_losses))
 }
@@ -130,49 +127,47 @@ pub fn display_monosaccharide_neutral_loss(rule: (MonoSaccharide, bool, Vec<Neut
 }
 
 #[tauri::command]
-pub fn validate_monosaccharide_neutral_loss(text: String) -> Result<String, CustomError> {
-    parse_monosaccharide_neutral_loss(&text).map(display_monosaccharide_neutral_loss)
+pub fn validate_monosaccharide_neutral_loss(text: String) -> Result<String, BoxedError<'static>> {
+    parse_monosaccharide_neutral_loss(&text).map(display_monosaccharide_neutral_loss).map_err(BoxedError::to_owned)
 }
 
-pub fn parse_aa_list(text: &str) -> Result<Vec<AminoAcid>, CustomError> {
+pub fn parse_aa_list(text: &str) -> Result<Vec<AminoAcid>, BoxedError<'_>> {
     let mut pos = 0;
     let mut aas = Vec::new();
     for aa in text.split(',') {
         aas.push(parse_amino_acid(aa).map_err(|err| {
-            err.with_context(Context::Line {
-                line_index: None,
-                line: text.to_string(),
-                offset: pos,
-                length: aa.len(),
-                comment: None
-            })
+            err.add_context(Context::line(
+                None,
+                text.to_string(),
+                pos,
+                aa.len(),
+            ))
         })?);
         pos += aa.len() + 1;
     }
     Ok(aas)
 }
 
-pub fn parse_satellite_ion(text: &str) -> Result<(Vec<AminoAcid>, u8), CustomError> {
+pub fn parse_satellite_ion(text: &str) -> Result<(Vec<AminoAcid>, u8), BoxedError<'_>> {
     if let Some(index) = text.find(':') {
         let aas = parse_aa_list(&text[..index])?;
 
         let maximal_distance = text[index + 1..].parse::<u8>().map_err(|err| {
-            CustomError::error(
+            BoxedError::error(
                 "Invalid maximal distance",
                 format!("The maximal distance {}", explain_number_error(&err)),
-                Context::Line {
-                    line_index: None,
-                    line: text.to_string(),
-                    offset: index + 1,
-                    length: text[index + 1..].len(),
-                    comment: None,
-                },
+                Context::line(
+                    None,
+                    text,
+                    index + 1,
+                    text[index + 1..].len(),
+                ),
             )
         })?;
 
         Ok((aas, maximal_distance))
     } else {
-        Err(CustomError::error(
+        Err(BoxedError::error(
             "Invalid satellite ion location",
             "A satellite ion location should be specified with 'A,C:2'",
             Context::full_line(0, text),
@@ -185,39 +180,41 @@ pub fn display_satellite_ion(aa: &[AminoAcid], distance: u8) -> String {
 }
 
 #[tauri::command]
-pub fn validate_satellite_ion(text: String) -> Result<String, CustomError> {
-    parse_satellite_ion(&text).map(|s| display_satellite_ion(&s.0, s.1))
+pub fn validate_satellite_ion(text: String) -> Result<String, BoxedError<'static>> {
+    parse_satellite_ion(&text).map(|s| display_satellite_ion(&s.0, s.1)).map_err(BoxedError::to_owned)
 }
 
 #[tauri::command]
-pub fn validate_placement_rule(text: String) -> Result<String, CustomError> {
+pub fn validate_placement_rule(text: String) -> Result<String, BoxedError<'static>> {
     text.parse::<PlacementRule>()
         .map(|r| display_placement_rule(&r, false))
 }
 
-pub fn parse_stub(text: &str) -> Result<(MolecularFormula, MolecularFormula), CustomError> {
+pub fn parse_stub(text: &str) -> Result<(MolecularFormula, MolecularFormula), BoxedError<'static>> {
     if let Some(index) = text.find(':') {
         let f1 = text[..index]
             .parse::<f64>()
             .map(MolecularFormula::with_additional_mass)
-            .or_else(|_| MolecularFormula::from_pro_forma(text, ..index, true, true, true, false))?;
+            .or_else(|_| MolecularFormula::from_pro_forma(text, ..index, true, true, true, false))
+            .map_err(BoxedError::to_owned)?;
         let f2 = text[index + 1..]
             .parse::<f64>()
             .map(MolecularFormula::with_additional_mass)
-            .or_else(|_| MolecularFormula::from_pro_forma(text, index + 1.., true, true, true, false))?;
+            .or_else(|_| MolecularFormula::from_pro_forma(text, index + 1.., true, true, true, false))
+            .map_err(BoxedError::to_owned)?;
         Ok((f1, f2))
     } else {
-        Err(CustomError::error(
+        Err(BoxedError::error(
             "Invalid breakage",
             "A breakage should be specified with 'formula1:formula2'",
-            Context::full_line(0, text),
+            Context::full_line(0, text.to_string()),
         ))
     }
 }
 
 #[tauri::command]
-pub fn validate_stub(text: String) -> Result<String, CustomError> {
-    parse_stub(&text).map(|s| display_stubs(&s, true))
+pub fn validate_stub(text: String) -> Result<String, BoxedError<'static>> {
+    parse_stub(&text).map(|s| display_stubs(&s, true)).map_err(BoxedError::to_owned)
 }
 
 #[tauri::command]
@@ -225,7 +222,7 @@ pub fn validate_custom_single_specificity(
     placement_rules: Vec<String>,
     neutral_losses: Vec<String>,
     diagnostic_ions: Vec<String>,
-) -> Result<String, CustomError> {
+) -> Result<String, BoxedError<'static>> {
     let rules = placement_rules
         .into_iter()
         .map(|text| text.parse::<PlacementRule>())
@@ -247,6 +244,7 @@ pub fn validate_custom_single_specificity(
             text.parse::<f64>()
                 .map(MolecularFormula::with_additional_mass)
                 .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true, false))
+                .map_err(BoxedError::to_owned)
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(
@@ -293,7 +291,7 @@ pub fn validate_custom_linker_specificity(
     stubs: Vec<String>,
     neutral_losses: Vec<String>,
     diagnostic_ions: Vec<String>,
-) -> Result<String, CustomError> {
+) -> Result<String, BoxedError<'static>> {
     let rules1 = placement_rules
         .into_iter()
         .map(|text| text.parse::<PlacementRule>())
@@ -316,7 +314,8 @@ pub fn validate_custom_linker_specificity(
     let stubs = stubs
         .into_iter()
         .map(|text| parse_stub(&text))
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(BoxedError::to_owned)?;
 
     let neutral_losses = neutral_losses
         .into_iter()
@@ -328,7 +327,7 @@ pub fn validate_custom_linker_specificity(
         .map(|text| {
             text.parse::<f64>()
                 .map(MolecularFormula::with_additional_mass)
-                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true, false))
+                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true, false)).map_err(BoxedError::to_owned)
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(
@@ -395,27 +394,29 @@ pub fn validate_glycan_fragments(
     kind: Vec<String>,
     full: bool,
     core: Option<(u8, u8)>,
-) -> Result<String, CustomError> {
+) -> Result<String, BoxedError<'static>> {
     let aas = aa
         .iter()
         .map(|aa| parse_amino_acid(aa))
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(BoxedError::to_owned)?;
     let kind = kind
         .iter()
         .map(|v| parse_fragment_kind(v))
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(BoxedError::to_owned)?;
 
     if !fallback && aas.is_empty() {
-        Err(CustomError::error(
+        Err(BoxedError::error(
             "Invalid glycan fragments",
             "At least one amino acid has to be provided for the selection",
-            Context::None,
+            Context::none(),
         ))
     } else if !full && core.is_none() {
-        Err(CustomError::error(
+        Err(BoxedError::error(
             "Invalid glycan fragments",
             "At least one fragment type has to be specified (one of full or core)",
-            Context::None,
+            Context::none(),
         ))
     } else {
         Ok(format!(

@@ -1,19 +1,18 @@
 use std::{io::BufWriter, sync::Mutex};
 
+use custom_error::{BoxedError, Context, CustomErrorTrait};
 use mzdata::meta::DissociationMethodTerm;
-use serde::{Deserialize, Serialize};
-
 use rustyms::{
     annotation::model::{
         ChargeRange, GlycanModel, GlycanPeptideFragment, Location, PrimaryIonSeries,
         SatelliteIonSeries, SatelliteLocation,
     },
-    error::*,
     fragment::{FragmentKind, NeutralLoss},
     prelude::*,
     quantities::Tolerance,
     system::{MassOverCharge, mz},
 };
+use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 use crate::{
@@ -162,7 +161,7 @@ pub fn get_custom_models(
 ) -> Result<
     (
         Vec<(bool, usize, String)>,
-        Option<(CustomError, Vec<String>)>,
+        Option<(BoxedError, Vec<String>)>,
     ),
     &'static str,
 > {
@@ -237,7 +236,7 @@ pub async fn update_model(
     name: String,
     model: ModelParameters,
     app: tauri::AppHandle,
-) -> Result<(), CustomError> {
+) -> Result<(), BoxedError<'static>> {
     let model = (name, model.try_into()?);
 
     if let Ok(mut state) = app.state::<Mutex<State>>().lock() {
@@ -246,10 +245,10 @@ pub async fn update_model(
         if index < state.custom_models.len() {
             let (built_in, _, _) = models[id];
             if built_in {
-                return Err(CustomError::error(
+                return Err(BoxedError::error(
                     "Can not update built in model",
                     "A built in model cannot be edited",
-                    Context::None,
+                    Context::none(),
                 ));
             } else {
                 state.custom_models[index] = model;
@@ -264,47 +263,47 @@ pub async fn update_model(
             .app_config_dir()
             .map(|dir| dir.join(crate::CUSTOM_MODELS_FILE))
             .map_err(|e| {
-                CustomError::error(
+                BoxedError::error(
                     "Cannot find app data directory",
                     e.to_string(),
-                    Context::None,
+                    Context::none(),
                 )
             })?;
         let parent = path.parent().ok_or_else(|| {
-            CustomError::error(
+            BoxedError::error(
                 "Custom models configuration does not have a valid directory",
                 "Please report",
-                Context::show(path.to_string_lossy()),
+                Context::show(path.to_string_lossy()).to_owned(),
             )
         })?;
         std::fs::create_dir_all(parent).map_err(|err| {
-            CustomError::error(
+            BoxedError::error(
                 "Could not create parent directories for custom models configuration file",
-                err,
-                Context::show(parent.to_string_lossy()),
+                err.to_string(),
+                Context::show(parent.to_string_lossy()).to_owned(),
             )
         })?;
         let file = BufWriter::new(std::fs::File::create(&path).map_err(|err| {
-            CustomError::error(
+            BoxedError::error(
                 "Could not open custom models configuration file",
-                err,
-                Context::show(path.to_string_lossy()),
+                err.to_string(),
+                Context::show(path.to_string_lossy()).to_owned(),
             )
         })?);
         serde_json::to_writer_pretty(file, &state.custom_models).map_err(|err| {
-            CustomError::error(
+            BoxedError::error(
                 "Could not write custom models to configuration file",
-                err,
-                Context::None,
+                err.to_string(),
+                Context::none(),
             )
         })?;
 
         Ok(())
     } else {
-        Err(CustomError::error(
+        Err(BoxedError::error(
             "State locked",
             "Cannot unlock the mutable state, are you doing many things in parallel?",
-            Context::None,
+            Context::none(),
         ))
     }
 }
@@ -329,7 +328,7 @@ pub struct ModelParameters {
 }
 
 impl TryFrom<ModelParameters> for FragmentationModel {
-    type Error = CustomError;
+    type Error = BoxedError<'static>;
     fn try_from(value: ModelParameters) -> Result<Self, Self::Error> {
         Ok(FragmentationModel::none()
             .clone()
@@ -343,13 +342,14 @@ impl TryFrom<ModelParameters> for FragmentationModel {
             .y(value.y.try_into()?)
             .z(value.z.try_into()?)
             .precursor(
-                parse_neutral_losses(&value.precursor.0.neutral_losses)?,
+                parse_neutral_losses(&value.precursor.0.neutral_losses)
+                    .map_err(BoxedError::to_owned)?,
                 value
                     .precursor
                     .0
                     .amino_acid_neutral_losses
                     .iter()
-                    .map(|rule| parse_aa_neutral_loss(rule))
+                    .map(|rule| parse_aa_neutral_loss(rule).map_err(BoxedError::to_owned))
                     .collect::<Result<_, _>>()?,
                 (value.precursor.0.amino_acid_side_chain_losses, {
                     let selection = value
@@ -357,7 +357,7 @@ impl TryFrom<ModelParameters> for FragmentationModel {
                         .0
                         .amino_acid_side_chain_losses_selection
                         .iter()
-                        .map(|aa| parse_amino_acid(aa))
+                        .map(|aa| parse_amino_acid(aa).map_err(BoxedError::to_owned))
                         .collect::<Result<Vec<_>, _>>()?;
                     (!selection.is_empty()).then_some(selection)
                 }),
@@ -370,7 +370,7 @@ impl TryFrom<ModelParameters> for FragmentationModel {
                         .immonium
                         .2
                         .iter()
-                        .map(|rule| parse_aa_neutral_loss(rule))
+                        .map(|rule| parse_aa_neutral_loss(rule).map_err(BoxedError::to_owned))
                         .collect::<Result<Vec<_>, _>>()?,
                 )),
             )
@@ -435,16 +435,20 @@ pub struct GlycanParameters {
 }
 
 impl TryFrom<GlycanParameters> for GlycanModel {
-    type Error = CustomError;
+    type Error = BoxedError<'static>;
     fn try_from(value: GlycanParameters) -> Result<Self, Self::Error> {
         Ok(Self {
             allow_structural: value.allow_structural,
-            compositional_range: value.compositional_range.0..=value.compositional_range.1,
-            neutral_losses: parse_neutral_losses(&value.neutral_losses)?,
+            compositional_range: (
+                Some(value.compositional_range.0),
+                Some(value.compositional_range.1),
+            ),
+            neutral_losses: parse_neutral_losses(&value.neutral_losses)
+                .map_err(BoxedError::to_owned)?,
             specific_neutral_losses: value
                 .diagnostic_neutral_losses
                 .into_iter()
-                .map(|v| parse_monosaccharide_neutral_loss(&v))
+                .map(|v| parse_monosaccharide_neutral_loss(&v).map_err(BoxedError::to_owned))
                 .collect::<Result<Vec<_>, _>>()?,
             default_peptide_fragment: value.default_glycan_peptide_fragment,
             peptide_fragment_rules: value
@@ -471,8 +475,8 @@ impl From<GlycanModel> for GlycanParameters {
         Self {
             allow_structural: value.allow_structural,
             compositional_range: (
-                *value.compositional_range.start(),
-                *value.compositional_range.end(),
+                value.compositional_range.0.unwrap_or(0),
+                value.compositional_range.1.unwrap_or(usize::MAX),
             ),
             neutral_losses: value.neutral_losses.iter().map(|l| l.to_string()).collect(),
             diagnostic_neutral_losses: value
@@ -552,20 +556,21 @@ pub struct PrimarySeriesParameters {
 }
 
 impl TryFrom<PrimarySeriesParameters> for PrimaryIonSeries {
-    type Error = CustomError;
+    type Error = BoxedError<'static>;
     fn try_from(value: PrimarySeriesParameters) -> Result<Self, Self::Error> {
         let selection = value
             .amino_acid_side_chain_losses_selection
             .iter()
-            .map(|aa| parse_amino_acid(aa))
+            .map(|aa| parse_amino_acid(aa).map_err(BoxedError::to_owned))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(Self {
             location: value.location,
-            neutral_losses: parse_neutral_losses(&value.neutral_losses)?,
+            neutral_losses: parse_neutral_losses(&value.neutral_losses)
+                .map_err(BoxedError::to_owned)?,
             amino_acid_neutral_losses: value
                 .amino_acid_neutral_losses
                 .iter()
-                .map(|rule| parse_aa_neutral_loss(rule))
+                .map(|rule| parse_aa_neutral_loss(rule).map_err(BoxedError::to_owned))
                 .collect::<Result<_, _>>()?,
             amino_acid_side_chain_losses: (
                 value.amino_acid_side_chain_losses,
@@ -613,27 +618,28 @@ pub struct SatelliteSeriesParameters {
 }
 
 impl TryFrom<SatelliteSeriesParameters> for SatelliteIonSeries {
-    type Error = CustomError;
+    type Error = BoxedError<'static>;
     fn try_from(value: SatelliteSeriesParameters) -> Result<Self, Self::Error> {
         let selection = value
             .amino_acid_side_chain_losses_selection
             .iter()
-            .map(|aa| parse_amino_acid(aa))
+            .map(|aa| parse_amino_acid(aa).map_err(BoxedError::to_owned))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(SatelliteIonSeries {
             location: SatelliteLocation {
                 rules: value
                     .location_rules
                     .into_iter()
-                    .map(|rule| parse_satellite_ion(&rule))
+                    .map(|rule| parse_satellite_ion(&rule).map_err(BoxedError::to_owned))
                     .collect::<Result<Vec<_>, _>>()?,
                 base: value.location_base,
             },
-            neutral_losses: parse_neutral_losses(&value.neutral_losses)?,
+            neutral_losses: parse_neutral_losses(&value.neutral_losses)
+                .map_err(BoxedError::to_owned)?,
             amino_acid_neutral_losses: value
                 .amino_acid_neutral_losses
                 .iter()
-                .map(|rule| parse_aa_neutral_loss(rule))
+                .map(|rule| parse_aa_neutral_loss(rule).map_err(BoxedError::to_owned))
                 .collect::<Result<_, _>>()?,
             amino_acid_side_chain_losses: (
                 value.amino_acid_side_chain_losses,
@@ -674,7 +680,7 @@ impl From<SatelliteIonSeries> for SatelliteSeriesParameters {
     }
 }
 
-fn parse_neutral_losses(neutral_losses: &[String]) -> Result<Vec<NeutralLoss>, CustomError> {
+fn parse_neutral_losses(neutral_losses: &[String]) -> Result<Vec<NeutralLoss>, BoxedError> {
     neutral_losses
         .iter()
         .filter(|n| !n.is_empty())
@@ -685,7 +691,7 @@ fn parse_neutral_losses(neutral_losses: &[String]) -> Result<Vec<NeutralLoss>, C
 pub fn parameters(
     tolerance: (f64, &str),
     mz_range: (Option<f64>, Option<f64>),
-) -> Result<MatchingParameters, CustomError> {
+) -> Result<MatchingParameters, BoxedError> {
     let mut parameters = MatchingParameters::default();
     if tolerance.1 == "ppm" {
         parameters.tolerance = Tolerance::new_ppm(tolerance.0);
@@ -693,19 +699,19 @@ pub fn parameters(
         parameters.tolerance =
             Tolerance::new_absolute(MassOverCharge::new::<rustyms::system::mz>(tolerance.0));
     } else {
-        return Err(CustomError::error(
+        return Err(BoxedError::error(
             "Invalid tolerance unit",
             "",
-            Context::None,
+            Context::none(),
         ));
     }
     let min = mz_range.0.unwrap_or(0.0);
     let max = mz_range.1.unwrap_or(f64::MAX);
     if min > max {
-        return Err(CustomError::error(
+        return Err(BoxedError::error(
             "m/z range invalid",
             "The minimal value is less then the maximal value",
-            Context::None,
+            Context::none(),
         ));
     }
     parameters.mz_range = MassOverCharge::new::<mz>(min)..=MassOverCharge::new::<mz>(max);

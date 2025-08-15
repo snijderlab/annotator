@@ -3,9 +3,9 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use custom_error::{BoxedError, Context, CustomErrorTrait};
 use ordered_float::OrderedFloat;
 use rustyms::{
-    error::{Context, CustomError},
     fragment::{DiagnosticIon, NeutralLoss},
     ontology::Ontology,
     prelude::*,
@@ -25,7 +25,7 @@ use crate::{
 pub fn get_custom_modifications(
     state: ModifiableState,
     theme: Theme,
-) -> Result<(Vec<(usize, String)>, Option<(CustomError, Vec<String>)>), &'static str> {
+) -> Result<(Vec<(usize, String)>, Option<(BoxedError, Vec<String>)>), &'static str> {
     let state = state.lock().map_err(|_| "Could not lock mutex")?;
     Ok((
         state
@@ -277,7 +277,7 @@ pub struct CustomModification {
 pub async fn update_modification(
     custom_modification: CustomModification,
     app: tauri::AppHandle,
-) -> Result<(), CustomError> {
+) -> Result<(), BoxedError<'static>> {
     let formula = custom_modification
         .formula
         .parse::<f64>()
@@ -291,7 +291,8 @@ pub async fn update_modification(
                 true,
                 false,
             )
-        })?;
+        })
+        .map_err(BoxedError::to_owned)?;
     let id = ModificationId {
         ontology: Ontology::Custom,
         name: custom_modification.name.clone(),
@@ -377,7 +378,8 @@ pub async fn update_modification(
                             }
                         },
                     )
-                    .collect::<Result<Vec<_>, _>>()?,
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(BoxedError::to_owned)?,
                 formula,
                 id,
                 length: custom_modification.linker_length.map(OrderedFloat::from),
@@ -417,7 +419,8 @@ pub async fn update_modification(
                                 .collect::<Result<Vec<_>, _>>()?,
                         ))
                     })
-                    .collect::<Result<Vec<_>, _>>()?,
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(BoxedError::to_owned)?,
                 formula,
                 id,
             }
@@ -442,47 +445,47 @@ pub async fn update_modification(
             .app_config_dir()
             .map(|dir| dir.join(crate::CUSTOM_MODIFICATIONS_FILE))
             .map_err(|e| {
-                CustomError::error(
+                BoxedError::error(
                     "Cannot find app data directory",
                     e.to_string(),
-                    Context::None,
+                    Context::none(),
                 )
             })?;
         let parent = path.parent().ok_or_else(|| {
-            CustomError::error(
+            BoxedError::error(
                 "Custom modifications configuration does not have a valid directory",
                 "Please report",
-                Context::show(path.to_string_lossy()),
+                Context::show(path.to_string_lossy()).to_owned(),
             )
         })?;
         std::fs::create_dir_all(parent).map_err(|err| {
-            CustomError::error(
+            BoxedError::error(
                 "Could not create parent directories for custom modifications configuration file",
-                err,
-                Context::show(parent.to_string_lossy()),
+                err.to_string(),
+                Context::show(parent.to_string_lossy()).to_owned(),
             )
         })?;
         let file = BufWriter::new(std::fs::File::create(&path).map_err(|err| {
-            CustomError::error(
+            BoxedError::error(
                 "Could not open custom modifications configuration file",
-                err,
-                Context::show(path.to_string_lossy()),
+                err.to_string(),
+                Context::show(path.to_string_lossy()).to_owned(),
             )
         })?);
         serde_json::to_writer_pretty(file, &state.custom_modifications).map_err(|err| {
-            CustomError::error(
+            BoxedError::error(
                 "Could not write custom modifications to configuration file",
-                err,
-                Context::None,
+                err.to_string(),
+                Context::none(),
             )
         })?;
 
         Ok(())
     } else {
-        Err(CustomError::error(
+        Err(BoxedError::error(
             "State locked",
             "Cannot unlock the mutable state, are you doing many things in parallel?",
-            Context::None,
+            Context::none(),
         ))
     }
 }
