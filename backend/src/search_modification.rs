@@ -3,7 +3,7 @@ use crate::{
     metadata_render::OptionalString,
     render::{display_formula, display_masses, display_placement_rule, render_full_glycan},
 };
-use custom_error::{BoxedError, Context, CustomErrorTrait};
+use custom_error::{BasicKind, BoxedError, Context, CreateError};
 use itertools::Itertools;
 use rustyms::{
     ontology::Ontology,
@@ -28,11 +28,12 @@ pub async fn search_modification(
     tolerance: f64,
     state: ModifiableState<'_>,
     theme: Theme,
-) -> Result<String, BoxedError<'static>> {
+) -> Result<String, BoxedError<'static, BasicKind>> {
     let state = state.lock().unwrap();
     let mut glycan_footnotes = Vec::new();
     let modification = if text.is_empty() {
-        Err(BoxedError::error(
+        Err(BoxedError::new(
+            BasicKind::Error,
             "Invalid modification",
             "The modification is empty",
             Context::none(),
@@ -47,7 +48,8 @@ pub async fn search_modification(
         )
         .map(|(m, _)| match m {
             ReturnModification::Defined(d) => Ok(d),
-            _ => Err(BoxedError::error(
+            _ => Err(BoxedError::new(
+                BasicKind::Error,
                 "Invalid modification",
                 "Can not define ambiguous modifications for the modifications parameter",
                 Context::none(),

@@ -1,6 +1,6 @@
 use std::{io::BufWriter, sync::Mutex};
 
-use custom_error::{BoxedError, Context, CustomErrorTrait};
+use custom_error::{BasicKind, BoxedError, Context, CreateError};
 use mzdata::meta::DissociationMethodTerm;
 use rustyms::{
     annotation::model::{
@@ -161,7 +161,7 @@ pub fn get_custom_models(
 ) -> Result<
     (
         Vec<(bool, usize, String)>,
-        Option<(BoxedError, Vec<String>)>,
+        Option<(BoxedError<'_, BasicKind>, Vec<String>)>,
     ),
     &'static str,
 > {
@@ -236,7 +236,7 @@ pub async fn update_model(
     name: String,
     model: ModelParameters,
     app: tauri::AppHandle,
-) -> Result<(), BoxedError<'static>> {
+) -> Result<(), BoxedError<'static, BasicKind>> {
     let model = (name, model.try_into()?);
 
     if let Ok(mut state) = app.state::<Mutex<State>>().lock() {
@@ -245,7 +245,8 @@ pub async fn update_model(
         if index < state.custom_models.len() {
             let (built_in, _, _) = models[id];
             if built_in {
-                return Err(BoxedError::error(
+                return Err(BoxedError::new(
+                    BasicKind::Error,
                     "Can not update built in model",
                     "A built in model cannot be edited",
                     Context::none(),
@@ -263,35 +264,40 @@ pub async fn update_model(
             .app_config_dir()
             .map(|dir| dir.join(crate::CUSTOM_MODELS_FILE))
             .map_err(|e| {
-                BoxedError::error(
+                BoxedError::new(
+                    BasicKind::Error,
                     "Cannot find app data directory",
                     e.to_string(),
                     Context::none(),
                 )
             })?;
         let parent = path.parent().ok_or_else(|| {
-            BoxedError::error(
+            BoxedError::new(
+                BasicKind::Error,
                 "Custom models configuration does not have a valid directory",
                 "Please report",
                 Context::show(path.to_string_lossy()).to_owned(),
             )
         })?;
         std::fs::create_dir_all(parent).map_err(|err| {
-            BoxedError::error(
+            BoxedError::new(
+                BasicKind::Error,
                 "Could not create parent directories for custom models configuration file",
                 err.to_string(),
                 Context::show(parent.to_string_lossy()).to_owned(),
             )
         })?;
         let file = BufWriter::new(std::fs::File::create(&path).map_err(|err| {
-            BoxedError::error(
+            BoxedError::new(
+                BasicKind::Error,
                 "Could not open custom models configuration file",
                 err.to_string(),
                 Context::show(path.to_string_lossy()).to_owned(),
             )
         })?);
         serde_json::to_writer_pretty(file, &state.custom_models).map_err(|err| {
-            BoxedError::error(
+            BoxedError::new(
+                BasicKind::Error,
                 "Could not write custom models to configuration file",
                 err.to_string(),
                 Context::none(),
@@ -300,7 +306,8 @@ pub async fn update_model(
 
         Ok(())
     } else {
-        Err(BoxedError::error(
+        Err(BoxedError::new(
+            BasicKind::Error,
             "State locked",
             "Cannot unlock the mutable state, are you doing many things in parallel?",
             Context::none(),
@@ -328,7 +335,7 @@ pub struct ModelParameters {
 }
 
 impl TryFrom<ModelParameters> for FragmentationModel {
-    type Error = BoxedError<'static>;
+    type Error = BoxedError<'static, BasicKind>;
     fn try_from(value: ModelParameters) -> Result<Self, Self::Error> {
         Ok(FragmentationModel::none()
             .clone()
@@ -435,7 +442,7 @@ pub struct GlycanParameters {
 }
 
 impl TryFrom<GlycanParameters> for GlycanModel {
-    type Error = BoxedError<'static>;
+    type Error = BoxedError<'static, BasicKind>;
     fn try_from(value: GlycanParameters) -> Result<Self, Self::Error> {
         Ok(Self {
             allow_structural: value.allow_structural,
@@ -556,7 +563,7 @@ pub struct PrimarySeriesParameters {
 }
 
 impl TryFrom<PrimarySeriesParameters> for PrimaryIonSeries {
-    type Error = BoxedError<'static>;
+    type Error = BoxedError<'static, BasicKind>;
     fn try_from(value: PrimarySeriesParameters) -> Result<Self, Self::Error> {
         let selection = value
             .amino_acid_side_chain_losses_selection
@@ -618,7 +625,7 @@ pub struct SatelliteSeriesParameters {
 }
 
 impl TryFrom<SatelliteSeriesParameters> for SatelliteIonSeries {
-    type Error = BoxedError<'static>;
+    type Error = BoxedError<'static, BasicKind>;
     fn try_from(value: SatelliteSeriesParameters) -> Result<Self, Self::Error> {
         let selection = value
             .amino_acid_side_chain_losses_selection
@@ -680,7 +687,9 @@ impl From<SatelliteIonSeries> for SatelliteSeriesParameters {
     }
 }
 
-fn parse_neutral_losses(neutral_losses: &[String]) -> Result<Vec<NeutralLoss>, BoxedError> {
+fn parse_neutral_losses(
+    neutral_losses: &[String],
+) -> Result<Vec<NeutralLoss>, BoxedError<'static, BasicKind>> {
     neutral_losses
         .iter()
         .filter(|n| !n.is_empty())
@@ -691,7 +700,7 @@ fn parse_neutral_losses(neutral_losses: &[String]) -> Result<Vec<NeutralLoss>, B
 pub fn parameters(
     tolerance: (f64, &str),
     mz_range: (Option<f64>, Option<f64>),
-) -> Result<MatchingParameters, BoxedError> {
+) -> Result<MatchingParameters, BoxedError<'static, BasicKind>> {
     let mut parameters = MatchingParameters::default();
     if tolerance.1 == "ppm" {
         parameters.tolerance = Tolerance::new_ppm(tolerance.0);
@@ -699,7 +708,8 @@ pub fn parameters(
         parameters.tolerance =
             Tolerance::new_absolute(MassOverCharge::new::<rustyms::system::mz>(tolerance.0));
     } else {
-        return Err(BoxedError::error(
+        return Err(BoxedError::new(
+            BasicKind::Error,
             "Invalid tolerance unit",
             "",
             Context::none(),
@@ -708,7 +718,8 @@ pub fn parameters(
     let min = mz_range.0.unwrap_or(0.0);
     let max = mz_range.1.unwrap_or(f64::MAX);
     if min > max {
-        return Err(BoxedError::error(
+        return Err(BoxedError::new(
+            BasicKind::Error,
             "m/z range invalid",
             "The minimal value is less then the maximal value",
             Context::none(),

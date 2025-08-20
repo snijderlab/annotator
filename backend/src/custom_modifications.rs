@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use custom_error::{BoxedError, Context, CustomErrorTrait};
+use custom_error::{BasicKind, BoxedError, Context, CreateError};
 use ordered_float::OrderedFloat;
 use rustyms::{
     fragment::{DiagnosticIon, NeutralLoss},
@@ -25,7 +25,13 @@ use crate::{
 pub fn get_custom_modifications(
     state: ModifiableState,
     theme: Theme,
-) -> Result<(Vec<(usize, String)>, Option<(BoxedError, Vec<String>)>), &'static str> {
+) -> Result<
+    (
+        Vec<(usize, String)>,
+        Option<(BoxedError<'static, BasicKind>, Vec<String>)>,
+    ),
+    &'static str,
+> {
     let state = state.lock().map_err(|_| "Could not lock mutex")?;
     Ok((
         state
@@ -277,7 +283,7 @@ pub struct CustomModification {
 pub async fn update_modification(
     custom_modification: CustomModification,
     app: tauri::AppHandle,
-) -> Result<(), BoxedError<'static>> {
+) -> Result<(), BoxedError<'static, BasicKind>> {
     let formula = custom_modification
         .formula
         .parse::<f64>()
@@ -445,35 +451,40 @@ pub async fn update_modification(
             .app_config_dir()
             .map(|dir| dir.join(crate::CUSTOM_MODIFICATIONS_FILE))
             .map_err(|e| {
-                BoxedError::error(
+                BoxedError::new(
+                    BasicKind::Error,
                     "Cannot find app data directory",
                     e.to_string(),
                     Context::none(),
                 )
             })?;
         let parent = path.parent().ok_or_else(|| {
-            BoxedError::error(
+            BoxedError::new(
+                BasicKind::Error,
                 "Custom modifications configuration does not have a valid directory",
                 "Please report",
                 Context::show(path.to_string_lossy()).to_owned(),
             )
         })?;
         std::fs::create_dir_all(parent).map_err(|err| {
-            BoxedError::error(
+            BoxedError::new(
+                BasicKind::Error,
                 "Could not create parent directories for custom modifications configuration file",
                 err.to_string(),
                 Context::show(parent.to_string_lossy()).to_owned(),
             )
         })?;
         let file = BufWriter::new(std::fs::File::create(&path).map_err(|err| {
-            BoxedError::error(
+            BoxedError::new(
+                BasicKind::Error,
                 "Could not open custom modifications configuration file",
                 err.to_string(),
                 Context::show(path.to_string_lossy()).to_owned(),
             )
         })?);
         serde_json::to_writer_pretty(file, &state.custom_modifications).map_err(|err| {
-            BoxedError::error(
+            BoxedError::new(
+                BasicKind::Error,
                 "Could not write custom modifications to configuration file",
                 err.to_string(),
                 Context::none(),
@@ -482,7 +493,8 @@ pub async fn update_modification(
 
         Ok(())
     } else {
-        Err(BoxedError::error(
+        Err(BoxedError::new(
+            BasicKind::Error,
             "State locked",
             "Cannot unlock the mutable state, are you doing many things in parallel?",
             Context::none(),

@@ -1,4 +1,4 @@
-use custom_error::{BoxedError, Context, CustomErrorTrait, ToHtml, combine_error};
+use custom_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent, combine_error};
 use itertools::Itertools;
 use rayon::prelude::*;
 use rustyms::{
@@ -34,7 +34,7 @@ pub async fn load_identified_peptides_file<'a>(
                 .filter_map(|p| match p {
                     Ok(p) => Some(p),
                     Err(e) => {
-                        combine_error(&mut peptide_errors, e);
+                        combine_error(&mut peptide_errors, e, ());
                         None
                     }
                 })
@@ -44,7 +44,8 @@ pub async fn load_identified_peptides_file<'a>(
         Ok(None)
     } else {
         Ok(Some(
-            BoxedError::warning(
+            BoxedError::new(
+                BasicKind::Warning,
                 "Could not parse all peptides",
                 "All peptides with an error are ignored",
                 Context::default().source(path).to_owned(),
@@ -61,7 +62,8 @@ pub async fn close_identified_peptides_file(
     state: ModifiableState<'_>,
 ) -> Result<(), String> {
     state.lock().map_err(|_| {
-        BoxedError::error(
+        BoxedError::new(
+            BasicKind::Error,
             "Could not lock mutex",
             "You are likely doing too many things in parallel",
             Context::none(),
@@ -76,7 +78,7 @@ pub async fn close_identified_peptides_file(
                 state.identified_peptide_files_mut().remove(pos);
                 Ok(())
             } else {
-                Err(BoxedError::error("File does not exist", "This selected file could not be closed as it does not exist, did you already close it?", Context::none()).to_html())
+                Err(BoxedError::new(BasicKind::Error,"File does not exist", "This selected file could not be closed as it does not exist, did you already close it?", Context::none()).to_html())
             }
         }
     )
@@ -111,7 +113,8 @@ pub async fn search_peptide<'a>(
         );
     }
     let state = state.lock().map_err(|_| {
-        BoxedError::error(
+        BoxedError::new(
+            BasicKind::Error,
             "Cannot search",
             "The state is locked, are you trying to do many things at the same time?",
             Context::none(),
@@ -123,7 +126,8 @@ pub async fn search_peptide<'a>(
             .map_err(|e| e.to_html())?
             .into_simple_linear()
             .ok_or_else(|| {
-                BoxedError::error(
+                BoxedError::new(
+                    BasicKind::Error,
                     "Invalid search peptide",
                     "A search peptide should be simple",
                     Context::none(),
