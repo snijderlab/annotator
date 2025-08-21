@@ -422,14 +422,11 @@ impl RenderToTable for IdentifiedPeptidoformData {
                 ),
                 (
                     "DN mass left",
-                    data.dn_missing_mass
-                        .map(|v| {
+                    data.dn_n_mass
+                        .map(|n| {
                             format!(
-                                "N: {} other: {} C: {}",
-                                data.dn_n_mass
-                                    .map(|v| display_mass(v, None),)
-                                    .to_optional_string(),
-                                display_mass(v, None),
+                                "N: {} C: {}",
+                                display_mass(n, None),
                                 data.dn_c_mass
                                     .map(|v| display_mass(v, None),)
                                     .to_optional_string(),
