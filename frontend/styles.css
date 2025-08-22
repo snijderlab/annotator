@@ -2714,11 +2714,11 @@ pre {
     overflow: hidden;
 }
 
-.context:has(.error) {
+.context:has(.highlight) {
     border-color: var(--color-red);
 }
 
-.context .error {
+.context .highlight {
     text-decoration: underline;
     text-decoration-style: wavy;
     text-decoration-color: var(--color-red);

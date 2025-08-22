@@ -5,7 +5,7 @@
 
 use std::sync::Mutex;
 
-use custom_error::{BasicKind, BoxedError, Context, CreateError};
+use custom_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
 use itertools::Itertools;
 use mzdata::prelude::{IonProperties, SpectrumLike};
 use ordered_float::OrderedFloat;
@@ -67,16 +67,17 @@ fn refresh(state: ModifiableState) -> (usize, usize) {
 }
 
 #[tauri::command]
-async fn details_formula(text: &str) -> Result<String, BoxedError<'static, BasicKind>> {
+async fn details_formula(text: &str) -> Result<String, String> {
     let formula = if text.is_empty() {
         Err(BoxedError::small(
             BasicKind::Error,
             "Invalid molecular formula",
             "The test is empty",
-        ))
+        )
+        .to_html())
     } else {
         MolecularFormula::from_pro_forma(text, .., false, true, true, false)
-            .map_err(BoxedError::to_owned)
+            .map_err(|err| err.to_html())
     }?;
     let isotopes = formula.isotopic_distribution(0.001);
     let (max, max_occurrence) = isotopes
@@ -198,39 +199,29 @@ async fn annotate_spectrum<'a>(
     mass_mode: &'a str,
     mz_range: (Option<f64>, Option<f64>),
     theme: Theme,
-) -> Result<AnnotationResult, BoxedError<'static, BasicKind>> {
+) -> Result<AnnotationResult, String> {
     let mut state = state.lock().unwrap();
     let spectrum = crate::spectra::create_selected_spectrum(&mut state, filter)
-        .map_err(BoxedError::to_owned)?;
+        .map_err(|err| err.to_html())?;
     let model = crate::model::get_models(&state)
         .1
         .get(model)
         .cloned()
         .ok_or_else(|| {
-            BoxedError::new(
-                BasicKind::Error,
-                "Invalid model",
-                "Model does not exist",
-                Context::none(),
-            )
+            BoxedError::small(BasicKind::Error, "Invalid model", "Model does not exist").to_html()
         })?
         .2;
-    let parameters = model::parameters(tolerance, mz_range).map_err(BoxedError::to_owned)?;
+    let parameters = model::parameters(tolerance, mz_range).map_err(|err| err.to_html())?;
     let mass_mode = match mass_mode {
         "monoisotopic" => MassMode::Monoisotopic,
         "average_weight" => MassMode::Average,
         "most_abundant" => MassMode::MostAbundant,
         _ => {
-            return Err(BoxedError::new(
-                BasicKind::Error,
-                "Invalid mass mode",
-                "",
-                Context::none(),
-            ));
+            return Err(BoxedError::small(BasicKind::Error, "Invalid mass mode", "").to_html());
         }
     };
     let peptide = CompoundPeptidoformIon::pro_forma(peptide, Some(&state.custom_modifications))
-        .map_err(BoxedError::to_owned)?;
+        .map_err(|err| err.to_html())?;
     let multiple_peptidoforms = peptide.peptidoform_ions().len() == 1;
     let multiple_peptides = peptide
         .peptidoform_ions()
@@ -288,7 +279,7 @@ fn load_custom_mods_and_models(app: &mut tauri::App) -> Result<(), Box<dyn std::
                 Ok(modifications) => state.custom_modifications = modifications,
                 Err(error) => {
                     eprintln!("Error while parsing custom modifications:\n{error}");
-                    let mut combined_error = (error.clone(), Vec::new());
+                    let mut combined_error = (error.to_html(), Vec::new());
                     if let Err(err) = std::fs::rename(
                         &custom_mods,
                         custom_mods
@@ -315,7 +306,7 @@ fn load_custom_mods_and_models(app: &mut tauri::App) -> Result<(), Box<dyn std::
                 Ok(models) => state.custom_models = models,
                 Err(error) => {
                     eprintln!("Error while parsing custom models:\n{error}");
-                    let mut combined_error = (error.clone(), Vec::new());
+                    let mut combined_error = (error.to_html(), Vec::new());
                     if let Err(err) = std::fs::rename(
                         &custom_models,
                         custom_models

@@ -319,7 +319,6 @@ impl RenderToTable for IdentifiedPeptidoformData {
             ],
             IdentifiedPeptidoformData::MaxQuant(data) => vec![
                 ("Scan index", data.scan_index.to_optional_string()),
-                ("Modifications", data.modifications.to_string()),
                 ("Proteins", data.proteins.to_string()),
                 (
                     "Mass analyser",

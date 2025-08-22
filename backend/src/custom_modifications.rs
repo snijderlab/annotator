@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use custom_error::{BasicKind, BoxedError, Context, CreateError};
+use custom_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
 use ordered_float::OrderedFloat;
 use rustyms::{
     fragment::{DiagnosticIon, NeutralLoss},
@@ -25,13 +25,7 @@ use crate::{
 pub fn get_custom_modifications(
     state: ModifiableState,
     theme: Theme,
-) -> Result<
-    (
-        Vec<(usize, String)>,
-        Option<(BoxedError<'static, BasicKind>, Vec<String>)>,
-    ),
-    &'static str,
-> {
+) -> Result<(Vec<(usize, String)>, Option<(String, Vec<String>)>), &'static str> {
     let state = state.lock().map_err(|_| "Could not lock mutex")?;
     Ok((
         state
@@ -283,7 +277,7 @@ pub struct CustomModification {
 pub async fn update_modification(
     custom_modification: CustomModification,
     app: tauri::AppHandle,
-) -> Result<(), BoxedError<'static, BasicKind>> {
+) -> Result<(), String> {
     let formula = custom_modification
         .formula
         .parse::<f64>()
@@ -298,7 +292,7 @@ pub async fn update_modification(
                 false,
             )
         })
-        .map_err(BoxedError::to_owned)?;
+        .map_err(|e| e.to_html())?;
     let id = ModificationId {
         ontology: Ontology::Custom,
         name: custom_modification.name.clone(),
@@ -384,8 +378,8 @@ pub async fn update_modification(
                             }
                         },
                     )
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(BoxedError::to_owned)?,
+                    .collect::<Result<Vec<_>, BoxedError<'_, BasicKind>>>()
+                    .map_err(|e| e.to_html())?,
                 formula,
                 id,
                 length: custom_modification.linker_length.map(OrderedFloat::from),
@@ -425,8 +419,8 @@ pub async fn update_modification(
                                 .collect::<Result<Vec<_>, _>>()?,
                         ))
                     })
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(BoxedError::to_owned)?,
+                    .collect::<Result<Vec<_>, BoxedError<'_, BasicKind>>>()
+                    .map_err(|e| e.to_html())?,
                 formula,
                 id,
             }
@@ -457,6 +451,7 @@ pub async fn update_modification(
                     e.to_string(),
                     Context::none(),
                 )
+                .to_html()
             })?;
         let parent = path.parent().ok_or_else(|| {
             BoxedError::new(
@@ -465,6 +460,7 @@ pub async fn update_modification(
                 "Please report",
                 Context::show(path.to_string_lossy()).to_owned(),
             )
+            .to_html()
         })?;
         std::fs::create_dir_all(parent).map_err(|err| {
             BoxedError::new(
@@ -473,6 +469,7 @@ pub async fn update_modification(
                 err.to_string(),
                 Context::show(parent.to_string_lossy()).to_owned(),
             )
+            .to_html()
         })?;
         let file = BufWriter::new(std::fs::File::create(&path).map_err(|err| {
             BoxedError::new(
@@ -481,6 +478,7 @@ pub async fn update_modification(
                 err.to_string(),
                 Context::show(path.to_string_lossy()).to_owned(),
             )
+            .to_html()
         })?);
         serde_json::to_writer_pretty(file, &state.custom_modifications).map_err(|err| {
             BoxedError::new(
@@ -489,6 +487,7 @@ pub async fn update_modification(
                 err.to_string(),
                 Context::none(),
             )
+            .to_html()
         })?;
 
         Ok(())
@@ -498,6 +497,7 @@ pub async fn update_modification(
             "State locked",
             "Cannot unlock the mutable state, are you doing many things in parallel?",
             Context::none(),
-        ))
+        )
+        .to_html())
     }
 }

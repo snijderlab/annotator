@@ -1,6 +1,6 @@
 use std::{io::BufWriter, sync::Mutex};
 
-use custom_error::{BasicKind, BoxedError, Context, CreateError};
+use custom_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
 use mzdata::meta::DissociationMethodTerm;
 use rustyms::{
     annotation::model::{
@@ -158,13 +158,7 @@ pub fn get_model_index(
 #[tauri::command]
 pub fn get_custom_models(
     state: ModifiableState,
-) -> Result<
-    (
-        Vec<(bool, usize, String)>,
-        Option<(BoxedError<'_, BasicKind>, Vec<String>)>,
-    ),
-    &'static str,
-> {
+) -> Result<(Vec<(bool, usize, String)>, Option<(String, Vec<String>)>), &'static str> {
     let state = state.lock().map_err(|_| "Could not lock mutex")?;
     Ok((
         get_models(&state)
@@ -236,8 +230,13 @@ pub async fn update_model(
     name: String,
     model: ModelParameters,
     app: tauri::AppHandle,
-) -> Result<(), BoxedError<'static, BasicKind>> {
-    let model = (name, model.try_into()?);
+) -> Result<(), String> {
+    let model = (
+        name,
+        model
+            .try_into()
+            .map_err(|err: BoxedError<'static, BasicKind>| err.to_html())?,
+    );
 
     if let Ok(mut state) = app.state::<Mutex<State>>().lock() {
         let (built_in_models_length, models) = get_models(&state);
@@ -245,12 +244,12 @@ pub async fn update_model(
         if index < state.custom_models.len() {
             let (built_in, _, _) = models[id];
             if built_in {
-                return Err(BoxedError::new(
+                return Err(BoxedError::small(
                     BasicKind::Error,
                     "Can not update built in model",
                     "A built in model cannot be edited",
-                    Context::none(),
-                ));
+                )
+                .to_html());
             } else {
                 state.custom_models[index] = model;
             }
@@ -264,12 +263,12 @@ pub async fn update_model(
             .app_config_dir()
             .map(|dir| dir.join(crate::CUSTOM_MODELS_FILE))
             .map_err(|e| {
-                BoxedError::new(
+                BoxedError::small(
                     BasicKind::Error,
                     "Cannot find app data directory",
                     e.to_string(),
-                    Context::none(),
                 )
+                .to_html()
             })?;
         let parent = path.parent().ok_or_else(|| {
             BoxedError::new(
@@ -278,6 +277,7 @@ pub async fn update_model(
                 "Please report",
                 Context::show(path.to_string_lossy()).to_owned(),
             )
+            .to_html()
         })?;
         std::fs::create_dir_all(parent).map_err(|err| {
             BoxedError::new(
@@ -286,6 +286,7 @@ pub async fn update_model(
                 err.to_string(),
                 Context::show(parent.to_string_lossy()).to_owned(),
             )
+            .to_html()
         })?;
         let file = BufWriter::new(std::fs::File::create(&path).map_err(|err| {
             BoxedError::new(
@@ -294,24 +295,25 @@ pub async fn update_model(
                 err.to_string(),
                 Context::show(path.to_string_lossy()).to_owned(),
             )
+            .to_html()
         })?);
         serde_json::to_writer_pretty(file, &state.custom_models).map_err(|err| {
-            BoxedError::new(
+            BoxedError::small(
                 BasicKind::Error,
                 "Could not write custom models to configuration file",
                 err.to_string(),
-                Context::none(),
             )
+            .to_html()
         })?;
 
         Ok(())
     } else {
-        Err(BoxedError::new(
+        Err(BoxedError::small(
             BasicKind::Error,
             "State locked",
             "Cannot unlock the mutable state, are you doing many things in parallel?",
-            Context::none(),
-        ))
+        )
+        .to_html())
     }
 }
 

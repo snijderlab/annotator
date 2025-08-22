@@ -628,7 +628,7 @@ fn main() {
           <p>While reading the custom modifications JSON file an error occured. The original file has been renamed to prevent accidental overwriting. The error is shown below and stored in a file next in the same folder.</p>
           <output class="error" id="custom-modifications-error"></output>
           <p id="custom-modifications-error-2"></p>
-        </dev>
+        </div>
         <dialog id="custom-mod-dialog">
           <h1>Custom modification</h1>
 
@@ -777,7 +777,7 @@ fn main() {
           <p>While reading the custom models JSON file an error occured. The original file has been renamed to prevent accidental overwriting. The error is shown below and stored in a file next in the same folder.</p>
           <output class="error" id="custom-models-error"></output>
           <p id="custom-models-error-2"></p>
-        </dev>
+        </div>
         <dialog id="custom-model-dialog">
           <h2>Custom model</h2>
           <label>Name <input type="text" id="custom-model-name"/></label>

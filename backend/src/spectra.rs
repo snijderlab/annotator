@@ -1,6 +1,6 @@
 use std::{io::ErrorKind, ops::RangeInclusive, path::Path, str::FromStr};
 
-use custom_error::{BasicKind, BoxedError, Context, CreateError};
+use custom_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
 use itertools::Itertools;
 use mzdata::{
     Param,
@@ -42,57 +42,59 @@ pub struct SelectedSpectrumDetails {
 pub async fn load_usi<'a>(
     usi: &'a str,
     state: ModifiableState<'a>,
-) -> Result<IdentifiedPeptideSettings, BoxedError<'static, BasicKind>> {
-    let mut usi = mzdata::io::usi::USI::from_str(usi).map_err(|e| match e {
-        USIParseError::MalformedIndex(index, e, full) => BoxedError::new(
-            BasicKind::Error,
-            "Invalid USI: Invalid index",
-            format!("The index is not valid: {e}"),
-            Context::line(
-                None,
-                &full,
-                full.find(&index).unwrap_or_default(),
-                index.len(),
-            )
-            .to_owned(),
-        ),
-        USIParseError::MissingDataset(full) => BoxedError::new(
-            BasicKind::Error,
-            "Invalid USI: Missing dataset",
-            "The dataset section of the USI is missing",
-            Context::show(full),
-        ),
-        USIParseError::MissingRun(full) => BoxedError::new(
-            BasicKind::Error,
-            "Invalid USI: Missing run",
-            "The run section of the USI is missing",
-            Context::show(full),
-        ),
-        USIParseError::UnknownIndexType(index, full) => BoxedError::new(
-            BasicKind::Error,
-            "Invalid USI: Unknown index type",
-            "The index has to be one of 'index', 'scan', or 'nativeId'",
-            Context::line(
-                None,
-                &full,
-                full.find(&index).unwrap_or_default(),
-                index.len(),
-            )
-            .to_owned(),
-        ),
-        USIParseError::UnknownProtocol(protocol, full) => BoxedError::new(
-            BasicKind::Error,
-            "Invalid USI: Unknown protocol",
-            "The protocol has to be 'mzspec'",
-            Context::line(
-                None,
-                &full,
-                full.find(&protocol).unwrap_or_default(),
-                protocol.len(),
-            )
-            .to_owned(),
-        ),
-    })?;
+) -> Result<IdentifiedPeptideSettings, String> {
+    let mut usi = mzdata::io::usi::USI::from_str(usi)
+        .map_err(|e| match e {
+            USIParseError::MalformedIndex(index, e, full) => BoxedError::new(
+                BasicKind::Error,
+                "Invalid USI: Invalid index",
+                format!("The index is not valid: {e}"),
+                Context::line(
+                    None,
+                    &full,
+                    full.find(&index).unwrap_or_default(),
+                    index.len(),
+                )
+                .to_owned(),
+            ),
+            USIParseError::MissingDataset(full) => BoxedError::new(
+                BasicKind::Error,
+                "Invalid USI: Missing dataset",
+                "The dataset section of the USI is missing",
+                Context::show(full),
+            ),
+            USIParseError::MissingRun(full) => BoxedError::new(
+                BasicKind::Error,
+                "Invalid USI: Missing run",
+                "The run section of the USI is missing",
+                Context::show(full),
+            ),
+            USIParseError::UnknownIndexType(index, full) => BoxedError::new(
+                BasicKind::Error,
+                "Invalid USI: Unknown index type",
+                "The index has to be one of 'index', 'scan', or 'nativeId'",
+                Context::line(
+                    None,
+                    &full,
+                    full.find(&index).unwrap_or_default(),
+                    index.len(),
+                )
+                .to_owned(),
+            ),
+            USIParseError::UnknownProtocol(protocol, full) => BoxedError::new(
+                BasicKind::Error,
+                "Invalid USI: Unknown protocol",
+                "The protocol has to be 'mzspec'",
+                Context::line(
+                    None,
+                    &full,
+                    full.find(&protocol).unwrap_or_default(),
+                    protocol.len(),
+                )
+                .to_owned(),
+            ),
+        })
+        .map_err(|err| err.to_html())?;
 
     // Remove the user added interpretation and add a fake entry.
     // The original peptide will be added back later after downloading.
@@ -102,40 +104,41 @@ pub async fn load_usi<'a>(
     let peptide = usi.interpretation.take();
     usi.interpretation = Some("A/1".to_string());
 
-    let (backend, spectra) =
-        usi.download_spectrum_async(None, None)
-            .await
-            .map_err(|e| match e {
-                PROXIError::IO(backend, error) => BoxedError::new(
-                    BasicKind::Error,
-                    format!("Error while retrieving USI from {backend}"),
-                    error.to_string(),
-                    Context::none(),
-                ),
-                PROXIError::Error {
-                    backend,
-                    title,
-                    detail,
-                    ..
-                } => BoxedError::new(
-                    BasicKind::Error,
-                    format!("Error while retrieving USI from {backend}: {title}"),
-                    detail,
-                    Context::none(),
-                ),
-                PROXIError::PeakUnavailable(backend, _) => BoxedError::new(
-                    BasicKind::Error,
-                    format!("Error while retrieving USI from {backend}"),
-                    "The peak data is not available for this dataset",
-                    Context::none(),
-                ),
-                PROXIError::NotFound => BoxedError::new(
-                    BasicKind::Error,
-                    "Error while retrieving USI",
-                    "No PROXI server responded to the request",
-                    Context::none(),
-                ),
-            })?;
+    let (backend, spectra) = usi
+        .download_spectrum_async(None, None)
+        .await
+        .map_err(|e| match e {
+            PROXIError::IO(backend, error) => BoxedError::new(
+                BasicKind::Error,
+                format!("Error while retrieving USI from {backend}"),
+                error.to_string(),
+                Context::none(),
+            ),
+            PROXIError::Error {
+                backend,
+                title,
+                detail,
+                ..
+            } => BoxedError::new(
+                BasicKind::Error,
+                format!("Error while retrieving USI from {backend}: {title}"),
+                detail,
+                Context::none(),
+            ),
+            PROXIError::PeakUnavailable(backend, _) => BoxedError::new(
+                BasicKind::Error,
+                format!("Error while retrieving USI from {backend}"),
+                "The peak data is not available for this dataset",
+                Context::none(),
+            ),
+            PROXIError::NotFound => BoxedError::new(
+                BasicKind::Error,
+                "Error while retrieving USI",
+                "No PROXI server responded to the request",
+                Context::none(),
+            ),
+        })
+        .map_err(|err| err.to_html())?;
 
     let mut spectrum = spectra
         .into_iter()
@@ -197,12 +200,12 @@ pub async fn load_usi<'a>(
             warning: None,
         })
     } else {
-        Err(BoxedError::new(
+        Err(BoxedError::small(
             BasicKind::Error,
             "Could not lock mutext",
             "Are you doing too many things at once?",
-            Context::none(),
-        ))
+        )
+        .to_html())
     }
 }
 
@@ -713,7 +716,7 @@ pub fn save_spectrum<'a>(
     sequence: &'a str,
     model: &'a str,
     charge: Option<usize>,
-) -> Result<(), BoxedError<'static, BasicKind>> {
+) -> Result<(), String> {
     let mut state = state.lock().map_err(|e| {
         BoxedError::new(
             BasicKind::Error,
@@ -721,6 +724,7 @@ pub fn save_spectrum<'a>(
             "Mutex locked, are you doing too much at the same time?",
             Context::show(e.to_string()),
         )
+        .to_html()
     })?;
     let file = std::fs::OpenOptions::new()
         .create(true)
@@ -734,12 +738,12 @@ pub fn save_spectrum<'a>(
                 "File could not be opened for writing",
                 Context::show(e.to_string()),
             )
+            .to_html()
         })?;
     let ext = path
         .extension()
         .map(|s| s.to_string_lossy().to_ascii_lowercase());
-    let mut spectrum =
-        create_selected_spectrum(&mut state, filter).map_err(BoxedError::to_owned)?;
+    let mut spectrum = create_selected_spectrum(&mut state, filter).map_err(|err| err.to_html())?;
     if !sequence.is_empty() {
         spectrum.description.params.push(Param::new_key_value(
             "sequence",
@@ -782,6 +786,7 @@ pub fn save_spectrum<'a>(
                     "Could not write MGF",
                     Context::show(e.to_string()),
                 )
+                .to_html()
             })
         }
         Some("mzml") => {
@@ -793,6 +798,7 @@ pub fn save_spectrum<'a>(
                     "Could not write mzML",
                     Context::show(e.to_string()),
                 )
+                .to_html()
             })
         }
         _ => Err(BoxedError::new(
@@ -800,6 +806,7 @@ pub fn save_spectrum<'a>(
             "Could not write file",
             "Invalid path, use mgf or mzml as extension",
             Context::show(path.to_string_lossy()).to_owned(),
-        )),
+        )
+        .to_html()),
     }
 }

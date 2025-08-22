@@ -943,68 +943,17 @@ async function annotate_spectrum() {
   })
 }
 
-function formatError(error, showContext = true) {
-  console.error(error);
-  if (typeof error == "string") {
-    return "<div class='raw'>" + error + "</div>";
-  } else {
-    let msg = "<p class='title'>" + error.content.short_description + "</p><p class='description'>" + error.content.long_description + "</p>";
-    if (error.content.version != "") {
-      msg += "<p class='version'>Version: " + error.content.version + "</p>";
-    }
-    if (showContext) {
-      if (error.content.context.hasOwnProperty('Line')) {
-        let Line = error.content.context.Line;
-        msg += "<div class='context'>" + (Line.line_index != null ? ("<span class='line-number'>" + (Line.line_index + 1) + "</span>") : "") + "<pre>" + Line.line + "\n" + " ".repeat(Line.offset) + "^".repeat(Line.length) + "</pre></div>";
-      } else if (error.content.context.hasOwnProperty('Show')) {
-        msg += "<div class='error'>" + error.content.context.Show.line + "</div>";
-      } else if (error.content.context.hasOwnProperty('FullLine')) {
-        let FullLine = error.content.context.FullLine;
-        msg += "<div class='error'>" + FullLine.line + "</div>";
-      } else if (error.content.context == "None") {
-        // Empty
-      } else {
-        msg += "<pre>" + error.content.context + "</pre>";
-      }
-    }
-    if (error.content.suggestions.length > 0) {
-      msg += "<p>Did you mean any of the following?</p><ul>";
-      for (let suggestion in error.content.suggestions) {
-        msg += "<li>" + error.content.suggestions[suggestion] + "</li>";
-      }
-      msg += "</ul>";
-    }
-    if (error.content.underlying_errors.length > 0) {
-      msg += "<label><input type='checkbox'></input>Show " + String(error.content.underlying_errors.length) + " underlying errors</label><ul>";
-      for (let underlying_error in error.content.underlying_errors) {
-        msg += "<li class='underlying-error'>" + formatError(error.content.underlying_errors[underlying_error], showContext) + "</li>";
-      }
-      msg += "</ul>";
-    }
-    return msg;
-  }
-}
-
 /**
  * @param {Object} error - The error object
  * @param {String} fallback - The fallback full original text if the error is unsupported or None
  * @returns {String} String representation of HTML for use in `element.innerHTML = result;`
  */
 function showContext(error, fallback) {
-  if (error.content.context.hasOwnProperty('Line')) {
-    let Line = error.content.context.Line;
-    return Line.line.slice(0, Line.offset) + "<span class='error'>" + Line.line.slice(Line.offset, Line.offset + Line.length) + "</span>" + Line.line.slice(Line.offset + Line.length, Line.line.length);
-  } else if (error.content.context.hasOwnProperty('FullLine')) {
-    let FullLine = error.content.context.FullLine;
-    return "<span class='error'>" + FullLine.line + "</span>";
-  } else if (error.content.context.hasOwnProperty('Show')) {
-    return "<span class='error'>" + error.content.context.Show.line + "</span>";
-  } else if (error.content.context = "None") {
-    return fallback;
-  } else {
-    console.error("Error type not handled", error);
-    return fallback;
-  }
+  var el = document.createElement('html');
+  el.innerHTML = error;
+  console.log(el);
+  console.log(el.querySelector(".line").innerHTML);
+  return el.querySelector(".line").innerHTML; // Get the context out
 }
 
 /** @param e {MouseEvent}  */
@@ -1166,7 +1115,7 @@ window.addEventListener("DOMContentLoaded", () => {
         .then(value => e.target.innerHTML = value)
         .catch(error => {
           e.target.parentElement.parentElement.classList.add("error");
-          e.target.parentElement.parentElement.querySelector("output.error").innerHTML = formatError(error, false);
+          e.target.parentElement.parentElement.querySelector("output.error").innerHTML = error;
           e.target.innerHTML = showContext(error, text);
         });
     }
@@ -1248,7 +1197,7 @@ window.addEventListener("DOMContentLoaded", () => {
       } else {
         let node = listInput.querySelector("&>.error");
         node.hidden = false;
-        node.innerHTML = formatError(validation_error, true);
+        node.innerHTML = validation_error;
       }
     })
     t.querySelector(".cancel").addEventListener("click", e => {
@@ -1651,63 +1600,63 @@ async function addValueSeparatedElement(element, value) {
       verified_value = await invoke("validate_molecular_formula", { text: value })
         .catch(error => {
           input.innerHTML = showContext(error, value);
-          outer.querySelector("output.error").innerHTML = formatError(error, false);
+          outer.querySelector("output.error").innerHTML = error;
         });
       break;
     case "neutral_loss":
       verified_value = await invoke("validate_neutral_loss", { text: value })
         .catch(error => {
           input.innerHTML = showContext(error, value);
-          outer.querySelector("output.error").innerHTML = formatError(error, false);
+          outer.querySelector("output.error").innerHTML = error;
         });
       break;
     case "aa_neutral_loss":
       verified_value = await invoke("validate_aa_neutral_loss", { text: value })
         .catch(error => {
           input.innerHTML = showContext(error, value);
-          outer.querySelector("output.error").innerHTML = formatError(error, false);
+          outer.querySelector("output.error").innerHTML = error;
         });
       break;
     case "monosaccharide_neutral_loss":
       verified_value = await invoke("validate_monosaccharide_neutral_loss", { text: value })
         .catch(error => {
           input.innerHTML = showContext(error, value);
-          outer.querySelector("output.error").innerHTML = formatError(error, false);
+          outer.querySelector("output.error").innerHTML = error;
         });
       break;
     case "fragment_kind":
       verified_value = await invoke("validate_fragment_kind", { text: value })
         .catch(error => {
           input.innerHTML = showContext(error, value);
-          outer.querySelector("output.error").innerHTML = formatError(error, false);
+          outer.querySelector("output.error").innerHTML = error;
         });
       break;
     case "amino_acid":
       verified_value = await invoke("validate_amino_acid", { text: value })
         .catch(error => {
           input.innerHTML = showContext(error, value);
-          outer.querySelector("output.error").innerHTML = formatError(error, false);
+          outer.querySelector("output.error").innerHTML = error;
         });
       break;
     case "satellite_ion":
       verified_value = await invoke("validate_satellite_ion", { text: value })
         .catch(error => {
           input.innerHTML = showContext(error, value);
-          outer.querySelector("output.error").innerHTML = formatError(error, false);
+          outer.querySelector("output.error").innerHTML = error;
         });
       break;
     case "placement_rule":
       verified_value = await invoke("validate_placement_rule", { text: value })
         .catch(error => {
           input.innerHTML = showContext(error, value);
-          outer.querySelector("output.error").innerHTML = formatError(error, false);
+          outer.querySelector("output.error").innerHTML = error;
         });
       break;
     case "stub":
       verified_value = await invoke("validate_stub", { text: value })
         .catch(error => {
           input.innerHTML = showContext(error, value);
-          outer.querySelector("output.error").innerHTML = formatError(error, false);
+          outer.querySelector("output.error").innerHTML = error;
         });
       break;
     case "cross_id":
@@ -1786,7 +1735,7 @@ function createElement(element, settings = undefined) {
   return node;
 }
 
-function showError(id, error, showContext = true) {
+function showError(id, error) {
   let node = document.getElementById(id);
   node.classList.add("error");
   node.classList.remove("hidden");

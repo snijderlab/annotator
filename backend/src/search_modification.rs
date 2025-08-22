@@ -3,7 +3,7 @@ use crate::{
     metadata_render::OptionalString,
     render::{display_formula, display_masses, display_placement_rule, render_full_glycan},
 };
-use custom_error::{BasicKind, BoxedError, Context, CreateError};
+use custom_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
 use itertools::Itertools;
 use rustyms::{
     ontology::Ontology,
@@ -28,16 +28,16 @@ pub async fn search_modification(
     tolerance: f64,
     state: ModifiableState<'_>,
     theme: Theme,
-) -> Result<String, BoxedError<'static, BasicKind>> {
+) -> Result<String, String> {
     let state = state.lock().unwrap();
     let mut glycan_footnotes = Vec::new();
     let modification = if text.is_empty() {
-        Err(BoxedError::new(
+        Err(BoxedError::small(
             BasicKind::Error,
             "Invalid modification",
             "The modification is empty",
-            Context::none(),
-        ))
+        )
+        .to_html())
     } else {
         SimpleModificationInner::parse_pro_forma(
             text,
@@ -46,16 +46,16 @@ pub async fn search_modification(
             &mut Vec::new(),
             Some(&state.custom_modifications),
         )
+        .map_err(|err| err.to_html())
         .map(|(m, _)| match m {
             ReturnModification::Defined(d) => Ok(d),
-            _ => Err(BoxedError::new(
+            _ => Err(BoxedError::small(
                 BasicKind::Error,
                 "Invalid modification",
                 "Can not define ambiguous modifications for the modifications parameter",
-                Context::none(),
-            )),
+            )
+            .to_html()),
         })
-        .map_err(BoxedError::to_owned)
     }??;
     let tolerance = Tolerance::new_absolute(Mass::new::<dalton>(tolerance));
 

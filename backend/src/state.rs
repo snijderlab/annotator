@@ -5,7 +5,6 @@ use std::{
     sync::{Arc, OnceLock, atomic::AtomicUsize},
 };
 
-use custom_error::{BasicKind, BoxedError};
 use mzdata::{
     io::{MZReaderType, RandomAccessSpectrumIterator, SpectrumSource},
     prelude::SpectrumLike,
@@ -26,9 +25,9 @@ pub struct State {
     pub spectra: Vec<RawFile>,
     pub identified_peptide_files: RefCell<Vec<IdentifiedPeptidoformFile>>,
     pub custom_modifications: CustomDatabase,
-    pub custom_modifications_error: Option<(BoxedError<'static, BasicKind>, Vec<String>)>,
+    pub custom_modifications_error: Option<(String, Vec<String>)>,
     pub custom_models: Vec<(String, FragmentationModel)>,
-    pub custom_models_error: Option<(BoxedError<'static, BasicKind>, Vec<String>)>,
+    pub custom_models_error: Option<(String, Vec<String>)>,
 }
 
 impl State {
