@@ -319,6 +319,14 @@ impl RenderToTable for IdentifiedPeptidoformData {
             ],
             IdentifiedPeptidoformData::MaxQuant(data) => vec![
                 ("Scan index", data.scan_index.to_optional_string()),
+                (
+                    "DN sequence",
+                    data.dn_sequence.as_ref().to_optional_string(),
+                ),
+                (
+                    "DN combined score",
+                    data.dn_combined_score.to_optional_string(),
+                ),
                 ("Proteins", data.proteins.to_string()),
                 (
                     "Mass analyser",
@@ -410,14 +418,6 @@ impl RenderToTable for IdentifiedPeptidoformData {
                 (
                     "Collision energy",
                     data.collision_energy.to_optional_string(),
-                ),
-                (
-                    "DN sequence",
-                    data.dn_sequence.as_ref().to_optional_string(),
-                ),
-                (
-                    "DN combined score",
-                    data.dn_combined_score.to_optional_string(),
                 ),
                 (
                     "DN mass left",
