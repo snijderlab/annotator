@@ -619,25 +619,6 @@ dialog {
     scrollbar-color: var(--color-primary) var(--color-halfway);
 }
 
-@media print {
-
-    ::-webkit-scrollbar {
-        display: none;
-    }
-
-    * {
-        scrollbar-width: none;
-    }
-
-    .overview-link {
-        display: none;
-    }
-
-    h1 {
-        padding-top: 0;
-    }
-}
-
 /* Table */
 
 table {
@@ -2382,6 +2363,22 @@ input:not(:checked)+.collapsible {
 }
 
 @media print {
+    ::-webkit-scrollbar {
+        display: none;
+    }
+
+    * {
+        scrollbar-width: none;
+    }
+
+    .overview-link {
+        display: none;
+    }
+
+    h1 {
+        padding-top: 0;
+    }
+
     body {
         font-size: 0.8em;
     }
@@ -2486,7 +2483,10 @@ input:not(:checked)+.collapsible {
     #peptides,
     #tools,
     #custom-modifications,
-    .error {
+    .error,
+    .usi,
+    .theme,
+    .input-flex {
         display: none !important;
     }
 

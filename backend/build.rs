@@ -289,7 +289,7 @@ fn main() {
             <div class="input-flex">
               <label for="search-peptide-input">Search peptidoform<input id="search-peptide-input" type="text"></input></label>
               <label for="search-peptide-minimal-match">Minimal match score<input id="search-peptide-minimal-match" type="number" min="0" max="1" value="0"></input></label>
-              <label for="search-peptide-minimal-peptide">Minimal peptidoform score<input id="search-peptide-minimal-peptide" type="number" min="0" max="1" value="0"></input></label>
+              <label for="search-peptide-minimal-peptide">Minimal peptidoform score<input id="search-peptide-minimal-peptide" type="number" min="-1" max="1" value="-1"></input></label>
               <label for="search-peptide-amount">Number of results<input id="search-peptide-amount" type="number" min="0" value="25"></input></label>
               <button id="search-peptide">Search</button>
             </div>
