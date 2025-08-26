@@ -2482,11 +2482,14 @@ input:not(:checked)+.collapsible {
     .input,
     #peptides,
     #tools,
+    #settings,
+    #custom-models-collapsible,
     #custom-modifications,
     .error,
     .usi,
     .theme,
-    .input-flex {
+    .input-flex,
+    .collapsible>legend::after {
         display: none !important;
     }
 
