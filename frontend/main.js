@@ -951,9 +951,7 @@ async function annotate_spectrum() {
 function showContext(error, fallback) {
   var el = document.createElement('html');
   el.innerHTML = error;
-  console.log(el);
-  console.log(el.querySelector(".line").innerHTML);
-  return el.querySelector(".line").innerHTML; // Get the context out
+  return el.querySelector(".line") ? el.querySelector(".line").innerHTML : fallback; // Get the context out
 }
 
 /** @param e {MouseEvent}  */

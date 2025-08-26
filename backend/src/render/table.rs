@@ -93,7 +93,7 @@ pub fn spectrum_table(
             series_number,
             format!(
                 "<span title='mzPAF: {}'>{label}</span>",
-                annotation.to_mzPAF()
+                annotation.to_mz_paf()
             ),
         )
     }
