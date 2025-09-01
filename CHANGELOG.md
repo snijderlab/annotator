@@ -1,3 +1,13 @@
+# Version 1.2.1
+
+- Fixed custom modifications and custom models not being displayed
+- Fixed print output including unnecessary parts
+- Updated naming of "folder" button to better reflect it use for Bruker .d data
+- Better error output + merged identical errors
+- Added generalised display of flanking residues for identified peptidoforms
+- Improved support for MaxNovo _de novo_ sequences
+- Added support for π-HelixNovo, π-PrimeNovo, Proteoscape, and Casanovo v5.0
+
 # Version 1.2.0 - Neutral losses & bug hunting
 
 - Fixed manual not opening & updated manual
