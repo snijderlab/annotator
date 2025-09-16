@@ -1,3 +1,8 @@
+# Upcoming version
+
+- Added support for pUniFind
+- Better handling of proteins as specified in many identified peptidoform files (amongst others: MSFragger, MaxQuant, and mzTab)
+
 # Version 1.2.1
 
 - Fixed custom modifications and custom models not being displayed

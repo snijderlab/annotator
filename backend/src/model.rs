@@ -10,7 +10,7 @@ use rustyms::{
     fragment::{FragmentKind, NeutralLoss},
     prelude::*,
     quantities::Tolerance,
-    system::{MassOverCharge, mz},
+    system::{MassOverCharge, thomson},
 };
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
@@ -708,7 +708,7 @@ pub fn parameters(
         parameters.tolerance = Tolerance::new_ppm(tolerance.0);
     } else if tolerance.1 == "th" {
         parameters.tolerance =
-            Tolerance::new_absolute(MassOverCharge::new::<rustyms::system::mz>(tolerance.0));
+            Tolerance::new_absolute(MassOverCharge::new::<rustyms::system::thomson>(tolerance.0));
     } else {
         return Err(BoxedError::new(
             BasicKind::Error,
@@ -727,6 +727,6 @@ pub fn parameters(
             Context::none(),
         ));
     }
-    parameters.mz_range = MassOverCharge::new::<mz>(min)..=MassOverCharge::new::<mz>(max);
+    parameters.mz_range = MassOverCharge::new::<thomson>(min)..=MassOverCharge::new::<thomson>(max);
     Ok(parameters)
 }

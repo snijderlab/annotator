@@ -10,7 +10,7 @@ use rustyms::{
     prelude::*,
     sequence::{PlacementRule, SimpleModificationInner},
     spectrum::PeakSpectrum,
-    system::{Mass, MassOverCharge, da, mz},
+    system::{Mass, MassOverCharge, da, thomson},
 };
 
 use crate::{
@@ -449,7 +449,7 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
                 .collect()
         })
         .collect();
-    let mut max_mz: MassOverCharge = MassOverCharge::new::<mz>(0.0);
+    let mut max_mz: MassOverCharge = MassOverCharge::new::<thomson>(0.0);
     let mut max_intensity: f64 = 0.0;
     let mut max_intensity_unassigned: f64 = 0.0;
     for peak in spectrum.spectrum() {

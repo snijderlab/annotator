@@ -102,7 +102,7 @@ impl<C, A> RenderToHtml for IdentifiedPeptidoform<C, A> {
                     .content(format!(
                         "Protein&nbsp;id:&nbsp;{}, Name:&nbsp;{}, Database:&nbsp;{}, Location:&nbsp;{}",
                         self.protein_id().to_optional_string(),
-                        self.protein_name().map(|n| n.name().clone()).to_optional_string(),
+                        self.protein_names().map(|n| n.iter().map(|n| n.name()).join(";")).to_optional_string(),
                         self.database().map(|(db, version)| format!("{db}{}", version.map(|v| format!(" ({v})")).unwrap_or_default())).to_optional_string(),
                         self.protein_location().map(|s| format!("{} — {}", s.start, s.end)).to_optional_string(),
                     ))
@@ -327,7 +327,7 @@ impl RenderToTable for IdentifiedPeptidoformData {
                     "DN combined score",
                     data.dn_combined_score.to_optional_string(),
                 ),
-                ("Proteins", data.proteins.to_string()),
+                ("Proteins", data.proteins.iter().map(|p| p.name()).join(";")),
                 (
                     "Mass analyser",
                     data.mass_analyser.as_ref().to_optional_string(),
@@ -460,7 +460,7 @@ impl RenderToTable for IdentifiedPeptidoformData {
                 ("Labeling state", data.labeling_state.to_optional_string()),
             ],
             IdentifiedPeptidoformData::Sage(data) => vec![
-                ("Proteins", data.proteins.join(";")),
+                ("Proteins", data.proteins.iter().map(|p| p.name()).join(";")),
                 ("Rank", data.rank.to_string()),
                 ("Decoy", data.decoy.to_string()),
                 ("Missed cleavages", data.missed_cleavages.to_string()),
@@ -596,7 +596,13 @@ impl RenderToTable for IdentifiedPeptidoformData {
                 ("Group", data.group.as_ref().to_optional_string()),
             ],
             IdentifiedPeptidoformData::MZTab(data) => vec![
-                ("Accession", data.accession.as_ref().to_optional_string()),
+                (
+                    "Accession",
+                    data.protein
+                        .as_ref()
+                        .map(|(acc, prot)| prot.as_ref().map(|p| &p.accession).unwrap_or(acc))
+                        .to_optional_string(),
+                ),
                 ("Unique", data.unique.to_optional_string()),
                 (
                     "Search engine",
@@ -660,6 +666,9 @@ impl RenderToTable for IdentifiedPeptidoformData {
                 ("In filter", data.is_filter_in.to_string()),
                 ("Title", data.title.clone()),
             ],
+            IdentifiedPeptidoformData::PUniFind(data) => {
+                vec![("Cosine similarity", data.cos_similarity.to_string())]
+            }
             IdentifiedPeptidoformData::Fasta(data) => vec![
                 ("Description", data.description().to_string()),
                 (
