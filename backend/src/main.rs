@@ -22,6 +22,7 @@ mod html_builder;
 mod identified_peptides;
 mod metadata_render;
 mod model;
+mod raw_data;
 mod render;
 mod search_modification;
 mod spectra;
@@ -393,6 +394,7 @@ fn main() {
             spectra::load_clipboard,
             spectra::load_raw,
             spectra::load_usi,
+            spectra::get_ms1,
             spectra::save_spectrum,
             spectra::select_spectrum_index,
             spectra::select_spectrum_native_id,

@@ -19,7 +19,10 @@ use mzdata::{
 };
 use mzpeaks::{CentroidPeak, peak_set::PeakSetVec};
 use mzsignal::{ArrayPairLike, PeakPicker};
-use rustyms::system::{Mass, OrderedTime, dalton};
+use rustyms::{
+    quantities::Tolerance,
+    system::{Mass, MassOverCharge, OrderedTime, Time, dalton, thomson},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -27,8 +30,8 @@ use crate::{
     identified_peptides::IdentifiedPeptideSettings,
     metadata_render::OptionalString,
     model::get_mzdata_model,
+    raw_data::{RawFile, RawFileDetails},
     render::display_mass,
-    state::{RawFile, RawFileDetails},
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -570,6 +573,42 @@ pub fn get_open_raw_files(state: ModifiableState) -> Vec<RawFileDetails> {
 }
 
 #[tauri::command]
+pub async fn get_ms1(state: ModifiableState<'_>) -> Result<String, ()> {
+    if let Ok(mut state) = state.lock() {
+        state
+            .spectra
+            .iter_mut()
+            .find_map(|file| {
+                let spectrum = file.get_selected_spectra().next();
+                if let Some(spectrum) = spectrum {
+                    if let Some(p) = spectrum.precursor() {
+                        let i = p.isolation_window();
+                        file.get_ms1(
+                            MassOverCharge::new::<thomson>(i.target as f64),
+                            time_window(spectrum.start_time(), 2.0),
+                            Tolerance::new_ppm(20.0),
+                        )
+                        .map(|data| {
+                            data.iter()
+                                .map(|(t, i)| format!("{}\t{i}", t.value))
+                                .join("\n")
+                        })
+                        // Some(spectrum.description.id)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .ok_or(())
+        // Some(format!("Could lock"))
+    } else {
+        Ok(format!("Poisoned: {}", state.is_poisoned()))
+    }
+}
+
+#[tauri::command]
 pub fn get_selected_spectra(
     state: ModifiableState,
 ) -> Vec<(usize, bool, Vec<SelectedSpectrumDetails>)> {
@@ -624,14 +663,20 @@ pub fn get_selected_spectra(
                             format!("<br>Sequence: <span style='-webkit-user-select:all;user-select:all;'>{}</span>", param.value)
                         } else {
                             String::new()
-                        },
+                        }
                     )
                 }
             }).collect_vec())
         }).collect_vec()
     } else {
+        println!("Poisoned: {}", state.is_poisoned());
         Vec::new()
     }
+}
+
+fn time_window(time: f64, delta: f64) -> RangeInclusive<OrderedTime> {
+    Time::new::<rustyms::system::time::min>(time - delta).into()
+        ..=Time::new::<rustyms::system::time::min>(time + delta).into()
 }
 
 pub fn create_selected_spectrum(

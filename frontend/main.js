@@ -397,6 +397,12 @@ async function update_selected_spectra() {
             });
             li.appendChild(close);
           }
+          let ms1 = document.createElement("button");
+          ms1.innerText = "MS1";
+          ms1.addEventListener("click", () => {
+            invoke("get_ms1", {}).then((result) => console.log(result))
+          });
+          li.appendChild(ms1);
           li.appendChild(createElement("span", { text: element.short }));
           let tooltip = document.createElement("div");
           tooltip.className = "tooltip";
