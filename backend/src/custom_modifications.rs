@@ -3,14 +3,14 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use custom_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
-use ordered_float::OrderedFloat;
-use rustyms::{
-    fragment::{DiagnosticIon, NeutralLoss},
+use context_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
+use mzcore::{
+    chemistry::{DiagnosticIon, NeutralLoss},
     ontology::Ontology,
     prelude::*,
     sequence::{LinkerSpecificity, ModificationId, PlacementRule, SimpleModificationInner},
 };
+use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 

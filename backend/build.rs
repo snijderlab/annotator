@@ -308,6 +308,7 @@ fn main() {
                 </div>
               </label>
               <button id="load-identified-peptide" title="Find this peptidoform in the raw data file and populate all setting fields with this peptidoform's data" type="button">Load</button>
+              <button id="load-annotated-spectrum" title="Load the annotated spectrum" type="button" hidden="true">Load annotated spectrum</button>
             </div>
             <div id="identified-peptide-details"></div>
           </div>

@@ -5,25 +5,27 @@ use std::{
     sync::{Arc, OnceLock, atomic::AtomicUsize},
 };
 
-use mzdata::{
-    io::{MZReaderType, RandomAccessSpectrumIterator, SpectrumSource},
-    prelude::SpectrumLike,
-    spectrum::MultiLayerSpectrum,
-};
-use ordered_float::OrderedFloat;
-use rustyms::{
-    align::AlignIndex,
-    identification::{IdentifiedPeptidoform, MaybePeptidoform, MetaData},
+use mzalign::AlignIndex;
+use mzannotate::prelude::*;
+use mzcore::{
     ontology::CustomDatabase,
     prelude::*,
     sequence::{Linked, SimpleLinear},
     system::OrderedTime,
 };
+use mzdata::{
+    io::{MZReaderType, RandomAccessSpectrumIterator, SpectrumSource},
+    prelude::SpectrumLike,
+    spectrum::MultiLayerSpectrum,
+};
+use mzident::{IdentifiedPeptidoform, MaybePeptidoform, MetaData};
+use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 
 pub struct State {
     pub spectra: Vec<RawFile>,
     pub identified_peptide_files: RefCell<Vec<IdentifiedPeptidoformFile>>,
+    pub annotated_spectrum: Option<AnnotatedSpectrum>,
     pub custom_modifications: CustomDatabase,
     pub custom_modifications_error: Option<(String, Vec<String>)>,
     pub custom_models: Vec<(String, FragmentationModel)>,

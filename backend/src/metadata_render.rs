@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use rustyms::identification::{
+use mzident::{
     CVTerm, IdentifiedPeptidoform, IdentifiedPeptidoformData, MSFraggerOpenModification, MetaData,
     SpectrumIds,
 };
@@ -76,7 +76,7 @@ impl<C, A> RenderToHtml for IdentifiedPeptidoform<C, A> {
                         self.mode()
                             .map_or("-".to_string(), |c| c.to_string()),
                         self.retention_time()
-                            .map_or("-".to_string(), |c| format!("{:.3}&nbsp;min", c.get::<rustyms::system::time::min>())),
+                            .map_or("-".to_string(), |c| format!("{:.3}&nbsp;min", c.get::<mzcore::system::time::min>())),
                     ))
                     .clone(),
                 HtmlTag::p.new()
@@ -859,10 +859,10 @@ impl RenderToTable for IdentifiedPeptidoformData {
                     data.start_time.map_or("-".to_string(), |st| {
                         format!(
                             "{:.3} — {}",
-                            st.get::<rustyms::system::time::min>(),
+                            st.get::<mzcore::system::time::min>(),
                             data.end_time.map_or("-".to_string(), |c| format!(
                                 "{:.3}",
-                                c.get::<rustyms::system::time::min>()
+                                c.get::<mzcore::system::time::min>()
                             ))
                         )
                     }),
@@ -890,7 +890,8 @@ impl RenderToTable for IdentifiedPeptidoformData {
                         .map_or("-".to_string(), |ccs| format!("{ccs:.3} Å²")),
                 ),
             ],
-            IdentifiedPeptidoformData::DeepNovoFamily(_)
+            IdentifiedPeptidoformData::AnnotatedSpectrum(_) // TODO: make a nice display
+            | IdentifiedPeptidoformData::DeepNovoFamily(_)
             | IdentifiedPeptidoformData::InstaNovo(_)
             | IdentifiedPeptidoformData::PowerNovo(_)
             | IdentifiedPeptidoformData::PepNet(_)

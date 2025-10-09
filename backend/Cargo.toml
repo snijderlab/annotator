@@ -13,37 +13,25 @@ tauri-build = { version = "2.1", features = [] }
 tauri = { version = "2.4" }
 
 [dependencies]
-chrono = "0.4"
-custom_error = {git="https://github.com/douweschulte/custom_error" }
-#custom_error = { path = "../../custom_error" }
-itertools = "0.14"
-serde_json = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "2.0", features = ["protocol-asset"] }
-rustyms = { version = "0.10.0", default-features = false, features = [
-    "identification",
-    "align",
-    "isotopes",
-    "mzdata",
-    "glycan-render",
-    "rayon",
-] }
-ordered-float = { version = "5.0", features = ["serde"] }
-rayon = "1.10"
-mzdata = { version = "0.57", default-features = false, features = [
-    "mzsignal",
-    "proxi-async",
-    "thermo",
-    "miniz_oxide",
-    "mgf",
-    "mzml",
-    "bruker_tdf",
-] }
-mzpeaks = "1.0"
-mzsignal = "1.0"
-tauri-plugin-dialog = "2"
-thin-vec = { version = "0.2", features = ["serde"] }
-tauri-plugin-opener = "2.4.0"
+chrono = {workspace = true}
+context_error = {workspace = true}
+itertools = {workspace = true}
+serde_json = {workspace = true}
+serde = {workspace = true}
+tauri = {workspace = true}
+mzcore = {workspace = true}
+mzannotate = {workspace = true}
+mzalign = {workspace = true}
+mzident = {workspace = true}
+ordered-float = {workspace = true}
+rayon = {workspace = true}
+mzdata = {workspace = true}
+mzspeclib-rs = {workspace = true}
+mzpeaks = {workspace = true}
+mzsignal = {workspace = true}
+tauri-plugin-dialog = {workspace = true}
+thin-vec = {workspace = true}
+tauri-plugin-opener = {workspace = true}
 
 [features]
 default = ["custom-protocol"]

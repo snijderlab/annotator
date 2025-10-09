@@ -3,9 +3,9 @@ use crate::{
     metadata_render::OptionalString,
     render::{display_formula, display_masses, display_placement_rule, render_full_glycan},
 };
-use custom_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
+use context_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
 use itertools::Itertools;
-use rustyms::{
+use mzcore::{
     ontology::Ontology,
     prelude::*,
     quantities::Tolerance,

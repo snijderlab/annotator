@@ -5,15 +5,17 @@
 
 use std::sync::Mutex;
 
-use custom_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
+use context_error::{BasicKind, BoxedError, CreateError, FullErrorContent};
 use itertools::Itertools;
-use mzdata::prelude::{IonProperties, SpectrumLike};
-use ordered_float::OrderedFloat;
-use render::{display_formula, display_mass};
-use rustyms::{
+use mzannotate::prelude::*;
+use mzcore::{
     prelude::*,
     system::{e, isize::Charge},
 };
+use mzdata::prelude::{IonProperties, SpectrumLike};
+use mzident::MetaData;
+use ordered_float::OrderedFloat;
+use render::{display_formula, display_mass};
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
@@ -152,7 +154,7 @@ fn identified_peptide_details(
     index: usize,
     state: ModifiableState,
     theme: Theme,
-) -> String {
+) -> (bool, String) {
     state
         .lock()
         .unwrap()
@@ -160,14 +162,60 @@ fn identified_peptide_details(
         .iter()
         .find(|f| f.id == file)
         .map_or(
-            "Identified peptide file index not valid".to_string(),
+            (false, "Identified peptide file index not valid".to_string()),
             |file| {
                 file.peptides.get(index).map_or(
-                    "Identified peptide index not valid".to_string(),
-                    |peptide| peptide.to_html(theme).to_string(),
+                    (false, "Identified peptide index not valid".to_string()),
+                    |peptide| {
+                        (
+                            peptide.has_annotated_spectrum(),
+                            peptide.to_html(theme).to_string(),
+                        )
+                    },
                 )
             },
         )
+}
+
+#[tauri::command]
+fn load_annotated_spectrum(
+    file: usize,
+    index: usize,
+    state: ModifiableState,
+    theme: Theme,
+) -> Result<AnnotationResult, String> {
+    let mut state = state.lock().unwrap();
+    let annotated = state
+        .identified_peptide_files()
+        .iter()
+        .find(|f| f.id == file)
+        .map_or(
+            Err("Identified peptide file index not valid".to_string()),
+            |file| {
+                file.peptides.get(index).map_or(
+                    Err("Identified peptide index not valid".to_string()),
+                    |peptide| {
+                        peptide.annotated_spectrum().map_or(
+                            Err(
+                                "Identified peptide does not have an associated annotated spectrum"
+                                    .to_string(),
+                            ),
+                            |a| Ok(a.into_owned()),
+                        )
+                    },
+                )
+            },
+        )?;
+    let rendered = render_annotated_spectrum(
+        &annotated,
+        &[],
+        FragmentationModel::all(),
+        &MatchingParameters::default(),
+        MassMode::Monoisotopic,
+        theme,
+    );
+    state.annotated_spectrum = Some(annotated);
+    Ok(rendered)
 }
 
 #[derive(Debug, Default, Deserialize, PartialEq, PartialOrd, Serialize)]
@@ -184,7 +232,7 @@ pub struct AnnotationResult {
     pub spectrum: String,
     pub fragment_table: String,
     pub mz_max: f64,
-    pub intensity_max: f64,
+    pub intensity_max: f32,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -222,13 +270,6 @@ async fn annotate_spectrum<'a>(
     };
     let peptide = CompoundPeptidoformIon::pro_forma(peptide, Some(&state.custom_modifications))
         .map_err(|err| err.to_html())?;
-    let multiple_peptidoforms = peptide.peptidoform_ions().len() == 1;
-    let multiple_peptides = peptide
-        .peptidoform_ions()
-        .iter()
-        .flat_map(|p| p.peptidoforms())
-        .count()
-        == 1;
 
     let use_charge = Charge::new::<e>(
         charge
@@ -241,27 +282,53 @@ async fn annotate_spectrum<'a>(
     );
     let fragments = peptide.generate_theoretical_fragments(use_charge, model);
     let annotated = spectrum.annotate(peptide, &fragments, &parameters, mass_mode);
+    let rendered =
+        render_annotated_spectrum(&annotated, &fragments, model, &parameters, mass_mode, theme);
+    state.annotated_spectrum = Some(annotated);
+    Ok(rendered)
+}
+
+fn render_annotated_spectrum(
+    annotated: &AnnotatedSpectrum,
+    fragments: &[Fragment],
+    model: &FragmentationModel,
+    parameters: &MatchingParameters,
+    mass_mode: MassMode,
+    theme: Theme,
+) -> AnnotationResult {
+    let multiple_peptidoforms = annotated
+        .analytes
+        .iter()
+        .filter(|a| a.peptidoform_ion.is_some())
+        .count()
+        == 1;
+    let multiple_peptides = annotated
+        .analytes
+        .iter()
+        .filter_map(|a| a.peptidoform_ion.as_ref())
+        .flat_map(|p| p.peptidoforms())
+        .count()
+        == 1;
     let (spectrum, limits) = render::annotated_spectrum(
-        &annotated,
-        &spectrum,
+        annotated,
         "spectrum",
-        &fragments,
+        fragments,
         model,
         &parameters,
         mass_mode,
         theme,
     );
-    Ok(AnnotationResult {
+    AnnotationResult {
         spectrum,
         fragment_table: render::spectrum_table(
-            &annotated,
-            &fragments,
+            annotated,
+            fragments,
             multiple_peptidoforms,
             multiple_peptides,
         ),
         mz_max: limits.mz.value,
         intensity_max: limits.intensity,
-    })
+    }
 }
 
 fn load_custom_mods_and_models(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
@@ -275,7 +342,7 @@ fn load_custom_mods_and_models(app: &mut tauri::App) -> Result<(), Box<dyn std::
             .expect("Poisoned mutex at setup of custom mods");
         let now = chrono::Local::now().format("%Y%m%d%H%M%S%.3f");
         if custom_mods.exists() {
-            match rustyms::sequence::parse_custom_modifications(&custom_mods) {
+            match mzcore::sequence::parse_custom_modifications(&custom_mods) {
                 Ok(modifications) => state.custom_modifications = modifications,
                 Err(error) => {
                     eprintln!("Error while parsing custom modifications:\n{error}");
@@ -302,7 +369,7 @@ fn load_custom_mods_and_models(app: &mut tauri::App) -> Result<(), Box<dyn std::
             }
         }
         if custom_models.exists() {
-            match rustyms::annotation::model::parse_custom_models(&custom_models) {
+            match mzannotate::annotation::model::parse_custom_models(&custom_models) {
                 Ok(models) => state.custom_models = models,
                 Err(error) => {
                     eprintln!("Error while parsing custom models:\n{error}");
@@ -357,6 +424,7 @@ fn main() {
         .manage(Mutex::new(State {
             spectra: Vec::new(),
             identified_peptide_files: std::cell::RefCell::new(Vec::new()),
+            annotated_spectrum: None,
             custom_modifications: Vec::new(),
             custom_modifications_error: None,
             custom_models: Vec::new(),
@@ -372,6 +440,7 @@ fn main() {
             custom_modifications::update_modification,
             details_formula,
             get_custom_configuration_path,
+            load_annotated_spectrum,
             identified_peptide_details,
             identified_peptides::close_identified_peptides_file,
             identified_peptides::get_identified_peptides_files,

@@ -1,17 +1,22 @@
 use std::{cmp::Ordering, collections::HashMap, fmt::Write};
 
 use itertools::Itertools;
-use mzdata::spectrum::MultiLayerSpectrum;
-use rustyms::{
-    annotation::{AnnotatedPeak, AnnotatedSpectrum, Fdr, Recovered, Score, model::Location},
+use mzannotate::{
+    annotation::{Fdr, Recovered, Score, model::Location},
     fragment::*,
+    prelude::*,
+    spectrum::{AnnotatedPeak, AnnotatedSpectrum},
+};
+use mzcore::{
+    chemistry::NeutralLoss,
     glycan::{GlycanDirection, GlycanRoot, GlycanSelection, GlycanStructure},
     ontology::Ontology,
     prelude::*,
     sequence::{PlacementRule, SimpleModificationInner},
-    spectrum::PeakSpectrum,
     system::{Mass, MassOverCharge, da, thomson},
 };
+use mzdata::mzpeaks::PeakCollection;
+use mzident::MetaData;
 
 use crate::{
     Theme,
@@ -24,7 +29,6 @@ use super::{classes::get_classes, label::get_label};
 
 pub fn annotated_spectrum(
     spectrum: &AnnotatedSpectrum,
-    raw: &MultiLayerSpectrum,
     _id: &str,
     fragments: &[Fragment],
     model: &FragmentationModel,
@@ -36,14 +40,13 @@ pub fn annotated_spectrum(
     let (limits, overview) = get_overview(spectrum);
     let (graph_data, graph_boundaries) =
         spectrum_graph_boundaries(spectrum, fragments, model, mass_mode);
-    let multiple_peptidoform_ions = spectrum.peptide.peptidoform_ions().len() > 1;
-    let multiple_peptidoforms = spectrum
-        .peptide
+    let compound_peptidoform_ion = spectrum.compound_peptidoform_ion().unwrap_or_default();
+    let multiple_peptidoform_ions = compound_peptidoform_ion.peptidoform_ions().len() > 1;
+    let multiple_peptidoforms = compound_peptidoform_ion
         .peptidoform_ions()
         .iter()
         .any(|p| p.peptidoforms().len() > 1);
-    let multiple_glycans = spectrum
-        .peptide
+    let multiple_glycans = compound_peptidoform_ion
         .peptidoform_ions()
         .iter()
         .flat_map(|p| p.peptidoforms())
@@ -68,7 +71,7 @@ pub fn annotated_spectrum(
     let mut glycan_footnotes = Vec::new();
     let unique_peptide_lookup = super::render_peptide(
         &mut output,
-        &spectrum.peptide,
+        &compound_peptidoform_ion,
         Some(overview),
         None,
         None,
@@ -78,7 +81,6 @@ pub fn annotated_spectrum(
     render_spectrum(
         &mut output,
         spectrum,
-        raw,
         fragments,
         &graph_boundaries,
         &limits,
@@ -130,7 +132,7 @@ pub fn annotated_spectrum(
     (output, limits)
 }
 
-type Boundaries = (f64, f64, f64, f64, f64, f64, f64, f64, f64, f64);
+type Boundaries = (f64, f64, f64, f64, f64, f64, f64, f64, f32, f32);
 type SpectrumGraphData = Vec<Point>;
 struct Point {
     annotation: Vec<Fragment>,
@@ -138,7 +140,7 @@ struct Point {
     unassigned: UnassignedData,
     mz: MassOverCharge,
     mass: Mass,
-    intensity: f64,
+    intensity: f32,
 }
 
 struct UnassignedData {
@@ -176,13 +178,18 @@ impl<A, B: Clone> RelAndAbs<(A, &B)> {
 }
 
 impl<'a> RelAndAbs<(f64, &'a Fragment)> {
-    fn fold(&mut self, fragment: &'a Fragment, point: &AnnotatedPeak, mass_mode: MassMode) {
+    fn fold(
+        &mut self,
+        fragment: &'a Fragment,
+        point: &AnnotatedPeak<Fragment>,
+        mass_mode: MassMode,
+    ) {
         self.rel = Self::min_by(
             self.rel,
             (
                 fragment
                     .mz(mass_mode)
-                    .map(|f| f.ppm(point.experimental_mz).value * 1e6)
+                    .map(|f| f.ppm(point.mz).value * 1e6)
                     .unwrap_or(f64::INFINITY),
                 fragment,
             ),
@@ -193,7 +200,7 @@ impl<'a> RelAndAbs<(f64, &'a Fragment)> {
             (
                 fragment
                     .mz(mass_mode)
-                    .map(|f| (point.experimental_mz - f).value)
+                    .map(|f| (point.mz - f).value)
                     .unwrap_or(f64::INFINITY),
                 fragment,
             ),
@@ -228,7 +235,7 @@ fn get_data(data: &Option<RelAndAbs<(f64, Fragment)>>, ion: char) -> [(String, S
 }
 
 fn get_unassigned_data(
-    point: &AnnotatedPeak,
+    point: &AnnotatedPeak<Fragment>,
     fragments: &[Fragment],
     model: &FragmentationModel,
     mass_mode: MassMode,
@@ -285,35 +292,36 @@ fn spectrum_graph_boundaries(
     mass_mode: MassMode,
 ) -> (SpectrumGraphData, Boundaries) {
     let data: SpectrumGraphData = spectrum
-        .spectrum()
+        .peaks
+        .iter()
         .map(|point| Point {
-            annotation: point.annotation.clone(),
-            assigned: (!point.annotation.is_empty()).then(|| RelAndAbs {
+            annotation: point.annotations.clone(),
+            assigned: (!point.annotations.is_empty()).then(|| RelAndAbs {
                 rel: point
-                    .annotation
+                    .annotations
                     .iter()
                     .map(|f| {
                         f.mz(mass_mode)
-                            .map(|f| f.signed_ppm(point.experimental_mz).value * 1e6)
+                            .map(|f| f.signed_ppm(point.mz).value * 1e6)
                             .unwrap_or(f64::INFINITY)
                     })
                     .min_by(|a, b| b.abs().total_cmp(&a.abs()))
                     .unwrap(),
                 abs: point
-                    .annotation
+                    .annotations
                     .iter()
                     .map(|f| {
                         f.mz(mass_mode)
-                            .map(|f| (point.experimental_mz - f).value)
+                            .map(|f| (point.mz - f).value)
                             .unwrap_or(f64::INFINITY)
                     })
                     .min_by(|a, b| b.abs().total_cmp(&a.abs()))
                     .unwrap(),
             }),
             unassigned: get_unassigned_data(point, fragments, model, mass_mode),
-            mz: point.experimental_mz,
-            mass: da(point.experimental_mz.value),
-            intensity: point.intensity.0,
+            mz: point.mz,
+            mass: da(point.mz.value),
+            intensity: point.intensity,
         })
         .collect();
     let bounds = data.iter().fold(
@@ -326,8 +334,8 @@ fn spectrum_graph_boundaries(
             f64::MAX,
             f64::MIN,
             f64::MAX,
-            f64::MIN,
-            f64::MAX,
+            f32::MIN,
+            f32::MAX,
         ),
         |acc, point| {
             (
@@ -429,19 +437,19 @@ fn render_error_graph(
     write!(output, "</div>").unwrap();
 }
 
-pub type PositionCoverage = Vec<Vec<Vec<HashMap<FragmentType, OrderedFloat<f64>>>>>;
+pub type PositionCoverage = Vec<Vec<Vec<HashMap<FragmentType, OrderedFloat<f32>>>>>;
 
 pub struct Limits {
     pub mz: MassOverCharge,
-    pub intensity: f64,
-    pub intensity_unassigned: f64,
+    pub intensity: f32,
+    pub intensity_unassigned: f32,
 }
 
 fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
     let mut output: PositionCoverage = spectrum
-        .peptide
-        .peptidoform_ions()
+        .analytes
         .iter()
+        .filter_map(|a| a.peptidoform_ion.as_ref())
         .map(|p| {
             p.peptidoforms()
                 .iter()
@@ -450,14 +458,14 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
         })
         .collect();
     let mut max_mz: MassOverCharge = MassOverCharge::new::<thomson>(0.0);
-    let mut max_intensity: f64 = 0.0;
-    let mut max_intensity_unassigned: f64 = 0.0;
-    for peak in spectrum.spectrum() {
-        max_mz = max_mz.max(peak.experimental_mz);
-        max_intensity_unassigned = max_intensity_unassigned.max(peak.intensity.0);
-        if !peak.annotation.is_empty() {
-            max_intensity = max_intensity.max(peak.intensity.0);
-            peak.annotation.iter().for_each(|fragment| {
+    let mut max_intensity: f32 = 0.0;
+    let mut max_intensity_unassigned: f32 = 0.0;
+    for peak in &spectrum.peaks {
+        max_mz = max_mz.max(peak.mz);
+        max_intensity_unassigned = max_intensity_unassigned.max(peak.intensity);
+        if !peak.annotations.is_empty() {
+            max_intensity = max_intensity.max(peak.intensity);
+            peak.annotations.iter().for_each(|fragment| {
                 fragment.ion.position().map(|i| {
                     if let (Some(pii), Some(pi)) =
                         (fragment.peptidoform_ion_index, fragment.peptidoform_index)
@@ -489,7 +497,6 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
 fn render_spectrum(
     output: &mut String,
     spectrum: &AnnotatedSpectrum,
-    raw: &MultiLayerSpectrum,
     fragments: &[Fragment],
     boundaries: &Boundaries,
     limits: &Limits,
@@ -556,22 +563,23 @@ fn render_spectrum(
     )
     .unwrap();
 
-    for peak in spectrum.spectrum() {
+    let compound_peptidoform_ion = spectrum.compound_peptidoform_ion().unwrap_or_default();
+    for peak in &spectrum.peaks {
         write!(
             output,
             "<span class='peak {}' style='--mz:{};--intensity:{};' data-label='{}' {}>{}</span>",
-            get_classes(&peak.annotation, unique_peptide_lookup),
-            peak.experimental_mz.value,
+            get_classes(&peak.annotations, unique_peptide_lookup),
+            peak.mz.value,
             peak.intensity,
-            (peak.experimental_mz.value * 100.0).round() / 100.0,
-            if peak.intensity.0 / limits.intensity >= 0.1 {
+            (peak.mz.value * 100.0).round() / 100.0,
+            if peak.intensity / limits.intensity >= 0.1 {
                 "data-show-label='true' data-show-glycan='true'"
             } else {
                 ""
             },
             get_label(
-                &spectrum.peptide,
-                &peak.annotation,
+                &compound_peptidoform_ion,
+                &peak.annotations,
                 multiple_peptidoforms,
                 multiple_peptides,
                 multiple_glycans,
@@ -593,7 +601,7 @@ fn render_spectrum(
                 peak_mz.value,
                 (peak_mz.value * 100.0).round() / 100.0,
                 get_label(
-                    &spectrum.peptide,
+                    &compound_peptidoform_ion,
                     &[peak.clone()],
                     multiple_peptidoforms,
                     multiple_peptides,
@@ -715,14 +723,14 @@ fn general_stats(
 
     let (combined_scores, separate_peptide_scores) =
         spectrum.scores(fragments, parameters, mass_mode);
-    let fdr =
-        (spectrum.spectrum().len() != 0).then(|| spectrum.fdr(fragments, parameters, mass_mode));
+    let fdr = (spectrum.peaks.len() != 0).then(|| spectrum.fdr(fragments, parameters, mass_mode));
+    let compound_peptidoform_ion = spectrum.compound_peptidoform_ion().unwrap_or_default();
 
     for (peptidoform_ion_index, peptidoform_ion_scores) in
         separate_peptide_scores.iter().enumerate()
     {
         for (peptidoform_index, peptidoform_score) in peptidoform_ion_scores.iter().enumerate() {
-            let precursor = spectrum.peptide.peptidoform_ions()[peptidoform_ion_index]
+            let precursor = compound_peptidoform_ion.peptidoform_ions()[peptidoform_ion_index]
                 .peptidoforms()[peptidoform_index]
                 .clone()
                 .into_linear()
@@ -894,8 +902,10 @@ fn general_stats(
     write!(output, "<label><input type='checkbox' switch id='general-stats-show-details'>Show statistics per ion series</label><table class='general-stats'>").unwrap();
     if multiple_peptidoform_ions || multiple_peptidoforms {
         write!(output, "<tr><td>General Statistics</td>").unwrap();
-        for (peptidoform_ion_index, peptidoform_ion) in
-            spectrum.peptide.peptidoform_ions().iter().enumerate()
+        for (peptidoform_ion_index, peptidoform_ion) in compound_peptidoform_ion
+            .peptidoform_ions()
+            .iter()
+            .enumerate()
         {
             for peptidoform_index in 0..peptidoform_ion.peptidoforms().len() {
                 if multiple_peptidoform_ions && multiple_peptidoforms {

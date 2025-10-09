@@ -1,17 +1,20 @@
 use std::{io::BufWriter, sync::Mutex};
 
-use custom_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
-use mzdata::meta::DissociationMethodTerm;
-use rustyms::{
+use context_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
+use mzannotate::{
     annotation::model::{
-        ChargeRange, GlycanModel, GlycanPeptideFragment, Location, PrimaryIonSeries,
-        SatelliteIonSeries, SatelliteLocation,
+        GlycanModel, Location, PrimaryIonSeries, SatelliteIonSeries, SatelliteLocation,
     },
-    fragment::{FragmentKind, NeutralLoss},
+    prelude::*,
+};
+use mzcore::{
+    chemistry::{ChargeRange, NeutralLoss},
+    glycan::{BackboneFragmentKind, GlycanPeptideFragment},
     prelude::*,
     quantities::Tolerance,
     system::{MassOverCharge, thomson},
 };
+use mzdata::meta::DissociationMethodTerm;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
@@ -438,7 +441,8 @@ pub struct GlycanParameters {
     neutral_losses: Vec<String>,
     diagnostic_neutral_losses: Vec<String>,
     default_glycan_peptide_fragment: GlycanPeptideFragment,
-    specific_glycan_peptide_fragment: Vec<(Vec<char>, Vec<FragmentKind>, GlycanPeptideFragment)>,
+    specific_glycan_peptide_fragment:
+        Vec<(Vec<char>, Vec<BackboneFragmentKind>, GlycanPeptideFragment)>,
     oxonium_charge_range: ChargeRange,
     other_charge_range: ChargeRange,
 }
@@ -708,7 +712,7 @@ pub fn parameters(
         parameters.tolerance = Tolerance::new_ppm(tolerance.0);
     } else if tolerance.1 == "th" {
         parameters.tolerance =
-            Tolerance::new_absolute(MassOverCharge::new::<rustyms::system::thomson>(tolerance.0));
+            Tolerance::new_absolute(MassOverCharge::new::<mzcore::system::thomson>(tolerance.0));
     } else {
         return Err(BoxedError::new(
             BasicKind::Error,

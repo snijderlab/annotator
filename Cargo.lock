@@ -78,14 +78,18 @@ name = "annotator"
 version = "1.2.1"
 dependencies = [
  "chrono",
- "custom_error",
+ "context_error",
  "itertools",
- "mzdata",
+ "mzalign",
+ "mzannotate",
+ "mzcore",
+ "mzdata 0.60.1",
+ "mzident",
  "mzpeaks",
  "mzsignal",
+ "mzspeclib-rs",
  "ordered-float",
  "rayon",
- "rustyms",
  "serde",
  "serde_json",
  "tauri",
@@ -685,6 +689,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
 
 [[package]]
+name = "context_error"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da7e1b8dc6f4cdc4f6b897d6aa1b7eaec6d95331bdb765d2a51cdd948e157ee0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "convert_case"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -873,14 +886,6 @@ name = "cty"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b365fabc795046672053e29c954733ec3b05e4be654ab130fe8f1f94d7051f35"
-
-[[package]]
-name = "custom_error"
-version = "0.1.0"
-source = "git+https://github.com/douweschulte/custom_error#0e6ab8b33bd6fc8534d1901e75f93d9ba9930bda"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "darling"
@@ -1353,6 +1358,7 @@ checksum = "4a3d7db9596fecd151c5f638c0ee5d5bd487b6e0ea232e5dc96d5250f6f94b1d"
 dependencies = [
  "crc32fast",
  "libz-rs-sys",
+ "libz-sys",
  "miniz_oxide",
 ]
 
@@ -2643,6 +2649,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b70e7a7df205e92a1a4cd9aaae7898dac0aa555503cc0a649494d0d60e7651d"
 dependencies = [
  "cc",
+ "cmake",
  "libc",
  "pkg-config",
  "vcpkg",
@@ -2827,10 +2834,81 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzalign"
+version = "0.11.0"
+dependencies = [
+ "itertools",
+ "mzcore",
+ "ordered-float",
+ "rayon",
+ "serde",
+]
+
+[[package]]
+name = "mzannotate"
+version = "0.11.0"
+dependencies = [
+ "context_error",
+ "flate2",
+ "indexmap 2.11.3",
+ "itertools",
+ "mzcore",
+ "mzdata 0.60.1",
+ "ordered-float",
+ "regex",
+ "serde",
+ "serde_json",
+ "uom",
+]
+
+[[package]]
+name = "mzcore"
+version = "0.11.0"
+dependencies = [
+ "bincode",
+ "context_error",
+ "itertools",
+ "ndarray 0.16.1",
+ "ordered-float",
+ "probability",
+ "regex",
+ "serde",
+ "serde_json",
+ "similar",
+ "thin-vec",
+ "uom",
+]
+
+[[package]]
 name = "mzdata"
-version = "0.57.1"
+version = "0.56.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9650d9b0b88371007831a80b02e93a490ef3652329c9b0c910e57501e4e8410e"
+checksum = "fd1686981c5a4ade435941889a6e206496166402aa4d850c54a8149d9967e03a"
+dependencies = [
+ "base16ct",
+ "base64-simd",
+ "bitflags 2.9.4",
+ "bytemuck",
+ "chrono",
+ "flate2",
+ "identity-hash",
+ "indexmap 2.11.3",
+ "log",
+ "md5",
+ "memchr",
+ "mzpeaks",
+ "num-traits",
+ "quick-xml 0.30.0",
+ "regex",
+ "sha1",
+ "thiserror 2.0.16",
+]
+
+[[package]]
+name = "mzdata"
+version = "0.60.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0c5a444200cad73bf6fc7201cb698b7c66636f7ffafb4b2a6ee9c1ca3118f3ae"
 dependencies = [
  "base16ct",
  "base64-simd",
@@ -2866,6 +2944,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzident"
+version = "0.11.0"
+dependencies = [
+ "context_error",
+ "flate2",
+ "itertools",
+ "mzannotate",
+ "mzcore",
+ "ordered-float",
+ "paste",
+ "regex",
+ "serde",
+ "thin-vec",
+ "uom",
+]
+
+[[package]]
 name = "mzpeaks"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2890,6 +2985,19 @@ dependencies = [
  "num-traits",
  "rayon",
  "serde",
+ "thiserror 2.0.16",
+]
+
+[[package]]
+name = "mzspeclib-rs"
+version = "0.1.0"
+source = "git+https://github.com/mobiusklein/mzspeclib-rs#506cfbc9d10ca97d674cb1fd3e40abcb6c0cbbc3"
+dependencies = [
+ "indexmap 2.11.3",
+ "mzdata 0.56.0",
+ "mzpeaks",
+ "nom",
+ "nom-language",
  "thiserror 2.0.16",
 ]
 
@@ -3055,6 +3163,24 @@ name = "nodrop"
 version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72ef4a56884ca558e5ddb05a1d1e7e1bfd9a68d9ed024c21704cc98872dae1bb"
+
+[[package]]
+name = "nom"
+version = "8.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df9761775871bdef83bee530e60050f7e54b1105350d6884eb0fb4f46c2f9405"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
+name = "nom-language"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2de2bc5b451bfedaef92c90b8939a8fff5770bdcc1fafd6239d086aab8fa6b29"
+dependencies = [
+ "nom",
+]
 
 [[package]]
 name = "num-bigint"
@@ -4382,29 +4508,6 @@ name = "rustversion"
 version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
-
-[[package]]
-name = "rustyms"
-version = "0.10.0"
-source = "git+https://github.com/rusteomics/mzcore#97d4050ac1541633cbc307cf189d4caa9dd02a78"
-dependencies = [
- "bincode",
- "custom_error",
- "flate2",
- "itertools",
- "mzdata",
- "ndarray 0.16.1",
- "ordered-float",
- "paste",
- "probability",
- "rayon",
- "regex",
- "serde",
- "serde_json",
- "similar",
- "thin-vec",
- "uom",
-]
 
 [[package]]
 name = "ryu"

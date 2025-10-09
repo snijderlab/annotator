@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use rustyms::fragment::Fragment;
+use mzannotate::fragment::Fragment;
 
 /// Get all applicable classes for a set of annotations.
 /// These are:

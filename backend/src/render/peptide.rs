@@ -2,13 +2,13 @@ use std::{collections::HashMap, fmt::Write};
 
 use crate::{Theme, html_builder::HtmlTag};
 use itertools::Itertools;
-use ordered_float::OrderedFloat;
-use rustyms::{
-    fragment::*,
-    identification::FlankingSequence,
+use mzannotate::fragment::*;
+use mzcore::{
     prelude::*,
     sequence::{CrossLinkName, GnoComposition, Linked, Modification, SimpleModificationInner},
 };
+use mzident::FlankingSequence;
+use ordered_float::OrderedFloat;
 
 use super::render_full_glycan;
 
@@ -45,7 +45,7 @@ pub fn render_peptide(
             o.iter()
                 .flat_map(|o| o.iter())
                 .flat_map(|o| o.iter())
-                .map(|o| o.values().sum::<OrderedFloat<f64>>())
+                .map(|o| o.values().sum::<OrderedFloat<f32>>())
                 .max()
         })
         .unwrap_or_default();
@@ -92,7 +92,7 @@ pub fn render_peptide(
 fn render_linear_peptidoform(
     output: &mut String,
     peptidoform: &Peptidoform<Linked>,
-    overview: Option<&[HashMap<FragmentType, OrderedFloat<f64>>]>,
+    overview: Option<&[HashMap<FragmentType, OrderedFloat<f32>>]>,
     local_confidence: Option<&[f64]>,
     peptidoform_ion_index: usize,
     peptidoform_index: usize,

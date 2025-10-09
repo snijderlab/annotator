@@ -7,7 +7,7 @@ const { listen } = window.__TAURI__.event;
 const { open, save } = window.__TAURI__.dialog;
 
 const RAW_EXTENSIONS = ["mgf", "mzml", "imzml", "mzmlb", "raw"];
-const RAW_WRITE_EXTENSIONS = ["mgf", "mzml"];
+const RAW_WRITE_EXTENSIONS = ["mgf", "mzml", "mzspeclib.txt"];
 const IDENTIFIED_EXTENSIONS = ["csv", "csv.gz", "tsv", "tsv.gz", "txt", "txt.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz", "fas", "fas.gz", "fa", "fa.gz", "faa", "faa.gz", "mpfa", "mpfa.gz", "mztab", "mztab.gz", "deepnovo_denovo", "deepnovo_denovo.gz", "ssl", "ssl.gz"];
 
 import { SetUpSpectrumInterface, spectrumClearDistanceLabels } from "./script.js";
@@ -123,7 +123,7 @@ async function save_spectrum_file(e) {
   let properties = {
     title: "Save selected spectrum",
     filters: [{
-      extensions: RAW_WRITE_EXTENSIONS, name: "MGF or mzML"
+      extensions: RAW_WRITE_EXTENSIONS, name: "MGF, mzML, or mzSpecLib"
     }]
   };
   save(properties).then((result) => {
@@ -419,12 +419,25 @@ async function identified_peptide_details() {
   let index = Number(document.querySelector("#details-identified-peptide-index").value);
   if (displayed_identified_peptide != [file_id, index]) {
     invoke("identified_peptide_details", { file: file_id, index: index, theme: Theme }).then((result) => {
-      document.querySelector("#identified-peptide-details").innerHTML = result;
+      document.querySelector("#load-annotated-spectrum").hidden = !result[0];
+      document.querySelector("#identified-peptide-details").innerHTML = result[1];
       displayed_identified_peptide = [file_id, index];
       clearError("spectrum-error");
     }).catch((error) => {
       showError("spectrum-error", error);
       document.querySelector("#identified-peptide-details").innerText = "ERROR";
+    })
+  }
+}
+
+async function load_annotated_spectrum() {
+  let file_id = displayed_identified_peptide[0];
+  let index = displayed_identified_peptide[1];
+  if (displayed_identified_peptide != undefined) {
+    invoke("load_annotated_spectrum", { file: file_id, index: index, theme: Theme }).then((result) => {
+      set_up_spectrum(result);
+    }).catch((error) => {
+      showError("spectrum-error", error);
     })
   }
 }
@@ -923,24 +936,28 @@ async function annotate_spectrum() {
     mzRange: [optional_number(document.querySelector("#model-mz-range-min").value), optional_number(document.querySelector("#model-mz-range-max").value)],
     theme: Theme
   }).then((result) => {
-    document.querySelector("#spectrum-results-wrapper").innerHTML = result.spectrum;
-    document.querySelector("#spectrum-fragment-table").innerHTML = result.fragment_table;
-    document.querySelector("#spectrum-error").innerText = "";
-    document.querySelector("#spectrum-wrapper").classList.remove("hidden"); // Remove hidden class if this is the first run
-    document.querySelector("#spectrum-mz-max").value = result.mz_max;
-    document.querySelector("#spectrum-intensity-max").value = result.intensity_max;
-    document.querySelector("#spectrum-label").value = 90;
-    document.querySelector("#spectrum-label-value").value = 90;
-    document.querySelector("#spectrum-m-z").value = 0;
-    document.querySelector("#spectrum-m-z-value").value = 0;
-    SetUpSpectrumInterface();
-    document.querySelector("#annotate-button").classList.remove("loading");
-    clearError("spectrum-error");
+    set_up_spectrum(result);
   }).catch((error) => {
     showError("spectrum-error", error, false);
     document.querySelector("#peptide").innerHTML = showContext(error, document.querySelector("#peptide").innerText);
     document.querySelector("#annotate-button").classList.remove("loading");
   })
+}
+
+function set_up_spectrum(result) {
+  document.querySelector("#spectrum-results-wrapper").innerHTML = result.spectrum;
+  document.querySelector("#spectrum-fragment-table").innerHTML = result.fragment_table;
+  document.querySelector("#spectrum-error").innerText = "";
+  document.querySelector("#spectrum-wrapper").classList.remove("hidden"); // Remove hidden class if this is the first run
+  document.querySelector("#spectrum-mz-max").value = result.mz_max;
+  document.querySelector("#spectrum-intensity-max").value = result.intensity_max;
+  document.querySelector("#spectrum-label").value = 90;
+  document.querySelector("#spectrum-label-value").value = 90;
+  document.querySelector("#spectrum-m-z").value = 0;
+  document.querySelector("#spectrum-m-z-value").value = 0;
+  SetUpSpectrumInterface();
+  document.querySelector("#annotate-button").classList.remove("loading");
+  clearError("spectrum-error");
 }
 
 /**
@@ -1010,6 +1027,9 @@ window.addEventListener("DOMContentLoaded", () => {
   document
     .querySelector("#load-identified-peptide")
     .addEventListener("click", (event) => load_identified_peptide());
+  document
+    .querySelector("#load-annotated-spectrum")
+    .addEventListener("click", (event) => load_annotated_spectrum());
   document
     .querySelector("#load-clipboard")
     .addEventListener("click", () => load_clipboard());

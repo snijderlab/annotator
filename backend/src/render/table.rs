@@ -5,9 +5,9 @@ use crate::{
     render::{display_formula, display_neutral_loss, label::display_sequence_index},
 };
 use itertools::Itertools;
-use rustyms::{
-    annotation::AnnotatedSpectrum, fragment::FragmentType, prelude::*, spectrum::PeakSpectrum,
-};
+use mzannotate::{fragment::FragmentType, prelude::*, spectrum::AnnotatedSpectrum};
+use mzcore::prelude::*;
+use mzident::MetaData;
 
 pub fn spectrum_table(
     spectrum: &AnnotatedSpectrum,
@@ -93,10 +93,11 @@ pub fn spectrum_table(
             series_number,
             format!(
                 "<span title='mzPAF: {}'>{label}</span>",
-                annotation.to_mz_paf()
+                annotation.to_mz_paf_string()
             ),
         )
     }
+    let peptide = spectrum.compound_peptidoform_ion().unwrap_or_default();
     let mut output = String::new();
     write!(
         output,
@@ -120,7 +121,7 @@ pub fn spectrum_table(
                 <th>Series Number</th>
                 <th>Additional label</th>
             </tr></thead><tdata>",
-        spectrum.peptide,
+        peptide,
         if multiple_peptidoform_ions {
             "<th>Peptidoform</th>"
         } else {
@@ -135,10 +136,10 @@ pub fn spectrum_table(
     .unwrap();
     // class followed by all data
     let mut data = Vec::new();
-    for peak in spectrum.spectrum() {
-        if peak.annotation.is_empty() {
+    for peak in &spectrum.peaks {
+        if peak.annotations.is_empty() {
             data.push((
-                peak.experimental_mz.value,
+                peak.mz.value,
                 [
                     "unassigned".to_string(),
                     "-".to_string(),
@@ -147,10 +148,7 @@ pub fn spectrum_table(
                     "<span title='?'>-</span>".to_string(),
                     "-".to_string(),
                     format!("<span title='{0}'>{0:.2}</span>", peak.intensity),
-                    format!(
-                        "<span title='{0}'>{0:.2}</span>",
-                        peak.experimental_mz.value
-                    ),
+                    format!("<span title='{0}'>{0:.2}</span>", peak.mz.value),
                     "-".to_string(),
                     "-".to_string(),
                     "-".to_string(),
@@ -160,11 +158,10 @@ pub fn spectrum_table(
                 ],
             ));
         } else {
-            for annotation in &peak.annotation {
-                let (sequence_index, series_number, label) =
-                    generate_text(annotation, &spectrum.peptide);
+            for annotation in &peak.annotations {
+                let (sequence_index, series_number, label) = generate_text(annotation, &peptide);
                 data.push((
-                    peak.experimental_mz.value,
+                    peak.mz.value,
                     [
                         "matched".to_string(),
                         if multiple_peptidoform_ions {
@@ -189,10 +186,7 @@ pub fn spectrum_table(
                             .map(|n| display_neutral_loss(n, true))
                             .join(""),
                         format!("<span title='{0}'>{0:.2}</span>", peak.intensity),
-                        format!(
-                            "<span title='{0}'>{0:.2}</span>",
-                            peak.experimental_mz.value
-                        ),
+                        format!("<span title='{0}'>{0:.2}</span>", peak.mz.value),
                         annotation
                             .formula
                             .as_ref()
@@ -201,12 +195,12 @@ pub fn spectrum_table(
                         annotation
                             .mz(MassMode::Monoisotopic)
                             .map_or("-".to_string(), |f| {
-                                format!("{:.5}", (f - peak.experimental_mz).abs().value)
+                                format!("{:.5}", (f - peak.mz).abs().value)
                             }),
                         annotation
                             .mz(MassMode::Monoisotopic)
                             .map_or("-".to_string(), |f| {
-                                format!("{:.2}", f.ppm(peak.experimental_mz).value * 1e6)
+                                format!("{:.2}", f.ppm(peak.mz).value * 1e6)
                             }),
                         format!("{:+}", annotation.charge.value),
                         series_number,
@@ -219,9 +213,12 @@ pub fn spectrum_table(
         }
     }
     for fragment in fragments {
-        if !spectrum.spectrum().any(|p| p.annotation.contains(fragment)) {
-            let (sequence_index, series_number, label) =
-                generate_text(&fragment.clone(), &spectrum.peptide);
+        if !spectrum
+            .peaks
+            .iter()
+            .any(|p| p.annotations.contains(fragment))
+        {
+            let (sequence_index, series_number, label) = generate_text(&fragment.clone(), &peptide);
             data.push((
                 fragment
                     .mz(MassMode::Monoisotopic)

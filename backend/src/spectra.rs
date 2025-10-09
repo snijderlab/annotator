@@ -1,7 +1,8 @@
 use std::{io::ErrorKind, ops::RangeInclusive, path::Path, str::FromStr};
 
-use custom_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
+use context_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
 use itertools::Itertools;
+use mzcore::system::{Mass, OrderedTime, dalton};
 use mzdata::{
     Param,
     io::{
@@ -19,7 +20,6 @@ use mzdata::{
 };
 use mzpeaks::{CentroidPeak, peak_set::PeakSetVec};
 use mzsignal::{ArrayPairLike, PeakPicker};
-use rustyms::system::{Mass, OrderedTime, dalton};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -743,7 +743,12 @@ pub fn save_spectrum<'a>(
     let ext = path
         .extension()
         .map(|s| s.to_string_lossy().to_ascii_lowercase());
-    let mut spectrum = create_selected_spectrum(&mut state, filter).map_err(|err| err.to_html())?;
+    let mut spectrum = state.annotated_spectrum.clone().ok_or_else(|| BoxedError::small(
+                BasicKind::Error,
+                "No spectrum present",
+                "No spectrum was present so no spectrum can be saved. Annotate a spectrum or load one from a library to save a spectrum.",
+            )
+            .to_html())?;
     if !sequence.is_empty() {
         spectrum.description.params.push(Param::new_key_value(
             "sequence",
@@ -751,7 +756,7 @@ pub fn save_spectrum<'a>(
         ));
     }
     if model != "all" && model != "none" && model != "custom" {
-        if let Some(p) = &mut spectrum.description.precursor {
+        if let Some(p) = spectrum.description.precursor.first_mut() {
             p.activation.methods_mut().append(&mut match model {
                 "ethcd" => vec![
                     DissociationMethodTerm::ElectronTransferDissociation,
@@ -770,7 +775,7 @@ pub fn save_spectrum<'a>(
         }
     }
     if let Some(charge) = charge {
-        if let Some(p) = &mut spectrum.description.precursor {
+        if let Some(p) = spectrum.description.precursor.first_mut() {
             if let Some(i) = p.ions.first_mut() {
                 i.charge = Some(charge as i32);
             }
@@ -778,7 +783,12 @@ pub fn save_spectrum<'a>(
     }
     match ext.as_deref() {
         Some("mgf") => {
-            let mut writer = mzdata::MGFWriter::new(file);
+            let mut writer: mzdata::io::mgf::MGFWriterType<
+                std::fs::File,
+                mzannotate::prelude::AnnotatedPeak<mzannotate::prelude::Fragment>,
+                mzpeaks::DeconvolutedPeak,
+                mzdata::io::mgf::MZDataMGFStyle,
+            > = mzdata::io::mgf::MGFWriterType::new(file);
             writer.write(&spectrum).map(|_| ()).map_err(|e| {
                 BoxedError::new(
                     BasicKind::Error,
@@ -790,7 +800,11 @@ pub fn save_spectrum<'a>(
             })
         }
         Some("mzml") => {
-            let mut writer = mzdata::MzMLWriter::new(file);
+            let mut writer: mzdata::io::mzml::MzMLWriterType<
+                std::fs::File,
+                mzannotate::prelude::AnnotatedPeak<mzannotate::prelude::Fragment>,
+                mzpeaks::DeconvolutedPeak,
+            > = mzdata::io::mzml::MzMLWriterType::new(file);
             writer.write_spectrum(&spectrum).map_err(|e| {
                 BoxedError::new(
                     BasicKind::Error,
@@ -801,10 +815,32 @@ pub fn save_spectrum<'a>(
                 .to_html()
             })
         }
+        Some("txt") => {
+            let mut writer =
+                mzannotate::mzspeclib::MzSpecLibTextWriter::new(std::io::BufWriter::new(file));
+            writer.write_header().map_err(|e| {
+                BoxedError::new(
+                    BasicKind::Error,
+                    "Could not write file",
+                    "Could not write mzSpecLib",
+                    Context::show(e.to_string()),
+                )
+                .to_html()
+            })?;
+            writer.write_spectrum(&spectrum).map_err(|e| {
+                BoxedError::new(
+                    BasicKind::Error,
+                    "Could not write file",
+                    "Could not write mzSpecLib",
+                    Context::show(e.to_string()),
+                )
+                .to_html()
+            })
+        }
         _ => Err(BoxedError::new(
             BasicKind::Error,
             "Could not write file",
-            "Invalid path, use mgf or mzml as extension",
+            "Invalid path, use mgf, mzml, or mzspeclib.txt as extension",
             Context::show(path.to_string_lossy()).to_owned(),
         )
         .to_html()),

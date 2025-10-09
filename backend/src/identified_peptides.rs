@@ -1,12 +1,9 @@
-use custom_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent, combine_error};
+use context_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent, combine_error};
 use itertools::Itertools;
+use mzalign::{AlignScoring, AlignType, Alignment};
+use mzcore::{prelude::*, sequence::Linked};
+use mzident::*;
 use rayon::prelude::*;
-use rustyms::{
-    align::{AlignScoring, AlignType, Alignment},
-    identification::*,
-    prelude::*,
-    sequence::Linked,
-};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -243,9 +240,9 @@ impl IdentifiedPeptideSettings {
         Self {
             peptide: str_peptide,
             charge: peptide.charge().map(|v| v.value),
-            mode: peptide
-                .mode()
-                .and_then(|mode| crate::model::get_model_index(&state.custom_models, mode)),
+            mode: peptide.mode().and_then(|mode| {
+                crate::model::get_model_index(&state.custom_models, mode.as_ref())
+            }),
             warning,
         }
     }

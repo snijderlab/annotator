@@ -1,7 +1,7 @@
 use itertools::Itertools;
-use rustyms::{
+use mzannotate::{fragment::FragmentType, prelude::*};
+use mzcore::{
     chemistry::AmbiguousLabel,
-    fragment::FragmentType,
     prelude::*,
     sequence::{GnoComposition, Modification, SimpleModificationInner},
 };
