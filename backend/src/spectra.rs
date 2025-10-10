@@ -2,6 +2,7 @@ use std::{io::ErrorKind, ops::RangeInclusive, path::Path, str::FromStr};
 
 use context_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
 use itertools::Itertools;
+use mzannotate::prelude::*;
 use mzcore::system::{Mass, OrderedTime, dalton};
 use mzdata::{
     Param,
@@ -12,10 +13,10 @@ use mzdata::{
     },
     meta::DissociationMethodTerm,
     params::{CURIE, ParamDescribed, Unit, Value, ValueRef},
-    prelude::{IonProperties, PrecursorSelection, SpectrumLike},
+    prelude::{IonMobilityMeasure, IonProperties, PrecursorSelection, SpectrumLike},
     spectrum::{
         ArrayType, BinaryDataArrayType, DataArray, MultiLayerSpectrum, SignalContinuity,
-        bindata::BinaryCompressionType,
+        SpectrumDescription, SpectrumSummary, bindata::BinaryCompressionType,
     },
 };
 use mzpeaks::{CentroidPeak, peak_set::PeakSetVec};
@@ -217,7 +218,8 @@ pub async fn load_raw<'a>(
     match mzdata::io::MZReaderType::open_path(path) {
         Ok(mut file) => {
             let file = if file.len() == 1 {
-                RawFile::new_single(file.next().unwrap(), path.to_string())
+                let spec = file.next().unwrap();
+                RawFile::new_single(dbg!(spec), path.to_string())
             } else {
                 RawFile::new_file(path, file)
             };
@@ -576,62 +578,90 @@ pub fn get_selected_spectra(
     if let Ok(mut state) = state.lock() {
         let (spectra, models) = state.spectra_and_models();
         spectra
-        .iter_mut()
-        .map(|file| {
-            let id = file.id();
-            (id,
-            matches!(file, RawFile::Single{..}),
-            file.get_selected_spectra().map(|spectrum | {
-                let d = spectrum.description();
-                let p = spectrum.precursor();
-                let summary = spectrum.peaks().fetch_summaries();
-                SelectedSpectrumDetails {
-                    id: spectrum.index(),
-                    short: d.id.to_string(),
-                    description: format!(
-                        "index: {} id: {}<br>time: {:.3} signal mode: {:?} ms level: {} ion mobility: {}<br>mz range: {:.1} — {:.1} peak count: {} tic: {:.3e} base peak intensity: {:.3e} resultion: {}<br>{}<br>{}{}",
-                        spectrum.index(),
-                        d.id,
-                        spectrum.start_time(),
-                        spectrum.signal_continuity(),
-                        spectrum.ms_level(),
-                        spectrum.ion_mobility().to_optional_string(),
-                        summary.mz_range.0,
-                        summary.mz_range.1,
-                        summary.count,
-                        summary.tic,
-                        summary.base_peak.intensity,
-                        spectrum.description.acquisition.first_scan().and_then(|s| s.resolution()).map_or("-".to_string(), |v| match v {
-                            ValueRef::Float(f) => format!("{f:.3e}"),
-                            ValueRef::Int(i) => format!("{i:.3e}"),
-                            _ => "-".to_string(),
-                        }),
-                        spectrum.description.acquisition.first_scan().and_then(|s| s.filter_string()).map_or("No filter string".to_string(), |v| format!("Filter: {v}")),
-                        p.map_or("No precursor".to_string(), |p| {
-                            let i = p.isolation_window();
-                            format!(
-                                "Precursor mass: {} charge: {} target: {} range: {} — {} method: {} energy: {:.1}",
-                                display_mass(Mass::new::<dalton>(p.neutral_mass()), None),
-                                p.charge().map_or("-".to_string(), |v| format!("{v:+.0}")),
-                                i.target,
-                                i.lower_bound,
-                                i.upper_bound,
-                                get_mzdata_model(p.activation.methods(), models).map_or_else(|n| n, |(_, n)| n),
-                                p.activation.energy,
-                            )
-                        }),
-                        if let Some(param) = &spectrum.params().iter().find(|p| p.name == "sequence") {
-                            format!("<br>Sequence: <span style='-webkit-user-select:all;user-select:all;'>{}</span>", param.value)
-                        } else {
-                            String::new()
-                        },
-                    )
-                }
-            }).collect_vec())
-        }).collect_vec()
+            .iter_mut()
+            .map(|file| {
+                let id = file.id();
+                (
+                    id,
+                    matches!(file, RawFile::Single { .. }),
+                    file.get_selected_spectra()
+                        .map(|spectrum| SelectedSpectrumDetails {
+                            id: spectrum.index(),
+                            short: spectrum.description.id.to_string(),
+                            description: spectrum_description(
+                                spectrum.description(),
+                                &spectrum.peaks().fetch_summaries(),
+                                models,
+                            ),
+                        })
+                        .collect_vec(),
+                )
+            })
+            .collect_vec()
     } else {
         Vec::new()
     }
+}
+
+pub fn spectrum_description(
+    description: &SpectrumDescription,
+    summary: &SpectrumSummary,
+    models: &[(String, FragmentationModel)],
+) -> String {
+    format!(
+        "index: {} id: {}<br>time: {:.3} min signal mode: {:?} ms level: {} ion mobility: {}<br>mz range: {:.1} — {:.1} peak count: {} tic: {:.3e} base peak intensity: {:.3e} resultion: {}<br>{}<br>{}{}",
+        description.index,
+        description.id,
+        description.acquisition.start_time() / 60.0,
+        description.signal_continuity,
+        description.ms_level,
+        description
+            .acquisition
+            .scans
+            .first()
+            .and_then(|s| s.ion_mobility())
+            .to_optional_string(),
+        summary.mz_range.0,
+        summary.mz_range.1,
+        summary.count,
+        summary.tic,
+        summary.base_peak.intensity,
+        description
+            .acquisition
+            .first_scan()
+            .and_then(|s| s.resolution())
+            .map_or("-".to_string(), |v| match v {
+                ValueRef::Float(f) => format!("{f:.3e}"),
+                ValueRef::Int(i) => format!("{i:.3e}"),
+                _ => "-".to_string(),
+            }),
+        description
+            .acquisition
+            .first_scan()
+            .and_then(|s| s.filter_string())
+            .map_or("No filter string".to_string(), |v| format!("Filter: {v}")),
+        description.precursor.first().map_or("No precursor".to_string(), |p| {
+            let i = p.isolation_window();
+            format!(
+                "Precursor mass: {} charge: {} target: {} range: {} — {} method: {} energy: {:.1}",
+                display_mass(Mass::new::<dalton>(p.neutral_mass()), None),
+                p.charge().map_or("-".to_string(), |v| format!("{v:+.0}")),
+                i.target,
+                i.lower_bound,
+                i.upper_bound,
+                get_mzdata_model(p.activation.methods(), models).map_or_else(|n| n, |(_, n)| n),
+                p.activation.energy,
+            )
+        }),
+        if let Some(param) = &description.params().iter().find(|p| p.name == "sequence") {
+            format!(
+                "<br>Sequence: <span style='-webkit-user-select:all;user-select:all;'>{}</span>",
+                param.value
+            )
+        } else {
+            String::new()
+        },
+    )
 }
 
 pub fn create_selected_spectrum(
@@ -674,6 +704,11 @@ pub fn create_selected_spectrum(
                         Context::none(),
                     )
                 })?;
+            if let Some(p) = spectrum.peaks.as_mut() {
+                p.peaks.retain(|p| p.intensity > 0.1)
+            } // Stupid filter to remove very low peaks
+            spectrum.description.signal_continuity = SignalContinuity::Centroid; // Not done by the above function
+            dbg!(&spectrum);
         } else if spectrum.arrays.is_some() && spectrum.peaks.is_none() {
             // USI spectra are mostly loaded as the binary array maps instead of peaks regardless of the signal continuity level
             spectrum.peaks = spectrum.arrays.as_ref().map(|a| a.into());

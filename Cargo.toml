@@ -1,7 +1,5 @@
 [workspace]
-members = [
-    "backend",
-]
+members = ["backend"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -11,21 +9,19 @@ itertools = "0.14"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "2.0", features = ["protocol-asset"] }
-mzcore = { version = "0.11.0", features = [
-    "isotopes",
-    "glycan-render",
-] }
-mzannotate = { version = "0.11.0"}
-mzident = { version = "0.11.0", features = ["mzannotate"]}
-mzalign = { version = "0.11.0", features = ["rayon"]}
+mzcore = { version = "0.11.0", features = ["isotopes", "glycan-render"] }
+mzannotate = { version = "0.11.0" }
+mzident = { version = "0.11.0", features = ["mzannotate"] }
+mzalign = { version = "0.11.0", features = ["rayon"] }
 ordered-float = { version = "5.0", features = ["serde"] }
 rayon = "1.10"
-mzdata = { version = "0.60", default-features = false, features = [
+mzdata = { path = "../mzdata", default-features = false, features = [
     "mzsignal",
     "proxi-async",
     "thermo",
     "miniz_oxide",
     "mgf",
+    "xy",
     "mzml",
     "bruker_tdf",
 ] }
@@ -40,10 +36,11 @@ tauri-plugin-opener = "2.4.0"
 # hdf5 rust crate needs a new version
 hdf5 = { git = "https://github.com/aldanor/hdf5-rust.git" }
 hdf5-sys = { git = "https://github.com/aldanor/hdf5-rust.git" }
-mzcore = {path = "../mzcore/mzcore"}
-mzannotate = {path = "../mzcore/mzannotate"}
-mzident = {path = "../mzcore/mzident"}
-mzalign = {path = "../mzcore/mzalign"}
+mzcore = { path = "../mzcore/mzcore" }
+mzannotate = { path = "../mzcore/mzannotate" }
+mzident = { path = "../mzcore/mzident" }
+mzalign = { path = "../mzcore/mzalign" }
+context_error = { path = "../context_error" }
 
 [profile.release]
 debug = true

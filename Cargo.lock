@@ -83,7 +83,7 @@ dependencies = [
  "mzalign",
  "mzannotate",
  "mzcore",
- "mzdata 0.60.1",
+ "mzdata 0.60.2",
  "mzident",
  "mzpeaks",
  "mzsignal",
@@ -691,8 +691,6 @@ checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
 [[package]]
 name = "context_error"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da7e1b8dc6f4cdc4f6b897d6aa1b7eaec6d95331bdb765d2a51cdd948e157ee0"
 dependencies = [
  "serde",
 ]
@@ -2853,7 +2851,7 @@ dependencies = [
  "indexmap 2.11.3",
  "itertools",
  "mzcore",
- "mzdata 0.60.1",
+ "mzdata 0.60.2",
  "ordered-float",
  "regex",
  "serde",
@@ -2906,9 +2904,7 @@ dependencies = [
 
 [[package]]
 name = "mzdata"
-version = "0.60.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c5a444200cad73bf6fc7201cb698b7c66636f7ffafb4b2a6ee9c1ca3118f3ae"
+version = "0.60.2"
 dependencies = [
  "base16ct",
  "base64-simd",

@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use mzdata::prelude::SpectrumLike;
 use mzident::{
     CVTerm, IdentifiedPeptidoform, IdentifiedPeptidoformData, MSFraggerOpenModification, MetaData,
     SpectrumIds,
@@ -8,6 +9,7 @@ use crate::{
     Theme,
     html_builder::{HtmlContent, HtmlElement, HtmlTag},
     render::{display_mass, display_masses, render_peptide},
+    spectra::spectrum_description,
 };
 
 pub trait RenderToHtml {
@@ -111,7 +113,13 @@ impl<C, A> RenderToHtml for IdentifiedPeptidoform<C, A> {
                     SpectrumIds::None => vec![HtmlTag::p.new().content("No spectrum reference").clone()],
                     SpectrumIds::FileNotKnown(scans) => vec![HtmlTag::li.new().content("Scans: ").content(scans.iter().join(";")).clone()],
                     SpectrumIds::FileKnown(scans) => scans.iter().map(|(file, scans)| HtmlTag::li.new().content("File: ").content(HtmlTag::span.new().title(file.to_string_lossy()).content(file.file_name().map_or(String::new(), |s| s.to_string_lossy().to_string())).content(" Scans: ").content(scans.iter().join(";"))).clone()).collect(),
-                }).clone(),]
+                }).clone(),
+                HtmlTag::p.new().maybe_content(self.annotated_spectrum().map(|a| spectrum_description(
+                                &a.description,
+                                &a.peaks().fetch_summaries(),
+                                &[], // TODO: add
+                            ))).clone(),
+                ]
             ).content(peptide).children([
                 HtmlTag::p.new().content(format!("Additional MetaData {} ID: {}", self.format(), self.id())).clone(),
                 {

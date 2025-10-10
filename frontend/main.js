@@ -6,7 +6,7 @@ const { listen } = window.__TAURI__.event;
 
 const { open, save } = window.__TAURI__.dialog;
 
-const RAW_EXTENSIONS = ["mgf", "mzml", "imzml", "mzmlb", "raw"];
+const RAW_EXTENSIONS = ["xy", "mgf", "mzml", "imzml", "mzmlb", "raw"];
 const RAW_WRITE_EXTENSIONS = ["mgf", "mzml", "mzspeclib.txt"];
 const IDENTIFIED_EXTENSIONS = ["csv", "csv.gz", "tsv", "tsv.gz", "txt", "txt.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz", "fas", "fas.gz", "fa", "fa.gz", "faa", "faa.gz", "mpfa", "mpfa.gz", "mztab", "mztab.gz", "deepnovo_denovo", "deepnovo_denovo.gz", "ssl", "ssl.gz"];
 
