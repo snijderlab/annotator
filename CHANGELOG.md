@@ -1,5 +1,6 @@
 # Upcoming version
 
+- Fixed bug where the peptide would disappear if there was an error in the peptide sequence
 - Added support for pUniFind
 - Better handling of proteins as specified in many identified peptidoform files (amongst others: MSFragger, MaxQuant, and mzTab)
 

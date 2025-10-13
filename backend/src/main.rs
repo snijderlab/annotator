@@ -311,13 +311,7 @@ fn render_annotated_spectrum(
         .count()
         == 1;
     let (spectrum, limits) = render::annotated_spectrum(
-        annotated,
-        "spectrum",
-        fragments,
-        model,
-        &parameters,
-        mass_mode,
-        theme,
+        annotated, "spectrum", fragments, model, parameters, mass_mode, theme,
     );
     AnnotationResult {
         spectrum,
@@ -466,6 +460,7 @@ fn main() {
             spectra::save_spectrum,
             spectra::select_spectrum_index,
             spectra::select_spectrum_native_id,
+            spectra::select_retention_time,
             validate::validate_aa_neutral_loss,
             validate::validate_amino_acid,
             validate::validate_custom_linker_specificity,

@@ -597,12 +597,12 @@ fn render_spectrum(
             write!(
                 output,
                 "<span class='theoretical peak {}' style='--mz:{};' data-label='{}'>{}</span>",
-                get_classes(&[peak.clone()], unique_peptide_lookup),
+                get_classes(std::slice::from_ref(peak), unique_peptide_lookup),
                 peak_mz.value,
                 (peak_mz.value * 100.0).round() / 100.0,
                 get_label(
                     &compound_peptidoform_ion,
-                    &[peak.clone()],
+                    std::slice::from_ref(peak),
                     multiple_peptidoforms,
                     multiple_peptides,
                     multiple_glycans,

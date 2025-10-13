@@ -36,10 +36,10 @@ impl State {
     pub fn database(&self) -> Option<&CustomDatabase> {
         (!self.custom_modifications.is_empty()).then_some(&self.custom_modifications)
     }
-    pub fn identified_peptide_files(&self) -> Ref<Vec<IdentifiedPeptidoformFile>> {
+    pub fn identified_peptide_files(&self) -> Ref<'_, Vec<IdentifiedPeptidoformFile>> {
         self.identified_peptide_files.borrow()
     }
-    pub fn identified_peptide_files_mut(&self) -> RefMut<Vec<IdentifiedPeptidoformFile>> {
+    pub fn identified_peptide_files_mut(&self) -> RefMut<'_, Vec<IdentifiedPeptidoformFile>> {
         self.identified_peptide_files.borrow_mut()
     }
     pub fn spectra_and_models(&mut self) -> (&mut [RawFile], &[(String, FragmentationModel)]) {

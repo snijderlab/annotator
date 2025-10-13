@@ -752,7 +752,7 @@ pub fn save_spectrum<'a>(
     model: &'a str,
     charge: Option<usize>,
 ) -> Result<(), String> {
-    let mut state = state.lock().map_err(|e| {
+    let state = state.lock().map_err(|e| {
         BoxedError::new(
             BasicKind::Error,
             "Could not write file",
