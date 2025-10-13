@@ -13,7 +13,7 @@ pub fn validate_molecular_formula(text: String) -> Result<String, String> {
         .map(MolecularFormula::with_additional_mass)
         .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true, false))
         .map(|f| display_formula(&f, true))
-        .map_err(|err| err.to_html())
+        .map_err(|err| err.to_html(false))
 }
 
 pub fn parse_amino_acid(text: &str) -> Result<AminoAcid, BoxedError<'_, BasicKind>> {
@@ -29,7 +29,7 @@ pub fn parse_amino_acid(text: &str) -> Result<AminoAcid, BoxedError<'_, BasicKin
 
 #[tauri::command]
 pub fn validate_amino_acid(text: String) -> Result<String, String> {
-    parse_amino_acid(&text).map(|f| f.to_string()).map_err(|err| err.to_html())
+    parse_amino_acid(&text).map(|f| f.to_string()).map_err(|err| err.to_html(false))
 }
 
 pub fn parse_fragment_kind(text: &str) -> Result<FragmentKind, BoxedError<'static, BasicKind>> {
@@ -50,13 +50,13 @@ pub fn parse_fragment_kind(text: &str) -> Result<FragmentKind, BoxedError<'stati
 
 #[tauri::command]
 pub fn validate_fragment_kind(text: String) -> Result<String, String> {
-    parse_fragment_kind(&text).map(|f| f.to_string()).map_err(|err| err.to_html())
+    parse_fragment_kind(&text).map(|f| f.to_string()).map_err(|err| err.to_html(false))
 }
 
 #[tauri::command]
 pub fn validate_neutral_loss(text: String) -> Result<String, String> {
     text.parse::<NeutralLoss>()
-        .map(|f| display_neutral_loss(&f, false)).map_err(|err| err.to_html())
+        .map(|f| display_neutral_loss(&f, false)).map_err(|err| err.to_html(false))
 }
 
 pub fn parse_aa_neutral_loss(
@@ -95,7 +95,7 @@ pub fn display_aa_neutral_loss(aa: &[AminoAcid], loss: &[NeutralLoss]) -> String
 
 #[tauri::command]
 pub fn validate_aa_neutral_loss(text: String) -> Result<String, String> {
-    parse_aa_neutral_loss(&text).map(|s| display_aa_neutral_loss(&s.0, &s.1)).map_err(|err| err.to_html())
+    parse_aa_neutral_loss(&text).map(|s| display_aa_neutral_loss(&s.0, &s.1)).map_err(|err| err.to_html(false))
 }
 
 pub fn parse_monosaccharide_neutral_loss(text: &str) -> Result<(MonoSaccharide, bool, Vec<NeutralLoss>), BoxedError<'_, BasicKind>> {
@@ -130,7 +130,7 @@ pub fn display_monosaccharide_neutral_loss(rule: (MonoSaccharide, bool, Vec<Neut
 
 #[tauri::command]
 pub fn validate_monosaccharide_neutral_loss(text: String) -> Result<String, String> {
-    parse_monosaccharide_neutral_loss(&text).map(display_monosaccharide_neutral_loss).map_err(|err| err.to_html())
+    parse_monosaccharide_neutral_loss(&text).map(display_monosaccharide_neutral_loss).map_err(|err| err.to_html(false))
 }
 
 pub fn parse_aa_list(text: &str) -> Result<Vec<AminoAcid>, BoxedError<'_, BasicKind>> {
@@ -185,13 +185,13 @@ pub fn display_satellite_ion(aa: &[AminoAcid], distance: u8) -> String {
 
 #[tauri::command]
 pub fn validate_satellite_ion(text: String) -> Result<String, String> {
-    parse_satellite_ion(&text).map(|s| display_satellite_ion(&s.0, s.1)).map_err(|err| err.to_html())
+    parse_satellite_ion(&text).map(|s| display_satellite_ion(&s.0, s.1)).map_err(|err| err.to_html(false))
 }
 
 #[tauri::command]
 pub fn validate_placement_rule(text: String) -> Result<String, String> {
     text.parse::<PlacementRule>()
-        .map(|r| display_placement_rule(&r, false)).map_err(|err| err.to_html())
+        .map(|r| display_placement_rule(&r, false)).map_err(|err| err.to_html(false))
 }
 
 pub fn parse_stub(text: &str) -> Result<(MolecularFormula, MolecularFormula), BoxedError<'static, BasicKind>> {
@@ -219,7 +219,7 @@ pub fn parse_stub(text: &str) -> Result<(MolecularFormula, MolecularFormula), Bo
 
 #[tauri::command]
 pub fn validate_stub(text: String) -> Result<String, String> {
-    parse_stub(&text).map(|s| display_stubs(&s, true)).map_err(|err| err.to_html())
+    parse_stub(&text).map(|s| display_stubs(&s, true)).map_err(|err| err.to_html(false))
 }
 
 #[tauri::command]
@@ -231,7 +231,7 @@ pub fn validate_custom_single_specificity(
     let rules = placement_rules
         .into_iter()
         .map(|text| text.parse::<PlacementRule>())
-        .collect::<Result<Vec<_>, _>>().map_err(|err| err.to_html())?;
+        .collect::<Result<Vec<_>, _>>().map_err(|err| err.to_html(false))?;
     let rules = if rules.is_empty() {
         vec![PlacementRule::Anywhere]
     } else {
@@ -241,7 +241,7 @@ pub fn validate_custom_single_specificity(
     let neutral_losses = neutral_losses
         .into_iter()
         .map(|text| text.parse::<NeutralLoss>())
-        .collect::<Result<Vec<_>, _>>().map_err(|err| err.to_html())?;
+        .collect::<Result<Vec<_>, _>>().map_err(|err| err.to_html(false))?;
 
     let diagnostic_ions = diagnostic_ions
         .into_iter()
@@ -249,7 +249,7 @@ pub fn validate_custom_single_specificity(
             text.parse::<f64>()
                 .map(MolecularFormula::with_additional_mass)
                 .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true, false))
-                .map_err(|err| err.to_html())
+                .map_err(|err| err.to_html(false))
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(
@@ -301,7 +301,7 @@ pub fn validate_custom_linker_specificity(
         .into_iter()
         .map(|text| text.parse::<PlacementRule>())
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|err| err.to_html())?;
+        .map_err(|err| err.to_html(false))?;
     let rules1 = if rules1.is_empty() {
         vec![PlacementRule::Anywhere]
     } else {
@@ -311,7 +311,7 @@ pub fn validate_custom_linker_specificity(
         .into_iter()
         .map(|text| text.parse::<PlacementRule>())
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|err| err.to_html())?;
+        .map_err(|err| err.to_html(false))?;
     let rules2 = if rules2.is_empty() {
         vec![PlacementRule::Anywhere]
     } else {
@@ -322,20 +322,20 @@ pub fn validate_custom_linker_specificity(
         .into_iter()
         .map(|text| parse_stub(&text))
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|err| err.to_html())?;
+        .map_err(|err| err.to_html(false))?;
 
     let neutral_losses = neutral_losses
         .into_iter()
         .map(|text| text.parse::<NeutralLoss>())
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|err| err.to_html())?;
+        .map_err(|err| err.to_html(false))?;
 
     let diagnostic_ions = diagnostic_ions
         .into_iter()
         .map(|text| {
             text.parse::<f64>()
                 .map(MolecularFormula::with_additional_mass)
-                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true, false)).map_err(|err| err.to_html())
+                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true, false)).map_err(|err| err.to_html(false))
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(
@@ -407,25 +407,25 @@ pub fn validate_glycan_fragments(
         .iter()
         .map(|aa| parse_amino_acid(aa))
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|err| err.to_html())?;
+        .map_err(|err| err.to_html(false))?;
     let kind = kind
         .iter()
         .map(|v| parse_fragment_kind(v))
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|err| err.to_html())?;
+        .map_err(|err| err.to_html(false))?;
 
     if !fallback && aas.is_empty() {
         Err(BoxedError::small(
             BasicKind::Error,
             "Invalid glycan fragments",
             "At least one amino acid has to be provided for the selection",
-        ).to_html())
+        ).to_html(false))
     } else if !full && core.is_none() {
         Err(BoxedError::small(
             BasicKind::Error,
             "Invalid glycan fragments",
             "At least one fragment type has to be specified (one of full or core)",
-        ).to_html())
+        ).to_html(false))
     } else {
         Ok(format!(
             "<span data-value='[[{}], [{}], {{\"full\": {full}, \"core\": {} }}, {fallback}]'>{}, Full glycan: {full}, Core: {}",

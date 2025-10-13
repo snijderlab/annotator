@@ -292,7 +292,7 @@ pub async fn update_modification(
                 false,
             )
         })
-        .map_err(|e| e.to_html())?;
+        .map_err(|e| e.to_html(false))?;
     let id = ModificationId {
         ontology: Ontology::Custom,
         name: custom_modification.name.clone(),
@@ -379,7 +379,7 @@ pub async fn update_modification(
                         },
                     )
                     .collect::<Result<Vec<_>, BoxedError<'_, BasicKind>>>()
-                    .map_err(|e| e.to_html())?,
+                    .map_err(|e| e.to_html(false))?,
                 formula,
                 id,
                 length: custom_modification.linker_length.map(OrderedFloat::from),
@@ -420,7 +420,7 @@ pub async fn update_modification(
                         ))
                     })
                     .collect::<Result<Vec<_>, BoxedError<'_, BasicKind>>>()
-                    .map_err(|e| e.to_html())?,
+                    .map_err(|e| e.to_html(false))?,
                 formula,
                 id,
             }
@@ -451,7 +451,7 @@ pub async fn update_modification(
                     e.to_string(),
                     Context::none(),
                 )
-                .to_html()
+                .to_html(false)
             })?;
         let parent = path.parent().ok_or_else(|| {
             BoxedError::new(
@@ -460,7 +460,7 @@ pub async fn update_modification(
                 "Please report",
                 Context::show(path.to_string_lossy()).to_owned(),
             )
-            .to_html()
+            .to_html(false)
         })?;
         std::fs::create_dir_all(parent).map_err(|err| {
             BoxedError::new(
@@ -469,7 +469,7 @@ pub async fn update_modification(
                 err.to_string(),
                 Context::show(parent.to_string_lossy()).to_owned(),
             )
-            .to_html()
+            .to_html(false)
         })?;
         let file = BufWriter::new(std::fs::File::create(&path).map_err(|err| {
             BoxedError::new(
@@ -478,7 +478,7 @@ pub async fn update_modification(
                 err.to_string(),
                 Context::show(path.to_string_lossy()).to_owned(),
             )
-            .to_html()
+            .to_html(false)
         })?);
         serde_json::to_writer_pretty(file, &state.custom_modifications).map_err(|err| {
             BoxedError::new(
@@ -487,7 +487,7 @@ pub async fn update_modification(
                 err.to_string(),
                 Context::none(),
             )
-            .to_html()
+            .to_html(false)
         })?;
 
         Ok(())
@@ -498,6 +498,6 @@ pub async fn update_modification(
             "Cannot unlock the mutable state, are you doing many things in parallel?",
             Context::none(),
         )
-        .to_html())
+        .to_html(false))
     }
 }

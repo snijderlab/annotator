@@ -238,7 +238,7 @@ pub async fn update_model(
         name,
         model
             .try_into()
-            .map_err(|err: BoxedError<'static, BasicKind>| err.to_html())?,
+            .map_err(|err: BoxedError<'static, BasicKind>| err.to_html(false))?,
     );
 
     if let Ok(mut state) = app.state::<Mutex<State>>().lock() {
@@ -252,7 +252,7 @@ pub async fn update_model(
                     "Can not update built in model",
                     "A built in model cannot be edited",
                 )
-                .to_html());
+                .to_html(false));
             } else {
                 state.custom_models[index] = model;
             }
@@ -271,7 +271,7 @@ pub async fn update_model(
                     "Cannot find app data directory",
                     e.to_string(),
                 )
-                .to_html()
+                .to_html(false)
             })?;
         let parent = path.parent().ok_or_else(|| {
             BoxedError::new(
@@ -280,7 +280,7 @@ pub async fn update_model(
                 "Please report",
                 Context::show(path.to_string_lossy()).to_owned(),
             )
-            .to_html()
+            .to_html(false)
         })?;
         std::fs::create_dir_all(parent).map_err(|err| {
             BoxedError::new(
@@ -289,7 +289,7 @@ pub async fn update_model(
                 err.to_string(),
                 Context::show(parent.to_string_lossy()).to_owned(),
             )
-            .to_html()
+            .to_html(false)
         })?;
         let file = BufWriter::new(std::fs::File::create(&path).map_err(|err| {
             BoxedError::new(
@@ -298,7 +298,7 @@ pub async fn update_model(
                 err.to_string(),
                 Context::show(path.to_string_lossy()).to_owned(),
             )
-            .to_html()
+            .to_html(false)
         })?);
         serde_json::to_writer_pretty(file, &state.custom_models).map_err(|err| {
             BoxedError::small(
@@ -306,7 +306,7 @@ pub async fn update_model(
                 "Could not write custom models to configuration file",
                 err.to_string(),
             )
-            .to_html()
+            .to_html(false)
         })?;
 
         Ok(())
@@ -316,7 +316,7 @@ pub async fn update_model(
             "State locked",
             "Cannot unlock the mutable state, are you doing many things in parallel?",
         )
-        .to_html())
+        .to_html(false))
     }
 }
 

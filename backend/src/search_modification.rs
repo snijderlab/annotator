@@ -37,7 +37,7 @@ pub async fn search_modification(
             "Invalid modification",
             "The modification is empty",
         )
-        .to_html())
+        .to_html(false))
     } else {
         SimpleModificationInner::parse_pro_forma(
             text,
@@ -46,7 +46,7 @@ pub async fn search_modification(
             &mut Vec::new(),
             Some(&state.custom_modifications),
         )
-        .map_err(|err| err.to_html())
+        .map_err(|err| err.to_html(false))
         .map(|(m, _)| match m {
             ReturnModification::Defined(d) => Ok(d),
             _ => Err(BoxedError::small(
@@ -54,7 +54,7 @@ pub async fn search_modification(
                 "Invalid modification",
                 "Can not define ambiguous modifications for the modifications parameter",
             )
-            .to_html()),
+            .to_html(false)),
         })
     }??;
     let tolerance = Tolerance::new_absolute(Mass::new::<dalton>(tolerance));

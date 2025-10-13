@@ -95,7 +95,7 @@ pub async fn load_usi<'a>(
                 .to_owned(),
             ),
         })
-        .map_err(|err| err.to_html())?;
+        .map_err(|err| err.to_html(false))?;
 
     // Remove the user added interpretation and add a fake entry.
     // The original peptide will be added back later after downloading.
@@ -139,7 +139,7 @@ pub async fn load_usi<'a>(
                 Context::none(),
             ),
         })
-        .map_err(|err| err.to_html())?;
+        .map_err(|err| err.to_html(false))?;
 
     let mut spectrum = spectra
         .into_iter()
@@ -206,7 +206,7 @@ pub async fn load_usi<'a>(
             "Could not lock mutext",
             "Are you doing too many things at once?",
         )
-        .to_html())
+        .to_html(false))
     }
 }
 
@@ -759,7 +759,7 @@ pub fn save_spectrum<'a>(
             "Mutex locked, are you doing too much at the same time?",
             Context::show(e.to_string()),
         )
-        .to_html()
+        .to_html(false)
     })?;
     let file = std::fs::OpenOptions::new()
         .create(true)
@@ -773,7 +773,7 @@ pub fn save_spectrum<'a>(
                 "File could not be opened for writing",
                 Context::show(e.to_string()),
             )
-            .to_html()
+            .to_html(false)
         })?;
     let ext = path
         .extension()
@@ -783,7 +783,7 @@ pub fn save_spectrum<'a>(
                 "No spectrum present",
                 "No spectrum was present so no spectrum can be saved. Annotate a spectrum or load one from a library to save a spectrum.",
             )
-            .to_html())?;
+            .to_html(false))?;
     if !sequence.is_empty() {
         spectrum.description.params.push(Param::new_key_value(
             "sequence",
@@ -831,7 +831,7 @@ pub fn save_spectrum<'a>(
                     "Could not write MGF",
                     Context::show(e.to_string()),
                 )
-                .to_html()
+                .to_html(false)
             })
         }
         Some("mzml") => {
@@ -847,7 +847,7 @@ pub fn save_spectrum<'a>(
                     "Could not write mzML",
                     Context::show(e.to_string()),
                 )
-                .to_html()
+                .to_html(false)
             })
         }
         Some("txt") => {
@@ -860,7 +860,7 @@ pub fn save_spectrum<'a>(
                     "Could not write mzSpecLib",
                     Context::show(e.to_string()),
                 )
-                .to_html()
+                .to_html(false)
             })?;
             writer.write_spectrum(&spectrum).map_err(|e| {
                 BoxedError::new(
@@ -869,7 +869,7 @@ pub fn save_spectrum<'a>(
                     "Could not write mzSpecLib",
                     Context::show(e.to_string()),
                 )
-                .to_html()
+                .to_html(false)
             })
         }
         _ => Err(BoxedError::new(
@@ -878,6 +878,6 @@ pub fn save_spectrum<'a>(
             "Invalid path, use mgf, mzml, or mzspeclib.txt as extension",
             Context::show(path.to_string_lossy()).to_owned(),
         )
-        .to_html()),
+        .to_html(false)),
     }
 }

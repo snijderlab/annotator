@@ -22,7 +22,7 @@ pub async fn load_identified_peptides_file<'a>(
     let state = state.lock().unwrap();
     let mut peptide_errors = Vec::new();
     let peptides = open_identified_peptidoforms_file(path, state.database(), false)
-        .map_err(|e| e.to_html())?;
+        .map_err(|e| e.to_html(false))?;
     state
         .identified_peptide_files_mut()
         .push(IdentifiedPeptidoformFile::new(
@@ -48,7 +48,7 @@ pub async fn load_identified_peptides_file<'a>(
                 Context::default().source(path).to_owned(),
             )
             .add_underlying_errors(peptide_errors)
-            .to_html(),
+            .to_html(true),
         ))
     }
 }
@@ -64,7 +64,7 @@ pub async fn close_identified_peptides_file(
             "Could not lock mutex",
             "You are likely doing too many things in parallel",
             Context::none(),
-        ).to_html()
+        ).to_html(false)
     }).and_then(|state| {
             let pos = state
             .identified_peptide_files()
@@ -75,7 +75,7 @@ pub async fn close_identified_peptides_file(
                 state.identified_peptide_files_mut().remove(pos);
                 Ok(())
             } else {
-                Err(BoxedError::new(BasicKind::Error,"File does not exist", "This selected file could not be closed as it does not exist, did you already close it?", Context::none()).to_html())
+                Err(BoxedError::new(BasicKind::Error,"File does not exist", "This selected file could not be closed as it does not exist, did you already close it?", Context::none()).to_html(false))
             }
         }
     )
@@ -116,11 +116,11 @@ pub async fn search_peptide<'a>(
             "The state is locked, are you trying to do many things at the same time?",
             Context::none(),
         )
-        .to_html()
+        .to_html(false)
     })?;
     let query = std::sync::Arc::new(
         Peptidoform::<Linked>::pro_forma(text, Some(&state.custom_modifications))
-            .map_err(|e| e.to_html())?
+            .map_err(|e| e.to_html(false))?
             .into_simple_linear()
             .ok_or_else(|| {
                 BoxedError::new(
@@ -129,7 +129,7 @@ pub async fn search_peptide<'a>(
                     "A search peptide should be simple",
                     Context::none(),
                 )
-                .to_html()
+                .to_html(false)
             })?,
     );
     let data = state

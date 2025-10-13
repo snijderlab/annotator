@@ -74,12 +74,12 @@ async fn details_formula(text: &str) -> Result<String, String> {
         Err(BoxedError::small(
             BasicKind::Error,
             "Invalid molecular formula",
-            "The test is empty",
+            "The input is empty",
         )
-        .to_html())
+        .to_html(false))
     } else {
         MolecularFormula::from_pro_forma(text, .., false, true, true, false)
-            .map_err(|err| err.to_html())
+            .map_err(|err| err.to_html(false))
     }?;
     let isotopes = formula.isotopic_distribution(0.001);
     let (max, max_occurrence) = isotopes
@@ -250,26 +250,27 @@ async fn annotate_spectrum<'a>(
 ) -> Result<AnnotationResult, String> {
     let mut state = state.lock().unwrap();
     let spectrum = crate::spectra::create_selected_spectrum(&mut state, filter)
-        .map_err(|err| err.to_html())?;
+        .map_err(|err| err.to_html(false))?;
     let model = crate::model::get_models(&state)
         .1
         .get(model)
         .cloned()
         .ok_or_else(|| {
-            BoxedError::small(BasicKind::Error, "Invalid model", "Model does not exist").to_html()
+            BoxedError::small(BasicKind::Error, "Invalid model", "Model does not exist")
+                .to_html(false)
         })?
         .2;
-    let parameters = model::parameters(tolerance, mz_range).map_err(|err| err.to_html())?;
+    let parameters = model::parameters(tolerance, mz_range).map_err(|err| err.to_html(false))?;
     let mass_mode = match mass_mode {
         "monoisotopic" => MassMode::Monoisotopic,
         "average_weight" => MassMode::Average,
         "most_abundant" => MassMode::MostAbundant,
         _ => {
-            return Err(BoxedError::small(BasicKind::Error, "Invalid mass mode", "").to_html());
+            return Err(BoxedError::small(BasicKind::Error, "Invalid mass mode", "").to_html(false));
         }
     };
     let peptide = CompoundPeptidoformIon::pro_forma(peptide, Some(&state.custom_modifications))
-        .map_err(|err| err.to_html())?;
+        .map_err(|err| err.to_html(false))?;
 
     let use_charge = Charge::new::<e>(
         charge
@@ -346,7 +347,7 @@ fn load_custom_mods_and_models(app: &mut tauri::App) -> Result<(), Box<dyn std::
                 Ok(modifications) => state.custom_modifications = modifications,
                 Err(error) => {
                     eprintln!("Error while parsing custom modifications:\n{error}");
-                    let mut combined_error = (error.to_html(), Vec::new());
+                    let mut combined_error = (error.to_html(false), Vec::new());
                     if let Err(err) = std::fs::rename(
                         &custom_mods,
                         custom_mods
@@ -373,7 +374,7 @@ fn load_custom_mods_and_models(app: &mut tauri::App) -> Result<(), Box<dyn std::
                 Ok(models) => state.custom_models = models,
                 Err(error) => {
                     eprintln!("Error while parsing custom models:\n{error}");
-                    let mut combined_error = (error.to_html(), Vec::new());
+                    let mut combined_error = (error.to_html(false), Vec::new());
                     if let Err(err) = std::fs::rename(
                         &custom_models,
                         custom_models
