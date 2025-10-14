@@ -4,6 +4,7 @@ use itertools::Itertools;
 use mzannotate::{
     annotation::{Fdr, Recovered, Score, model::Location},
     fragment::*,
+    mzspeclib::AnalyteTarget,
     prelude::*,
     spectrum::{AnnotatedPeak, AnnotatedSpectrum},
 };
@@ -449,7 +450,10 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
     let mut output: PositionCoverage = spectrum
         .analytes
         .iter()
-        .filter_map(|a| a.peptidoform_ion.as_ref())
+        .filter_map(|a| match &a.target {
+            AnalyteTarget::PeptidoformIon(pep) => Some(pep),
+            _ => None,
+        })
         .map(|p| {
             p.peptidoforms()
                 .iter()

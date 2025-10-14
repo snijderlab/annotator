@@ -5,9 +5,11 @@ use itertools::Itertools;
 use mzannotate::fragment::*;
 use mzcore::{
     prelude::*,
-    sequence::{CrossLinkName, GnoComposition, Linked, Modification, SimpleModificationInner},
+    sequence::{
+        CrossLinkName, FlankingSequence, GnoComposition, Linked, Modification,
+        SimpleModificationInner,
+    },
 };
-use mzident::FlankingSequence;
 use ordered_float::OrderedFloat;
 
 use super::render_full_glycan;

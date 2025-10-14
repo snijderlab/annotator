@@ -7,7 +7,7 @@ use std::sync::Mutex;
 
 use context_error::{BasicKind, BoxedError, CreateError, FullErrorContent};
 use itertools::Itertools;
-use mzannotate::prelude::*;
+use mzannotate::{mzspeclib::AnalyteTarget, prelude::*};
 use mzcore::{
     prelude::*,
     system::{e, isize::Charge},
@@ -300,13 +300,16 @@ fn render_annotated_spectrum(
     let multiple_peptidoforms = annotated
         .analytes
         .iter()
-        .filter(|a| a.peptidoform_ion.is_some())
+        .filter(|a| matches!(&a.target, AnalyteTarget::PeptidoformIon(_)))
         .count()
         == 1;
     let multiple_peptides = annotated
         .analytes
         .iter()
-        .filter_map(|a| a.peptidoform_ion.as_ref())
+        .filter_map(|a| match &a.target {
+            AnalyteTarget::PeptidoformIon(pep) => Some(pep),
+            _ => None,
+        })
         .flat_map(|p| p.peptidoforms())
         .count()
         == 1;
