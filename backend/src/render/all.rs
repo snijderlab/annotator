@@ -466,21 +466,13 @@ fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
         if !peak.annotations.is_empty() {
             max_intensity = max_intensity.max(peak.intensity);
             peak.annotations.iter().for_each(|fragment| {
-                fragment.ion.position().map(|i| {
-                    if let (Some(pii), Some(pi)) =
+                if let Some(pos) = fragment.ion.position()
+                    && let SequencePosition::Index(si) = pos.sequence_index
+                    && let (Some(pii), Some(pi)) =
                         (fragment.peptidoform_ion_index, fragment.peptidoform_index)
-                    {
-                        *output[pii][pi][match i.sequence_index {
-                            SequencePosition::Index(i) => i,
-                            _ => unreachable!(), // TODO: handle better
-                        }]
-                        .entry(fragment.ion.clone())
-                        .or_default() += peak.intensity;
-                        true
-                    } else {
-                        false
-                    }
-                });
+                {
+                    *output[pii][pi][si].entry(fragment.ion.clone()).or_default() += peak.intensity;
+                }
             });
         }
     }
