@@ -1351,9 +1351,13 @@ input:not(:checked)+.collapsible {
         }
     }
 
-    & .flanking {
-        color: var(--color-halfway-fg);
+    & .charge-carriers {
         max-width: none;
+    }
+
+    & .flanking {
+        max-width: none;
+        color: var(--color-halfway-fg);
 
         &:first-child {
             margin-inline-end: 0.5rem;

@@ -853,7 +853,7 @@ pub fn save_spectrum<'a>(
         Some("txt") => {
             let mut writer =
                 mzannotate::mzspeclib::MzSpecLibTextWriter::new(std::io::BufWriter::new(file));
-            writer.write_header().map_err(|e| {
+            let mut writer = writer.write_header().map_err(|e| {
                 BoxedError::new(
                     BasicKind::Error,
                     "Could not write file",
@@ -862,15 +862,16 @@ pub fn save_spectrum<'a>(
                 )
                 .to_html(false)
             })?;
-            writer.write_spectrum(&spectrum).map_err(|e| {
-                BoxedError::new(
-                    BasicKind::Error,
-                    "Could not write file",
-                    "Could not write mzSpecLib",
-                    Context::show(e.to_string()),
-                )
-                .to_html(false)
-            })
+            todo!("impl writing");
+            // writer.write_spectrum(&spectrum).map_err(|e| {
+            //     BoxedError::new(
+            //         BasicKind::Error,
+            //         "Could not write file",
+            //         "Could not write mzSpecLib",
+            //         Context::show(e.to_string()),
+            //     )
+            //     .to_html(false)
+            // })
         }
         _ => Err(BoxedError::new(
             BasicKind::Error,

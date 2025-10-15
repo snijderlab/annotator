@@ -83,7 +83,7 @@ impl<C, A> RenderToHtml for IdentifiedPeptidoform<C, A> {
                     .clone(),
                 HtmlTag::p.new()
                     .content(format!(
-                        "Experimental&nbsp;mass:&nbsp;{}, Experimental&nbsp;m/z:&nbsp;{}, Mass&nbsp;error&nbsp;[ppm]:&nbsp;{}, Mass&nbsp;error&nbsp;[Abs]:&nbsp;{}",
+                        "Experimental&nbsp;mass:&nbsp;{}, Experimental&nbsp;m/z:&nbsp;{}, Mass&nbsp;error:&nbsp;{}&nbsp;ppm&nbsp;/&nbsp;{}",
                         self.experimental_mass()
                             .map(|m| display_mass(m, None))
                             .to_optional_string(),
