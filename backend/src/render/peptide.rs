@@ -222,6 +222,7 @@ fn render_linear_peptidoform(
             (!possible_modifications.is_empty()).then_some("possible-modification").into_iter()
                 .chain((!cross_link.is_empty()).then_some("cross-link").into_iter())
                 .chain((!modifications.is_empty()).then_some("modification").into_iter())
+                .chain((!glycans.is_empty()).then_some("glycan").into_iter())
                 .chain(cross_link.iter().map(|c| c.0.as_str())).join(" "),
                 cross_link.iter().map(|c| c.1.as_str()).join(" "),
                 cross_link.iter().map(|c| c.2.as_str()).join(" "),
@@ -364,6 +365,9 @@ fn render_linear_peptidoform(
         if modification {
             write!(classes, " modification").unwrap();
         }
+        if !glycans.is_empty() {
+            write!(classes, " glycan").unwrap();
+        }
         if !xl_indices.is_empty() {
             write!(classes, " cross-link").unwrap();
         }
@@ -494,6 +498,7 @@ fn render_linear_peptidoform(
             (!possible_modifications.is_empty()).then_some("possible-modification").into_iter()
                 .chain((!cross_link.is_empty()).then_some("cross-link").into_iter())
                 .chain((!modifications.is_empty()).then_some("modification").into_iter())
+                .chain((!glycans.is_empty()).then_some("glycan").into_iter())
                 .chain(cross_link.iter().map(|c| c.0.as_str())).join(" "),
                 cross_link.iter().map(|c| c.1.as_str()).join(" "),
                 cross_link.iter().map(|c| c.2.as_str()).join(" "),

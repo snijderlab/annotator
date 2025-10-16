@@ -467,6 +467,7 @@ fn main() {
             <legend>Peptidoform settings</legend>
             <label for='spectrum-compact' title='Display the peptidoform ion support in a more compact way'><input id='spectrum-compact' class='compact' type='checkbox' switch/>Compact peptidoform</label>
             <label for='peptide-intensities' title='Display the intensities in the peptidoform support'><input id='peptide-intensities' class='compact' type='checkbox' switch/>Display intensities</label>
+            <label for='hide-glycans' title='Hide the glycans by showing them as ordinary modifications instead of fully rendered'><input id='hide-glycans' class='compact' type='checkbox' switch/>Hide glycans</label>
     
             <div class='row'>
               <span class='title'>Highlight</span>

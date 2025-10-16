@@ -1487,6 +1487,36 @@ input:not(:checked)+.collapsible {
     --padding: 0px;
 }
 
+.spectrum.hide-glycans {
+    & .peptide>span.glycan {
+        color: var(--color-secondary);
+
+        &.term {
+            width: var(--spacing);
+        }
+
+        &::before {
+            content: "";
+            display: block;
+            position: absolute;
+            bottom: calc(var(--height) + var(--fragments-padding) + 2 * var(--spacing));
+            left: calc(50% - 0.5 * var(--spacing));
+            width: var(--spacing);
+            height: var(--spacing);
+            border-radius: 50%;
+            background-color: var(--color-secondary);
+        }
+
+        &.term::before {
+            top: calc(50% - var(--stroke-peptide));
+        }
+
+        & .glycans {
+            display: none;
+        }
+    }
+
+}
 
 #spectrum-wrapper.legend-ion {
 

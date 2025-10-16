@@ -534,6 +534,8 @@ function PeptideSettings(event) {
         spectrum_wrapper.classList.toggle("compact");
     } else if (t.name == "highlight") {
         selected_colour = t.value;
+    } else if (t.id == "hide-glycans") {
+        spectrum_wrapper.classList.toggle("hide-glycans");
     } else if (t.id == "peptide-intensities") {
         spectrum_wrapper.classList.toggle("peptide-intensity-ion");
     } else if (t.id == "clear-colour") {
