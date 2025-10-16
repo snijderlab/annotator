@@ -1253,7 +1253,7 @@ window.addEventListener("DOMContentLoaded", () => {
   updateCustomModifications();
 
   // Custom models
-  // All built in models should be listed and the only way to create a new model should be to duplicate a built in one.
+  // All built-in models should be listed and the only way to create a new model should be to duplicate a built-in one.
   document.getElementById("custom-model-save").addEventListener("click", e => {
     e.target.parentElement.parentElement.querySelectorAll(".hidden").forEach(e => e.remove());
     let model = get_model();
@@ -1279,7 +1279,7 @@ window.addEventListener("DOMContentLoaded", () => {
   updateCustomModels();
 
   // Refresh interface for hot reload
-  invoke("refresh").then((result) => {
+  invoke("refresh", { theme: Theme }).then((result) => {
     if (result[0] > 0) {
       update_selected_spectra();
     }
@@ -1290,6 +1290,9 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     update_identified_peptide_file_select();
     update_open_raw_files();
+    if (result[2]) {
+      set_up_spectrum(result[2]);
+    }
   })
 });
 

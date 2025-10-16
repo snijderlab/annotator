@@ -58,14 +58,22 @@ const CUSTOM_MODELS_FILE: &str = "custom_models.json";
 type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
 
 #[tauri::command]
-fn refresh(state: ModifiableState) -> (usize, usize) {
+fn refresh(state: ModifiableState, theme: Theme) -> (usize, usize, Option<AnnotationResult>) {
     let state = state.lock().unwrap();
-    let res = (
+    (
         0, // state.spectra.as_ref().map(|s| s.len()).unwrap_or_default(),
         state.identified_peptide_files().len(),
-    );
-    drop(state);
-    res
+        state.annotated_spectrum.as_ref().map(|annotated| {
+            render_annotated_spectrum(
+                annotated,
+                &[],
+                FragmentationModel::all(),
+                &MatchingParameters::default(),
+                MassMode::Monoisotopic,
+                theme,
+            )
+        }),
+    )
 }
 
 #[tauri::command]
