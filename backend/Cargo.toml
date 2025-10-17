@@ -26,7 +26,6 @@ mzident = {workspace = true}
 ordered-float = {workspace = true}
 rayon = {workspace = true}
 mzdata = {workspace = true}
-mzspeclib-rs = {workspace = true}
 mzpeaks = {workspace = true}
 mzsignal = {workspace = true}
 tauri-plugin-dialog = {workspace = true}
