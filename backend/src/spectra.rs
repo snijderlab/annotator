@@ -219,7 +219,7 @@ pub async fn load_raw<'a>(
         Ok(mut file) => {
             let file = if file.len() == 1 {
                 let spec = file.next().unwrap();
-                RawFile::new_single(dbg!(spec), path.to_string())
+                RawFile::new_single(spec, path.to_string())
             } else {
                 RawFile::new_file(path, file)
             };
@@ -609,10 +609,10 @@ pub fn spectrum_description(
     models: &[(String, FragmentationModel)],
 ) -> String {
     format!(
-        "index: {} id: {}<br>time: {:.3} min signal mode: {:?} ms level: {} ion mobility: {}<br>mz range: {:.1} — {:.1} peak count: {} tic: {:.3e} base peak intensity: {:.3e} resultion: {}<br>{}<br>{}{}",
+        "index: {} id: {}<br>time: {} min signal mode: {:?} ms level: {} ion mobility: {}<br>mz range: {:.1} — {:.1} peak count: {} tic: {:.3e} base peak intensity: {:.3e} resultion: {}<br>{}<br>{}{}",
         description.index,
         description.id,
-        description.acquisition.start_time() / 60.0,
+        description.acquisition.scans.first().map(|s| format!("{:.3}", s.start_time / 60.0)).to_optional_string(),
         description.signal_continuity,
         description.ms_level,
         description
@@ -705,10 +705,9 @@ pub fn create_selected_spectrum(
                     )
                 })?;
             if let Some(p) = spectrum.peaks.as_mut() {
-                p.peaks.retain(|p| p.intensity > 0.1)
+                p.peaks.retain(|p| p.intensity > 1.0)
             } // Stupid filter to remove very low peaks
             spectrum.description.signal_continuity = SignalContinuity::Centroid; // Not done by the above function
-            dbg!(&spectrum);
         } else if spectrum.arrays.is_some() && spectrum.peaks.is_none() {
             // USI spectra are mostly loaded as the binary array maps instead of peaks regardless of the signal continuity level
             spectrum.peaks = spectrum.arrays.as_ref().map(|a| a.into());

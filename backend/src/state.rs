@@ -245,13 +245,19 @@ impl RawFile {
             } => rawfile
                 .start_from_time(rt.start().value)
                 .map(|iter| {
-                    iter.take_while(|s| s.start_time() <= rt.end().value)
-                        .for_each(|s| {
-                            if s.ms_level() == 2 && !selected_spectra.contains(&s.index()) {
-                                selected_spectra.push(s.index());
-                                selected_spectra.sort();
-                            }
-                        })
+                    iter.take_while(|s| {
+                        s.description
+                            .acquisition
+                            .scans
+                            .first()
+                            .is_some_and(|s| s.start_time <= rt.end().value)
+                    })
+                    .for_each(|s| {
+                        if s.ms_level() == 2 && !selected_spectra.contains(&s.index()) {
+                            selected_spectra.push(s.index());
+                            selected_spectra.sort();
+                        }
+                    })
                 })
                 .map_err(|_| "Retention time outside of range"),
             Self::Single { .. } => {

@@ -35,10 +35,14 @@ tauri-plugin-opener = "2.4.0"
 # hdf5 rust crate needs a new version
 hdf5 = { git = "https://github.com/aldanor/hdf5-rust.git" }
 hdf5-sys = { git = "https://github.com/aldanor/hdf5-rust.git" }
-mzcore = { git="https://github.com/rusteomics/mzcore" }
-mzannotate = { git="https://github.com/rusteomics/mzcore" }
-mzident = { git="https://github.com/rusteomics/mzcore"}
-mzalign = { git="https://github.com/rusteomics/mzcore" }
+# mzcore = { git="https://github.com/rusteomics/mzcore" }
+# mzannotate = { git="https://github.com/rusteomics/mzcore" }
+# mzident = { git="https://github.com/rusteomics/mzcore"}
+# mzalign = { git="https://github.com/rusteomics/mzcore" }
+mzcore =  { path = "../mzcore/mzcore" }
+mzannotate = { path = "../mzcore/mzannotate" }
+mzident  = { path = "../mzcore/mzident" }
+mzalign = { path = "../mzcore/mzalign" }
 context_error = { git="https://github.com/douweschulte/context_error" }
 
 [profile.release]
