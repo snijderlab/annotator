@@ -42,9 +42,6 @@ impl State {
     pub fn identified_peptide_files_mut(&self) -> RefMut<'_, Vec<IdentifiedPeptidoformFile>> {
         self.identified_peptide_files.borrow_mut()
     }
-    pub fn spectra_and_models(&mut self) -> (&mut [RawFile], &[(String, FragmentationModel)]) {
-        (&mut self.spectra, &self.custom_models)
-    }
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]

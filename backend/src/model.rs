@@ -3,7 +3,8 @@ use std::{io::BufWriter, sync::Mutex};
 use context_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
 use mzannotate::{
     annotation::model::{
-        GlycanModel, Location, PrimaryIonSeries, SatelliteIonSeries, SatelliteLocation,
+        BuiltInFragmentationModel, GlycanModel, Location, PrimaryIonSeries, SatelliteIonSeries,
+        SatelliteLocation,
     },
     prelude::*,
 };
@@ -14,7 +15,6 @@ use mzcore::{
     quantities::Tolerance,
     system::{MassOverCharge, thomson},
 };
-use mzdata::meta::DissociationMethodTerm;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
@@ -28,118 +28,94 @@ use crate::{
     },
 };
 
-/// Get the corresponding model (index + mzdata name) if the model is built in or could be matched to a custom model or shorthand name if not
-pub fn get_mzdata_model(
-    methods: &[DissociationMethodTerm],
-    custom_models: &[(String, FragmentationModel)],
-) -> Result<(usize, String), String> {
-    let lookup = |method: &DissociationMethodTerm| match method {
-        DissociationMethodTerm::BeamTypeCollisionInducedDissociation => Ok((HCD, "BeamCID")),
-        DissociationMethodTerm::BlackbodyInfraredRadiativeDissociation => {
-            Err("BlackbodyInfraredRadiativeDissociation")
-        }
-        DissociationMethodTerm::CollisionInducedDissociation => Ok((HCD, "CID")),
-        DissociationMethodTerm::DissociationMethod => Err("Dissociation"),
-        DissociationMethodTerm::ElectronActivatedDissociation => Ok((EAD, "EAD")),
-        DissociationMethodTerm::ElectronCaptureDissociation => Ok((ETD, "ECD")),
-        DissociationMethodTerm::ElectronTransferDissociation => Ok((ETD, "ETD")),
-        DissociationMethodTerm::HigherEnergyBeamTypeCollisionInducedDissociation => {
-            Ok((HCD, "BeamHCD"))
-        }
-        DissociationMethodTerm::InfraredMultiphotonDissociation => {
-            Err("InfraredMultiphotonDissociation")
-        }
-        DissociationMethodTerm::InSourceCollisionInducedDissociation => Ok((HCD, "isCID")),
-        DissociationMethodTerm::LIFT => Err("LIFT"),
-        DissociationMethodTerm::LowEnergyCollisionInducedDissociation => Ok((HCD, "lowCID")),
-        DissociationMethodTerm::NegativeElectronTransferDissociation => Ok((ETD, "nETD")),
-        DissociationMethodTerm::Photodissociation => Err("PD"),
-        DissociationMethodTerm::PlasmaDesorption => Err("PlasmaDesorption"),
-        DissociationMethodTerm::PostSourceDecay => Err("PostSourceDecay"),
-        DissociationMethodTerm::PulsedQDissociation => Err("PulsedDissociation"),
-        DissociationMethodTerm::SupplementalBeamTypeCollisionInducedDissociation => {
-            Ok((HCD, "sBeamCID"))
-        }
-        DissociationMethodTerm::SupplementalCollisionInducedDissociation => Ok((HCD, "sCID")),
-        DissociationMethodTerm::SurfaceInducedDissociation => Err("SurfaceInducedDissocation"),
-        DissociationMethodTerm::SustainedOffResonanceIrradiation => {
-            Err("SustainedOffResonanceIrradiation")
-        }
-        DissociationMethodTerm::TrapTypeCollisionInducedDissociation => Ok((HCD, "trapCID")),
-        DissociationMethodTerm::UltravioletPhotodissociation => Ok((UVPD, "UVPD")),
-    };
-
-    #[allow(clippy::manual_try_fold)]
-    methods
-        .iter()
-        .fold(Ok((NONE, "-".to_string())), |acc, method| {
-            match (acc, lookup(method)) {
-                (Ok((NONE, _)), Ok((a, b))) => Ok((a, b.to_string())),
-                (Ok((model1, first)), Ok((model2, second))) if model1 == model2 => {
-                    Ok((model1, format!("{first}+{second}")))
-                }
-                (Ok((ETD, etd)), Ok((HCD, hcd))) => Ok((ETHCD, format!("{etd}+{hcd}"))),
-                (Ok((HCD, hcd)), Ok((ETD, etd))) => Ok((ETHCD, format!("{etd}+{hcd}"))),
-                (Ok((ETHCD, first)), Ok((HCD, second))) => Ok((ETHCD, format!("{first}+{second}"))),
-                (Ok((ETHCD, first)), Ok((ETD, second))) => Ok((ETHCD, format!("{first}+{second}"))),
-                (Ok((EAD, ead)), Ok((HCD, hcd))) => Ok((EACID, format!("{ead}+{hcd}"))),
-                (Ok((HCD, hcd)), Ok((EAD, ead))) => Ok((EACID, format!("{ead}+{hcd}"))),
-                (Ok((EACID, first)), Ok((HCD, second))) => Ok((EACID, format!("{first}+{second}"))),
-                (Ok((EACID, first)), Ok((EAD, second))) => Ok((EACID, format!("{first}+{second}"))),
-                (Ok((_, first)), Ok((_, second))) => Ok((ALL, format!("{first}+{second}"))),
-                (Err(first), Ok((_, second))) => Err(format!("{first}+{second}")),
-                (Ok((_, first)), Err(second)) => Err(format!("{first}+{second}")),
-                (Err(first), Err(second)) => Err(format!("{first}+{second}")),
-            }
-        })
-        .or_else(|n| {
-            get_model_index(custom_models, &n)
-                .map(|i| (i, n.clone()))
-                .ok_or(n)
-        })
-}
-
-pub fn get_models(state: &State) -> (usize, Vec<(bool, &str, &FragmentationModel)>) {
+pub fn get_models(
+    state: &State,
+) -> (
+    usize,
+    Vec<(Option<BuiltInFragmentationModel>, &str, &FragmentationModel)>,
+) {
     let mut output = vec![
-        (true, "All", FragmentationModel::all()),
-        (true, "EtHCD/EtCAD", FragmentationModel::ethcd()),
-        (true, "EAciD", FragmentationModel::eacid()),
-        (true, "EAD", FragmentationModel::ead()),
-        (true, "CID/HCD", FragmentationModel::cid_hcd()),
-        (true, "ETD", FragmentationModel::etd()),
-        (true, "Top-down ETD", FragmentationModel::td_etd()),
-        (true, "UVPD", FragmentationModel::uvpd()),
-        (true, "None", FragmentationModel::none()),
+        (
+            Some(BuiltInFragmentationModel::All),
+            "All",
+            FragmentationModel::all(),
+        ),
+        (
+            Some(BuiltInFragmentationModel::CID),
+            "CID",
+            FragmentationModel::cid(),
+        ),
+        (
+            Some(BuiltInFragmentationModel::ETD),
+            "ETD",
+            FragmentationModel::etd(),
+        ),
+        (
+            Some(BuiltInFragmentationModel::ETD_TD),
+            "Top-down ETD",
+            FragmentationModel::td_etd(),
+        ),
+        (
+            Some(BuiltInFragmentationModel::ETciD),
+            "ETciD",
+            FragmentationModel::etcid(),
+        ),
+        (
+            Some(BuiltInFragmentationModel::EAD),
+            "EAD",
+            FragmentationModel::ead(),
+        ),
+        (
+            Some(BuiltInFragmentationModel::EAciD),
+            "EAciD",
+            FragmentationModel::eacid(),
+        ),
+        (
+            Some(BuiltInFragmentationModel::UVPD),
+            "UVPD",
+            FragmentationModel::uvpd(),
+        ),
+        (
+            Some(BuiltInFragmentationModel::None),
+            "None",
+            FragmentationModel::none(),
+        ),
     ];
     let built_in_length = output.len();
     output.extend(
         state
             .custom_models
             .iter()
-            .map(|(n, m)| (false, n.as_str(), m)),
+            .map(|(n, m)| (None, n.as_str(), m)),
     );
     (built_in_length, output)
 }
 
 const BUILT_IN_MODELS: &[&[&str]] = &[
     &["all"],
-    &["ethcd", "etcid", "etcad"],
-    &["eacid"],
-    &["ead"],
     &["cid", "hcd"],
     &["etd"],
     &["td_etd"],
+    &["ethcd", "etcid", "etcad"],
+    &["ead"],
+    &["eacid"],
     &["uvpd"],
     &["none"],
 ];
-const ALL: usize = 0;
-const ETHCD: usize = 1;
-const EACID: usize = 2;
-const EAD: usize = 3;
-const HCD: usize = 4;
-const ETD: usize = 5;
-const UVPD: usize = 7;
-pub const NONE: usize = 8;
+
+pub fn get_built_in_index(built_in: BuiltInFragmentationModel) -> usize {
+    match built_in {
+        BuiltInFragmentationModel::All => 0,
+        BuiltInFragmentationModel::CID => 1,
+        BuiltInFragmentationModel::ETD => 2,
+        BuiltInFragmentationModel::ETD_TD => 3,
+        BuiltInFragmentationModel::ETciD => 4,
+        BuiltInFragmentationModel::EAD => 5,
+        BuiltInFragmentationModel::EAciD => 6,
+        BuiltInFragmentationModel::UVPD => 7,
+        BuiltInFragmentationModel::None => 8,
+    }
+}
 
 pub fn get_model_index(
     custom_models: &[(String, FragmentationModel)],
@@ -161,7 +137,13 @@ pub fn get_model_index(
 #[tauri::command]
 pub fn get_custom_models(
     state: ModifiableState,
-) -> Result<(Vec<(bool, usize, String)>, Option<(String, Vec<String>)>), &'static str> {
+) -> Result<
+    (
+        Vec<(Option<BuiltInFragmentationModel>, usize, String)>,
+        Option<(String, Vec<String>)>,
+    ),
+    &'static str,
+> {
     let state = state.lock().map_err(|_| "Could not lock mutex")?;
     Ok((
         get_models(&state)
@@ -178,7 +160,15 @@ pub fn get_custom_models(
 pub fn duplicate_custom_model(
     id: usize,
     state: ModifiableState,
-) -> Result<(usize, bool, String, ModelParameters), &'static str> {
+) -> Result<
+    (
+        usize,
+        Option<BuiltInFragmentationModel>,
+        String,
+        ModelParameters,
+    ),
+    &'static str,
+> {
     let mut locked_state = state.lock().map_err(|_| "Could not lock mutex")?;
     let models = get_models(&locked_state).1;
     if let Some((built_in, name, model)) = models.get(id).cloned() {
@@ -202,7 +192,7 @@ pub fn delete_custom_model(id: usize, state: ModifiableState) -> Result<(), &'st
     if id < models.len() {
         let (built_in, _, _) = models[id];
         drop(models);
-        if built_in {
+        if built_in.is_some() {
             Err("Can not delete built in model")
         } else {
             state.custom_models.remove(id - offset);
@@ -246,7 +236,7 @@ pub async fn update_model(
         let index = id.saturating_sub(built_in_models_length);
         if index < state.custom_models.len() {
             let (built_in, _, _) = models[id];
-            if built_in {
+            if built_in.is_some() {
                 return Err(BoxedError::small(
                     BasicKind::Error,
                     "Can not update built in model",

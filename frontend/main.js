@@ -131,7 +131,7 @@ async function save_spectrum_file(e) {
       document.querySelector("#save-spectrum").classList.add("loading")
       var noise_threshold = Number(document.querySelector("#noise-filter").value);
       var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);
-      invoke("save_spectrum", { filter: noise_threshold, path: result, sequence: document.querySelector("#peptide").innerText, model: document.querySelector("#spectrum-model").value, charge: charge }).then(() => {
+      invoke("save_spectrum", { filter: noise_threshold, path: result, sequence: document.querySelector("#peptide").innerText, model: Number(document.querySelector("#spectrum-model").value), charge: charge }).then(() => {
         clearError("open-files-error");
         document.querySelector("#save-spectrum").classList.remove("loading");
       }).catch((error) => {

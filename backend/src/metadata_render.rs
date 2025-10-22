@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use mzannotate::annotation::model::BuiltInFragmentationModel;
 use mzdata::prelude::SpectrumLike;
 use mzident::{
     CVTerm, IdentifiedPeptidoform, IdentifiedPeptidoformData, MSFraggerOpenModification, MetaData,
@@ -75,8 +76,10 @@ impl<C, A> RenderToHtml for IdentifiedPeptidoform<C, A> {
                                 f.monoisotopic_mass().value / c.value as f64
                             ))
                             .to_optional_string(),
-                        self.mode()
-                            .map_or("-".to_string(), |c| c.to_string()),
+                        self.fragmentation_model().map_or("-".to_string(), |f| match (f, self.mode()) {
+                            (BuiltInFragmentationModel::All | BuiltInFragmentationModel::None, Some(m)) if !m.is_empty() => format!("{f}&nbsp;({m})"),
+                            _ => f.to_string(),
+                        }),
                         self.retention_time()
                             .map_or("-".to_string(), |c| format!("{:.3}&nbsp;min", c.get::<mzcore::system::time::min>())),
                     ))
@@ -117,7 +120,6 @@ impl<C, A> RenderToHtml for IdentifiedPeptidoform<C, A> {
                 HtmlTag::p.new().maybe_content(self.annotated_spectrum().map(|a| spectrum_description(
                                 &a.description,
                                 &a.peaks().fetch_summaries(),
-                                &[], // TODO: add
                             ))).clone(),
                 ]
             ).content(peptide).children([

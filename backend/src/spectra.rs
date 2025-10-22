@@ -2,7 +2,7 @@ use std::{io::ErrorKind, ops::RangeInclusive, path::Path, str::FromStr};
 
 use context_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
 use itertools::Itertools;
-use mzannotate::prelude::*;
+use mzannotate::annotation::model::BuiltInFragmentationModel;
 use mzcore::system::{Mass, OrderedTime, dalton};
 use mzdata::{
     Param,
@@ -11,7 +11,6 @@ use mzdata::{
         proxi::{PROXIError, PROXIParam},
         usi::{Identifier, USIParseError},
     },
-    meta::DissociationMethodTerm,
     params::{CURIE, ParamDescribed, Unit, Value, ValueRef},
     prelude::{IonMobilityMeasure, IonProperties, PrecursorSelection, SpectrumLike},
     spectrum::{
@@ -27,7 +26,7 @@ use crate::{
     ModifiableState,
     identified_peptides::IdentifiedPeptideSettings,
     metadata_render::OptionalString,
-    model::get_mzdata_model,
+    model::get_built_in_index,
     render::display_mass,
     state::{RawFile, RawFileDetails},
 };
@@ -182,12 +181,9 @@ pub async fn load_usi<'a>(
                 Identifier::NativeID(s) => format!("nativeId:{}", s.iter().join(",")),
             })
         );
-        let mode = spectrum.precursor().and_then(|p| {
-            get_mzdata_model(p.activation.methods(), &state.custom_models)
-                .map(|(i, _)| i)
-                .ok()
-                .filter(|i| *i != crate::model::NONE)
-        });
+        let mode = spectrum
+            .precursor()
+            .map(|p| get_built_in_index(BuiltInFragmentationModel::from(p.activation.methods())));
 
         state.spectra.push(RawFile::new_single(
             spectrum,
@@ -576,8 +572,8 @@ pub fn get_selected_spectra(
     state: ModifiableState,
 ) -> Vec<(usize, bool, Vec<SelectedSpectrumDetails>)> {
     if let Ok(mut state) = state.lock() {
-        let (spectra, models) = state.spectra_and_models();
-        spectra
+        state
+            .spectra
             .iter_mut()
             .map(|file| {
                 let id = file.id();
@@ -591,7 +587,6 @@ pub fn get_selected_spectra(
                             description: spectrum_description(
                                 spectrum.description(),
                                 &spectrum.peaks().fetch_summaries(),
-                                models,
                             ),
                         })
                         .collect_vec(),
@@ -606,7 +601,6 @@ pub fn get_selected_spectra(
 pub fn spectrum_description(
     description: &SpectrumDescription,
     summary: &SpectrumSummary,
-    models: &[(String, FragmentationModel)],
 ) -> String {
     format!(
         "index: {} id: {}<br>time: {} min signal mode: {:?} ms level: {} ion mobility: {}<br>mz range: {:.1} — {:.1} peak count: {} tic: {:.3e} base peak intensity: {:.3e} resultion: {}<br>{}<br>{}{}",
@@ -649,7 +643,7 @@ pub fn spectrum_description(
                 i.target,
                 i.lower_bound,
                 i.upper_bound,
-                get_mzdata_model(p.activation.methods(), models).map_or_else(|n| n, |(_, n)| n),
+                BuiltInFragmentationModel::from(p.activation.methods()),
                 p.activation.energy,
             )
         }),
@@ -743,12 +737,12 @@ pub fn create_selected_spectrum(
 }
 
 #[tauri::command]
-pub fn save_spectrum<'a>(
+pub fn save_spectrum(
     state: ModifiableState,
     filter: f32,
     path: &Path,
-    sequence: &'a str,
-    model: &'a str,
+    sequence: &'_ str,
+    model: usize,
     charge: Option<usize>,
 ) -> Result<(), String> {
     let state = state.lock().map_err(|e| {
@@ -789,23 +783,17 @@ pub fn save_spectrum<'a>(
             mzdata::params::Value::String(sequence.to_string()),
         ));
     }
-    if model != "all" && model != "none" && model != "custom" {
+    if let Some(built_in) = crate::model::get_models(&state)
+        .1
+        .get(model)
+        .and_then(|(m, _, _)| *m)
+    {
         if let Some(p) = spectrum.description.precursor.first_mut() {
-            p.activation.methods_mut().append(&mut match model {
-                "ethcd" => vec![
-                    DissociationMethodTerm::ElectronTransferDissociation,
-                    DissociationMethodTerm::CollisionInducedDissociation,
-                ],
-                "hot_eacid" => vec![
-                    DissociationMethodTerm::ElectronActivatedDissociation,
-                    DissociationMethodTerm::CollisionInducedDissociation,
-                ],
-                "ead" => vec![DissociationMethodTerm::ElectronActivatedDissociation],
-                "cidhcd" => vec![DissociationMethodTerm::CollisionInducedDissociation],
-                "etd" => vec![DissociationMethodTerm::ElectronTransferDissociation],
-                "td_etd" => vec![DissociationMethodTerm::ElectronTransferDissociation],
-                _ => Vec::new(),
-            })
+            // TODO: check if this is actually written out from the mzdata side
+            p.activation.methods_mut().clear();
+            p.activation
+                .methods_mut()
+                .extend_from_slice(dbg!(built_in.terms()))
         }
     }
     if let Some(charge) = charge {
