@@ -185,6 +185,21 @@ pub async fn search_peptide<'a>(
             let start = alignment.start_a();
             let end = alignment.start_a() + alignment.len_a();
             let sequence = alignment.seq_a().peptidoform();
+            let mut highlighted_match = String::new();
+            sequence
+                .sub_peptide(..start)
+                .display(&mut highlighted_match, true, false, true)
+                .unwrap();
+            highlighted_match.push_str("<span class='match'>");
+            sequence
+                .sub_peptide(start..end)
+                .display(&mut highlighted_match, false, false, true)
+                .unwrap();
+            highlighted_match.push_str("</span>");
+            sequence
+                .sub_peptide(end..)
+                .display(&mut highlighted_match, false, true, true)
+                .unwrap();
             vec![
                 format!(
                     "<a onclick=\"load_peptide({0}, {1})\">F{2}:{1}</a>",
@@ -192,12 +207,7 @@ pub async fn search_peptide<'a>(
                     alignment.seq_a().index,
                     alignment.seq_a().id + 1
                 ),
-                format!(
-                    "{}<span class='match'>{}</span>{}",
-                    sequence.sub_peptide(..start).to_string(),
-                    sequence.sub_peptide(start..end).to_string(),
-                    sequence.sub_peptide(end..).to_string(),
-                ),
+                highlighted_match,
                 format!("{:.3}", alignment.normalised_score()),
                 alignment
                     .seq_a()
