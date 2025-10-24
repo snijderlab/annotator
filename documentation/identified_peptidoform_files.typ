@@ -11,6 +11,8 @@ There are quite some programs that export peptidoforms with metadata based on sp
   [No header requirements],
   [mzTab],
   [v1.0 & Casanovo (3.x, 4.x, & 5.0)],
+  [mzSpecLib],
+  [v1.0],
   [SSL],
   [Spectrum sequence list]
 )
@@ -26,6 +28,8 @@ There are quite some programs that export peptidoforms with metadata based on sp
   [1.0.0 & 1.1.4],
   [MaxQuant],
   [msms, msms scans, novo msms scans, & silac],
+  [MetaMorpheus],
+  [PSM and Peptides],
   [MSFragger],
   [4.2 & 4.3 Fragpipe: 20, 21, & 22, & Philosopher],
   [NovoB],

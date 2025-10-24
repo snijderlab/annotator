@@ -254,25 +254,7 @@ impl RenderToTable for IdentifiedPeptidoformData {
                 ("Glycan Mass", data.glycan_mass.value.to_string()),
                 ("Accession", data.accession.to_string()),
                 ("Organism", data.organism.to_string()),
-                ("Protein name", data.protein_name.to_string()),
                 ("Rank", data.rank.to_string()),
-                ("Matched ion series", data.matched_ion_series.to_string()),
-                (
-                    "Matched ion mz ratios",
-                    data.matched_ion_mz_ratios.to_string(),
-                ),
-                (
-                    "Matched ion mass error",
-                    data.matched_ion_mass_error.to_string(),
-                ),
-                (
-                    "Matched ion mass error (ppm)",
-                    data.matched_ion_ppm.to_string(),
-                ),
-                (
-                    "Matched ion intensities",
-                    data.matched_ion_intensities.to_string(),
-                ),
                 ("Matched ion counts", data.matched_ion_counts.to_string()),
                 ("Kind", data.kind.to_string()),
                 ("Q value", data.q_value.to_string()),
@@ -326,6 +308,20 @@ impl RenderToTable for IdentifiedPeptidoformData {
                     data.all_site_specific_localisation_probabilities
                         .to_string(),
                 ),
+            ],
+            IdentifiedPeptidoformData::MetaMorpheus(data) => vec![
+                (
+                    "Precursor scan number",
+                    data.precursor_scan_number.to_string(),
+                ),
+                ("Accession", data.protein_accession.join("|")),
+                ("Organism", data.organism.join("|")),
+                ("Matched ion counts", data.matched_ion_counts.to_string()),
+                ("Kind", data.kind.iter().join("|")),
+                ("Q value", data.q_value.to_string()),
+                ("PEP", data.pep.to_string()),
+                ("PEP Q value", data.pep_q_value.to_string()),
+
             ],
             IdentifiedPeptidoformData::MaxQuant(data) => vec![
                 ("Scan index", data.scan_index.to_optional_string()),
