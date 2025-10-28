@@ -936,9 +936,10 @@ async function annotate_spectrum() {
     mzRange: [optional_number(document.querySelector("#model-mz-range-min").value), optional_number(document.querySelector("#model-mz-range-max").value)],
     theme: Theme
   }).then((result) => {
-    set_up_spectrum(result);
+    set_up_spectrum(result[0]);
+    showError("spectrum-error", result[1]);
   }).catch((error) => {
-    showError("spectrum-error", error, false);
+    showError("spectrum-error", error);
     document.querySelector("#peptide").innerHTML = showContext(error, document.querySelector("#peptide").innerText);
     document.querySelector("#annotate-button").classList.remove("loading");
   })

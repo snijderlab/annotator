@@ -283,14 +283,7 @@ pub async fn update_modification(
         .parse::<f64>()
         .map(MolecularFormula::with_additional_mass)
         .or_else(|_| {
-            MolecularFormula::from_pro_forma(
-                &custom_modification.formula,
-                ..,
-                true,
-                true,
-                true,
-                false,
-            )
+            MolecularFormula::from_pro_forma::<true, true>(&custom_modification.formula, ..)
         })
         .map_err(|e| e.to_html(false))?;
     let id = ModificationId {
@@ -337,14 +330,7 @@ pub async fn update_modification(
                                     d.parse::<f64>()
                                         .map(MolecularFormula::with_additional_mass)
                                         .or_else(|_| {
-                                            MolecularFormula::from_pro_forma(
-                                                d,
-                                                ..,
-                                                true,
-                                                true,
-                                                true,
-                                                false,
-                                            )
+                                            MolecularFormula::from_pro_forma::<true, true>(d, ..)
                                         })
                                         .map(DiagnosticIon)
                                 })
@@ -405,14 +391,7 @@ pub async fn update_modification(
                                     d.parse::<f64>()
                                         .map(MolecularFormula::with_additional_mass)
                                         .or_else(|_| {
-                                            MolecularFormula::from_pro_forma(
-                                                d,
-                                                ..,
-                                                true,
-                                                true,
-                                                true,
-                                                false,
-                                            )
+                                            MolecularFormula::from_pro_forma::<true, true>(d, ..)
                                         })
                                         .map(DiagnosticIon)
                                 })

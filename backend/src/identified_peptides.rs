@@ -120,7 +120,17 @@ pub async fn search_peptide<'a>(
     })?;
     let query = std::sync::Arc::new(
         Peptidoform::<Linked>::pro_forma(text, Some(&state.custom_modifications))
+            .map_err(|errs| {
+                BoxedError::new(
+                    BasicKind::Error,
+                    "Invalid ProForma definition",
+                    "The string could not be parsed as a ProForma definition",
+                    Context::full_line(0, text),
+                )
+                .add_underlying_errors(errs)
+            })
             .map_err(|e| e.to_html(false))?
+            .0
             .into_simple_linear()
             .ok_or_else(|| {
                 BoxedError::new(

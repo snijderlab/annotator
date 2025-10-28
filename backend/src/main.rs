@@ -86,8 +86,7 @@ async fn details_formula(text: &str) -> Result<String, String> {
         )
         .to_html(false))
     } else {
-        MolecularFormula::from_pro_forma(text, .., false, true, true, false)
-            .map_err(|err| err.to_html(false))
+        MolecularFormula::from_pro_forma::<false, false>(text, ..).map_err(|err| err.to_html(false))
     }?;
     let isotopes = formula.isotopic_distribution(0.001);
     let (max, max_occurrence) = isotopes
@@ -255,30 +254,41 @@ async fn annotate_spectrum<'a>(
     mass_mode: &'a str,
     mz_range: (Option<f64>, Option<f64>),
     theme: Theme,
-) -> Result<AnnotationResult, String> {
+) -> Result<(AnnotationResult, Vec<String>), Vec<String>> {
     let mut state = state.lock().unwrap();
     let spectrum = crate::spectra::create_selected_spectrum(&mut state, filter)
-        .map_err(|err| err.to_html(false))?;
+        .map_err(|err| vec![err.to_html(false)])?;
     let model = crate::model::get_models(&state)
         .1
         .get(model)
         .cloned()
         .ok_or_else(|| {
-            BoxedError::small(BasicKind::Error, "Invalid model", "Model does not exist")
-                .to_html(false)
+            vec![
+                BoxedError::small(BasicKind::Error, "Invalid model", "Model does not exist")
+                    .to_html(false),
+            ]
         })?
         .2;
-    let parameters = model::parameters(tolerance, mz_range).map_err(|err| err.to_html(false))?;
+    let parameters =
+        model::parameters(tolerance, mz_range).map_err(|err| vec![err.to_html(false)])?;
     let mass_mode = match mass_mode {
         "monoisotopic" => MassMode::Monoisotopic,
         "average_weight" => MassMode::Average,
         "most_abundant" => MassMode::MostAbundant,
         _ => {
-            return Err(BoxedError::small(BasicKind::Error, "Invalid mass mode", "").to_html(false));
+            return Err(vec![
+                BoxedError::small(BasicKind::Error, "Invalid mass mode", "").to_html(false),
+            ]);
         }
     };
-    let peptide = CompoundPeptidoformIon::pro_forma(peptide, Some(&state.custom_modifications))
-        .map_err(|err| err.to_html(false))?;
+    let (peptide, warnings) =
+        CompoundPeptidoformIon::pro_forma(peptide, Some(&state.custom_modifications)).map_err(
+            |errs| {
+                errs.into_iter()
+                    .map(|err| err.to_html(false))
+                    .collect::<Vec<_>>()
+            },
+        )?;
 
     let use_charge = Charge::new::<e>(
         charge
@@ -294,7 +304,13 @@ async fn annotate_spectrum<'a>(
     let rendered =
         render_annotated_spectrum(&annotated, &fragments, model, &parameters, mass_mode, theme);
     state.annotated_spectrum = Some(annotated);
-    Ok(rendered)
+    Ok((
+        rendered,
+        warnings
+            .into_iter()
+            .map(|err| err.to_html(false))
+            .collect::<Vec<_>>(),
+    ))
 }
 
 fn render_annotated_spectrum(

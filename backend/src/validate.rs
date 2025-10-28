@@ -11,7 +11,7 @@ use crate::render::{display_formula, display_neutral_loss, display_placement_rul
 pub fn validate_molecular_formula(text: String) -> Result<String, String> {
     text.parse::<f64>()
         .map(MolecularFormula::with_additional_mass)
-        .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true, false))
+        .or_else(|_| MolecularFormula::from_pro_forma::<true, true>(&text, ..))
         .map(|f| display_formula(&f, true))
         .map_err(|err| err.to_html(false))
 }
@@ -199,12 +199,12 @@ pub fn parse_stub(text: &str) -> Result<(MolecularFormula, MolecularFormula), Bo
         let f1 = text[..index]
             .parse::<f64>()
             .map(MolecularFormula::with_additional_mass)
-            .or_else(|_| MolecularFormula::from_pro_forma(text, ..index, true, true, true, false))
+            .or_else(|_| MolecularFormula::from_pro_forma::<true, true>(text, ..index))
             .map_err(BoxedError::to_owned)?;
         let f2 = text[index + 1..]
             .parse::<f64>()
             .map(MolecularFormula::with_additional_mass)
-            .or_else(|_| MolecularFormula::from_pro_forma(text, index + 1.., true, true, true, false))
+            .or_else(|_| MolecularFormula::from_pro_forma::<true, true>(text, index + 1..))
             .map_err(BoxedError::to_owned)?;
         Ok((f1, f2))
     } else {
@@ -248,7 +248,7 @@ pub fn validate_custom_single_specificity(
         .map(|text| {
             text.parse::<f64>()
                 .map(MolecularFormula::with_additional_mass)
-                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true, false))
+                .or_else(|_| MolecularFormula::from_pro_forma::<true, true>(&text, ..))
                 .map_err(|err| err.to_html(false))
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -335,7 +335,7 @@ pub fn validate_custom_linker_specificity(
         .map(|text| {
             text.parse::<f64>()
                 .map(MolecularFormula::with_additional_mass)
-                .or_else(|_| MolecularFormula::from_pro_forma(&text, .., true, true, true, false)).map_err(|err| err.to_html(false))
+                .or_else(|_| MolecularFormula::from_pro_forma::<true, true>(&text, ..)).map_err(|err| err.to_html(false))
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(
