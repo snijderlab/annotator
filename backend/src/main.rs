@@ -5,6 +5,7 @@
 
 use std::sync::Mutex;
 
+use clap::Parser;
 use context_error::{BasicKind, BoxedError, CreateError, FullErrorContent};
 use itertools::Itertools;
 use mzannotate::{mzspeclib::AnalyteTarget, prelude::*};
@@ -58,7 +59,10 @@ const CUSTOM_MODELS_FILE: &str = "custom_models.json";
 type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
 
 #[tauri::command]
-fn refresh(state: ModifiableState, theme: Theme) -> (usize, usize, Option<AnnotationResult>) {
+fn refresh(
+    state: ModifiableState,
+    theme: Theme,
+) -> (usize, usize, Option<AnnotationResult>, Vec<String>) {
     let state = state.lock().unwrap();
     (
         0, // state.spectra.as_ref().map(|s| s.len()).unwrap_or_default(),
@@ -73,6 +77,7 @@ fn refresh(state: ModifiableState, theme: Theme) -> (usize, usize, Option<Annota
                 theme,
             )
         }),
+        state.auto_open_errors.clone(),
     )
 }
 
@@ -424,6 +429,55 @@ fn load_custom_mods_and_models(app: &mut tauri::App) -> Result<(), Box<dyn std::
     }
 }
 
+fn auto_open(app: &mut tauri::App, args: Args) -> Result<(), Box<dyn std::error::Error>> {
+    const RAW_EXTENSIONS: &[&str] = &["xy", "mgf", "mzml", "imzml", "mzmlb", "raw"];
+    let app_state = app.state::<Mutex<State>>();
+    let mut state = app_state
+        .lock()
+        .expect("Poisoned mutex at load of provided auto open files");
+
+    for path in &args.paths {
+        let actual_extension = path
+            .extension()
+            .map(|ex| {
+                ex.eq_ignore_ascii_case("gz")
+                    .then_some(path)
+                    .and_then(|p| p.file_stem())
+                    .and_then(|p| std::path::Path::new(p).extension())
+                    .unwrap_or(ex)
+            })
+            .map(|ex| ex.to_string_lossy().to_lowercase());
+        if let Some(ext) = actual_extension {
+            if RAW_EXTENSIONS.contains(&ext.as_str()) {
+                match crate::spectra::annotator_open_raw_file(path, &mut state) {
+                    Ok(_) => (),
+                    Err(error) => state.auto_open_errors.push(error),
+                }
+            } else {
+                match crate::identified_peptides::annotator_open_identified_peptidoforms_file(
+                    path, &mut state,
+                ) {
+                    Ok(None) => (),
+                    Ok(Some(error)) => state.auto_open_errors.push(error),
+                    Err(error) => state.auto_open_errors.push(error),
+                }
+            }
+        } else {
+            state.auto_open_errors.push(
+                BoxedError::new(
+                    BasicKind::Error,
+                    "Could not identify file",
+                    "An extension has to be provided for auto open file to be recognised",
+                    context_error::Context::none().lines(0, path.to_string_lossy()),
+                )
+                .to_html(false),
+            )
+        }
+    }
+
+    Ok(())
+}
+
 #[tauri::command]
 fn get_custom_configuration_path(app: tauri::AppHandle) -> (String, String) {
     app.path().app_config_dir().map_or(
@@ -440,6 +494,7 @@ fn get_custom_configuration_path(app: tauri::AppHandle) -> (String, String) {
 }
 
 fn main() {
+    let args = Args::parse();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -451,8 +506,10 @@ fn main() {
             custom_modifications_error: None,
             custom_models: Vec::new(),
             custom_models_error: None,
+            auto_open_errors: Vec::new(),
         }))
         .setup(load_custom_mods_and_models)
+        .setup(|app| auto_open(app, args))
         .invoke_handler(tauri::generate_handler![
             annotate_spectrum,
             custom_modifications::delete_custom_modification,
@@ -462,13 +519,13 @@ fn main() {
             custom_modifications::update_modification,
             details_formula,
             get_custom_configuration_path,
-            load_annotated_spectrum,
             identified_peptide_details,
             identified_peptides::close_identified_peptides_file,
             identified_peptides::get_identified_peptides_files,
             identified_peptides::load_identified_peptide,
             identified_peptides::load_identified_peptides_file,
             identified_peptides::search_peptide,
+            load_annotated_spectrum,
             model::delete_custom_model,
             model::duplicate_custom_model,
             model::get_custom_model,
@@ -485,9 +542,9 @@ fn main() {
             spectra::load_raw,
             spectra::load_usi,
             spectra::save_spectrum,
+            spectra::select_retention_time,
             spectra::select_spectrum_index,
             spectra::select_spectrum_native_id,
-            spectra::select_retention_time,
             validate::validate_aa_neutral_loss,
             validate::validate_amino_acid,
             validate::validate_custom_linker_specificity,
@@ -503,6 +560,12 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[derive(Parser)]
+struct Args {
+    /// The paths to open in the annotator
+    paths: Vec<std::path::PathBuf>,
 }
 
 pub trait InvertResult<T, E> {

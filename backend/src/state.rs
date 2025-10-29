@@ -30,6 +30,7 @@ pub struct State {
     pub custom_modifications_error: Option<(String, Vec<String>)>,
     pub custom_models: Vec<(String, FragmentationModel)>,
     pub custom_models_error: Option<(String, Vec<String>)>,
+    pub auto_open_errors: Vec<String>,
 }
 
 impl State {
@@ -263,12 +264,12 @@ impl RawFile {
         }
     }
 
-    pub fn new_file(path: &str, file: MZReaderType<File>) -> Self {
+    pub fn new_file(path: String, file: MZReaderType<File>) -> Self {
         RawFile::File {
             id: RAW_FILE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
             rawfile: file,
             selected_spectra: Vec::new(),
-            path: path.to_string(),
+            path,
         }
     }
 

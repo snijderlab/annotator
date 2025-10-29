@@ -211,15 +211,23 @@ pub async fn load_raw<'a>(
     path: &'a str,
     state: ModifiableState<'a>,
 ) -> Result<RawFileDetails, String> {
+    let mut state = state.lock().unwrap();
+    annotator_open_raw_file(std::path::Path::new(path), &mut state)
+}
+
+pub fn annotator_open_raw_file(
+    path: &std::path::Path,
+    state: &mut std::sync::MutexGuard<'_, crate::State>,
+) -> Result<RawFileDetails, String> {
     match mzdata::io::MZReaderType::open_path(path) {
         Ok(mut file) => {
             let file = if file.len() == 1 {
                 let spec = file.next().unwrap();
-                RawFile::new_single(spec, path.to_string())
+                RawFile::new_single(spec, path.to_string_lossy().to_string())
             } else {
-                RawFile::new_file(path, file)
+                RawFile::new_file(path.to_string_lossy().to_string(), file)
             };
-            let spectra = &mut state.lock().unwrap().spectra;
+            let spectra = &mut state.spectra;
             let details = file.details();
             spectra.push(file);
             Ok(details)

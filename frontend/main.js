@@ -1294,6 +1294,9 @@ window.addEventListener("DOMContentLoaded", () => {
     if (result[2]) {
       set_up_spectrum(result[2]);
     }
+    if (result[3].length > 0) {
+      showError("open-files-error", result[3]);
+    }
   })
 });
 

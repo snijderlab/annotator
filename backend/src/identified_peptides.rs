@@ -19,14 +19,21 @@ pub async fn load_identified_peptides_file<'a>(
     path: &'a str,
     state: ModifiableState<'a>,
 ) -> Result<Option<String>, String> {
-    let state = state.lock().unwrap();
+    let mut state = state.lock().unwrap();
+    annotator_open_identified_peptidoforms_file(std::path::Path::new(path), &mut state)
+}
+
+pub fn annotator_open_identified_peptidoforms_file(
+    path: &std::path::Path,
+    state: &mut std::sync::MutexGuard<'_, State>,
+) -> Result<Option<String>, String> {
     let mut peptide_errors = Vec::new();
     let peptides = open_identified_peptidoforms_file(path, state.database(), false)
         .map_err(|e| e.to_html(false))?;
     state
         .identified_peptide_files_mut()
         .push(IdentifiedPeptidoformFile::new(
-            path.to_string(),
+            path.to_string_lossy().to_string(),
             peptides
                 .filter_map(|p| match p {
                     Ok(p) => Some(p),
@@ -45,7 +52,7 @@ pub async fn load_identified_peptides_file<'a>(
                 BasicKind::Warning,
                 "Could not parse all peptides",
                 "All peptides with an error are ignored",
-                Context::default().source(path).to_owned(),
+                Context::default().source(path.to_string_lossy()).to_owned(),
             )
             .add_underlying_errors(peptide_errors)
             .to_html(true),
