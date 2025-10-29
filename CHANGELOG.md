@@ -1,8 +1,12 @@
 # Upcoming version
 
 - Fixed bug where the peptide would disappear if there was an error in the peptide sequence
-- Added support for pUniFind
+- Added support for pUniFind & MetaMorpheus
 - Better handling of proteins as specified in many identified peptidoform files (amongst others: MSFragger, MaxQuant, and mzTab)
+- Added support for mzSpecLib
+- Added support for opening a file from the command line, making it possible to use 'open in Annotator' for most operating systems
+- Note this update removes the case insensitiveness of `Formula:XX` meaning `Formula:NH3` now is 1 Nitrogen and 3 Hydrogens instead of 3 Nihonium
+- Improved many error messages with better context
 
 # Version 1.2.1
 

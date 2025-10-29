@@ -646,8 +646,8 @@ pub fn spectrum_description(
             let i = p.isolation_window();
             format!(
                 "Precursor mass: {} charge: {} target: {} range: {} — {} method: {} energy: {:.1}",
-                display_mass(Mass::new::<dalton>(p.neutral_mass()), None),
-                p.charge().map_or("-".to_string(), |v| format!("{v:+.0}")),
+                p.ions.first().map_or("-".to_string(), |i| display_mass(Mass::new::<dalton>(i.neutral_mass()), None).to_string()),
+                p.ions.first().and_then(|i| i.charge()).map_or("-".to_string(), |v| format!("{v:+.0}")),
                 i.target,
                 i.lower_bound,
                 i.upper_bound,
