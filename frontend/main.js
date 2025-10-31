@@ -67,11 +67,11 @@ async function select_raw_file(e, directory) {
   let properties = {
     directory: directory,
     multiple: true,
-    filters: [directory ? {
+    filters: directory ? [{
       extensions: ["d"], name: "*.d"
-    } : {
-      extensions: RAW_EXTENSIONS, name: "*"
-    }]
+    }] : [{
+      extensions: RAW_EXTENSIONS, name: "Raw files"
+    }, { extensions: ["*"], name: "Anything" }]
   };
   open(properties).then((result) => {
     if (result != null) {
@@ -96,8 +96,8 @@ async function dialog_select_identified_peptides_file(e) {
     directory: false,
     multiple: true,
     filters: [{
-      extensions: IDENTIFIED_EXTENSIONS, name: "*"
-    }]
+      extensions: IDENTIFIED_EXTENSIONS, name: "Known"
+    }, { extensions: ["*"], name: "Anything" }]
   };
   open(properties).then((result) => {
     if (result != null) {
