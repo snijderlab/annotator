@@ -255,6 +255,16 @@ impl From<&String> for HtmlContent {
         HtmlContent::Text(value.to_string()) // TODO: escape all html thingies
     }
 }
+impl From<Box<str>> for HtmlContent {
+    fn from(value: Box<str>) -> Self {
+        HtmlContent::Text(value.to_string()) // TODO: escape all html thingies
+    }
+}
+impl From<&Box<str>> for HtmlContent {
+    fn from(value: &Box<str>) -> Self {
+        HtmlContent::Text(value.to_string()) // TODO: escape all html thingies
+    }
+}
 
 impl From<HtmlElement> for HtmlContent {
     fn from(value: HtmlElement) -> Self {

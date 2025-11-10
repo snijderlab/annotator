@@ -6,7 +6,7 @@ authors = ["Douwe Schulte <d.schulte@uu.nl>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/snijderlab/annotator"
 edition = "2024"
-rust-version = "1.85.0"
+rust-version = "1.90.0"
 
 [build-dependencies]
 tauri-build = { version = "2.1", features = [] }
@@ -21,6 +21,7 @@ serde_json = {workspace = true}
 serde = {workspace = true}
 tauri = {workspace = true}
 mzcore = {workspace = true}
+mzcv = {workspace = true}
 mzannotate = {workspace = true}
 mzalign = {workspace = true}
 mzident = {workspace = true}

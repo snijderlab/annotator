@@ -880,6 +880,11 @@ fn main() {
         </dialog>
         <ul id="custom-models"></ul>
       </fieldset>
+      <input type="checkbox" id="collapsible-ontologies">
+      <fieldset class="collapsible" data-linked-item="collapsible-ontologies" id="ontologies-collapsible">
+        <legend>Ontologies</legend>
+        <output id="ontologies-details">NOT LOADED</output>
+      </fieldset>
       <div class="grow"></div>
       <footer>
         <p>Annotator by Douwe Schulte at the Snijderlab</p>

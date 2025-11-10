@@ -6,13 +6,13 @@ use crate::{
 use context_error::{BasicKind, BoxedError, CreateError, FullErrorContent};
 use itertools::Itertools;
 use mzcore::{
-    ontology::Ontology,
+    ontology::{Ontologies, Ontology},
     prelude::*,
     quantities::Tolerance,
     sequence::{
         GnoComposition, LinkerSpecificity, ModificationId, PlacementRule, ReturnModification,
-        SimpleModificationInner, modification_search_formula, modification_search_glycan,
-        modification_search_mass,
+        SimpleModification, SimpleModificationInner, modification_search_formula,
+        modification_search_glycan, modification_search_mass,
     },
     system::{Mass, dalton},
 };
@@ -39,15 +39,22 @@ pub async fn search_modification(
         )
         .to_html(false))
     } else {
-        SimpleModificationInner::parse_pro_forma(
+        SimpleModificationInner::pro_forma(
             text,
-            0..text.len(),
             &mut Vec::new(),
             &mut Vec::new(),
-            Some(&state.custom_modifications),
+            &state.ontologies,
         )
-        .map_err(|err| err.to_html(false))
-        .map(|(m, _)| match m {
+        .map_err(|err| {
+            BoxedError::small(
+                BasicKind::Error,
+                "Invalid modification",
+                "Could not parse the modification",
+            )
+            .add_underlying_errors(err)
+            .to_html(false)
+        })
+        .map(|((m, _), _)| match m {
             ReturnModification::Defined(d) => Ok(d),
             _ => Err(BoxedError::small(
                 BasicKind::Error,
@@ -76,12 +83,12 @@ pub async fn search_modification(
                 tolerance,
                 None,
                 MassMode::Monoisotopic,
-                Some(&state.custom_modifications),
+                &state.ontologies,
             )
-            .map(|(ontology, id, name, modification)| {
+            .map(|modification| {
                 [
                     modification.to_string(),
-                    link_modification(ontology, id, &name),
+                    link_modification(modification.clone()),
                     display_masses(&modification.formula()).to_string(),
                     display_formula(&modification.formula(), true),
                 ]
@@ -90,14 +97,8 @@ pub async fn search_modification(
         .to_string()),
         SimpleModificationInner::Formula(f) => Ok(html_builder::HtmlElement::table(
             Some(&["Name", "Id"]),
-            modification_search_formula(f, Some(&state.custom_modifications)).map(
-                |(ontology, id, name, modification)| {
-                    [
-                        modification.to_string(),
-                        link_modification(ontology, id, &name),
-                    ]
-                },
-            ),
+            modification_search_formula(f, &state.ontologies)
+                .map(|modification| [modification.to_string(), link_modification(modification)]),
         )
         .to_string()),
         SimpleModificationInner::Glycan(g)
@@ -106,12 +107,16 @@ pub async fn search_modification(
             ..
         } => Ok(HtmlTag::div
             .new()
-            .content(render_modification(&modification, theme))
+            .content(render_modification(
+                modification.clone(),
+                theme,
+                &state.ontologies,
+            ))
             .content(html_builder::HtmlElement::table(
                 Some(&["Name", "Structure"]),
-                modification_search_glycan(g, true).map(|(ontology, id, name, modification)| {
+                modification_search_glycan(g, true, &state.ontologies).map(|modification| {
                     [
-                        link_modification(ontology, id, &name),
+                        link_modification(modification.clone()),
                         if let SimpleModificationInner::Gno {
                             composition: GnoComposition::Topology(structure),
                             ..
@@ -146,11 +151,15 @@ pub async fn search_modification(
                     .clone()
             }))
             .to_string()),
-        modification => Ok(render_modification(modification, theme).to_string()),
+        _ => Ok(render_modification(modification, theme, &state.ontologies).to_string()),
     }
 }
 
-pub fn render_modification(modification: &SimpleModificationInner, theme: Theme) -> HtmlElement {
+pub fn render_modification(
+    modification: SimpleModification,
+    theme: Theme,
+    ontologies: &Ontologies,
+) -> HtmlElement {
     let mut output = HtmlTag::div.new();
     output.class("modification");
 
@@ -162,16 +171,16 @@ pub fn render_modification(modification: &SimpleModificationInner, theme: Theme)
 
     if let SimpleModificationInner::Database {
         specificities, id, ..
-    } = &modification
+    } = &*modification
     {
-        output.content(render_modification_id(id));
+        output.content(render_modification_id(id, ontologies));
         output.content(HtmlTag::p.new().content("Placement rules"));
         let mut ul = HtmlTag::ul.new();
 
         for rule in specificities {
             ul.content(HtmlTag::li.new().content(format!(
                 "Positions: {}{}{}{}{}",
-                render_places(&rule.0),
+                render_places(&rule.0, ontologies),
                 if rule.1.is_empty() {
                     ""
                 } else {
@@ -195,27 +204,26 @@ pub fn render_modification(modification: &SimpleModificationInner, theme: Theme)
         motif,
         taxonomy,
         glycomeatlas,
-    } = &modification
+    } = &*modification.clone()
     {
-        output.content(render_modification_id(id));
+        output.content(render_modification_id(id, ontologies));
         output.content(
             HtmlTag::p
                 .new()
                 .content(format!("Subsumption level: {subsumption_level}")),
         );
-        output.maybe_content(structure_score.map(|score| {
+        if *structure_score != u16::MAX {
+            output.content(
+                HtmlTag::p
+                    .new()
+                    .content(format!("Structure score: {structure_score}"))
+                    .clone(),
+            );
+        }
+        output.maybe_content(motif.as_ref().map(|(name, _)| {
             HtmlTag::p
                 .new()
-                .content(format!("Structure score: {score}"))
-                .clone()
-        }));
-        output.maybe_content(motif.as_ref().map(|(name, id)| {
-            HtmlTag::p
-                .new()
-                .content(format!(
-                    "Motif: {name} {}",
-                    link_modification(Ontology::Gnome, None, id)
-                ))
+                .content(format!("Motif: {name} {}", link_modification(modification)))
                 .clone()
         }));
         output.content(HtmlTag::p.new().content(format!(
@@ -307,9 +315,9 @@ pub fn render_modification(modification: &SimpleModificationInner, theme: Theme)
         id,
         length,
         ..
-    } = &modification
+    } = &*modification
     {
-        output.content(render_modification_id(id));
+        output.content(render_modification_id(id, ontologies));
         output.content(HtmlTag::p.new().content(format!(
             "Length: {}",
             length.map_or("-".to_string(), |l| l.to_string()),
@@ -329,7 +337,7 @@ pub fn render_modification(modification: &SimpleModificationInner, theme: Theme)
                     ul.content(
                         HtmlTag::li
                             .new()
-                            .content(format!("Positions: {}", render_places(rules)))
+                            .content(format!("Positions: {}", render_places(rules, ontologies)))
                             .maybe_content((!stubs.is_empty()).then(|| {
                                 format!(
                                     ", Breakages: {}",
@@ -367,8 +375,8 @@ pub fn render_modification(modification: &SimpleModificationInner, theme: Theme)
                             .new()
                             .content(format!(
                                 "First positions: {}, Second positions: {}",
-                                render_places(left_places),
-                                render_places(right_places)
+                                render_places(left_places, ontologies),
+                                render_places(right_places, ontologies)
                             ))
                             .maybe_content((!stubs.is_empty()).then(|| {
                                 format!(
@@ -404,12 +412,12 @@ pub fn render_modification(modification: &SimpleModificationInner, theme: Theme)
     output
 }
 
-fn render_modification_id(id: &ModificationId) -> HtmlElement {
+fn render_modification_id(id: &ModificationId, ontologies: &Ontologies) -> HtmlElement {
     let mut text = HtmlTag::div.new();
     text
         .content(HtmlTag::p.new().content(format!(
             "Ontology: <span class='ontology'>{}</span>, name: <span class='name'>{}</span>, index: <span class='index'>{}</span>{}",
-            id.ontology, if id.ontology == Ontology::Gnome {id.name.to_ascii_uppercase()} else {id.name.clone()}, id.id.to_optional_string(), if let Some(url) = id.url() {
+            id.ontology, if id.ontology == Ontology::Gnome {id.name.to_ascii_uppercase()} else {id.name.to_string()}, id.id().to_optional_string(), if let Some(url) = id.url() {
                 format!(", {}", HtmlTag::a.new()
                 .content("view online")
                 .header("href", url)
@@ -428,7 +436,7 @@ fn render_modification_id(id: &ModificationId) -> HtmlElement {
                 .children(
                     id.synonyms
                         .iter()
-                        .map(|syn| HtmlTag::li.new().content(syn).clone()),
+                        .map(|(_, syn)| HtmlTag::li.new().content(syn).clone()),
                 ),
         );
     }
@@ -441,29 +449,42 @@ fn render_modification_id(id: &ModificationId) -> HtmlElement {
                 .children(id.cross_ids.iter().map(|(meta, id)| {
                     HtmlTag::li
                         .new()
-                        .content(match meta.as_str() {
-                            "RESID"
+                        .content(match meta.as_deref() {
+                            Some("RESID")
                                 if id.starts_with("AA")
                                     && id.len() > 2
                                     && id[2..].parse::<usize>().is_ok() =>
                             {
-                                link_modification(
-                                    Ontology::Resid,
-                                    Some(id[2..].parse::<usize>().unwrap()),
-                                    "",
-                                )
+                                if let Ok(index) = id[2..].parse::<u32>()
+                                    && let Some(modification) =
+                                        ontologies.resid().get_by_index(&index)
+                                {
+                                    link_modification(modification)
+                                } else {
+                                    String::new()
+                                }
                             }
-                            "PSI-MOD" if id.parse::<usize>().is_ok() => link_modification(
-                                Ontology::Psimod,
-                                Some(id.parse::<usize>().unwrap()),
-                                "",
-                            ),
-                            "Unimod" if id.parse::<usize>().is_ok() => link_modification(
-                                Ontology::Unimod,
-                                Some(id.parse::<usize>().unwrap()),
-                                "",
-                            ),
-                            "ChEBI" if id.parse::<usize>().is_ok() => HtmlTag::a
+                            Some("PSI-MOD") if id.parse::<usize>().is_ok() => {
+                                if let Ok(index) = id.parse::<u32>()
+                                    && let Some(modification) =
+                                        ontologies.psimod().get_by_index(&index)
+                                {
+                                    link_modification(modification)
+                                } else {
+                                    String::new()
+                                }
+                            }
+                            Some("Unimod") if id.parse::<usize>().is_ok() => {
+                                if let Ok(index) = id.parse::<u32>()
+                                    && let Some(modification) =
+                                        ontologies.unimod().get_by_index(&index)
+                                {
+                                    link_modification(modification)
+                                } else {
+                                    String::new()
+                                }
+                            }
+                            Some("ChEBI") if id.parse::<usize>().is_ok() => HtmlTag::a
                                 .new()
                                 .header(
                                     "href",
@@ -473,10 +494,10 @@ fn render_modification_id(id: &ModificationId) -> HtmlElement {
                                 )
                                 .header("target", "_blank")
                                 .content(format!(
-                                    "<span class='cross-id-system'>{meta}</span>: {id}"
+                                    "<span class='cross-id-system'>ChEBI</span>: {id}"
                                 ))
                                 .to_string(),
-                            "PubMed" | "PMID" if id.parse::<usize>().is_ok() => HtmlTag::a
+                            Some("PubMed" | "PMID") if id.parse::<usize>().is_ok() => HtmlTag::a
                                 .new()
                                 .header("href", format!("https://pubmed.ncbi.nlm.nih.gov/{id}"))
                                 .header("target", "_blank")
@@ -484,40 +505,40 @@ fn render_modification_id(id: &ModificationId) -> HtmlElement {
                                     "<span class='cross-id-system'>PubMed</span>: {id}"
                                 ))
                                 .to_string(),
-                            "DOI" => HtmlTag::a
+                            Some("DOI") => HtmlTag::a
                                 .new()
                                 .header("href", format!("https://doi.org/{id}"))
                                 .header("target", "_blank")
-                                .content(format!(
-                                    "<span class='cross-id-system'>{meta}</span>: {id}"
-                                ))
+                                .content(format!("<span class='cross-id-system'>DOI</span>: {id}"))
                                 .to_string(),
-                            "FindMod" => HtmlTag::a
+                            Some("FindMod") => HtmlTag::a
                                 .new()
                                 .header("href", format!("https://web.expasy.org/findmod/{id}.html"))
                                 .header("target", "_blank")
                                 .content(format!(
-                                    "<span class='cross-id-system'>{meta}</span>: {id}"
+                                    "<span class='cross-id-system'>FindMod</span>: {id}"
                                 ))
                                 .to_string(),
-                            "PDBHET" => HtmlTag::a
+                            Some("PDBHET") => HtmlTag::a
                                 .new()
                                 .header("href", format!("https://www.rcsb.org/ligand/{id}"))
                                 .header("target", "_blank")
                                 .content(format!(
-                                    "<span class='cross-id-system'>{meta}</span>: {id}"
+                                    "<span class='cross-id-system'>PDBHET</span>: {id}"
                                 ))
                                 .to_string(),
                             _ => {
                                 if id.starts_with("http://") || id.starts_with("https://") {
                                     HtmlTag::a
                                         .new()
-                                        .header("href", id)
+                                        .header("href", id.to_string())
                                         .header("target", "_blank")
-                                        .content(meta)
+                                        .content(meta.as_deref().unwrap_or("URL"))
                                         .to_string()
-                                } else {
+                                } else if let Some(meta) = meta {
                                     format!("<span class='cross-id-system'>{meta}</span>: {id}")
+                                } else {
+                                    id.to_string()
                                 }
                             }
                         })
@@ -528,13 +549,13 @@ fn render_modification_id(id: &ModificationId) -> HtmlElement {
     text
 }
 
-fn render_places(places: &[PlacementRule]) -> String {
+fn render_places(places: &[PlacementRule], ontologies: &Ontologies) -> String {
     if places.is_empty() {
         "Anywhere".to_string()
     } else {
         places
             .iter()
-            .map(|p| display_placement_rule(p, true))
+            .map(|p| display_placement_rule(p, true, ontologies))
             .join(", ")
     }
 }

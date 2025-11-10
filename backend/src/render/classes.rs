@@ -100,10 +100,10 @@ pub fn get_classes(
         if !annotation.neutral_loss.is_empty() {
             output.push("neutral-loss".to_string());
         }
-        if let Some(ion) = &shared_ion {
-            if *ion != annotation.ion.kind() {
-                shared_ion = None;
-            }
+        if let Some(ion) = &shared_ion
+            && *ion != annotation.ion.kind()
+        {
+            shared_ion = None;
         }
     }
     if shared_ion.is_none() {

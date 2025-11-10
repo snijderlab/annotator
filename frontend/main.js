@@ -1297,6 +1297,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (result[3].length > 0) {
       showError("open-files-error", result[3]);
     }
+    document.getElementById("ontologies-details").innerHTML = result[4];
   })
 });
 

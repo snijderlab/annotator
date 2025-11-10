@@ -1,7 +1,4 @@
-use std::{
-    io::BufWriter,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 use context_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
 use mzcore::{
@@ -10,6 +7,7 @@ use mzcore::{
     prelude::*,
     sequence::{LinkerSpecificity, ModificationId, PlacementRule, SimpleModificationInner},
 };
+use mzcv::SynonymScope;
 use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
@@ -25,17 +23,26 @@ use crate::{
 pub fn get_custom_modifications(
     state: ModifiableState,
     theme: Theme,
-) -> Result<(Vec<(usize, String)>, Option<(String, Vec<String>)>), &'static str> {
+) -> Result<(Vec<(u32, String)>, Option<(String, Vec<String>)>), &'static str> {
     let state = state.lock().map_err(|_| "Could not lock mutex")?;
+
     Ok((
         state
-            .custom_modifications
-            .iter()
-            .map(|(index, _, modification)| {
+            .ontologies
+            .custom()
+            .data()
+            .map(|modification| {
                 (
-                    index.unwrap_or_default(),
-                    crate::search_modification::render_modification(modification, theme)
-                        .to_string(),
+                    modification
+                        .description()
+                        .and_then(|d| d.id())
+                        .unwrap_or_default(),
+                    crate::search_modification::render_modification(
+                        modification,
+                        theme,
+                        &state.ontologies,
+                    )
+                    .to_string(),
                 )
             })
             .collect(),
@@ -45,25 +52,23 @@ pub fn get_custom_modifications(
 
 #[tauri::command]
 pub fn duplicate_custom_modification(
-    id: usize,
-    new_id: usize,
+    id: u32,
+    new_id: u32,
     state: ModifiableState,
-) -> Result<CustomModification, &'static str> {
+) -> Result<CustomModification, String> {
     let mut locked_state = state.lock().map_err(|_| "Could not lock mutex")?;
-    if let Some(index) = locked_state
-        .custom_modifications
-        .iter()
-        .position(|p| p.0.is_some_and(|i| i == id))
-    {
-        let mut modification = locked_state.custom_modifications[index].clone();
-        modification.0 = Some(new_id);
-        modification.2 = match modification.2.as_ref().clone() {
+    if let Some(modification) = locked_state.ontologies.custom().data().find(|p| {
+        p.description()
+            .and_then(|d| d.id())
+            .is_some_and(|i| i == id)
+    }) {
+        let new_modification = match modification.as_ref().clone() {
             SimpleModificationInner::Database {
                 mut id,
                 specificities,
                 formula,
             } => {
-                id.id = Some(new_id);
+                id.set_id(Some(new_id));
                 SimpleModificationInner::Database {
                     specificities,
                     formula,
@@ -79,7 +84,7 @@ pub fn duplicate_custom_modification(
                 taxonomy,
                 glycomeatlas,
             } => {
-                id.id = Some(new_id);
+                id.set_id(Some(new_id));
                 SimpleModificationInner::Gno {
                     id,
                     composition,
@@ -96,7 +101,7 @@ pub fn duplicate_custom_modification(
                 formula,
                 length,
             } => {
-                id.id = Some(new_id);
+                id.set_id(Some(new_id));
                 SimpleModificationInner::Linker {
                     id,
                     specificities,
@@ -107,23 +112,23 @@ pub fn duplicate_custom_modification(
             full => full,
         }
         .into();
-        locked_state.custom_modifications.push(modification);
+        locked_state.ontologies.custom_mut().add(new_modification);
+        locked_state
+            .ontologies
+            .custom()
+            .save_to_cache()
+            .map_err(|e| e.to_html(true))?;
         drop(locked_state);
-        get_custom_modification(new_id, state)
+        get_custom_modification(new_id, state).map_err(|e| e.to_string())
     } else {
-        Err("Could not find specified id")
+        Err("Could not find specified id".to_string())
     }
 }
 
 #[tauri::command]
-pub fn delete_custom_modification(id: usize, state: ModifiableState) -> Result<(), &'static str> {
+pub fn delete_custom_modification(id: u32, state: ModifiableState) -> Result<(), &'static str> {
     let mut state = state.lock().map_err(|_| "Could not lock mutex")?;
-    if let Some(index) = state
-        .custom_modifications
-        .iter()
-        .position(|p| p.0.is_some_and(|i| i == id))
-    {
-        state.custom_modifications.remove(index);
+    if state.ontologies.custom_mut().remove(&id) {
         Ok(())
     } else {
         Err("Could not find specified id")
@@ -132,121 +137,114 @@ pub fn delete_custom_modification(id: usize, state: ModifiableState) -> Result<(
 
 #[tauri::command]
 pub fn get_custom_modification(
-    id: usize,
+    id: u32,
     state: ModifiableState,
 ) -> Result<CustomModification, &'static str> {
     let state = state.lock().map_err(|_| "Could not lock mutex")?;
-    if let Some(index) = state
-        .custom_modifications
-        .iter()
-        .position(|p| p.0.is_some_and(|i| i == id))
-    {
-        match &*state.custom_modifications[index].2 {
-            SimpleModificationInner::Database {
-                specificities,
-                formula,
-                id,
-            } => Ok(CustomModification {
-                id: id.id.unwrap_or_default(),
-                name: id.name.clone(),
-                formula: formula.to_string(),
-                description: id.description.clone(),
-                synonyms: id.synonyms.to_vec(),
-                cross_ids: id
-                    .cross_ids
-                    .iter()
-                    .map(|(a, b)| format!("{a}:{b}"))
-                    .collect(),
-                linker: false,
-                single_specificities: specificities
-                    .iter()
-                    .map(|(rules, neutral_losses, diagnostic_ions)| {
-                        (
-                            rules
-                                .iter()
-                                .map(|p| display_placement_rule(p, false))
-                                .collect(),
-                            neutral_losses.iter().map(|n| n.hill_notation()).collect(),
-                            diagnostic_ions
-                                .iter()
-                                .map(|n| n.0.hill_notation())
-                                .collect(),
-                        )
-                    })
-                    .collect(),
-                linker_specificities: Vec::new(),
-                linker_length: None,
-            }),
-            SimpleModificationInner::Linker {
-                specificities,
-                formula,
-                id,
-                length,
-            } => Ok(CustomModification {
-                id: id.id.unwrap_or_default(),
-                name: id.name.clone(),
-                formula: formula.to_string(),
-                description: id.description.clone(),
-                synonyms: id.synonyms.to_vec(),
-                cross_ids: id
-                    .cross_ids
-                    .iter()
-                    .map(|(a, b)| format!("{a}:{b}"))
-                    .collect(),
-                linker: true,
-                single_specificities: Vec::new(),
-                linker_specificities: specificities
-                    .iter()
-                    .map(|spec| match spec {
-                        LinkerSpecificity::Asymmetric {
-                            rules: (rules, secondary_rules),
-                            stubs,
-                            neutral_losses,
-                            diagnostic,
-                        } => (
-                            true,
-                            rules
-                                .iter()
-                                .map(|p| display_placement_rule(p, false))
-                                .collect(),
-                            secondary_rules
-                                .iter()
-                                .map(|p| display_placement_rule(p, false))
-                                .collect(),
-                            stubs.iter().map(|s| display_stubs(s, false)).collect(),
-                            neutral_losses
-                                .iter()
-                                .map(|n| display_neutral_loss(n, false))
-                                .collect(),
-                            diagnostic.iter().map(|n| n.0.hill_notation()).collect(),
-                        ),
-                        LinkerSpecificity::Symmetric {
-                            rules,
-                            stubs,
-                            neutral_losses,
-                            diagnostic,
-                        } => (
-                            false,
-                            rules
-                                .iter()
-                                .map(|p| display_placement_rule(p, false))
-                                .collect(),
-                            Vec::new(),
-                            stubs.iter().map(|s| display_stubs(s, false)).collect(),
-                            neutral_losses
-                                .iter()
-                                .map(|n| display_neutral_loss(n, false))
-                                .collect(),
-                            diagnostic.iter().map(|n| n.0.hill_notation()).collect(),
-                        ),
-                    })
-                    .collect(),
-                linker_length: length.map(|n| n.0),
-            }),
-            _ => Err("Invalid custom modification type"),
-        }
-    } else {
-        Err("Given index does not exist")
+    match state.ontologies.custom().get_by_index(&id).as_deref() {
+        Some(SimpleModificationInner::Database {
+            specificities,
+            formula,
+            id,
+        }) => Ok(CustomModification {
+            id: id.id().unwrap_or_default(),
+            name: id.name.to_string(),
+            formula: formula.to_string(),
+            description: id.description.to_string(),
+            synonyms: id.synonyms.iter().map(|s| s.1.to_string()).collect(),
+            cross_ids: id
+                .cross_ids
+                .iter()
+                .map(|(a, b)| a.as_ref().map_or(b.to_string(), |a| format!("{a}:{b}")))
+                .collect(),
+            linker: false,
+            single_specificities: specificities
+                .iter()
+                .map(|(rules, neutral_losses, diagnostic_ions)| {
+                    (
+                        rules
+                            .iter()
+                            .map(|p| display_placement_rule(p, false, &state.ontologies))
+                            .collect(),
+                        neutral_losses.iter().map(|n| n.hill_notation()).collect(),
+                        diagnostic_ions
+                            .iter()
+                            .map(|n| n.0.hill_notation())
+                            .collect(),
+                    )
+                })
+                .collect(),
+            linker_specificities: Vec::new(),
+            linker_length: None,
+        }),
+        Some(SimpleModificationInner::Linker {
+            specificities,
+            formula,
+            id,
+            length,
+        }) => Ok(CustomModification {
+            id: id.id().unwrap_or_default(),
+            name: id.name.to_string(),
+            formula: formula.to_string(),
+            description: id.description.to_string(),
+            synonyms: id.synonyms.iter().map(|s| s.1.to_string()).collect(),
+            cross_ids: id
+                .cross_ids
+                .iter()
+                .map(|(a, b)| a.as_ref().map_or(b.to_string(), |a| format!("{a}:{b}")))
+                .collect(),
+            linker: true,
+            single_specificities: Vec::new(),
+            linker_specificities: specificities
+                .iter()
+                .map(|spec| match spec {
+                    LinkerSpecificity::Asymmetric {
+                        rules: (rules, secondary_rules),
+                        stubs,
+                        neutral_losses,
+                        diagnostic,
+                    } => (
+                        true,
+                        rules
+                            .iter()
+                            .map(|p| display_placement_rule(p, false, &state.ontologies))
+                            .collect(),
+                        secondary_rules
+                            .iter()
+                            .map(|p| display_placement_rule(p, false, &state.ontologies))
+                            .collect(),
+                        stubs.iter().map(|s| display_stubs(s, false)).collect(),
+                        neutral_losses
+                            .iter()
+                            .map(|n| display_neutral_loss(n, false))
+                            .collect(),
+                        diagnostic.iter().map(|n| n.0.hill_notation()).collect(),
+                    ),
+                    LinkerSpecificity::Symmetric {
+                        rules,
+                        stubs,
+                        neutral_losses,
+                        diagnostic,
+                    } => (
+                        false,
+                        rules
+                            .iter()
+                            .map(|p| display_placement_rule(p, false, &state.ontologies))
+                            .collect(),
+                        Vec::new(),
+                        stubs.iter().map(|s| display_stubs(s, false)).collect(),
+                        neutral_losses
+                            .iter()
+                            .map(|n| display_neutral_loss(n, false))
+                            .collect(),
+                        diagnostic.iter().map(|n| n.0.hill_notation()).collect(),
+                    ),
+                })
+                .collect(),
+            linker_length: length.map(|n| n.0),
+        }),
+        Some(_) => Err("Invalid custom modification type"),
+        None => Err("Given index does not exist"),
     }
 }
 
@@ -254,7 +252,7 @@ pub fn get_custom_modification(
 /// This structure is way easier to handle over there.
 #[derive(Deserialize, Serialize)]
 pub struct CustomModification {
-    id: usize,
+    id: u32,
     name: String,
     formula: String,
     description: String,
@@ -282,192 +280,135 @@ pub async fn update_modification(
         .formula
         .parse::<f64>()
         .map(MolecularFormula::with_additional_mass)
-        .or_else(|_| {
-            MolecularFormula::from_pro_forma::<true, true>(&custom_modification.formula, ..)
-        })
+        .or_else(|_| MolecularFormula::pro_forma::<true, true>(&custom_modification.formula))
         .map_err(|e| e.to_html(false))?;
-    let id = ModificationId {
-        ontology: Ontology::Custom,
-        name: custom_modification.name.clone(),
-        id: Some(custom_modification.id),
-        description: custom_modification.description,
-        synonyms: custom_modification.synonyms.into(),
-        cross_ids: custom_modification
+    let id = ModificationId::new(
+        Ontology::Custom,
+        custom_modification.name.clone().into_boxed_str(),
+        Some(custom_modification.id),
+        custom_modification.description.into_boxed_str(),
+        custom_modification
+            .synonyms
+            .iter()
+            .map(|s| (SynonymScope::Exact, s.clone().into_boxed_str()))
+            .collect(),
+        custom_modification
             .cross_ids
             .iter()
-            .filter_map(|id| id.split_once(':'))
-            .map(|(a, b)| (a.to_string(), b.to_string()))
-            .collect(),
-    };
-    let modification = (
-        Some(custom_modification.id),
-        custom_modification.name.to_lowercase(),
-        Arc::new(if custom_modification.linker {
-            SimpleModificationInner::Linker {
-                specificities: custom_modification
-                    .linker_specificities
-                    .iter()
-                    .map(
-                        |(
-                            asymmetric,
-                            placement_rules,
-                            secondary_placement_rules,
-                            stubs,
-                            neutral_losses,
-                            diagnostic,
-                        )| {
-                            let stubs = stubs
-                                .iter()
-                                .map(|text| parse_stub(text))
-                                .collect::<Result<Vec<_>, _>>()?;
-                            let neutral_losses = neutral_losses
-                                .iter()
-                                .map(|text| text.parse())
-                                .collect::<Result<Vec<_>, _>>()?;
-                            let diagnostic = diagnostic
-                                .iter()
-                                .map(|d| {
-                                    d.parse::<f64>()
-                                        .map(MolecularFormula::with_additional_mass)
-                                        .or_else(|_| {
-                                            MolecularFormula::from_pro_forma::<true, true>(d, ..)
-                                        })
-                                        .map(DiagnosticIon)
-                                })
-                                .collect::<Result<Vec<_>, _>>()?;
-                            if *asymmetric {
-                                Ok(LinkerSpecificity::Asymmetric {
-                                    rules: (
-                                        placement_rules
-                                            .iter()
-                                            .map(|r| r.parse::<PlacementRule>())
-                                            .collect::<Result<Vec<_>, _>>()?,
-                                        secondary_placement_rules
-                                            .iter()
-                                            .map(|r| r.parse::<PlacementRule>())
-                                            .collect::<Result<Vec<_>, _>>()?,
-                                    ),
-                                    stubs,
-                                    neutral_losses,
-                                    diagnostic,
-                                })
-                            } else {
-                                Ok(LinkerSpecificity::Symmetric {
-                                    rules: placement_rules
+            .map(|id| {
+                id.split_once(':')
+                    .map_or((None, id.clone().into_boxed_str()), |(a, b)| {
+                        (Some(a.into()), b.into())
+                    })
+            })
+            .collect::<Vec<_>>()
+            .into(),
+    );
+    let modification = Arc::new(if custom_modification.linker {
+        SimpleModificationInner::Linker {
+            specificities: custom_modification
+                .linker_specificities
+                .iter()
+                .map(
+                    |(
+                        asymmetric,
+                        placement_rules,
+                        secondary_placement_rules,
+                        stubs,
+                        neutral_losses,
+                        diagnostic,
+                    )| {
+                        let stubs = stubs
+                            .iter()
+                            .map(|text| parse_stub(text))
+                            .collect::<Result<Vec<_>, _>>()?;
+                        let neutral_losses = neutral_losses
+                            .iter()
+                            .map(|text| text.parse())
+                            .collect::<Result<Vec<_>, _>>()?;
+                        let diagnostic = diagnostic
+                            .iter()
+                            .map(|d| {
+                                d.parse::<f64>()
+                                    .map(MolecularFormula::with_additional_mass)
+                                    .or_else(|_| MolecularFormula::pro_forma::<true, true>(d))
+                                    .map(DiagnosticIon)
+                            })
+                            .collect::<Result<Vec<_>, _>>()?;
+                        if *asymmetric {
+                            Ok(LinkerSpecificity::Asymmetric {
+                                rules: (
+                                    placement_rules
                                         .iter()
                                         .map(|r| r.parse::<PlacementRule>())
                                         .collect::<Result<Vec<_>, _>>()?,
-                                    stubs,
-                                    neutral_losses,
-                                    diagnostic,
-                                })
-                            }
-                        },
-                    )
-                    .collect::<Result<Vec<_>, BoxedError<'_, BasicKind>>>()
-                    .map_err(|e| e.to_html(false))?,
-                formula,
-                id,
-                length: custom_modification.linker_length.map(OrderedFloat::from),
-            }
-        } else {
-            SimpleModificationInner::Database {
-                specificities: custom_modification
-                    .single_specificities
-                    .iter()
-                    .map(|(placement_rules, neutral_losses, diagnostic_ions)| {
-                        Ok((
-                            placement_rules
-                                .iter()
-                                .map(|r| r.parse::<PlacementRule>())
-                                .collect::<Result<Vec<_>, _>>()?,
-                            neutral_losses
-                                .iter()
-                                .map(|n| n.parse::<NeutralLoss>())
-                                .collect::<Result<Vec<_>, _>>()?,
-                            diagnostic_ions
-                                .iter()
-                                .map(|d| {
-                                    d.parse::<f64>()
-                                        .map(MolecularFormula::with_additional_mass)
-                                        .or_else(|_| {
-                                            MolecularFormula::from_pro_forma::<true, true>(d, ..)
-                                        })
-                                        .map(DiagnosticIon)
-                                })
-                                .collect::<Result<Vec<_>, _>>()?,
-                        ))
-                    })
-                    .collect::<Result<Vec<_>, BoxedError<'_, BasicKind>>>()
-                    .map_err(|e| e.to_html(false))?,
-                formula,
-                id,
-            }
-        }),
-    );
+                                    secondary_placement_rules
+                                        .iter()
+                                        .map(|r| r.parse::<PlacementRule>())
+                                        .collect::<Result<Vec<_>, _>>()?,
+                                ),
+                                stubs,
+                                neutral_losses,
+                                diagnostic,
+                            })
+                        } else {
+                            Ok(LinkerSpecificity::Symmetric {
+                                rules: placement_rules
+                                    .iter()
+                                    .map(|r| r.parse::<PlacementRule>())
+                                    .collect::<Result<Vec<_>, _>>()?,
+                                stubs,
+                                neutral_losses,
+                                diagnostic,
+                            })
+                        }
+                    },
+                )
+                .collect::<Result<Vec<_>, BoxedError<'_, BasicKind>>>()
+                .map_err(|e| e.to_html(false))?,
+            formula,
+            id,
+            length: custom_modification.linker_length.map(OrderedFloat::from),
+        }
+    } else {
+        SimpleModificationInner::Database {
+            specificities: custom_modification
+                .single_specificities
+                .iter()
+                .map(|(placement_rules, neutral_losses, diagnostic_ions)| {
+                    Ok((
+                        placement_rules
+                            .iter()
+                            .map(|r| r.parse::<PlacementRule>())
+                            .collect::<Result<Vec<_>, _>>()?,
+                        neutral_losses
+                            .iter()
+                            .map(|n| n.parse::<NeutralLoss>())
+                            .collect::<Result<Vec<_>, _>>()?,
+                        diagnostic_ions
+                            .iter()
+                            .map(|d| {
+                                d.parse::<f64>()
+                                    .map(MolecularFormula::with_additional_mass)
+                                    .or_else(|_| MolecularFormula::pro_forma::<true, true>(d))
+                                    .map(DiagnosticIon)
+                            })
+                            .collect::<Result<Vec<_>, _>>()?,
+                    ))
+                })
+                .collect::<Result<Vec<_>, BoxedError<'_, BasicKind>>>()
+                .map_err(|e| e.to_html(false))?,
+            formula,
+            id,
+        }
+    });
 
     if let Ok(mut state) = app.state::<Mutex<State>>().lock() {
-        // Update state
-        if let Some(index) = state
-            .custom_modifications
-            .iter()
-            .position(|p| p.0 == modification.0)
-        {
-            state.custom_modifications[index] = modification;
-        } else {
-            state.custom_modifications.push(modification);
-        }
-
-        // Store mods config file
-        let path = app
-            .path()
-            .app_config_dir()
-            .map(|dir| dir.join(crate::CUSTOM_MODIFICATIONS_FILE))
-            .map_err(|e| {
-                BoxedError::new(
-                    BasicKind::Error,
-                    "Cannot find app data directory",
-                    e.to_string(),
-                    Context::none(),
-                )
-                .to_html(false)
-            })?;
-        let parent = path.parent().ok_or_else(|| {
-            BoxedError::new(
-                BasicKind::Error,
-                "Custom modifications configuration does not have a valid directory",
-                "Please report",
-                Context::show(path.to_string_lossy()).to_owned(),
-            )
-            .to_html(false)
-        })?;
-        std::fs::create_dir_all(parent).map_err(|err| {
-            BoxedError::new(
-                BasicKind::Error,
-                "Could not create parent directories for custom modifications configuration file",
-                err.to_string(),
-                Context::show(parent.to_string_lossy()).to_owned(),
-            )
-            .to_html(false)
-        })?;
-        let file = BufWriter::new(std::fs::File::create(&path).map_err(|err| {
-            BoxedError::new(
-                BasicKind::Error,
-                "Could not open custom modifications configuration file",
-                err.to_string(),
-                Context::show(path.to_string_lossy()).to_owned(),
-            )
-            .to_html(false)
-        })?);
-        serde_json::to_writer_pretty(file, &state.custom_modifications).map_err(|err| {
-            BoxedError::new(
-                BasicKind::Error,
-                "Could not write custom modifications to configuration file",
-                err.to_string(),
-                Context::none(),
-            )
-            .to_html(false)
-        })?;
+        // Update state (if this modification was not stored before the remove will just do nothing)
+        let custom = state.ontologies.custom_mut();
+        custom.remove(&custom_modification.id);
+        custom.add(modification);
+        custom.save_to_cache().map_err(|e| e.to_html(true))?;
 
         Ok(())
     } else {

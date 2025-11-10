@@ -75,6 +75,7 @@ dependencies = [
  "mzalign",
  "mzannotate",
  "mzcore",
+ "mzcv",
  "mzdata",
  "mzident",
  "mzpeaks",
@@ -1083,6 +1084,15 @@ dependencies = [
  "block-buffer",
  "crypto-common",
  "subtle",
+]
+
+[[package]]
+name = "directories"
+version = "6.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16f5094c54661b38d03bd7e50df373292118db60b585c08a411c6d840017fe7d"
+dependencies = [
+ "dirs-sys",
 ]
 
 [[package]]
@@ -2353,6 +2363,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "imgt"
+version = "0.11.0"
+dependencies = [
+ "bincode",
+ "context_error",
+ "mzcore",
+ "rayon",
+ "serde",
+ "similar",
+]
+
+[[package]]
 name = "include_dir"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2889,6 +2911,7 @@ dependencies = [
 name = "mzalign"
 version = "0.11.0"
 dependencies = [
+ "imgt",
  "itertools",
  "mzcore",
  "ordered-float",
@@ -2918,16 +2941,33 @@ version = "0.11.0"
 dependencies = [
  "bincode",
  "context_error",
+ "flate2",
  "itertools",
+ "mzcv",
  "ndarray 0.16.1",
  "ordered-float",
  "probability",
  "regex",
+ "roxmltree",
  "serde",
  "serde_json",
- "similar",
+ "sha2",
  "thin-vec",
  "uom",
+]
+
+[[package]]
+name = "mzcv"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "chrono",
+ "context_error",
+ "directories",
+ "flate2",
+ "reqwest",
+ "serde",
+ "sha2",
 ]
 
 [[package]]
@@ -4436,6 +4476,15 @@ dependencies = [
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "roxmltree"
+version = "0.21.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1964b10c76125c36f8afe190065a4bf9a87bf324842c05701330bba9f1cacbb"
+dependencies = [
+ "memchr",
 ]
 
 [[package]]

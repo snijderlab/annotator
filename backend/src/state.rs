@@ -8,7 +8,7 @@ use std::{
 use mzalign::AlignIndex;
 use mzannotate::prelude::*;
 use mzcore::{
-    ontology::CustomDatabase,
+    ontology::Ontologies,
     prelude::*,
     sequence::{Linked, SimpleLinear},
     system::OrderedTime,
@@ -26,7 +26,7 @@ pub struct State {
     pub spectra: Vec<RawFile>,
     pub identified_peptide_files: RefCell<Vec<IdentifiedPeptidoformFile>>,
     pub annotated_spectrum: Option<AnnotatedSpectrum>,
-    pub custom_modifications: CustomDatabase,
+    pub ontologies: Ontologies,
     pub custom_modifications_error: Option<(String, Vec<String>)>,
     pub custom_models: Vec<(String, FragmentationModel)>,
     pub custom_models_error: Option<(String, Vec<String>)>,
@@ -34,9 +34,6 @@ pub struct State {
 }
 
 impl State {
-    pub fn database(&self) -> Option<&CustomDatabase> {
-        (!self.custom_modifications.is_empty()).then_some(&self.custom_modifications)
-    }
     pub fn identified_peptide_files(&self) -> Ref<'_, Vec<IdentifiedPeptidoformFile>> {
         self.identified_peptide_files.borrow()
     }

@@ -54,83 +54,81 @@ pub fn get_label(
             Some(get_glycan_peptide_fragments(&annotations[0]));
 
         for a in annotations {
-            if let Some(charge) = shared_charge {
-                if charge != a.charge {
-                    shared_charge = None;
-                }
+            if let Some(charge) = shared_charge
+                && charge != a.charge
+            {
+                shared_charge = None;
             }
-            if let Some(ion) = &shared_ion {
-                if *ion != a.ion.label() {
-                    shared_ion = None;
-                }
+            if let Some(ion) = &shared_ion
+                && *ion != a.ion.label()
+            {
+                shared_ion = None;
             }
-            if let Some(pos) = &shared_pos {
-                if *pos != a.ion.position_label() {
-                    shared_pos = None;
-                }
+            if let Some(pos) = &shared_pos
+                && *pos != a.ion.position_label()
+            {
+                shared_pos = None;
             }
-            if let Some(peptidoform) = shared_peptidoform_ion {
-                if peptidoform != a.peptidoform_ion_index {
-                    shared_peptidoform_ion = None;
-                }
+            if let Some(peptidoform) = shared_peptidoform_ion
+                && peptidoform != a.peptidoform_ion_index
+            {
+                shared_peptidoform_ion = None;
             }
-            if let Some(peptide) = shared_peptidoform {
-                if peptide != a.peptidoform_index {
-                    shared_peptidoform = None;
-                }
+            if let Some(peptide) = shared_peptidoform
+                && peptide != a.peptidoform_index
+            {
+                shared_peptidoform = None;
             }
-            if let Some(glycan) = &shared_glycan {
-                if *glycan != a.ion.glycan_position().map(|g| g.attachment()) {
-                    shared_glycan = None;
-                }
+            if let Some(glycan) = &shared_glycan
+                && *glycan != a.ion.glycan_position().map(|g| g.attachment())
+            {
+                shared_glycan = None;
             }
-            if let Some(glycan) = &shared_glycan_figures {
-                if *glycan != get_glycan_figure(compound_peptidoform, a, theme, glycan_footnotes) {
-                    shared_glycan_figures = None;
-                }
+            if let Some(glycan) = &shared_glycan_figures
+                && *glycan != get_glycan_figure(compound_peptidoform, a, theme, glycan_footnotes)
+            {
+                shared_glycan_figures = None;
             }
-            if let Some(loss) = &shared_loss {
-                if loss != &a.neutral_loss {
-                    shared_loss = None;
-                }
+            if let Some(loss) = &shared_loss
+                && loss != &a.neutral_loss
+            {
+                shared_loss = None;
             }
-            if let Some(xl) = &shared_xl {
-                if *xl != get_xl(a) {
-                    shared_xl = None;
-                }
+            if let Some(xl) = &shared_xl
+                && *xl != get_xl(a)
+            {
+                shared_xl = None;
             }
-            if let Some(aaa) = &shared_ambiguous_amino_acids {
-                if *aaa
+            if let Some(aaa) = &shared_ambiguous_amino_acids
+                && *aaa
                     != get_ambiguous_amino_acids(
                         a,
                         multiple_peptidoforms,
                         multiple_peptidoform_ions,
                     )
-                {
-                    shared_ambiguous_amino_acids = None;
-                }
+            {
+                shared_ambiguous_amino_acids = None;
             }
-            if let Some(sm) = &shared_modifications {
-                if *sm
+            if let Some(sm) = &shared_modifications
+                && *sm
                     != get_modifications(
                         a,
                         multiple_peptidoforms,
                         multiple_peptidoform_ions,
                         compound_peptidoform,
                     )
-                {
-                    shared_modifications = None;
-                }
+            {
+                shared_modifications = None;
             }
-            if let Some(cc) = &shared_charge_carriers {
-                if *cc != get_charge_carriers(a) {
-                    shared_charge_carriers = None;
-                }
+            if let Some(cc) = &shared_charge_carriers
+                && *cc != get_charge_carriers(a)
+            {
+                shared_charge_carriers = None;
             }
-            if let Some(cc) = &shared_glycan_peptide_fragments {
-                if *cc != get_glycan_peptide_fragments(a) {
-                    shared_glycan_peptide_fragments = None;
-                }
+            if let Some(cc) = &shared_glycan_peptide_fragments
+                && *cc != get_glycan_peptide_fragments(a)
+            {
+                shared_glycan_peptide_fragments = None;
             }
         }
 

@@ -11,9 +11,9 @@ use mzannotate::{
 use mzcore::{
     chemistry::NeutralLoss,
     glycan::{GlycanDirection, GlycanRoot, GlycanSelection, GlycanStructure},
-    ontology::Ontology,
+    ontology::{Ontologies, Ontology},
     prelude::*,
-    sequence::{PlacementRule, SimpleModificationInner},
+    sequence::{PlacementRule, SimpleModification, SimpleModificationInner},
     system::{Mass, MassOverCharge, da, thomson},
 };
 use mzdata::mzpeaks::PeakCollection;
@@ -1305,7 +1305,11 @@ pub fn display_neutral_loss(loss: &NeutralLoss, formatted: bool) -> String {
     }
 }
 
-pub fn display_placement_rule(rule: &PlacementRule, formatted: bool) -> String {
+pub fn display_placement_rule(
+    rule: &PlacementRule,
+    formatted: bool,
+    ontologies: &Ontologies,
+) -> String {
     if formatted {
         match rule {
             PlacementRule::AminoAcid(aa, pos) => format!(
@@ -1317,8 +1321,9 @@ pub fn display_placement_rule(rule: &PlacementRule, formatted: bool) -> String {
             PlacementRule::PsiModification(index, pos) => {
                 format!(
                     "{}@<span class='position'>{pos}</span>",
-                    Ontology::Psimod
-                        .find_id(*index, None)
+                    ontologies
+                        .psimod()
+                        .get_by_index(index)
                         .unwrap_or_else(|| panic!(
                             "Invalid PsiMod placement rule, non existing modification {index}"
                         ))
@@ -1333,8 +1338,9 @@ pub fn display_placement_rule(rule: &PlacementRule, formatted: bool) -> String {
             PlacementRule::PsiModification(index, pos) => {
                 format!(
                     "{}@{pos}",
-                    Ontology::Psimod
-                        .find_id(*index, None)
+                    ontologies
+                        .psimod()
+                        .get_by_index(index)
                         .unwrap_or_else(|| panic!(
                             "Invalid PsiMod placement rule, non existing modification {index}"
                         ))
@@ -1344,38 +1350,41 @@ pub fn display_placement_rule(rule: &PlacementRule, formatted: bool) -> String {
     }
 }
 
-pub fn link_modification(ontology: Ontology, id: Option<usize>, name: &str) -> String {
-    if ontology == Ontology::Gnome {
-        format!(
-            "<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'>{0}:{1}</a>",
-            ontology.char(),
-            name.to_ascii_uppercase()
-        )
-    } else if let Some(id) = id {
-        let preview = if let Some(
-            SimpleModificationInner::Database { formula, id, .. }
-            | SimpleModificationInner::Linker { formula, id, .. },
-        ) = ontology.find_id(id, None).as_deref()
-        {
+pub fn link_modification(modification: SimpleModification) -> String {
+    if let Some(description) = modification.description() {
+        if description.ontology == Ontology::Gnome {
             format!(
-                " title=\"{} Formula: {} Mass: {}\"",
-                id.name,
-                display_formula(formula, false),
-                display_masses_unformatted(formula)
+                "<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'>{0}:{1}</a>",
+                description.ontology.char(),
+                description.name
+            )
+        } else if let Some(id) = description.id() {
+            let preview = if let SimpleModificationInner::Database { formula, .. }
+            | SimpleModificationInner::Linker { formula, .. } =
+                modification.as_ref()
+            {
+                format!(
+                    " title=\"{} Formula: {} Mass: {}\"",
+                    description.name,
+                    display_formula(formula, false),
+                    display_masses_unformatted(formula)
+                )
+            } else {
+                String::new()
+            };
+            format!(
+                "<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{2}{1}\";document.getElementById(\"search-modification-button\").click()'{preview}>{0}:{2}{1}</a>",
+                description.ontology.name(),
+                id,
+                if description.ontology == Ontology::Resid {
+                    "AA"
+                } else {
+                    ""
+                }
             )
         } else {
             String::new()
-        };
-        format!(
-            "<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{2}{1}\";document.getElementById(\"search-modification-button\").click()'{preview}>{0}:{2}{1}</a>",
-            ontology.name(),
-            id,
-            if ontology == Ontology::Resid {
-                "AA"
-            } else {
-                ""
-            }
-        )
+        }
     } else {
         String::new()
     }

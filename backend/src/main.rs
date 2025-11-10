@@ -10,10 +10,12 @@ use context_error::{BasicKind, BoxedError, CreateError, FullErrorContent};
 use itertools::Itertools;
 use mzannotate::{mzspeclib::AnalyteTarget, prelude::*};
 use mzcore::{
+    ontology::Ontologies,
     prelude::*,
     system::{e, isize::Charge},
 };
-use mzdata::prelude::{IonProperties, SpectrumLike};
+use mzcv::{CVIndex, CVSource};
+use mzdata::prelude::SpectrumLike;
 use mzident::MetaData;
 use ordered_float::OrderedFloat;
 use render::{display_formula, display_mass};
@@ -31,7 +33,11 @@ mod spectra;
 mod state;
 mod validate;
 
-use crate::{metadata_render::RenderToHtml, state::State};
+use crate::{
+    html_builder::{HtmlContent, HtmlElement, HtmlTag},
+    metadata_render::{OptionalString, RenderToHtml},
+    state::State,
+};
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub enum Theme {
@@ -62,8 +68,21 @@ type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
 fn refresh(
     state: ModifiableState,
     theme: Theme,
-) -> (usize, usize, Option<AnnotationResult>, Vec<String>) {
+) -> (usize, usize, Option<AnnotationResult>, Vec<String>, String) {
     let state = state.lock().unwrap();
+    fn get_details<T: CVSource>(index: &CVIndex<T>) -> [HtmlContent; 5] {
+        [
+            T::cv_name().into(),
+            index.version().version.clone().to_optional_string().into(),
+            index.version().last_updated().to_optional_string().into(),
+            HtmlTag::code
+                .new()
+                .content(index.version().hash_hex())
+                .into(),
+            index.len().to_string().into(),
+        ]
+    }
+
     (
         0, // state.spectra.as_ref().map(|s| s.len()).unwrap_or_default(),
         state.identified_peptide_files().len(),
@@ -78,6 +97,23 @@ fn refresh(
             )
         }),
         state.auto_open_errors.clone(),
+        HtmlElement::table(
+            Some(&[
+                "Ontology",
+                "Version",
+                "Last updated",
+                "Hash",
+                "Number of mods",
+            ]),
+            [
+                get_details(state.ontologies.unimod()),
+                get_details(state.ontologies.psimod()),
+                get_details(state.ontologies.gnome()),
+                get_details(state.ontologies.xlmod()),
+                get_details(state.ontologies.resid()),
+            ],
+        )
+        .to_string(),
     )
 }
 
@@ -91,7 +127,7 @@ async fn details_formula(text: &str) -> Result<String, String> {
         )
         .to_html(false))
     } else {
-        MolecularFormula::from_pro_forma::<false, false>(text, ..).map_err(|err| err.to_html(false))
+        MolecularFormula::pro_forma::<false, false>(text).map_err(|err| err.to_html(false))
     }?;
     let isotopes = formula.isotopic_distribution(0.001);
     let (max, max_occurrence) = isotopes
@@ -286,21 +322,19 @@ async fn annotate_spectrum<'a>(
             ]);
         }
     };
-    let (peptide, warnings) =
-        CompoundPeptidoformIon::pro_forma(peptide, Some(&state.custom_modifications)).map_err(
-            |errs| {
-                errs.into_iter()
-                    .map(|err| err.to_html(false))
-                    .collect::<Vec<_>>()
-            },
-        )?;
+    let (peptide, warnings) = CompoundPeptidoformIon::pro_forma(peptide, &state.ontologies)
+        .map_err(|errs| {
+            errs.into_iter()
+                .map(|err| err.to_html(false))
+                .collect::<Vec<_>>()
+        })?;
 
     let use_charge = Charge::new::<e>(
         charge
             .or_else(|| {
                 spectrum
                     .precursor()
-                    .and_then(|p| p.charge().map(|c| c as isize))
+                    .and_then(|p| p.ions.first().and_then(|i| i.charge.map(|c| c as isize)))
             })
             .unwrap_or(1),
     );
@@ -359,42 +393,33 @@ fn render_annotated_spectrum(
 }
 
 fn load_custom_mods_and_models(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let app_state = app.state::<Mutex<State>>();
+    let mut state = app_state
+        .lock()
+        .expect("Poisoned mutex at setup of custom mods");
+    let now = chrono::Local::now().format("%Y%m%d%H%M%S%.3f");
+    let (ontologies, warnings) = dbg!(Ontologies::init());
+    state.ontologies = ontologies;
+    if !warnings.is_empty() {
+        eprintln!("Error while parsing custom modifications:\n");
+        for err in &warnings {
+            eprintln!("{err}");
+        }
+
+        state.custom_modifications_error = Some((
+            BoxedError::small(
+                mzcv::CVError::FileDoesNotExist, // Error type does not matter
+                "Errors while initialising ontologies",
+                "See underlying errors",
+            )
+            .add_underlying_errors(warnings)
+            .to_html(false),
+            Vec::new(),
+        ))
+    }
     let path = app.path().app_config_dir();
     if let Ok(path) = path {
-        let custom_mods = path.join(CUSTOM_MODIFICATIONS_FILE);
         let custom_models = path.join(CUSTOM_MODELS_FILE);
-        let app_state = app.state::<Mutex<State>>();
-        let mut state = app_state
-            .lock()
-            .expect("Poisoned mutex at setup of custom mods");
-        let now = chrono::Local::now().format("%Y%m%d%H%M%S%.3f");
-        if custom_mods.exists() {
-            match mzcore::sequence::parse_custom_modifications(&custom_mods) {
-                Ok(modifications) => state.custom_modifications = modifications,
-                Err(error) => {
-                    eprintln!("Error while parsing custom modifications:\n{error}");
-                    let mut combined_error = (error.to_html(false), Vec::new());
-                    if let Err(err) = std::fs::rename(
-                        &custom_mods,
-                        custom_mods
-                            .with_file_name(format!("{CUSTOM_MODELS_FILE}_backup_{now}.json",)),
-                    ) {
-                        combined_error
-                            .1
-                            .push(format!("Could not rename modifications file: {err}"));
-                    }
-                    if let Err(err) = std::fs::write(
-                        custom_mods.with_file_name(format!("error_{now}.txt")),
-                        error.to_string().as_bytes(),
-                    ) {
-                        combined_error.1.push(format!(
-                            "Could not save modifications parse error file: {err}"
-                        ));
-                    }
-                    state.custom_modifications_error = Some(combined_error);
-                }
-            }
-        }
         if custom_models.exists() {
             match mzannotate::annotation::model::parse_custom_models(&custom_models) {
                 Ok(models) => state.custom_models = models,
@@ -478,6 +503,11 @@ fn auto_open(app: &mut tauri::App, args: Args) -> Result<(), Box<dyn std::error:
     Ok(())
 }
 
+fn setup(app: &mut tauri::App, args: Args) -> Result<(), Box<dyn std::error::Error>> {
+    load_custom_mods_and_models(app)?;
+    auto_open(app, args)
+}
+
 #[tauri::command]
 fn get_custom_configuration_path(app: tauri::AppHandle) -> (String, String) {
     app.path().app_config_dir().map_or(
@@ -502,14 +532,13 @@ fn main() {
             spectra: Vec::new(),
             identified_peptide_files: std::cell::RefCell::new(Vec::new()),
             annotated_spectrum: None,
-            custom_modifications: Vec::new(),
+            ontologies: Ontologies::empty(),
             custom_modifications_error: None,
             custom_models: Vec::new(),
             custom_models_error: None,
             auto_open_errors: Vec::new(),
         }))
-        .setup(load_custom_mods_and_models)
-        .setup(|app| auto_open(app, args))
+        .setup(|app| setup(app, args))
         .invoke_handler(tauri::generate_handler![
             annotate_spectrum,
             custom_modifications::delete_custom_modification,

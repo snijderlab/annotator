@@ -5,13 +5,13 @@ use itertools::Itertools;
 use mzcore::{glycan::MonoSaccharide, prelude::*, sequence::PlacementRule, chemistry::NeutralLoss};
 use mzannotate::fragment::{FragmentKind};
 
-use crate::render::{display_formula, display_neutral_loss, display_placement_rule, display_stubs};
+use crate::{ModifiableState, render::{display_formula, display_neutral_loss, display_placement_rule, display_stubs}};
 
 #[tauri::command]
 pub fn validate_molecular_formula(text: String) -> Result<String, String> {
     text.parse::<f64>()
         .map(MolecularFormula::with_additional_mass)
-        .or_else(|_| MolecularFormula::from_pro_forma::<true, true>(&text, ..))
+        .or_else(|_| MolecularFormula::pro_forma::<true, true>(&text))
         .map(|f| display_formula(&f, true))
         .map_err(|err| err.to_html(false))
 }
@@ -117,7 +117,7 @@ pub fn parse_monosaccharide_neutral_loss(text: &str) -> Result<(MonoSaccharide, 
 
     Ok((MonoSaccharide::from_short_iupac(monosaccharide, 0, 0).and_then(|(sugar, amount_parsed)| 
         if amount_parsed == monosaccharide.len() {
-            Ok(sugar.with_name(monosaccharide))
+            Ok(sugar)
         } else {
             Err(BoxedError::new(BasicKind::Error,"Could not parse monosaccharide", format!("The monosaccharide was interpreted to mean '{sugar}' but this left text unaccounted for"), Context::line_range(None, text, amount_parsed..monosaccharide.len())))
         }
@@ -189,9 +189,10 @@ pub fn validate_satellite_ion(text: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn validate_placement_rule(text: String) -> Result<String, String> {
+pub fn validate_placement_rule(text: String, state: ModifiableState<'_>) -> Result<String, String> {
+    let state = state.lock().map_err(|_| "Mutex poissoned")?;
     text.parse::<PlacementRule>()
-        .map(|r| display_placement_rule(&r, false)).map_err(|err| err.to_html(false))
+        .map(|r| display_placement_rule(&r, false, &state.ontologies)).map_err(|err| err.to_html(false))
 }
 
 pub fn parse_stub(text: &str) -> Result<(MolecularFormula, MolecularFormula), BoxedError<'static, BasicKind>> {
@@ -199,12 +200,12 @@ pub fn parse_stub(text: &str) -> Result<(MolecularFormula, MolecularFormula), Bo
         let f1 = text[..index]
             .parse::<f64>()
             .map(MolecularFormula::with_additional_mass)
-            .or_else(|_| MolecularFormula::from_pro_forma::<true, true>(text, ..index))
+            .or_else(|_| MolecularFormula::pro_forma_inner::<true, true>(&Context::none().lines(0, text), text, ..index))
             .map_err(BoxedError::to_owned)?;
         let f2 = text[index + 1..]
             .parse::<f64>()
             .map(MolecularFormula::with_additional_mass)
-            .or_else(|_| MolecularFormula::from_pro_forma::<true, true>(text, index + 1..))
+            .or_else(|_| MolecularFormula::pro_forma_inner::<true, true>(&Context::none().lines(0, text), text, index + 1..))
             .map_err(BoxedError::to_owned)?;
         Ok((f1, f2))
     } else {
@@ -227,7 +228,9 @@ pub fn validate_custom_single_specificity(
     placement_rules: Vec<String>,
     neutral_losses: Vec<String>,
     diagnostic_ions: Vec<String>,
+    state: ModifiableState<'_>,
 ) -> Result<String, String> {
+    let state = state.lock().map_err(|_| "Mutex poissoned")?;
     let rules = placement_rules
         .into_iter()
         .map(|text| text.parse::<PlacementRule>())
@@ -248,7 +251,7 @@ pub fn validate_custom_single_specificity(
         .map(|text| {
             text.parse::<f64>()
                 .map(MolecularFormula::with_additional_mass)
-                .or_else(|_| MolecularFormula::from_pro_forma::<true, true>(&text, ..))
+                .or_else(|_| MolecularFormula::pro_forma::<true, true>(&text))
                 .map_err(|err| err.to_html(false))
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -256,7 +259,7 @@ pub fn validate_custom_single_specificity(
         "<span data-value='{{\"placement_rules\":[{}],\"neutral_losses\":[{}],\"diagnostic_ions\":[{}]}}'>Placement rules: {}{}{}</span>",
         rules
             .iter()
-            .map(|r| format!("\"{}\"", display_placement_rule(r, false)))
+            .map(|r| format!("\"{}\"", display_placement_rule(r, false, &state.ontologies)))
             .join(","),
         neutral_losses
             .iter()
@@ -268,7 +271,7 @@ pub fn validate_custom_single_specificity(
             .join(","),
         rules
             .iter()
-            .map(|p| display_placement_rule(p, true))
+            .map(|p| display_placement_rule(p, true, &state.ontologies))
             .join(", "),
         if neutral_losses.is_empty() {
             String::new()
@@ -296,7 +299,9 @@ pub fn validate_custom_linker_specificity(
     stubs: Vec<String>,
     neutral_losses: Vec<String>,
     diagnostic_ions: Vec<String>,
+    state: ModifiableState<'_>,
 ) -> Result<String, String> {
+    let state = state.lock().map_err(|_| "Mutex poissoned")?;
     let rules1 = placement_rules
         .into_iter()
         .map(|text| text.parse::<PlacementRule>())
@@ -335,18 +340,18 @@ pub fn validate_custom_linker_specificity(
         .map(|text| {
             text.parse::<f64>()
                 .map(MolecularFormula::with_additional_mass)
-                .or_else(|_| MolecularFormula::from_pro_forma::<true, true>(&text, ..)).map_err(|err| err.to_html(false))
+                .or_else(|_| MolecularFormula::pro_forma::<true, true>(&text)).map_err(|err| err.to_html(false))
         })
         .collect::<Result<Vec<_>, _>>()?;
     Ok(format!(
         "<span data-value='{{\"asymmetric\":{asymmetric},\"placement_rules\":[{}],\"secondary_placement_rules\":[{}],\"stubs\":[{}],\"neutral_losses\":[{}],\"diagnostic_ions\":[{}]}}'>Placement rules: {}{}{}{}{}</span>",
         rules1
             .iter()
-            .map(|r| format!("\"{}\"", display_placement_rule(r, false)))
+            .map(|r| format!("\"{}\"", display_placement_rule(r, false, &state.ontologies)))
             .join(","),
         rules2
             .iter()
-            .map(|r| format!("\"{}\"", display_placement_rule(r, false)))
+            .map(|r| format!("\"{}\"", display_placement_rule(r, false, &state.ontologies)))
             .join(","),
         stubs
             .iter()
@@ -362,13 +367,13 @@ pub fn validate_custom_linker_specificity(
             .join(","),
         rules1
             .iter()
-            .map(|p| display_placement_rule(p, true))
+            .map(|p| display_placement_rule(p, true, &state.ontologies))
             .join(", "),
         if asymmetric {
             ", Secondary placement rules: ".to_string()
                 + &rules2
                     .iter()
-                    .map(|p| display_placement_rule(p, true))
+                    .map(|p| display_placement_rule(p, true, &state.ontologies))
                     .join(", ")
         } else {
             String::new()

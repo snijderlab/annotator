@@ -28,7 +28,7 @@ pub fn annotator_open_identified_peptidoforms_file(
     state: &mut std::sync::MutexGuard<'_, State>,
 ) -> Result<Option<String>, String> {
     let mut peptide_errors = Vec::new();
-    let peptides = open_identified_peptidoforms_file(path, state.database(), false)
+    let peptides = open_identified_peptidoforms_file(path, &state.ontologies, false)
         .map_err(|e| e.to_html(false))?;
     state
         .identified_peptide_files_mut()
@@ -126,7 +126,7 @@ pub async fn search_peptide<'a>(
         .to_html(false)
     })?;
     let query = std::sync::Arc::new(
-        Peptidoform::<Linked>::pro_forma(text, Some(&state.custom_modifications))
+        Peptidoform::<Linked>::pro_forma(text, &state.ontologies)
             .map_err(|errs| {
                 BoxedError::new(
                     BasicKind::Error,

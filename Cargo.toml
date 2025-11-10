@@ -7,15 +7,16 @@ chrono = "0.4"
 clap = {version = "4.5", features = ["derive"]}
 context_error = "0.1"
 itertools = "0.14"
-serde_json = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "2.0", features = ["protocol-asset"] }
-mzcore = { version = "0.11.0", features = ["isotopes", "glycan-render"] }
-mzannotate = { version = "0.11.0" }
-mzident = { version = "0.11.0", features = ["mzannotate"] }
 mzalign = { version = "0.11.0", features = ["rayon"] }
+mzannotate = { version = "0.11.0" }
+mzcore = { version = "0.11.0", default-features = false, features = ["isotopes", "glycan-render"] }
+mzcv = { version = "0.1.0", features = ["search-index", "http"] }
+mzident = { version = "0.11.0", features = ["mzannotate"] }
 ordered-float = { version = "5.0", features = ["serde"] }
 rayon = "1.10"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tauri = { version = "2.0", features = ["protocol-asset"] }
 mzdata = { git = "https://github.com/douweschulte/mzdata", branch="xy-support", default-features = false, features = [
     "mzsignal",
     "proxi-async",
@@ -41,6 +42,7 @@ hdf5-sys = { git = "https://github.com/aldanor/hdf5-rust.git" }
 # mzident = { git="https://github.com/rusteomics/mzcore"}
 # mzalign = { git="https://github.com/rusteomics/mzcore" }
 mzcore =  { path = "../mzcore/mzcore" }
+mzcv =  { path = "../mzcore/mzcv" }
 mzannotate = { path = "../mzcore/mzannotate" }
 mzident  = { path = "../mzcore/mzident" }
 mzalign = { path = "../mzcore/mzalign" }
