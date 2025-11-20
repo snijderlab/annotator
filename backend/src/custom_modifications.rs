@@ -31,6 +31,7 @@ pub fn get_custom_modifications(
             .ontologies
             .custom()
             .data()
+            .iter()
             .map(|modification| {
                 (
                     modification
@@ -38,7 +39,7 @@ pub fn get_custom_modifications(
                         .and_then(|d| d.id())
                         .unwrap_or_default(),
                     crate::search_modification::render_modification(
-                        modification,
+                        modification.clone(),
                         theme,
                         &state.ontologies,
                     )
@@ -57,7 +58,7 @@ pub fn duplicate_custom_modification(
     state: ModifiableState,
 ) -> Result<CustomModification, String> {
     let mut locked_state = state.lock().map_err(|_| "Could not lock mutex")?;
-    if let Some(modification) = locked_state.ontologies.custom().data().find(|p| {
+    if let Some(modification) = locked_state.ontologies.custom().data().iter().find(|p| {
         p.description()
             .and_then(|d| d.id())
             .is_some_and(|i| i == id)
@@ -112,7 +113,10 @@ pub fn duplicate_custom_modification(
             full => full,
         }
         .into();
-        locked_state.ontologies.custom_mut().add(new_modification);
+        locked_state
+            .ontologies
+            .custom_mut()
+            .add_to_indices(new_modification);
         locked_state
             .ontologies
             .custom()
@@ -303,6 +307,7 @@ pub async fn update_modification(
             })
             .collect::<Vec<_>>()
             .into(),
+        false,
     );
     let modification = Arc::new(if custom_modification.linker {
         SimpleModificationInner::Linker {
@@ -407,7 +412,7 @@ pub async fn update_modification(
         // Update state (if this modification was not stored before the remove will just do nothing)
         let custom = state.ontologies.custom_mut();
         custom.remove(&custom_modification.id);
-        custom.add(modification);
+        custom.add_to_indices(modification);
         custom.save_to_cache().map_err(|e| e.to_html(true))?;
 
         Ok(())

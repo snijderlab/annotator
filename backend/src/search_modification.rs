@@ -67,7 +67,7 @@ pub async fn search_modification(
     let tolerance = Tolerance::new_absolute(Mass::new::<dalton>(tolerance));
 
     match &*modification {
-        SimpleModificationInner::Mass(m)
+        SimpleModificationInner::Mass(_, m, _)
         | SimpleModificationInner::Gno {
             composition: GnoComposition::Weight(m),
             ..

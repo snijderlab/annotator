@@ -14,11 +14,24 @@ Other raw file formats can be converted using available converters. For convenie
   columns: (auto, auto),
   table.header([*Converter*], [*Supported formats*]),
   link("https://proteowizard.sourceforge.io/download.html")[Proteowizard MSConvert],
-  link("https://proteowizard.sourceforge.io/doc_users.html#SupportedFormats")[AB/Sciex T2D, Agilent MassHunter, Bruker BAF/Data Exchange/FID/TDF/U2/YEP, Mascot Generic, MS1, MS2, MZ5, mzML, mzXML, Sciex WIFF/WIFF2, Shimadzu LCD, Thermo raw, UIMF, Waters raw],
+  link(
+    "https://proteowizard.sourceforge.io/doc_users.html#SupportedFormats",
+  )[AB/Sciex T2D, Agilent MassHunter, Bruker BAF/Data Exchange/FID/TDF/U2/YEP, Mascot Generic, MS1, MS2, MZ5, mzML, mzXML, Sciex WIFF/WIFF2, Shimadzu LCD, Thermo raw, UIMF, Waters raw],
+
   link("https://openms.readthedocs.io/en/latest/about/installation.html")[TOPP FileConverter],
-  link("https://openms.readthedocs.io/en/latest/getting-started/types-of-topp-tools/file-handling.html#converting-your-files-to-mzml")[mzData, mzXML, ANDI/MS],
+  link(
+    "https://openms.readthedocs.io/en/latest/getting-started/types-of-topp-tools/file-handling.html#converting-your-files-to-mzml",
+  )[mzData, mzXML, ANDI/MS],
+
   link("https://openms.readthedocs.io/en/latest/about/installation.html")[TOPP DTAExtractor],
-  link("https://openms.readthedocs.io/en/latest/getting-started/types-of-topp-tools/file-handling.html#converting-between-dta-and-mzml")[Sequest DTA],
+  link(
+    "https://openms.readthedocs.io/en/latest/getting-started/types-of-topp-tools/file-handling.html#converting-between-dta-and-mzml",
+  )[Sequest DTA],
+
+  link(
+    "https://sciex.com/support/software-support/software-downloads",
+  )[Sciex MS Data Converter 2.0],
+  [Sciex formats],
 )
 
 == Selected spectra
@@ -35,7 +48,7 @@ The .NET 8.0 runtime is needed to open Thermo raw files, #link("https://dotnet.m
 
 == Clipboard
 
-Some programs allow copying a spectrum into the clipboard, use the #button[Load Clipboard] button to load such a spectrum from the clipboard. Currently spectra from selected Bruker, Stitch, Sciex, and Thermo programs are supported. 
+Some programs allow copying a spectrum into the clipboard, use the #button[Load Clipboard] button to load such a spectrum from the clipboard. Currently spectra from selected Bruker, Stitch, Sciex, and Thermo programs are supported.
 
 #aside[If you find another program that allows this behaviour please open an issue on GitHub for the Annotator, with the name and version of the program in question along with an example of the format.]
 
@@ -43,19 +56,22 @@ Some programs allow copying a spectrum into the clipboard, use the #button[Load 
 
 A #link("https://www.psidev.info/usi")[USI] is a text based format that identifies any spectrum in any publicly accessible dataset. It is build using the following parts.
 
-#table(columns: (auto, auto, auto),
-table.header([*Part*], [*Example*], [*Comment*]),
-[Prefix], [mzspec], [required],
-[Collection], [PXD043489], [required],
-[Dataset], [20201103_F1_UM5_Peng0013\_-?SA_139H2_InS_Elastase.raw], [required],
-[Index type], [scan], [required, can be scan/nativeId/index],
-[Index], [11809], [required, content depens on Index type],
-[Interpretation], [VSLFPPSSEQLTSNASVV], [optional, can be any ProForma sequence],
-[Provenance], [PR-G47], [optional]
+#table(
+  columns: (auto, auto, auto),
+  table.header([*Part*], [*Example*], [*Comment*]),
+  [Prefix], [mzspec], [required],
+  [Collection], [PXD043489], [required],
+  [Dataset], [20201103_F1_UM5_Peng0013\_-?SA_139H2_InS_Elastase.raw], [required],
+  [Index type], [scan], [required, can be scan/nativeId/index],
+  [Index], [11809], [required, content depens on Index type],
+  [Interpretation], [VSLFPPSSEQLTSNASVV], [optional, can be any ProForma sequence],
+  [Provenance], [PR-G47], [optional],
 )
 
 These parts have to be strung together using colons ':', resulting in the following string:
 
-#h(12pt)#peptidoform[mzspec:-?PXD043489:-?20201103_F1_UM5_Peng0013_SA_139H2_InS_Elastase.raw:-?scan:-?11809:-?VSLFPPSSEQLTSNASVV]
+#h(
+  12pt,
+)#peptidoform[mzspec:-?PXD043489:-?20201103_F1_UM5_Peng0013_SA_139H2_InS_Elastase.raw:-?scan:-?11809:-?VSLFPPSSEQLTSNASVV]
 
 Pasting a USI into the Annotator downloads that spectrum from the internet and loads the interpretation (if given) into the peptidoform field.

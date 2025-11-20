@@ -10,7 +10,7 @@ use mzannotate::prelude::*;
 use mzcore::{
     ontology::Ontologies,
     prelude::*,
-    sequence::{Linked, SimpleLinear},
+    sequence::{Linear, Linked},
     system::OrderedTime,
 };
 use mzdata::{
@@ -44,14 +44,14 @@ impl State {
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct IndexSequence {
-    pub sequence: Arc<Peptidoform<SimpleLinear>>,
+    pub sequence: Arc<Peptidoform<Linear>>,
     pub score: Option<OrderedFloat<f64>>,
     pub id: usize,
     pub index: usize,
 }
 
 impl HasPeptidoformImpl for IndexSequence {
-    type Complexity = SimpleLinear;
+    type Complexity = Linear;
     fn peptidoform(&self) -> &Peptidoform<Self::Complexity> {
         &self.sequence
     }
@@ -97,7 +97,7 @@ impl IdentifiedPeptidoformFile {
                         identified
                             .compound_peptidoform_ion()
                             .and_then(|p| p.into_owned().singular_peptidoform())
-                            .and_then(|p| p.into_simple_linear())
+                            .and_then(|p| p.into_linear())
                             .map(|p| IndexSequence {
                                 sequence: Arc::new(p),
                                 score: identified.score.map(OrderedFloat),

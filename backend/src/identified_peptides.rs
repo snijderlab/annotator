@@ -138,12 +138,12 @@ pub async fn search_peptide<'a>(
             })
             .map_err(|e| e.to_html(false))?
             .0
-            .into_simple_linear()
+            .into_linear()
             .ok_or_else(|| {
                 BoxedError::new(
                     BasicKind::Error,
                     "Invalid search peptide",
-                    "A search peptide should be simple",
+                    "A search peptide should not be cross-linked",
                     Context::none(),
                 )
                 .to_html(false)

@@ -7,14 +7,10 @@ There are quite some programs that export peptidoforms with metadata based on sp
 #table(
   columns: (auto, auto),
   table.header([*Open format*], [*Comment*]),
-  [Fasta],
-  [No header requirements],
-  [mzTab],
-  [v1.0 & Casanovo (3.x, 4.x, & 5.0)],
-  [mzSpecLib],
-  [v1.0],
-  [SSL],
-  [Spectrum sequence list]
+  [Fasta], [No header requirements],
+  [mzTab], [v1.0 & Casanovo (3.x, 4.x, & 5.0)],
+  [mzSpecLib], [v1.0],
+  [SSL], [Spectrum sequence list],
 )
 
 #table(
@@ -22,40 +18,25 @@ There are quite some programs that export peptidoforms with metadata based on sp
   table.header([*Software*], [*Versions/Formats*]),
   [Basic CSV],
   [A CSV file with the following columns: 'raw_file', 'sequence' (in ProForma format), 'z', 'scan_index', and possibly 'mode' with the fragmentation mode, this ignores any other columns.],
-  [DeepNovoFamily],
-  [DeepNovo, PointNovo, BiatNovo, PGPointNovo],
-  [InstaNovo],
-  [1.0.0 & 1.1.4],
-  [MaxQuant],
-  [msms, msms scans, novo msms scans, & silac],
-  [MetaMorpheus],
-  [PSM and Peptides],
-  [MSFragger],
-  [4.2 & 4.3 Fragpipe: 20, 21, & 22, & Philosopher],
-  [NovoB],
-  [0.0.1],
-  [Novor],
-  [Denovo and PSM],
-  [OPair],
-  [common version],
-  [Peaks],
-  [X, X+, 11, 12, 13 Dia de novo, Ab, DB peptidoforms, DB PSM, & DB protein-peptidoform],
-  [PepNet],
-  [1.0],
-  [π-HelixNovo],
-  [1.1],
-  [π-PrimeNovo],
-  [0.1],
-  [pLink],
-  [2.3],
-  [PLGS],
-  [3.0],
-  [PowerNovo],
-  [1.0.17],
-  [Proteoscape],
-  [2025B],
-  [Sage],
-  [0.14],
+
+  [DeepNovoFamily], [DeepNovo, PointNovo, BiatNovo, PGPointNovo],
+  [InstaNovo], [1.0.0 & 1.1.4],
+  [MaxQuant], [msms, msms scans, novo msms scans, & silac],
+  [MetaMorpheus], [PSM and Peptides],
+  [MSFragger], [4.2 & 4.3 Fragpipe: 20, 21, & 22, & Philosopher],
+  [NovoB], [0.0.1],
+  [Novor], [Denovo and PSM],
+  [OPair], [common version],
+  [Peaks], [X, X+, 11, 12, 13 Dia de novo, Ab, DB peptidoforms, DB PSM, & DB protein-peptidoform],
+  [PepNet], [1.0],
+  [π-HelixNovo], [1.1],
+  [π-PrimeNovo], [0.1],
+  [pLink], [2.3],
+  [PLGS], [3.0],
+  [PowerNovo], [1.0.17],
+  [Proteoscape], [2025B],
+  [pUniFind], [0.1],
+  [Sage], [0.14],
 )
 
 #aside[If you have data from an unsupported version of a supported program please open an issue on GitHub and give an example file so that the support can be extended.]
@@ -72,7 +53,7 @@ Below the structured metadata follows in table format all other metadata from th
 
 Use #button[Load] to select the right spectrum (if the corresponding raw file is open) and load the details for annotation. This will load the sequence, charge, and method if these are available.
 
-== Peptidoform search 
+== Peptidoform search
 
 Once at least one identified peptidoforms file is open all peptidoforms can be searched for sequence patterns. Type the search pattern as a ProForma (see @proforma) peptidoform in the search box and hit #button[Search] to search. The search is based on #link("https://doi.org/10.1021/acs.jproteome.4c00188")[mass based alignment] so any peptidoform matching the mass pattern of the search will come up. For example, searching for 'WNA' matches 'R#text(fill: blue)[WGGA]PG'. By default it will show the 25 best matching peptidoforms, but this number can be changed. The search can be restricted with a minimal score for the searched peptidoforms, which also makes the search faster, or with a minimal score for the alignment. Both these minimal score have to be in range 0.0 to 1.0.
 
