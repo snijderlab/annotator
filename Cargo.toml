@@ -10,7 +10,7 @@ itertools = "0.14"
 mzalign = { version = "0.1.1", features = ["rayon"] }
 mzannotate = { version = "0.1.0" }
 mzcore = { version = "0.1.1", default-features = false, features = ["isotopes", "glycan-render"] }
-mzcv = { version = "0.1.0", features = ["search-index", "http"] }
+mzcv = { version = "0.2.0", features = ["search-index", "http"] }
 mzident = { version = "0.1.0", features = ["mzannotate"] }
 ordered-float = { version = "5.0", features = ["serde"] }
 rayon = "1.10"

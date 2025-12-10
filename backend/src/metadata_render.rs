@@ -58,9 +58,10 @@ impl<C, A> RenderToHtml for IdentifiedPeptidoform<C, A> {
             .children([
                 HtmlTag::p.new()
                     .content(format!(
-                        "Score:&nbsp;{}, ALC:&nbsp;{}, Length:&nbsp;{}, Mass:&nbsp;{}, Charge:&nbsp;{}, m/z:&nbsp;{}, Mode:&nbsp;{}, RT:&nbsp;{}",
+                        "<span class='colour-dot {reliability}' title='Reliability: {reliability}'></span> Score:&nbsp;{}, ALC:&nbsp;{}, Original:&nbsp;{}, Length:&nbsp;{}, Mass:&nbsp;{}, Charge:&nbsp;{}, m/z:&nbsp;{}",
                         self.score.map_or(String::from("-"), |s| format!("{s:.3}")),
                         self.local_confidence.as_ref().map_or(String::from("-"), |lc| format!("{:.3}", lc.iter().sum::<f64>() / lc.len() as f64)),
+                        self.original_confidence().map_or(String::from("-"), |(s, t)| format!("<span title='{}|{}'>{s:.3}</span>", t.accession, t.name)),
                         self.compound_peptidoform_ion().and_then(|p| p.singular_peptidoform_ref().map(|p| p.len()))
                             .to_optional_string(),
                         formula
@@ -76,17 +77,12 @@ impl<C, A> RenderToHtml for IdentifiedPeptidoform<C, A> {
                                 f.monoisotopic_mass().value / c.value as f64
                             ))
                             .to_optional_string(),
-                        self.fragmentation_model().map_or("-".to_string(), |f| match (f, self.mode()) {
-                            (BuiltInFragmentationModel::All | BuiltInFragmentationModel::None, Some(m)) if !m.is_empty() => format!("{f}&nbsp;({m})"),
-                            _ => f.to_string(),
-                        }),
-                        self.retention_time()
-                            .map_or("-".to_string(), |c| format!("{:.3}&nbsp;min", c.get::<mzcore::system::time::min>())),
+                        reliability = self.reliability().map_or("unknown".to_string(), |r| r.to_string()),
                     ))
                     .clone(),
                 HtmlTag::p.new()
                     .content(format!(
-                        "Experimental&nbsp;mass:&nbsp;{}, Experimental&nbsp;m/z:&nbsp;{}, Mass&nbsp;error:&nbsp;{}&nbsp;ppm&nbsp;/&nbsp;{}",
+                        "Experimental&nbsp;mass:&nbsp;{}, Experimental&nbsp;m/z:&nbsp;{}, Mass&nbsp;error:&nbsp;{}&nbsp;ppm&nbsp;/&nbsp;{}, Mode:&nbsp;{}, RT:&nbsp;{}",
                         self.experimental_mass()
                             .map(|m| display_mass(m, None))
                             .to_optional_string(),
@@ -101,15 +97,22 @@ impl<C, A> RenderToHtml for IdentifiedPeptidoform<C, A> {
                         self.mass_error()
                             .map(|m| display_mass(m, None))
                             .to_optional_string(),
+                        self.fragmentation_model().map_or("-".to_string(), |f| match (f, self.mode()) {
+                            (BuiltInFragmentationModel::All | BuiltInFragmentationModel::None, Some(m)) if !m.is_empty() => format!("{f}&nbsp;({m})"),
+                            _ => f.to_string(),
+                        }),
+                        self.retention_time()
+                            .map_or("-".to_string(), |c| format!("{:.3}&nbsp;min", c.get::<mzcore::system::time::min>())),
                     ))
                     .clone(),
                 HtmlTag::p.new()
                     .content(format!(
-                        "Protein&nbsp;id:&nbsp;{}, Name:&nbsp;{}, Database:&nbsp;{}, Location:&nbsp;{}",
+                        "Protein&nbsp;id:&nbsp;{}, Name:&nbsp;{}, Database:&nbsp;{}, Location:&nbsp;{}, Unique:&nbsp{}",
                         self.protein_id().to_optional_string(),
                         self.protein_names().map(|n| n.iter().map(|n| n.name()).join(";")).to_optional_string(),
                         self.database().map(|(db, version)| format!("{db}{}", version.map(|v| format!(" ({v})")).unwrap_or_default())).to_optional_string(),
                         self.protein_location().map(|s| format!("{} — {}", s.start, s.end)).to_optional_string(),
+                        self.unique().to_optional_string(),
                     ))
                     .clone(),
                 HtmlTag::ul.new().children(match self.scans() {
@@ -123,7 +126,10 @@ impl<C, A> RenderToHtml for IdentifiedPeptidoform<C, A> {
                             ))).clone(),
                 ]
             ).content(peptide).children([
-                HtmlTag::p.new().content(format!("Additional MetaData {} ID: {}", self.format(), self.id())).clone(),
+                HtmlTag::p.new().content(format!("Additional MetaData <span title='{}'>{}</span> ID: {}", 
+                    self.search_engine().map(|s| format!("{}|{}", s.accession, s.name)).unwrap_or_default(), 
+                    self.format(), 
+                    self.id())).clone(),
                 {
                     HtmlElement::table::<HtmlContent, String>(
                         None,
@@ -209,7 +215,6 @@ impl RenderToTable for IdentifiedPeptidoformData {
                     data.ascore.as_ref().to_optional_string(),
                 ),
                 ("Found by", data.found_by.as_ref().to_optional_string()),
-                ("Accession", data.accession.as_ref().to_optional_string()),
                 ("From Chimera", data.from_chimera.to_optional_string()),
                 ("ID", data.id.to_optional_string()),
                 ("Precursor ID", data.precursor_id.to_optional_string()),
@@ -222,8 +227,8 @@ impl RenderToTable for IdentifiedPeptidoformData {
                 (
                     "Protein",
                     data.protein_group
-                        .and_then(|g| data.protein_id.and_then(|i| data.unique.map(|u| (g, i, u))))
-                        .map(|(g, i, u)| format!("group: {g}, ID: {i}, unique: {u}"))
+                        .and_then(|g| data.protein_id.map(|i| (g, i)))
+                        .map(|(g, i)| format!("group: {g}, ID: {i}"))
                         .to_optional_string(),
                 ),
             ],
@@ -333,7 +338,6 @@ impl RenderToTable for IdentifiedPeptidoformData {
                     "DN combined score",
                     data.dn_combined_score.to_optional_string(),
                 ),
-                ("Proteins", data.proteins.iter().map(|p| p.name()).join(";")),
                 (
                     "Mass analyser",
                     data.mass_analyser.as_ref().to_optional_string(),
@@ -344,7 +348,6 @@ impl RenderToTable for IdentifiedPeptidoformData {
                     data.scan_event_number.to_optional_string(),
                 ),
                 ("Pep", data.pep.to_string()),
-                ("Score", data.score.to_string()),
                 (
                     "Precursor full scan number",
                     data.precursor.to_optional_string(),
@@ -466,7 +469,6 @@ impl RenderToTable for IdentifiedPeptidoformData {
                 ("Labeling state", data.labeling_state.to_optional_string()),
             ],
             IdentifiedPeptidoformData::Sage(data) => vec![
-                ("Proteins", data.proteins.iter().map(|p| p.name()).join(";")),
                 ("Rank", data.rank.to_string()),
                 ("Decoy", data.decoy.to_string()),
                 ("Missed cleavages", data.missed_cleavages.to_string()),
@@ -534,7 +536,6 @@ impl RenderToTable for IdentifiedPeptidoformData {
                         .to_optional_string(),
                 ),
                 ("Expectation score", format!("{:e}", data.expectation_score)),
-                ("Hyper score", data.hyper_score.to_string()),
                 ("Next score", data.next_score.to_string()),
                 (
                     "Peptide Prophet probability",
@@ -578,7 +579,6 @@ impl RenderToTable for IdentifiedPeptidoformData {
                         .to_optional_string(),
                 ),
                 ("Purity", data.purity.to_optional_string()),
-                ("Is unique", data.is_unique.to_optional_string()),
                 ("Gene", data.gene.as_ref().to_optional_string()),
                 (
                     "Protein description",
@@ -609,7 +609,6 @@ impl RenderToTable for IdentifiedPeptidoformData {
                         .map(|(acc, prot)| prot.as_ref().map(|p| &p.accession).unwrap_or(acc))
                         .to_optional_string(),
                 ),
-                ("Unique", data.unique.to_optional_string()),
                 (
                     "Search engine",
                     data.search_engine
@@ -623,10 +622,6 @@ impl RenderToTable for IdentifiedPeptidoformData {
                             )
                         })
                         .join("|"),
-                ),
-                (
-                    "Reliability",
-                    data.reliability.as_ref().to_optional_string(),
                 ),
                 ("Uri", data.uri.as_ref().to_optional_string()),
                 (
@@ -706,7 +701,6 @@ impl RenderToTable for IdentifiedPeptidoformData {
                     ),
                 ),
                 ("Matched ions", data.matched_ions.to_string()),
-                ("Unique", data.is_unique.to_string()),
             ],
             IdentifiedPeptidoformData::NovoB(data) => vec![
                 (
@@ -763,11 +757,9 @@ impl RenderToTable for IdentifiedPeptidoformData {
                 (
                     "Peptide score",
                     format!(
-                        "<span class='colour-dot {curate}' title='{curate}'></span> score: {:.3} (raw: {:.3}) rank: {}",
-                        data.peptide_score,
+                        "raw: {:.3} rank: {}",
                         data.peptide_raw_score,
                         data.peptide_rank,
-                        curate = data.peptide_auto_curate,
                     ),
                 ),
                 (
@@ -922,10 +914,10 @@ impl RenderToHtml for CVTerm {
     fn to_html(&self, _theme: Theme) -> HtmlElement {
         HtmlTag::span
             .new()
-            .content(self.term.clone())
+            .content(self.term.accession.to_string())
             .title(format!(
                 "[{}, {}, {}, {}]",
-                self.ontology, self.id, self.term, self.comment
+                self.term.accession.cv, self.term.accession.accession, self.term.name, self.comment
             ))
             .clone()
     }

@@ -2919,16 +2919,37 @@ dialog.neutral-loss {
     background-color: var(--color-halfway);
     display: inline-block;
 
-    &.Green {
+    &::after {
+        content: "?";
+        display: block;
+        font-size: 0.75em;
+        text-align: center;
+        margin-top: -0.25em;
+        color: var(--color-background);
+    }
+
+    &.High {
         background-color: var(--color-green);
+
+        &::after {
+            content: "H";
+        }
     }
 
-    &.Yellow {
+    &.Medium {
         background-color: var(--color-yellow);
+
+        &::after {
+            content: "M";
+        }
     }
 
-    &.Red {
+    &.Poor {
         background-color: var(--color-red);
+
+        &::after {
+            content: "P";
+        }
     }
 }
 
