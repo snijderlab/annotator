@@ -16,7 +16,7 @@ use mzcore::{
 };
 use mzcv::{CVIndex, CVSource};
 use mzdata::prelude::SpectrumLike;
-use mzident::MetaData;
+use mzident::PSMMetaData;
 use ordered_float::OrderedFloat;
 use render::{display_formula, display_mass};
 use serde::{Deserialize, Serialize};
@@ -479,9 +479,7 @@ fn auto_open(app: &mut tauri::App, args: Args) -> Result<(), Box<dyn std::error:
                     Err(error) => state.auto_open_errors.push(error),
                 }
             } else {
-                match crate::identified_peptides::annotator_open_identified_peptidoforms_file(
-                    path, &mut state,
-                ) {
+                match crate::identified_peptides::annotator_open_psm_file(path, &mut state) {
                     Ok(None) => (),
                     Ok(Some(error)) => state.auto_open_errors.push(error),
                     Err(error) => state.auto_open_errors.push(error),

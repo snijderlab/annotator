@@ -7,7 +7,7 @@ use crate::{
 use itertools::Itertools;
 use mzannotate::{fragment::FragmentType, prelude::*, spectrum::AnnotatedSpectrum};
 use mzcore::prelude::*;
-use mzident::MetaData;
+use mzident::PSMMetaData;
 
 pub fn spectrum_table(
     spectrum: &AnnotatedSpectrum,

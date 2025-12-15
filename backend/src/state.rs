@@ -18,13 +18,13 @@ use mzdata::{
     prelude::SpectrumLike,
     spectrum::MultiLayerSpectrum,
 };
-use mzident::{IdentifiedPeptidoform, MaybePeptidoform, MetaData};
+use mzident::{MaybePeptidoform, PSM, PSMMetaData};
 use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 
 pub struct State {
     pub spectra: Vec<RawFile>,
-    pub identified_peptide_files: RefCell<Vec<IdentifiedPeptidoformFile>>,
+    pub identified_peptide_files: RefCell<Vec<PSMFile>>,
     pub annotated_spectrum: Option<AnnotatedSpectrum>,
     pub ontologies: Ontologies,
     pub custom_modifications_error: Option<(String, Vec<String>)>,
@@ -34,10 +34,10 @@ pub struct State {
 }
 
 impl State {
-    pub fn identified_peptide_files(&self) -> Ref<'_, Vec<IdentifiedPeptidoformFile>> {
+    pub fn identified_peptide_files(&self) -> Ref<'_, Vec<PSMFile>> {
         self.identified_peptide_files.borrow()
     }
-    pub fn identified_peptide_files_mut(&self) -> RefMut<'_, Vec<IdentifiedPeptidoformFile>> {
+    pub fn identified_peptide_files_mut(&self) -> RefMut<'_, Vec<PSMFile>> {
         self.identified_peptide_files.borrow_mut()
     }
 }
@@ -57,14 +57,14 @@ impl HasPeptidoformImpl for IndexSequence {
     }
 }
 
-pub struct IdentifiedPeptidoformFile {
+pub struct PSMFile {
     pub id: usize,
     pub path: String,
-    pub peptides: Vec<IdentifiedPeptidoform<Linked, MaybePeptidoform>>,
+    pub peptides: Vec<PSM<Linked, MaybePeptidoform>>,
     pub index: OnceLock<AlignIndex<4, IndexSequence>>,
 }
 
-impl IdentifiedPeptidoformFile {
+impl PSMFile {
     pub fn file_name(&self) -> String {
         std::path::Path::new(&self.path)
             .file_name()
@@ -73,10 +73,7 @@ impl IdentifiedPeptidoformFile {
             .to_string()
     }
 
-    pub fn new(
-        path: String,
-        peptides: Vec<IdentifiedPeptidoform<Linked, MaybePeptidoform>>,
-    ) -> Self {
+    pub fn new(path: String, peptides: Vec<PSM<Linked, MaybePeptidoform>>) -> Self {
         Self {
             id: IDENTIFIED_PEPTIDE_FILE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
             path,

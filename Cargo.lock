@@ -2930,6 +2930,7 @@ dependencies = [
  "indexmap 2.12.0",
  "itertools",
  "mzcore",
+ "mzcv",
  "mzdata",
  "ordered-float",
  "serde",

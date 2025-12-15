@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ModifiableState, html_builder,
-    state::{IdentifiedPeptidoformFile, State},
+    state::{PSMFile, State},
 };
 
 /// Open a file and get all individual peptide errors.
@@ -20,30 +20,27 @@ pub async fn load_identified_peptides_file<'a>(
     state: ModifiableState<'a>,
 ) -> Result<Option<String>, String> {
     let mut state = state.lock().unwrap();
-    annotator_open_identified_peptidoforms_file(std::path::Path::new(path), &mut state)
+    annotator_open_psm_file(std::path::Path::new(path), &mut state)
 }
 
-pub fn annotator_open_identified_peptidoforms_file(
+pub fn annotator_open_psm_file(
     path: &std::path::Path,
     state: &mut std::sync::MutexGuard<'_, State>,
 ) -> Result<Option<String>, String> {
     let mut peptide_errors = Vec::new();
-    let peptides = open_identified_peptidoforms_file(path, &state.ontologies, false)
-        .map_err(|e| e.to_html(false))?;
-    state
-        .identified_peptide_files_mut()
-        .push(IdentifiedPeptidoformFile::new(
-            path.to_string_lossy().to_string(),
-            peptides
-                .filter_map(|p| match p {
-                    Ok(p) => Some(p),
-                    Err(e) => {
-                        combine_error(&mut peptide_errors, e, ());
-                        None
-                    }
-                })
-                .collect(),
-        ));
+    let peptides = open_psm_file(path, &state.ontologies, false).map_err(|e| e.to_html(false))?;
+    state.identified_peptide_files_mut().push(PSMFile::new(
+        path.to_string_lossy().to_string(),
+        peptides
+            .filter_map(|p| match p {
+                Ok(p) => Some(p),
+                Err(e) => {
+                    combine_error(&mut peptide_errors, e, ());
+                    None
+                }
+            })
+            .collect(),
+    ));
     if peptide_errors.is_empty() {
         Ok(None)
     } else {
@@ -255,11 +252,7 @@ pub struct IdentifiedPeptideSettings {
 }
 
 impl IdentifiedPeptideSettings {
-    fn from_peptide<C, A>(
-        state: &State,
-        peptide: &IdentifiedPeptidoform<C, A>,
-        warning: Option<String>,
-    ) -> Self {
+    fn from_peptide<C, A>(state: &State, peptide: &PSM<C, A>, warning: Option<String>) -> Self {
         let mut str_peptide = String::new();
         if let Some(peptide) = peptide.compound_peptidoform_ion() {
             peptide.display(&mut str_peptide, true).unwrap()

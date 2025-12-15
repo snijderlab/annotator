@@ -17,7 +17,7 @@ use mzcore::{
     system::{Mass, MassOverCharge, da, thomson},
 };
 use mzdata::mzpeaks::PeakCollection;
-use mzident::MetaData;
+use mzident::PSMMetaData;
 
 use crate::{
     Theme,
