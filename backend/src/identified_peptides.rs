@@ -6,10 +6,7 @@ use mzident::*;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    ModifiableState, html_builder,
-    state::{PSMFile, State},
-};
+use crate::{ModifiableState, html_builder, psm_file::PSMFile, state::State};
 
 /// Open a file and get all individual peptide errors.
 /// # Errors

@@ -10,7 +10,7 @@ use context_error::{BasicKind, BoxedError, CreateError, FullErrorContent};
 use itertools::Itertools;
 use mzannotate::{mzspeclib::AnalyteTarget, prelude::*};
 use mzcore::{
-    ontology::Ontologies,
+    ontology::{Ontologies, Ontology},
     prelude::*,
     system::{e, isize::Charge},
 };
@@ -27,6 +27,8 @@ mod html_builder;
 mod identified_peptides;
 mod metadata_render;
 mod model;
+mod psm_file;
+mod raw_file;
 mod render;
 mod search_modification;
 mod spectra;
@@ -70,7 +72,7 @@ fn refresh(
     theme: Theme,
 ) -> (usize, usize, Option<AnnotationResult>, Vec<String>, String) {
     let state = state.lock().unwrap();
-    fn get_details<T: CVSource>(index: &CVIndex<T>) -> [HtmlContent; 5] {
+    fn get_details<T: CVSource>(index: &CVIndex<T>) -> [HtmlContent; 6] {
         [
             T::cv_name().into(),
             index.version().version.clone().to_optional_string().into(),
@@ -80,6 +82,16 @@ fn refresh(
                 .content(index.version().hash_hex())
                 .into(),
             index.len().to_string().into(),
+            if T::cv_name() != "RESID" {
+                HtmlTag::button
+                    .new()
+                    .class("update-ontology-internet")
+                    .content("Internet")
+                    .data([("ontology", T::cv_name())])
+                    .into()
+            } else {
+                HtmlContent::Text("".to_string())
+            },
         ]
     }
 
@@ -104,6 +116,7 @@ fn refresh(
                 "Last updated",
                 "Hash",
                 "Number of mods",
+                "Update",
             ]),
             [
                 get_details(state.ontologies.unimod()),
@@ -517,6 +530,38 @@ fn get_custom_configuration_path(app: tauri::AppHandle) -> (String, String) {
     )
 }
 
+#[tauri::command]
+fn update_ontology_via_internet(ontology: &str, state: ModifiableState<'_>) -> Result<(), String> {
+    let mut state = state
+        .lock()
+        .map_err(|err| format!("Mutex was poisoned: {err}"))?;
+    match ontology {
+        "Unimod" => state
+            .ontologies
+            .unimod_mut()
+            .update_from_url(&[])
+            .map_err(|err| err.to_html(true)),
+        "PSI-MOD" => state
+            .ontologies
+            .psimod_mut()
+            .update_from_url(&[])
+            .map_err(|err| err.to_html(true)),
+        "XLMOD" => state
+            .ontologies
+            .xlmod_mut()
+            .update_from_url(&[])
+            .map_err(|err| err.to_html(true)),
+        "GNOme" => state
+            .ontologies
+            .gnome_mut()
+            .update_from_url(&[])
+            .map_err(|err| err.to_html(true)),
+        "RESID" => Err("Cannot update RESID from the internet".to_string()),
+        "Custom" => Err("Cannot update Custom from the internet".to_string()),
+        _ => Err("Invalid ontology".to_string()),
+    }
+}
+
 fn main() {
     let args = Args::parse();
     tauri::Builder::default()
@@ -568,6 +613,7 @@ fn main() {
             spectra::select_retention_time,
             spectra::select_spectrum_index,
             spectra::select_spectrum_native_id,
+            update_ontology_via_internet,
             validate::validate_aa_neutral_loss,
             validate::validate_amino_acid,
             validate::validate_custom_linker_specificity,

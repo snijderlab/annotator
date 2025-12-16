@@ -32,8 +32,8 @@ use crate::{
     identified_peptides::PSMSettings,
     metadata_render::OptionalString,
     model::get_built_in_index,
+    raw_file::{RawFile, RawFileDetails},
     render::display_mass,
-    state::{RawFile, RawFileDetails},
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

@@ -1280,7 +1280,12 @@ window.addEventListener("DOMContentLoaded", () => {
   updateCustomModels();
 
   // Refresh interface for hot reload
+  refresh()
+});
+
+async function refresh() {
   invoke("refresh", { theme: Theme }).then((result) => {
+    console.log(result);
     if (result[0] > 0) {
       update_selected_spectra();
     }
@@ -1298,8 +1303,18 @@ window.addEventListener("DOMContentLoaded", () => {
       showError("open-files-error", result[3]);
     }
     document.getElementById("ontologies-details").innerHTML = result[4];
+
+    document.querySelectorAll("#ontologies-details .update-ontology-internet").forEach(t => {
+      t.addEventListener("click", () => {
+        t.classList.add("loading");
+        invoke("update_ontology_via_internet", { ontology: t.dataset.ontology }).then(() => {
+          t.classList.remove("loading");
+          refresh();
+        }).catch((err) => console.error(err))
+      })
+    })
   })
-});
+}
 
 /** 
  * @param {Event} e
