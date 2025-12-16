@@ -17,13 +17,12 @@ rayon = "1.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tauri = { version = "2.0", features = ["protocol-asset"] }
-mzdata = { git = "https://github.com/douweschulte/mzdata", branch="xy-support", default-features = false, features = [
+mzdata = { version="0.63", default-features = false, features = [
     "mzsignal",
     "proxi-async",
     "thermo",
     "miniz_oxide",
     "mgf",
-    "xy",
     "mzml",
     "bruker_tdf",
 ] }
