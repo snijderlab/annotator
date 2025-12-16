@@ -7,7 +7,7 @@
 - Added support for opening a file from the command line when starting the Annotator, making it possible to use 'open in Annotator' for most operating systems
 - Added support for `.xy` files as exported from Bruker
 - Added support for 
-- Improved handling of proteins as specified in many identified peptidoform files (amongst others: MSFragger, MaxQuant, and mzTab)
+- Improved handling of proteins as specified in many PSM files (amongst others: MSFragger, MaxQuant, and mzTab)
 - Improved many error messages with better context
 - Improved the display of PSM and spectra details
 - Fixed bug where the peptide would disappear if there was an error in the peptide sequence
@@ -19,7 +19,7 @@
 - Fixed print output including unnecessary parts
 - Updated naming of "folder" button to better reflect it use for Bruker .d data
 - Better error output + merged identical errors
-- Added generalised display of flanking residues for identified peptidoforms
+- Added generalised display of flanking residues for PSMs
 - Improved support for MaxNovo _de novo_ sequences
 - Added support for π-HelixNovo, π-PrimeNovo, Proteoscape, and Casanovo v5.0
 
