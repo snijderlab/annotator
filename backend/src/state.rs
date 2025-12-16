@@ -34,10 +34,10 @@ pub struct State {
 }
 
 impl State {
-    pub fn identified_peptide_files(&self) -> Ref<'_, Vec<PSMFile>> {
+    pub fn psm_files(&self) -> Ref<'_, Vec<PSMFile>> {
         self.identified_peptide_files.borrow()
     }
-    pub fn identified_peptide_files_mut(&self) -> RefMut<'_, Vec<PSMFile>> {
+    pub fn psm_files_mut(&self) -> RefMut<'_, Vec<PSMFile>> {
         self.identified_peptide_files.borrow_mut()
     }
 }

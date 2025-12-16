@@ -271,7 +271,7 @@ fn main() {
       <div class="input-flex">
         <div class="joined-button" id="load-raw-path"><button type="button" id="load-raw-file">Load raw data file</button><button type="button" id="load-raw-folder" title="Open a Bruker TDF .d directory">Bruker TDF</button></div>
         <button type="button" id="load-clipboard">Load Clipboard</button>
-        <button type="button" id="load-identified-peptides">Load identified peptidoforms file</button>
+        <button type="button" id="load-identified-peptides">Load PSM file</button>
       </div>
       <div class="input-flex">
         <div class="usi">
@@ -283,13 +283,13 @@ fn main() {
       <output class="" id="open-files-error"></output>
       
       <div id="peptides" style="display:none">
-        <h2>Peptidoform details</h2>
+        <h2>PSM files details</h2>
         <div class="resize-wrapper">
           <div>
             <div class="input-flex">
               <label for="search-peptide-input">Search peptidoform<input id="search-peptide-input" type="text"></input></label>
               <label for="search-peptide-minimal-match">Minimal match score<input id="search-peptide-minimal-match" type="number" min="0" max="1" value="0"></input></label>
-              <label for="search-peptide-minimal-peptide">Minimal peptidoform score<input id="search-peptide-minimal-peptide" type="number" min="-1" max="1" value="-1"></input></label>
+              <label for="search-peptide-minimal-peptide">Minimal PSM score<input id="search-peptide-minimal-peptide" type="number" min="-1" max="1" value="-1"></input></label>
               <label for="search-peptide-amount">Number of results<input id="search-peptide-amount" type="number" min="0" value="25"></input></label>
               <button id="search-peptide">Search</button>
             </div>
@@ -300,14 +300,14 @@ fn main() {
             <div class="input-flex">
               <label for="details-identified-peptide-files">File<select id="details-identified-peptide-files"></select></label>
               <button id="close-identified-peptide-file" type="button">Close file</button>
-              <label for="details-identified-peptide-index">Peptidoform index
+              <label for="details-identified-peptide-index">PSM index
                 <div class="combined-input">
                   <input type="number" id="details-identified-peptide-index" value="0" min="0" />
                   <span>/</span>
                   <span id="number-of-identified-peptides">0</span>
                 </div>
               </label>
-              <button id="load-identified-peptide" title="Find this peptidoform in the raw data file and populate all setting fields with this peptidoform's data" type="button">Load</button>
+              <button id="load-identified-peptide" title="Find this PSM in the raw data file and populate all setting fields with values based on this PSM" type="button">Load</button>
               <button id="load-annotated-spectrum" title="Load the annotated spectrum" type="button" hidden="true">Load annotated spectrum</button>
             </div>
             <div id="identified-peptide-details"></div>

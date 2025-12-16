@@ -1,12 +1,17 @@
-# Upcoming version
+# 1.3.0 - Spectral libraries
 
-- Fixed bug where the peptide would disappear if there was an error in the peptide sequence
 - Added support for pUniFind & MetaMorpheus
-- Better handling of proteins as specified in many identified peptidoform files (amongst others: MSFragger, MaxQuant, and mzTab)
-- Added support for mzSpecLib
-- Added support for opening a file from the command line, making it possible to use 'open in Annotator' for most operating systems
-- Note this update removes the case insensitiveness of `Formula:XX` meaning `Formula:NH3` now is 1 Nitrogen and 3 Hydrogens instead of 3 Nihonium
+- Added support for mzSpecLib reading
+- Added support to save an annotated spectrum as an mzSpecLib file
+- Added support for opening stored spectra from supported file formats: mzSpecLib & MaxQuant
+- Added support for opening a file from the command line when starting the Annotator, making it possible to use 'open in Annotator' for most operating systems
+- Added support for `.xy` files as exported from Bruker
+- Added support for 
+- Improved handling of proteins as specified in many identified peptidoform files (amongst others: MSFragger, MaxQuant, and mzTab)
 - Improved many error messages with better context
+- Improved the display of PSM and spectra details
+- Fixed bug where the peptide would disappear if there was an error in the peptide sequence
+- Note this update removes the case insensitiveness of `Formula:XX` meaning `Formula:NH3` now is 1 Nitrogen and 3 Hydrogens instead of 3 Nihonium
 
 # Version 1.2.1
 

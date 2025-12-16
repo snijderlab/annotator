@@ -31,11 +31,12 @@
 
     GitHub: #link(crate.package.repository)[#crate.package.repository] \
     License: #crate.package.license \
-    Version: #version 
+    Version: #version \
+    DOI: 10.1021/acs.analchem.5c02832 @schulte_universal_2025
     ],
 )
 
-#outline(indent: auto, depth: 2)
+#outline(indent: auto, depth: 2, title: none)
 
 #pagebreak()
 
@@ -50,7 +51,7 @@ Buttons are displayed as #button[Button]. Keys used in key combinations as #key[
 
 #include "installing.typ"
 #include "rawfiles.typ"
-#include "identified_peptidoform_files.typ"
+#include "PSM_files.typ"
 #include "annotate.typ"
 #include "spectrum.typ"
 #include "tools.typ"
@@ -65,3 +66,5 @@ Buttons are displayed as #button[Button]. Keys used in key combinations as #key[
   heading()[ProForma cheat sheet]
   page(header: none, margin: 0pt, image(width: 100%, height: 100%, "proforma_cheat_sheet_1.0_print.svg"))
 }
+
+#bibliography("bib.bib", style: "american-chemical-society")

@@ -29,7 +29,7 @@ pub fn annotator_open_psm_file(
 ) -> Result<Option<String>, String> {
     let mut peptide_errors = Vec::new();
     let peptides = open_psm_file(path, &state.ontologies, false).map_err(|e| e.to_html(false))?;
-    state.identified_peptide_files_mut().push(PSMFile::new(
+    state.psm_files_mut().push(PSMFile::new(
         path.to_string_lossy().to_string(),
         peptides
             .filter_map(|p| match p {
@@ -71,12 +71,12 @@ pub async fn close_identified_peptides_file(
         ).to_html(false)
     }).and_then(|state| {
             let pos = state
-            .identified_peptide_files()
+            .psm_files()
             .iter()
             .position(|f| f.id == file);
             if let Some(pos) = pos
             {
-                state.identified_peptide_files_mut().remove(pos);
+                state.psm_files_mut().remove(pos);
                 Ok(())
             } else {
                 Err(BoxedError::new(BasicKind::Error,"File does not exist", "This selected file could not be closed as it does not exist, did you already close it?", Context::none()).to_html(false))
@@ -93,7 +93,7 @@ pub async fn get_identified_peptides_files(
     Ok(state
         .lock()
         .map_err(|_| ())?
-        .identified_peptide_files()
+        .psm_files()
         .iter()
         .map(|f| (f.id, f.file_name(), f.path.clone(), f.peptides.len()))
         .collect_vec())
@@ -147,7 +147,7 @@ pub async fn search_peptide<'a>(
             })?,
     );
     let data = state
-        .identified_peptide_files()
+        .psm_files()
         .par_iter()
         .flat_map(|file| {
             file.index()
@@ -244,14 +244,14 @@ pub async fn search_peptide<'a>(
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct IdentifiedPeptideSettings {
+pub struct PSMSettings {
     pub peptide: String,
     pub charge: Option<isize>,
     pub mode: Option<usize>,
     pub warning: Option<String>,
 }
 
-impl IdentifiedPeptideSettings {
+impl PSMSettings {
     fn from_peptide<C, A>(state: &State, peptide: &PSM<C, A>, warning: Option<String>) -> Self {
         let mut str_peptide = String::new();
         if let Some(peptide) = peptide.compound_peptidoform_ion() {
@@ -273,10 +273,10 @@ pub async fn load_identified_peptide(
     file: usize,
     index: usize,
     state: ModifiableState<'_>,
-) -> Result<IdentifiedPeptideSettings, &'static str> {
+) -> Result<PSMSettings, &'static str> {
     if let Ok(mut state) = state.lock() {
         let peptide = state
-            .identified_peptide_files()
+            .psm_files()
             .iter()
             .find(|f| f.id == file)
             .and_then(|file| file.peptides.get(index))
@@ -349,9 +349,9 @@ pub async fn load_identified_peptide(
                     },
                 }
 
-                IdentifiedPeptideSettings::from_peptide(&state, &peptide, message)
+                PSMSettings::from_peptide(&state, &peptide, message)
             })
-            .ok_or("The identified peptide could not be found")
+            .ok_or("The PSM could not be found")
     } else {
         Err("Could not lock mutex, are you running too many things at the same time?")
     }

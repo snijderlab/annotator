@@ -85,7 +85,7 @@ fn refresh(
 
     (
         0, // state.spectra.as_ref().map(|s| s.len()).unwrap_or_default(),
-        state.identified_peptide_files().len(),
+        state.psm_files().len(),
         state.annotated_spectrum.as_ref().map(|annotated| {
             render_annotated_spectrum(
                 annotated,
@@ -206,7 +206,7 @@ fn identified_peptide_details(
     state
         .lock()
         .unwrap()
-        .identified_peptide_files()
+        .psm_files()
         .iter()
         .find(|f| f.id == file)
         .map_or(
@@ -233,27 +233,23 @@ fn load_annotated_spectrum(
     theme: Theme,
 ) -> Result<AnnotationResult, String> {
     let mut state = state.lock().unwrap();
-    let annotated = state
-        .identified_peptide_files()
-        .iter()
-        .find(|f| f.id == file)
-        .map_or(
-            Err("Identified peptide file index not valid".to_string()),
-            |file| {
-                file.peptides.get(index).map_or(
-                    Err("Identified peptide index not valid".to_string()),
-                    |peptide| {
-                        peptide.annotated_spectrum().map_or(
-                            Err(
-                                "Identified peptide does not have an associated annotated spectrum"
-                                    .to_string(),
-                            ),
-                            |a| Ok(a.into_owned()),
-                        )
-                    },
-                )
-            },
-        )?;
+    let annotated = state.psm_files().iter().find(|f| f.id == file).map_or(
+        Err("Identified peptide file index not valid".to_string()),
+        |file| {
+            file.peptides.get(index).map_or(
+                Err("Identified peptide index not valid".to_string()),
+                |peptide| {
+                    peptide.annotated_spectrum().map_or(
+                        Err(
+                            "Identified peptide does not have an associated annotated spectrum"
+                                .to_string(),
+                        ),
+                        |a| Ok(a.into_owned()),
+                    )
+                },
+            )
+        },
+    )?;
     let rendered = render_annotated_spectrum(
         &annotated,
         &[],

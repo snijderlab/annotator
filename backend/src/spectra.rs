@@ -29,7 +29,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ModifiableState,
-    identified_peptides::IdentifiedPeptideSettings,
+    identified_peptides::PSMSettings,
     metadata_render::OptionalString,
     model::get_built_in_index,
     render::display_mass,
@@ -44,10 +44,7 @@ pub struct SelectedSpectrumDetails {
 }
 
 #[tauri::command]
-pub async fn load_usi<'a>(
-    usi: &'a str,
-    state: ModifiableState<'a>,
-) -> Result<IdentifiedPeptideSettings, String> {
+pub async fn load_usi<'a>(usi: &'a str, state: ModifiableState<'a>) -> Result<PSMSettings, String> {
     let mut usi = mzdata::io::usi::USI::from_str(usi)
         .map_err(|e| match e {
             USIParseError::MalformedIndex(index, e, full) => BoxedError::new(
@@ -195,7 +192,7 @@ pub async fn load_usi<'a>(
             format!("{backend} {} {}", usi.dataset, usi.run_name),
         ));
 
-        Ok(IdentifiedPeptideSettings {
+        Ok(PSMSettings {
             peptide: peptide.unwrap_or_default(),
             charge: None,
             mode,
