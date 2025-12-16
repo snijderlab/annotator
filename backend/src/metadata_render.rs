@@ -1,6 +1,7 @@
+use std::ops::Not;
+
 use itertools::Itertools;
-use mzannotate::annotation::model::BuiltInFragmentationModel;
-use mzdata::prelude::SpectrumLike;
+use mzannotate::{annotation::{Score, model::BuiltInFragmentationModel}, prelude::MatchingParameters};
 use mzident::{
     CVTerm, MSFraggerOpenModification, PSM, PSMData, PSMMetaData, ProteinMetaData, SpectrumIds
 };
@@ -8,8 +9,7 @@ use mzident::{
 use crate::{
     Theme,
     html_builder::{HtmlContent, HtmlElement, HtmlTag},
-    render::{display_mass, display_masses, render_peptide},
-    spectra::spectrum_description,
+    render::{display_mass, display_masses, get_overview, render_peptide},
 };
 
 pub trait RenderToHtml {
@@ -26,10 +26,11 @@ impl<C, A> RenderToHtml for PSM<C, A> {
         let peptide = if let Some(peptide) = self.compound_peptidoform_ion() {
             let mut glycan_footnotes = Vec::new();
             let mut buffer = String::new();
+            let overview = self.annotated_spectrum().map(|a| get_overview(&a).1);
             render_peptide(
                 &mut buffer,
                 &peptide,
-                None,
+                overview,
                 self.local_confidence
                     .as_ref()
                     .map(|lc| vec![vec![lc.clone()]]),
@@ -105,24 +106,28 @@ impl<C, A> RenderToHtml for PSM<C, A> {
                     ))
                     .clone(),
                 HtmlTag::p.new()
-                    .content(format!(
-                        "Protein&nbsp;id:&nbsp;{}, Name:&nbsp;{}, Database:&nbsp;{}, Location:&nbsp;{}, Unique:&nbsp{}",
-                        self.proteins().iter().filter_map(|n| n.numerical_id()).join(";"),
-                        self.proteins().iter().map(|n| n.id().name().to_string()).join(";"),
-                        self.database().map(|(db, version)| format!("{db}{}", version.map(|v| format!(" ({v})")).unwrap_or_default())).to_optional_string(),
-                        self.protein_location().map(|s| format!("{} — {}", s.start, s.end)).to_optional_string(),
-                        self.unique().to_optional_string(),
-                    ))
+                    .maybe_content(
+                        self.proteins().is_empty().not().then(||
+                            format!(
+                            "Protein&nbsp;ID:&nbsp;{}, Name:&nbsp;{}, Database:&nbsp;{}, Location:&nbsp;{}, Unique:&nbsp{}",
+                            self.proteins().iter().filter_map(|n| n.numerical_id()).join(";"),
+                            self.proteins().iter().map(|n| n.id().name().to_string()).join(";"),
+                            self.database().map(|(db, version)| format!("{db}{}", version.map(|v| format!(" ({v})")).unwrap_or_default())).to_optional_string(),
+                            self.protein_location().map(|s| format!("{} — {}", s.start, s.end)).to_optional_string(),
+                            self.unique().to_optional_string(),
+                        )))
                     .clone(),
+                HtmlTag::p.new().maybe_content(self.annotated_spectrum().map(|a| {                
+                    let (fragments, peaks, intensity) = match a.scores(&[], &MatchingParameters::default(), mzcore::prelude::MassMode::Monoisotopic).0.score {
+                        Score::Position { fragments, peaks, intensity, .. } | Score::UniqueFormulas { fragments, peaks, intensity, .. } => (fragments, peaks, intensity)
+                    };                    
+                    format!("Spectrum Fragments:&nbsp;{}, Peaks:&nbsp;{}, Intensity&nbsp;annotated:&nbsp;{:.2}%&nbsp;({:.2e}/{:.2e})", fragments.found, peaks.total, intensity.fraction()*100.0, intensity.found, intensity.total)
+                    })).clone(),
                 HtmlTag::ul.new().children(match self.scans() {
                     SpectrumIds::None => vec![HtmlTag::p.new().content("No spectrum reference").clone()],
                     SpectrumIds::FileNotKnown(scans) => vec![HtmlTag::li.new().content("Scans: ").content(scans.iter().join(";")).clone()],
                     SpectrumIds::FileKnown(scans) => scans.iter().map(|(file, scans)| HtmlTag::li.new().content("File: ").content(HtmlTag::span.new().title(file.to_string_lossy()).content(file.file_name().map_or(String::new(), |s| s.to_string_lossy().to_string())).content(" Scans: ").content(scans.iter().join(";"))).clone()).collect(),
                 }).clone(),
-                HtmlTag::p.new().maybe_content(self.annotated_spectrum().map(|a| spectrum_description(
-                                &a.description,
-                                &a.peaks().fetch_summaries(),
-                            ))).clone(),
                 ]
             ).content(peptide).children([
                 HtmlTag::p.new().content(format!("Additional MetaData <span title='{}'>{}</span> ID: {}", 

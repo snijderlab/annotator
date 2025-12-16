@@ -1521,7 +1521,8 @@ input:not(:checked)+.collapsible {
 
 }
 
-#spectrum-wrapper.legend-ion {
+#spectrum-wrapper.legend-ion,
+#identified-peptide-details .complex-peptide.with-fragments {
 
     & .a,
     & .Y {

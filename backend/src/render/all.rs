@@ -446,7 +446,7 @@ pub struct Limits {
     pub intensity_unassigned: f32,
 }
 
-fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
+pub fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
     let mut output: PositionCoverage = spectrum
         .analytes
         .iter()

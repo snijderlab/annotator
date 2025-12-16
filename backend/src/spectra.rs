@@ -671,7 +671,7 @@ pub fn spectrum_description(
     summary: &SpectrumSummary,
 ) -> String {
     format!(
-        "index: {} id: {}<br>time: {} min signal mode: {:?} ms level: {} ion mobility: {}<br>mz range: {:.1} — {:.1} peak count: {} tic: {:.3e} base peak intensity: {:.3e} resultion: {}<br>{}<br>{}{}",
+        "Index: {}, ID: {},<br>RT: {} min, Signal mode: {:?}, MS level: {}, Ion mobility: {},<br>mz Range: {:.1} — {:.1}, Peak count: {}, TIC: {:.3e}, Base peak intensity: {:.3e}, Resolution: {},<br>{}<br>{}{}",
         description.index,
         description.id,
         description.acquisition.scans.first().map(|s| format!("{:.3}", s.start_time / 60.0)).to_optional_string(),
@@ -705,7 +705,7 @@ pub fn spectrum_description(
         description.precursor.first().map_or("No precursor".to_string(), |p| {
             let i = p.isolation_window();
             format!(
-                "Precursor mass: {} charge: {} target: {} range: {} — {} method: {} energy: {:.1}",
+                "Precursor Mass: {}, Charge: {}, Target: {}, Range: {} — {}, Mode: {}, Energy: {:.1}",
                 p.ions.first().map_or("-".to_string(), |i| display_mass(Mass::new::<dalton>(i.neutral_mass()), None).to_string()),
                 p.ions.first().and_then(|i| i.charge()).map_or("-".to_string(), |v| format!("{v:+.0}")),
                 i.target,
