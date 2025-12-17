@@ -150,62 +150,54 @@ pub async fn load_usi<'a>(usi: &'a str, state: ModifiableState<'a>) -> Result<PS
         })
         .unwrap();
 
-    if let Ok(mut state) = state.lock() {
-        // Fix the stored sequence after the decoy shuffling
-        if let Some(peptide) = peptide.clone() {
-            let param = PROXIParam::new(
-                CURIE::new(mzdata::params::ControlledVocabulary::Unknown, 0),
-                "sequence",
-                Value::String(peptide),
-            );
-            if let Some(index) = spectrum
-                .attributes
-                .iter()
-                .position(|p| p.name.eq_ignore_ascii_case("sequence"))
-            {
-                spectrum.attributes[index] = param;
-            } else {
-                spectrum.attributes.push(param);
-            }
-        } else {
-            spectrum
-                .attributes
-                .retain(|p| !p.name.eq_ignore_ascii_case("sequence"));
-        }
-        let mut spectrum: MultiLayerSpectrum = spectrum.into();
-        spectrum.description.id = format!(
-            "{}:{}:{}",
-            usi.dataset,
-            usi.run_name,
-            usi.identifier.map_or("-".to_string(), |i| match i {
-                Identifier::Scan(s) => format!("scan:{s}"),
-                Identifier::Index(s) => format!("index:{s}"),
-                Identifier::NativeID(s) => format!("nativeId:{}", s.iter().join(",")),
-            })
+    let mut state = state.lock().await;
+    // Fix the stored sequence after the decoy shuffling
+    if let Some(peptide) = peptide.clone() {
+        let param = PROXIParam::new(
+            CURIE::new(mzdata::params::ControlledVocabulary::Unknown, 0),
+            "sequence",
+            Value::String(peptide),
         );
-        let mode = spectrum
-            .precursor()
-            .map(|p| get_built_in_index(BuiltInFragmentationModel::from(p.activation.methods())));
-
-        state.spectra.push(RawFile::new_single(
-            spectrum,
-            format!("{backend} {} {}", usi.dataset, usi.run_name),
-        ));
-
-        Ok(PSMSettings {
-            peptide: peptide.unwrap_or_default(),
-            charge: None,
-            mode,
-            warning: None,
-        })
+        if let Some(index) = spectrum
+            .attributes
+            .iter()
+            .position(|p| p.name.eq_ignore_ascii_case("sequence"))
+        {
+            spectrum.attributes[index] = param;
+        } else {
+            spectrum.attributes.push(param);
+        }
     } else {
-        Err(BoxedError::small(
-            BasicKind::Error,
-            "Could not lock mutex",
-            "Are you doing too many things at once?",
-        )
-        .to_html(false))
+        spectrum
+            .attributes
+            .retain(|p| !p.name.eq_ignore_ascii_case("sequence"));
     }
+    let mut spectrum: MultiLayerSpectrum = spectrum.into();
+    spectrum.description.id = format!(
+        "{}:{}:{}",
+        usi.dataset,
+        usi.run_name,
+        usi.identifier.map_or("-".to_string(), |i| match i {
+            Identifier::Scan(s) => format!("scan:{s}"),
+            Identifier::Index(s) => format!("index:{s}"),
+            Identifier::NativeID(s) => format!("nativeId:{}", s.iter().join(",")),
+        })
+    );
+    let mode = spectrum
+        .precursor()
+        .map(|p| get_built_in_index(BuiltInFragmentationModel::from(p.activation.methods())));
+
+    state.spectra.push(RawFile::new_single(
+        spectrum,
+        format!("{backend} {} {}", usi.dataset, usi.run_name),
+    ));
+
+    Ok(PSMSettings {
+        peptide: peptide.unwrap_or_default(),
+        charge: None,
+        mode,
+        warning: None,
+    })
 }
 
 #[tauri::command]
@@ -213,13 +205,13 @@ pub async fn load_raw<'a>(
     path: &'a str,
     state: ModifiableState<'a>,
 ) -> Result<RawFileDetails, String> {
-    let mut state = state.lock().unwrap();
+    let mut state = state.lock().await;
     annotator_open_raw_file(std::path::Path::new(path), &mut state)
 }
 
 pub fn annotator_open_raw_file(
     path: &std::path::Path,
-    state: &mut std::sync::MutexGuard<'_, crate::State>,
+    state: &mut tokio::sync::MutexGuard<'_, crate::State>,
 ) -> Result<RawFileDetails, String> {
     if path
         .extension()
@@ -334,7 +326,7 @@ pub async fn load_clipboard<'a>(data: &'a str, state: ModifiableState<'a>) -> Re
 
     state
         .lock()
-        .unwrap()
+        .await
         .spectra
         .push(RawFile::new_single(spectrum, format!("Clipboard {title}")));
 
@@ -558,8 +550,7 @@ pub fn select_spectrum_index(
     state: ModifiableState,
 ) -> Result<(), &'static str> {
     state
-        .lock()
-        .unwrap()
+        .blocking_lock()
         .spectra
         .iter_mut()
         .find(|f| f.id() == file_index)
@@ -574,8 +565,7 @@ pub fn select_spectrum_native_id(
     state: ModifiableState,
 ) -> Result<(), &'static str> {
     state
-        .lock()
-        .unwrap()
+        .blocking_lock()
         .spectra
         .iter_mut()
         .find(|f| f.id() == file_index)
@@ -590,8 +580,7 @@ pub fn select_retention_time(
     state: ModifiableState,
 ) -> Result<(), &'static str> {
     state
-        .lock()
-        .unwrap()
+        .blocking_lock()
         .spectra
         .iter_mut()
         .find(|f| f.id() == file_index)
@@ -601,31 +590,28 @@ pub fn select_retention_time(
 
 #[tauri::command]
 pub fn close_raw_file(file_index: usize, state: ModifiableState) {
-    let _ = state.lock().map(|mut state| {
-        state
-            .spectra
-            .iter_mut()
-            .position(|f| f.id() == file_index)
-            .map(|index| state.spectra.remove(index))
-    });
+    let mut state = state.blocking_lock();
+    state
+        .spectra
+        .iter_mut()
+        .position(|f| f.id() == file_index)
+        .map(|index| state.spectra.remove(index));
 }
 
 #[tauri::command]
 pub fn deselect_spectrum(file_index: usize, index: usize, state: ModifiableState) {
-    let _ = state.lock().map(|mut state| {
-        state
-            .spectra
-            .iter_mut()
-            .find(|f| f.id() == file_index)
-            .map(|file| file.unselect_index(index))
-    });
+    let mut state = state.blocking_lock();
+    state
+        .spectra
+        .iter_mut()
+        .find(|f| f.id() == file_index)
+        .map(|file| file.unselect_index(index));
 }
 
 #[tauri::command]
 pub fn get_open_raw_files(state: ModifiableState) -> Vec<RawFileDetails> {
     state
-        .lock()
-        .unwrap()
+        .blocking_lock()
         .spectra
         .iter()
         .map(|file| file.details())
@@ -636,31 +622,28 @@ pub fn get_open_raw_files(state: ModifiableState) -> Vec<RawFileDetails> {
 pub fn get_selected_spectra(
     state: ModifiableState,
 ) -> Vec<(usize, bool, Vec<SelectedSpectrumDetails>)> {
-    if let Ok(mut state) = state.lock() {
-        state
-            .spectra
-            .iter_mut()
-            .map(|file| {
-                let id = file.id();
-                (
-                    id,
-                    matches!(file, RawFile::Single { .. }),
-                    file.get_selected_spectra()
-                        .map(|spectrum| SelectedSpectrumDetails {
-                            id: spectrum.index(),
-                            short: spectrum.description.id.to_string(),
-                            description: spectrum_description(
-                                spectrum.description(),
-                                &spectrum.peaks().fetch_summaries(),
-                            ),
-                        })
-                        .collect_vec(),
-                )
-            })
-            .collect_vec()
-    } else {
-        Vec::new()
-    }
+    let mut state = state.blocking_lock();
+    state
+        .spectra
+        .iter_mut()
+        .map(|file| {
+            let id = file.id();
+            (
+                id,
+                matches!(file, RawFile::Single { .. }),
+                file.get_selected_spectra()
+                    .map(|spectrum| SelectedSpectrumDetails {
+                        id: spectrum.index(),
+                        short: spectrum.description.id.to_string(),
+                        description: spectrum_description(
+                            spectrum.description(),
+                            &spectrum.peaks().fetch_summaries(),
+                        ),
+                    })
+                    .collect_vec(),
+            )
+        })
+        .collect_vec()
 }
 
 pub fn spectrum_description(
@@ -810,15 +793,7 @@ pub fn save_spectrum(
     model: usize,
     charge: Option<usize>,
 ) -> Result<(), String> {
-    let state = state.lock().map_err(|e| {
-        BoxedError::new(
-            BasicKind::Error,
-            "Could not write file",
-            "Mutex locked, are you doing too much at the same time?",
-            Context::show(e.to_string()),
-        )
-        .to_html(false)
-    })?;
+    let state = state.blocking_lock();
     let file = std::fs::OpenOptions::new()
         .create(true)
         .truncate(true)

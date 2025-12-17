@@ -1307,7 +1307,7 @@ async function refresh() {
     document.querySelectorAll("#ontologies-details .update-ontology-internet").forEach(t => {
       t.addEventListener("click", () => {
         t.classList.add("loading");
-        invoke("update_ontology_via_internet", { ontology: t.dataset.ontology }).then(() => {
+        invoke("update_ontology_internet", { ontology: t.dataset.ontology }).then(() => {
           t.classList.remove("loading");
           refresh();
         }).catch((err) => console.error(err))

@@ -89,6 +89,7 @@ dependencies = [
  "tauri-plugin-dialog",
  "tauri-plugin-opener",
  "thin-vec",
+ "tokio",
 ]
 
 [[package]]

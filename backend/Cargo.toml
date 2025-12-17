@@ -33,6 +33,7 @@ mzsignal = {workspace = true}
 tauri-plugin-dialog = {workspace = true}
 thin-vec = {workspace = true}
 tauri-plugin-opener = {workspace = true}
+tokio = {workspace = true}
 
 [features]
 default = ["custom-protocol"]

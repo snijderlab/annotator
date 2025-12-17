@@ -144,7 +144,7 @@ pub fn get_custom_models(
     ),
     &'static str,
 > {
-    let state = state.lock().map_err(|_| "Could not lock mutex")?;
+    let state = state.blocking_lock();
     Ok((
         get_models(&state)
             .1
@@ -169,7 +169,7 @@ pub fn duplicate_custom_model(
     ),
     &'static str,
 > {
-    let mut locked_state = state.lock().map_err(|_| "Could not lock mutex")?;
+    let mut locked_state = state.blocking_lock();
     let models = get_models(&locked_state).1;
     if let Some((built_in, name, model)) = models.get(id).cloned() {
         let model = (*model).clone();
@@ -187,7 +187,7 @@ pub fn duplicate_custom_model(
 
 #[tauri::command]
 pub fn delete_custom_model(id: usize, state: ModifiableState) -> Result<(), &'static str> {
-    let mut state = state.lock().map_err(|_| "Could not lock mutex")?;
+    let mut state = state.blocking_lock();
     let (offset, models) = get_models(&state);
     if id < models.len() {
         let (built_in, _, _) = models[id];
@@ -208,7 +208,7 @@ pub fn get_custom_model(
     id: usize,
     state: ModifiableState,
 ) -> Result<(usize, String, ModelParameters), &'static str> {
-    let state = state.lock().map_err(|_| "Could not lock mutex")?;
+    let state = state.blocking_lock();
     let models = get_models(&state);
     if let Some((_, name, model)) = models.1.get(id) {
         Ok((id, name.to_string(), (*model).clone().into()))

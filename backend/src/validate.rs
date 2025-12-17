@@ -190,7 +190,7 @@ pub fn validate_satellite_ion(text: String) -> Result<String, String> {
 
 #[tauri::command]
 pub fn validate_placement_rule(text: String, state: ModifiableState<'_>) -> Result<String, String> {
-    let state = state.lock().map_err(|_| "Mutex poissoned")?;
+    let state = state.blocking_lock();
     text.parse::<PlacementRule>()
         .map(|r| display_placement_rule(&r, false, &state.ontologies)).map_err(|err| err.to_html(false))
 }
@@ -230,7 +230,7 @@ pub fn validate_custom_single_specificity(
     diagnostic_ions: Vec<String>,
     state: ModifiableState<'_>,
 ) -> Result<String, String> {
-    let state = state.lock().map_err(|_| "Mutex poissoned")?;
+    let state = state.blocking_lock();
     let rules = placement_rules
         .into_iter()
         .map(|text| text.parse::<PlacementRule>())
@@ -301,7 +301,7 @@ pub fn validate_custom_linker_specificity(
     diagnostic_ions: Vec<String>,
     state: ModifiableState<'_>,
 ) -> Result<String, String> {
-    let state = state.lock().map_err(|_| "Mutex poissoned")?;
+    let state = state.blocking_lock();
     let rules1 = placement_rules
         .into_iter()
         .map(|text| text.parse::<PlacementRule>())

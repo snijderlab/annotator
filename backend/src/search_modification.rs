@@ -29,7 +29,7 @@ pub async fn search_modification(
     state: ModifiableState<'_>,
     theme: Theme,
 ) -> Result<String, String> {
-    let state = state.lock().unwrap();
+    let state = state.lock().await;
     let mut glycan_footnotes = Vec::new();
     let modification = if text.is_empty() {
         Err(BoxedError::small(

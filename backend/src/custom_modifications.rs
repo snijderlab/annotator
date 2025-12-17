@@ -24,7 +24,7 @@ pub fn get_custom_modifications(
     state: ModifiableState,
     theme: Theme,
 ) -> Result<(Vec<(u32, String)>, Option<(String, Vec<String>)>), &'static str> {
-    let state = state.lock().map_err(|_| "Could not lock mutex")?;
+    let state = state.blocking_lock();
 
     Ok((
         state
@@ -57,7 +57,7 @@ pub fn duplicate_custom_modification(
     new_id: u32,
     state: ModifiableState,
 ) -> Result<CustomModification, String> {
-    let mut locked_state = state.lock().map_err(|_| "Could not lock mutex")?;
+    let mut locked_state = state.blocking_lock();
     if let Some(modification) = locked_state.ontologies.custom().data().iter().find(|p| {
         p.description()
             .and_then(|d| d.id())
@@ -131,7 +131,7 @@ pub fn duplicate_custom_modification(
 
 #[tauri::command]
 pub fn delete_custom_modification(id: u32, state: ModifiableState) -> Result<(), &'static str> {
-    let mut state = state.lock().map_err(|_| "Could not lock mutex")?;
+    let mut state = state.blocking_lock();
     if state.ontologies.custom_mut().remove(&id) {
         Ok(())
     } else {
@@ -144,7 +144,7 @@ pub fn get_custom_modification(
     id: u32,
     state: ModifiableState,
 ) -> Result<CustomModification, &'static str> {
-    let state = state.lock().map_err(|_| "Could not lock mutex")?;
+    let state = state.blocking_lock();
     match state.ontologies.custom().get_by_index(&id).as_deref() {
         Some(SimpleModificationInner::Database {
             specificities,

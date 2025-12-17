@@ -3,14 +3,14 @@
     windows_subsystem = "windows"
 )]
 
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
 use clap::Parser;
 use context_error::{BasicKind, BoxedError, CreateError, FullErrorContent};
 use itertools::Itertools;
 use mzannotate::{mzspeclib::AnalyteTarget, prelude::*};
 use mzcore::{
-    ontology::{Ontologies, Ontology},
+    ontology::Ontologies,
     prelude::*,
     system::{e, isize::Charge},
 };
@@ -64,14 +64,14 @@ impl Theme {
 
 const CUSTOM_MODIFICATIONS_FILE: &str = "custom_modifications.json";
 const CUSTOM_MODELS_FILE: &str = "custom_models.json";
-type ModifiableState<'a> = tauri::State<'a, std::sync::Mutex<State>>;
+type ModifiableState<'a> = tauri::State<'a, tokio::sync::Mutex<State>>;
 
 #[tauri::command]
 fn refresh(
     state: ModifiableState,
     theme: Theme,
 ) -> (usize, usize, Option<AnnotationResult>, Vec<String>, String) {
-    let state = state.lock().unwrap();
+    let state = state.blocking_lock();
     fn get_details<T: CVSource>(index: &CVIndex<T>) -> [HtmlContent; 6] {
         [
             T::cv_name().into(),
@@ -217,8 +217,7 @@ fn identified_peptide_details(
     theme: Theme,
 ) -> (bool, String) {
     state
-        .lock()
-        .unwrap()
+        .blocking_lock()
         .psm_files()
         .iter()
         .find(|f| f.id == file)
@@ -245,7 +244,7 @@ fn load_annotated_spectrum(
     state: ModifiableState,
     theme: Theme,
 ) -> Result<AnnotationResult, String> {
-    let mut state = state.lock().unwrap();
+    let mut state = state.blocking_lock();
     let annotated = state.psm_files().iter().find(|f| f.id == file).map_or(
         Err("Identified peptide file index not valid".to_string()),
         |file| {
@@ -305,7 +304,7 @@ async fn annotate_spectrum<'a>(
     mz_range: (Option<f64>, Option<f64>),
     theme: Theme,
 ) -> Result<(AnnotationResult, Vec<String>), Vec<String>> {
-    let mut state = state.lock().unwrap();
+    let mut state = state.lock().await;
     let spectrum = crate::spectra::create_selected_spectrum(&mut state, filter)
         .map_err(|err| vec![err.to_html(false)])?;
     let model = crate::model::get_models(&state)
@@ -403,9 +402,7 @@ fn render_annotated_spectrum(
 
 fn load_custom_mods_and_models(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let app_state = app.state::<Mutex<State>>();
-    let mut state = app_state
-        .lock()
-        .expect("Poisoned mutex at setup of custom mods");
+    let mut state = app_state.blocking_lock();
     let now = chrono::Local::now().format("%Y%m%d%H%M%S%.3f");
     let (ontologies, warnings) = dbg!(Ontologies::init());
     state.ontologies = ontologies;
@@ -466,9 +463,7 @@ fn load_custom_mods_and_models(app: &mut tauri::App) -> Result<(), Box<dyn std::
 fn auto_open(app: &mut tauri::App, args: Args) -> Result<(), Box<dyn std::error::Error>> {
     const RAW_EXTENSIONS: &[&str] = &["xy", "mgf", "mzml", "imzml", "mzmlb", "raw"];
     let app_state = app.state::<Mutex<State>>();
-    let mut state = app_state
-        .lock()
-        .expect("Poisoned mutex at load of provided auto open files");
+    let mut state = app_state.blocking_lock();
 
     for path in &args.paths {
         let actual_extension = path
@@ -531,30 +526,35 @@ fn get_custom_configuration_path(app: tauri::AppHandle) -> (String, String) {
 }
 
 #[tauri::command]
-fn update_ontology_via_internet(ontology: &str, state: ModifiableState<'_>) -> Result<(), String> {
-    let mut state = state
-        .lock()
-        .map_err(|err| format!("Mutex was poisoned: {err}"))?;
+async fn update_ontology_internet(
+    ontology: &str,
+    state: ModifiableState<'_>,
+) -> Result<(), String> {
+    let mut state = state.lock().await;
     match ontology {
         "Unimod" => state
             .ontologies
             .unimod_mut()
-            .update_from_url(&[])
+            .update_from_url_async(&[])
+            .await
             .map_err(|err| err.to_html(true)),
         "PSI-MOD" => state
             .ontologies
             .psimod_mut()
-            .update_from_url(&[])
+            .update_from_url_async(&[])
+            .await
             .map_err(|err| err.to_html(true)),
         "XLMOD" => state
             .ontologies
             .xlmod_mut()
-            .update_from_url(&[])
+            .update_from_url_async(&[])
+            .await
             .map_err(|err| err.to_html(true)),
         "GNOme" => state
             .ontologies
             .gnome_mut()
-            .update_from_url(&[])
+            .update_from_url_async(&[])
+            .await
             .map_err(|err| err.to_html(true)),
         "RESID" => Err("Cannot update RESID from the internet".to_string()),
         "Custom" => Err("Cannot update Custom from the internet".to_string()),
@@ -613,7 +613,7 @@ fn main() {
             spectra::select_retention_time,
             spectra::select_spectrum_index,
             spectra::select_spectrum_native_id,
-            update_ontology_via_internet,
+            update_ontology_internet,
             validate::validate_aa_neutral_loss,
             validate::validate_amino_acid,
             validate::validate_custom_linker_specificity,
