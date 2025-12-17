@@ -3,6 +3,8 @@
     windows_subsystem = "windows"
 )]
 
+use std::path::PathBuf;
+
 use tokio::sync::Mutex;
 
 use clap::Parser;
@@ -70,7 +72,7 @@ type ModifiableState<'a> = tauri::State<'a, tokio::sync::Mutex<State>>;
 fn refresh(
     state: ModifiableState,
     theme: Theme,
-) -> (usize, usize, Option<AnnotationResult>, Vec<String>, String) {
+) -> (usize, Option<AnnotationResult>, Vec<String>, String) {
     let state = state.blocking_lock();
     fn get_details<T: CVSource>(index: &CVIndex<T>) -> [HtmlContent; 6] {
         [
@@ -82,21 +84,33 @@ fn refresh(
                 .content(index.version().hash_hex())
                 .into(),
             index.len().to_string().into(),
-            if T::cv_name() != "RESID" {
-                HtmlTag::button
-                    .new()
-                    .class("update-ontology-internet")
-                    .content("Internet")
-                    .data([("ontology", T::cv_name())])
-                    .into()
-            } else {
-                HtmlContent::Text("".to_string())
-            },
+            HtmlTag::div
+                .new()
+                .content(
+                    HtmlTag::button
+                        .new()
+                        .class("update-ontology-file")
+                        .content("File")
+                        .data([("ontology", T::cv_name())])
+                        .clone(),
+                )
+                .maybe_content(if T::cv_name() != "RESID" {
+                    Some(
+                        HtmlTag::button
+                            .new()
+                            .class("update-ontology-internet")
+                            .content("Internet")
+                            .data([("ontology", T::cv_name())])
+                            .clone(),
+                    )
+                } else {
+                    None
+                })
+                .into(),
         ]
     }
 
     (
-        0, // state.spectra.as_ref().map(|s| s.len()).unwrap_or_default(),
         state.psm_files().len(),
         state.annotated_spectrum.as_ref().map(|annotated| {
             render_annotated_spectrum(
@@ -562,6 +576,128 @@ async fn update_ontology_internet(
     }
 }
 
+#[tauri::command]
+async fn update_ontology_file(
+    ontology: &str,
+    files: Vec<PathBuf>,
+    state: ModifiableState<'_>,
+) -> Result<(), String> {
+    let mut state = state.lock().await;
+
+    // TODO: validate that the picked files make sense (correct extension and amount and put them in the right order if needed)
+
+    let extensions = files
+        .iter()
+        .map(|path| {
+            path.extension().map(|ex| {
+                ex.eq_ignore_ascii_case("gz")
+                    .then_some(path)
+                    .and_then(|p| p.file_stem())
+                    .and_then(|p| std::path::Path::new(p).extension())
+                    .unwrap_or(ex)
+            })
+        })
+        .collect::<Vec<_>>();
+
+    match ontology {
+        "Unimod" => {
+            if extensions.len() == 1
+                && extensions[0].is_some_and(|ex| ex.eq_ignore_ascii_case("xml"))
+            {
+                state
+                    .ontologies
+                    .unimod_mut()
+                    .update_from_path(files.iter().map(|p| Some(p.as_ref())), false)
+                    .map_err(|err| err.to_html(true))
+            } else {
+                Err("Provide exactly one .xml file for Unimod".to_string())
+            }
+        }
+        "PSI-MOD" => {
+            if extensions.len() == 1
+                && extensions[0].is_some_and(|ex| ex.eq_ignore_ascii_case("obo"))
+            {
+                state
+                    .ontologies
+                    .psimod_mut()
+                    .update_from_path(files.iter().map(|p| Some(p.as_ref())), false)
+                    .map_err(|err| err.to_html(true))
+            } else {
+                Err("Provide exactly one .obo file for PSI-MOD".to_string())
+            }
+        }
+        "XLMOD" => {
+            if extensions.len() == 1
+                && extensions[0].is_some_and(|ex| ex.eq_ignore_ascii_case("obo"))
+            {
+                state
+                    .ontologies
+                    .xlmod_mut()
+                    .update_from_path(files.iter().map(|p| Some(p.as_ref())), false)
+                    .map_err(|err| err.to_html(true))
+            } else {
+                Err("Provide exactly one .obo file for XLMOD".to_string())
+            }
+        }
+        "GNOme" => {
+            if extensions.len() == 2
+                && extensions[0].is_some_and(|ex| ex.eq_ignore_ascii_case("obo"))
+                && extensions[1].is_some_and(|ex| ex.eq_ignore_ascii_case("csv"))
+            {
+                state
+                    .ontologies
+                    .gnome_mut()
+                    .update_from_path(files.iter().map(|p| Some(p.as_ref())), false)
+                    .map_err(|err| err.to_html(true))
+            } else if extensions.len() == 2
+                && extensions[0].is_some_and(|ex| ex.eq_ignore_ascii_case("csv"))
+                && extensions[1].is_some_and(|ex| ex.eq_ignore_ascii_case("obo"))
+            {
+                state
+                    .ontologies
+                    .gnome_mut()
+                    .update_from_path(
+                        [
+                            Some(std::path::Path::new(&files[1])),
+                            Some(std::path::Path::new(&files[0])),
+                        ],
+                        false,
+                    )
+                    .map_err(|err| err.to_html(true))
+            } else {
+                Err("Provide one .obo and one .csv file for GNOme".to_string())
+            }
+        }
+        "RESID" => {
+            if extensions.len() == 1
+                && extensions[0].is_some_and(|ex| ex.eq_ignore_ascii_case("xml"))
+            {
+                state
+                    .ontologies
+                    .resid_mut()
+                    .update_from_path(files.iter().map(|p| Some(p.as_ref())), false)
+                    .map_err(|err| err.to_html(true))
+            } else {
+                Err("Provide exactly one .xml file for RESID".to_string())
+            }
+        }
+        "Custom" => {
+            if extensions.len() == 1
+                && extensions[0].is_some_and(|ex| ex.eq_ignore_ascii_case("xml"))
+            {
+                state
+                    .ontologies
+                    .custom_mut()
+                    .update_from_path(files.iter().map(|p| Some(p.as_ref())), false)
+                    .map_err(|err| err.to_html(true))
+            } else {
+                Err("Provide exactly one .json file for Custom".to_string())
+            }
+        }
+        _ => Err("Invalid ontology".to_string()),
+    }
+}
+
 fn main() {
     let args = Args::parse();
     tauri::Builder::default()
@@ -614,6 +750,7 @@ fn main() {
             spectra::select_spectrum_index,
             spectra::select_spectrum_native_id,
             update_ontology_internet,
+            update_ontology_file,
             validate::validate_aa_neutral_loss,
             validate::validate_amino_acid,
             validate::validate_custom_linker_specificity,

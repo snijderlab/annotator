@@ -1285,32 +1285,56 @@ window.addEventListener("DOMContentLoaded", () => {
 
 async function refresh() {
   invoke("refresh", { theme: Theme }).then((result) => {
-    console.log(result);
     if (result[0] > 0) {
-      update_selected_spectra();
-    }
-    document.querySelector("#number-of-identified-peptides").innerText = result[1];
-    if (result[1] > 0) {
       document.querySelector("#peptides").style.display = "block";
       identified_peptide_details();
     }
     update_identified_peptide_file_select();
     update_open_raw_files();
-    if (result[2]) {
-      set_up_spectrum(result[2]);
+    if (result[1]) {
+      set_up_spectrum(result[1]);
     }
-    if (result[3].length > 0) {
-      showError("open-files-error", result[3]);
+    if (result[2].length > 0) {
+      showError("open-files-error", result[2]);
     }
-    document.getElementById("ontologies-details").innerHTML = result[4];
+    document.getElementById("ontologies-details").innerHTML = result[3];
 
+    // Hook up all update ontology from the internet buttons
     document.querySelectorAll("#ontologies-details .update-ontology-internet").forEach(t => {
       t.addEventListener("click", () => {
         t.classList.add("loading");
         invoke("update_ontology_internet", { ontology: t.dataset.ontology }).then(() => {
           t.classList.remove("loading");
           refresh();
-        }).catch((err) => console.error(err))
+        }).catch((err) => {
+          t.classList.remove("loading");
+          showError("update-ontologies-error", err);
+        })
+      })
+    })
+
+    // Hook up all update ontology from file buttons
+    document.querySelectorAll("#ontologies-details .update-ontology-file").forEach(t => {
+      t.addEventListener("click", () => {
+        t.classList.add("loading");
+        let properties = {
+          directory: false,
+          multiple: true,
+          filters: [{
+            extensions: ["obo", "csv", "xml"], name: "Known"
+          }, { extensions: ["*"], name: "Anything" }]
+        };
+        open(properties).then((result) => {
+          if (result != null) {
+            invoke("update_ontology_file", { ontology: t.dataset.ontology, files: result }).then(() => {
+              t.classList.remove("loading");
+              refresh();
+            }).catch((err) => {
+              t.classList.remove("loading");
+              showError("update-ontologies-error", err);
+            })
+          }
+        }).catch(() => t.classList.remove("loading"));
       })
     })
   })

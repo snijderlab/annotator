@@ -884,6 +884,7 @@ fn main() {
       <fieldset class="collapsible" data-linked-item="collapsible-ontologies" id="ontologies-collapsible">
         <legend>Ontologies</legend>
         <output id="ontologies-details">NOT LOADED</output>
+        <output class="" id="update-ontologies-error"></output>
       </fieldset>
       <div class="grow"></div>
       <footer>

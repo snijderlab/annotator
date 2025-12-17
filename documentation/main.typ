@@ -56,6 +56,7 @@ Buttons are displayed as #button[Button]. Keys used in key combinations as #key[
 #include "spectrum.typ"
 #include "tools.typ"
 #include "exporting.typ"
+#include "ontologies.typ"
 
 #{
   show heading: none
@@ -66,5 +67,7 @@ Buttons are displayed as #button[Button]. Keys used in key combinations as #key[
   heading()[ProForma cheat sheet]
   page(header: none, margin: 0pt, image(width: 100%, height: 100%, "proforma_cheat_sheet_1.0_print.svg"))
 }
+
+#show "De Novo": emph
 
 #bibliography("bib.bib", style: "american-chemical-society")
