@@ -436,9 +436,9 @@ impl RenderToTable for PSMData {
                         .map(|n| {
                             format!(
                                 "N: {} C: {}",
-                                display_mass(n, None),
+                                display_mass(n.into(), None),
                                 data.dn_c_mass
-                                    .map(|v| display_mass(v, None),)
+                                    .map(|v| display_mass(v.into(), None),)
                                     .to_optional_string(),
                             )
                         })
@@ -654,7 +654,7 @@ impl RenderToTable for PSMData {
                 ("Raw file ID", data.raw_file_id.to_string()),
                 ("Complex satisfied", data.is_complex_satisfied.to_string()),
                 ("In filter", data.is_filter_in.to_string()),
-                ("Title", data.title.clone()),
+                ("Title", data.title.to_string()),
             ],
             PSMData::PUniFind(data) => {
                 vec![("Cosine similarity", data.cos_similarity.to_string())]
