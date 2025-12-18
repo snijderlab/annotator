@@ -599,13 +599,6 @@ impl RenderToTable for PSMData {
             ],
             PSMData::MzTab(data) => vec![
                 (
-                    "Accession",
-                    data.protein
-                        .as_ref()
-                        .map(|(acc, prot)| prot.as_ref().map(|p| &p.accession).unwrap_or(acc))
-                        .to_optional_string(),
-                ),
-                (
                     "Search engine",
                     data.search_engine
                         .iter()
@@ -619,7 +612,7 @@ impl RenderToTable for PSMData {
                         })
                         .join("|"),
                 ),
-                ("Uri", data.uri.as_ref().to_optional_string()),
+                ("URI", data.uri.as_ref().to_optional_string()),
                 (
                     "Other columns",
                     (!data.additional.is_empty())
