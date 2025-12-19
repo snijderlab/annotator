@@ -1333,6 +1333,8 @@ async function refresh() {
               t.classList.remove("loading");
               showError("update-ontologies-error", err);
             })
+          } else {
+            t.classList.remove("loading")
           }
         }).catch(() => t.classList.remove("loading"));
       })
