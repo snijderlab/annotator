@@ -8,17 +8,15 @@ There are quite some programs that export PSMs. The annotator supports a selecti
   columns: (auto, auto),
   table.header([*Open format*], [*Comment*]),
   [Fasta], [No header requirements],
-  [mzTab], [v1.0 & Casanovo (3.x, 4.x, & 5.0)],
   [mzSpecLib], [v1.0],
+  [mzTab], [v1.0 & Casanovo (3.x, 4.x, & 5.0)],
   [SSL], [Spectrum sequence list],
 )
 
 #table(
   columns: (auto, auto),
   table.header([*Software*], [*Versions/Formats*]),
-  [Basic CSV],
-  [A CSV file with the following columns: 'raw_file', 'sequence' (in ProForma format), 'z', 'scan_index', and possibly 'mode' with the fragmentation mode, this ignores any other columns.],
-
+  [Basic CSV], [A CSV file with the following columns: 'raw_file', 'sequence' (in ProForma format), 'z', 'scan_index', and possibly 'mode' with the fragmentation mode, this ignores any other columns.],
   [DeepNovoFamily], [DeepNovo, PointNovo, BiatNovo, PGPointNovo],
   [InstaNovo], [1.0.0 & 1.1.4],
   [MaxQuant], [msms, msms scans, novo msms scans, & silac],
@@ -29,14 +27,14 @@ There are quite some programs that export PSMs. The annotator supports a selecti
   [OPair], [common version],
   [Peaks], [X, X+, 11, 12, 13 Dia de novo, Ab, DB peptidoforms, DB PSM, & DB protein-peptidoform],
   [PepNet], [1.0],
-  [π-HelixNovo], [1.1],
-  [π-PrimeNovo], [0.1],
-  [pLink], [2.3],
   [PLGS], [3.0],
+  [pLink], [2.3],
   [PowerNovo], [1.0.17],
   [Proteoscape], [2025B],
   [pUniFind], [0.1],
   [Sage], [0.14],
+  [π-HelixNovo], [1.1],
+  [π-PrimeNovo], [0.1],
 )
 
 #aside[If you have data from an unsupported version of a supported program please open an issue on GitHub and give an example file so that the support can be extended.]
