@@ -32,7 +32,7 @@ pub fn annotator_open_psm_file(
             .filter_map(|p| match p {
                 Ok(p) => Some(p),
                 Err(e) => {
-                    combine_error(&mut peptide_errors, e, ());
+                    combine_error(&mut peptide_errors, e);
                     None
                 }
             })
@@ -177,17 +177,20 @@ pub async fn search_peptide<'a>(
             let sequence = alignment.seq_a().peptidoform();
             let mut highlighted_match = String::new();
             sequence
-                .sub_peptide(..start)
+                .sub_peptidoform(..start)
+                .unwrap()
                 .display(&mut highlighted_match, true, false, true)
                 .unwrap();
             highlighted_match.push_str("<span class='match'>");
             sequence
-                .sub_peptide(start..end)
+                .sub_peptidoform(start..end)
+                .unwrap()
                 .display(&mut highlighted_match, false, false, true)
                 .unwrap();
             highlighted_match.push_str("</span>");
             sequence
-                .sub_peptide(end..)
+                .sub_peptidoform(end..)
+                .unwrap()
                 .display(&mut highlighted_match, false, true, true)
                 .unwrap();
             vec![

@@ -70,7 +70,7 @@ version = "1.3.0"
 dependencies = [
  "chrono",
  "clap",
- "context_error 0.2.0",
+ "context_error",
  "itertools",
  "mzalign",
  "mzannotate",
@@ -728,15 +728,10 @@ checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
 
 [[package]]
 name = "context_error"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
 ]
-
-[[package]]
-name = "context_error"
-version = "0.2.0"
-source = "git+https://github.com/douweschulte/context_error#77761af8da7853aa34cb9be06383342c8709fd48"
 
 [[package]]
 name = "convert_case"
@@ -2369,7 +2364,7 @@ name = "imgt"
 version = "0.1.0"
 dependencies = [
  "bincode",
- "context_error 0.1.0",
+ "context_error",
  "itertools",
  "mzcore",
  "mzcv",
@@ -2909,7 +2904,7 @@ dependencies = [
 name = "mzannotate"
 version = "0.1.0"
 dependencies = [
- "context_error 0.1.0",
+ "context_error",
  "indexmap 2.13.0",
  "itertools",
  "mzcore",
@@ -2927,7 +2922,7 @@ name = "mzcore"
 version = "0.1.1"
 dependencies = [
  "bincode",
- "context_error 0.1.0",
+ "context_error",
  "flate2",
  "itertools",
  "mzcv",
@@ -2949,7 +2944,7 @@ version = "0.2.0"
 dependencies = [
  "bincode",
  "chrono",
- "context_error 0.1.0",
+ "context_error",
  "directories",
  "flate2",
  "reqwest",
@@ -3001,7 +2996,7 @@ dependencies = [
 name = "mzident"
 version = "0.1.0"
 dependencies = [
- "context_error 0.1.0",
+ "context_error",
  "flate2",
  "itertools",
  "mzannotate",
@@ -7125,3 +7120,8 @@ dependencies = [
  "syn 2.0.114",
  "winnow 0.7.14",
 ]
+
+[[patch.unused]]
+name = "context_error"
+version = "0.2.0"
+source = "git+https://github.com/douweschulte/context_error#77761af8da7853aa34cb9be06383342c8709fd48"

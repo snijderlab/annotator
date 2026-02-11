@@ -1,6 +1,7 @@
 "use strict";
 
 const { invoke } = window.__TAURI__.core
+let scroll_spectrum = undefined;
 
 /* Spectrum viewer code */
 function SpectrumSetUp() {
@@ -102,8 +103,18 @@ function SpectrumSetUp() {
     document.querySelectorAll("#spectrum-wrapper .peak:not(.fragment)").forEach(element => {
         element.addEventListener("click", ForceShowLabels)
     })
+    document.addEventListener("wheel", (event) => {
+        if (scroll_spectrum === undefined) {
+            scroll_spectrum = document.getElementById("spectrum-wrapper").contains(event.target);
+        }
+    })
+    document.addEventListener("scrollend", () => { scroll_spectrum = undefined; })
     document.querySelectorAll("#spectrum-wrapper .canvas-spectrum").forEach(element => {
-        element.addEventListener("wheel", spectrumScroll)
+        element.addEventListener("wheel", (event) => {
+            if (scroll_spectrum || scroll_spectrum === undefined) {
+                spectrumScroll(event)
+            }
+        })
     })
     document.addEventListener("keyup", e => {
         if (e.key == "0" && e.ctrlKey) {
