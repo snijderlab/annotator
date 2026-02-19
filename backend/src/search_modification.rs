@@ -10,9 +10,9 @@ use mzcore::{
     prelude::*,
     quantities::Tolerance,
     sequence::{
-        GnoComposition, LinkerSpecificity, ModificationId, PlacementRule, ReturnModification,
-        SimpleModification, SimpleModificationInner, modification_search_formula,
-        modification_search_glycan, modification_search_mass,
+        GnoComposition, LinkerLength, LinkerSpecificity, ModificationId, PlacementRule,
+        ReturnModification, SimpleModification, SimpleModificationInner,
+        modification_search_formula, modification_search_glycan, modification_search_mass,
     },
     system::{Mass, dalton},
 };
@@ -318,10 +318,19 @@ pub fn render_modification(
     } = &*modification
     {
         output.content(render_modification_id(id, ontologies));
-        output.content(HtmlTag::p.new().content(format!(
-            "Length: {}",
-            length.map_or("-".to_string(), |l| l.to_string()),
-        )));
+        match length {
+            LinkerLength::Unknown => (),
+            LinkerLength::Discreet(v) => {
+                output.content(
+                    HtmlTag::p
+                        .new()
+                        .content(format!("Length: {}", v.iter().map(|v| v.0).join(", "),)),
+                );
+            }
+            LinkerLength::InclusiveRange(s, e) => {
+                output.content(HtmlTag::p.new().content(format!("Length: {}—{}", s.0, e.0)));
+            }
+        }
         output.content(HtmlTag::p.new().content("Placement rules"));
         let mut ul = HtmlTag::ul.new();
         ul.class("placement-rules");

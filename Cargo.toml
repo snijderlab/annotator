@@ -5,7 +5,7 @@ resolver = "2"
 [workspace.dependencies]
 chrono = "0.4"
 clap = {version = "4.5", features = ["derive"]}
-context_error = {path="../context_error"}
+context_error = "0.2.0"
 itertools = "0.14"
 mzalign = { version = "0.1.1", features = ["rayon"] }
 mzannotate = { version = "0.1.0" }

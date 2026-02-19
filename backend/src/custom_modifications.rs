@@ -5,10 +5,11 @@ use mzcore::{
     chemistry::{DiagnosticIon, NeutralLoss},
     ontology::Ontology,
     prelude::*,
-    sequence::{LinkerSpecificity, ModificationId, PlacementRule, SimpleModificationInner},
+    sequence::{
+        LinkerLength, LinkerSpecificity, ModificationId, PlacementRule, SimpleModificationInner,
+    },
 };
 use mzcv::SynonymScope;
-use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
@@ -245,7 +246,7 @@ pub fn get_custom_modification(
                     ),
                 })
                 .collect(),
-            linker_length: length.map(|n| n.0),
+            linker_length: None, //TODO: fix to allow all complexity to bubble to the edit interface
         }),
         Some(_) => Err("Invalid custom modification type"),
         None => Err("Given index does not exist"),
@@ -373,7 +374,10 @@ pub async fn update_modification(
                 .map_err(|e| e.to_html(false))?,
             formula,
             id,
-            length: custom_modification.linker_length.map(OrderedFloat::from),
+            length: match custom_modification.linker_length {
+                None => LinkerLength::Unknown,
+                Some(l) => LinkerLength::Discreet(vec![l.into()]),
+            },
         }
     } else {
         SimpleModificationInner::Database {

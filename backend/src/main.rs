@@ -551,25 +551,29 @@ async fn update_ontology_internet(
             .unimod_mut()
             .update_from_url_async(&[])
             .await
-            .map_err(|err| err.to_html(true)),
+            .map_err(|err| err.to_html(true))
+            .map(|_| ()),
         "PSI-MOD" => state
             .ontologies
             .psimod_mut()
             .update_from_url_async(&[])
             .await
-            .map_err(|err| err.to_html(true)),
+            .map_err(|err| err.to_html(true))
+            .map(|_| ()),
         "XLMOD" => state
             .ontologies
             .xlmod_mut()
             .update_from_url_async(&[])
             .await
-            .map_err(|err| err.to_html(true)),
+            .map_err(|err| err.to_html(true))
+            .map(|_| ()),
         "GNOme" => state
             .ontologies
             .gnome_mut()
             .update_from_url_async(&[])
             .await
-            .map_err(|err| err.to_html(true)),
+            .map_err(|err| err.to_html(true))
+            .map(|_| ()),
         "RESID" => Err("Cannot update RESID from the internet".to_string()),
         "Custom" => Err("Cannot update Custom from the internet".to_string()),
         _ => Err("Invalid ontology".to_string()),
@@ -609,6 +613,7 @@ async fn update_ontology_file(
                     .unimod_mut()
                     .update_from_path(files.iter().map(|p| Some(p.as_ref())), false)
                     .map_err(|err| err.to_html(true))
+                    .map(|_| ())
             } else {
                 Err("Provide exactly one .xml file for Unimod".to_string())
             }
@@ -622,6 +627,7 @@ async fn update_ontology_file(
                     .psimod_mut()
                     .update_from_path(files.iter().map(|p| Some(p.as_ref())), false)
                     .map_err(|err| err.to_html(true))
+                    .map(|_| ())
             } else {
                 Err("Provide exactly one .obo file for PSI-MOD".to_string())
             }
@@ -635,6 +641,7 @@ async fn update_ontology_file(
                     .xlmod_mut()
                     .update_from_path(files.iter().map(|p| Some(p.as_ref())), false)
                     .map_err(|err| err.to_html(true))
+                    .map(|_| ())
             } else {
                 Err("Provide exactly one .obo file for XLMOD".to_string())
             }
@@ -649,6 +656,7 @@ async fn update_ontology_file(
                     .gnome_mut()
                     .update_from_path(files.iter().map(|p| Some(p.as_ref())), false)
                     .map_err(|err| err.to_html(true))
+                    .map(|_| ())
             } else if extensions.len() == 2
                 && extensions[0].is_some_and(|ex| ex.eq_ignore_ascii_case("csv"))
                 && extensions[1].is_some_and(|ex| ex.eq_ignore_ascii_case("obo"))
@@ -664,6 +672,7 @@ async fn update_ontology_file(
                         false,
                     )
                     .map_err(|err| err.to_html(true))
+                    .map(|_| ())
             } else {
                 Err("Provide one .obo and one .csv file for GNOme".to_string())
             }
@@ -677,6 +686,7 @@ async fn update_ontology_file(
                     .resid_mut()
                     .update_from_path(files.iter().map(|p| Some(p.as_ref())), false)
                     .map_err(|err| err.to_html(true))
+                    .map(|_| ())
             } else {
                 Err("Provide exactly one .xml file for RESID".to_string())
             }
@@ -690,6 +700,7 @@ async fn update_ontology_file(
                     .custom_mut()
                     .update_from_path(files.iter().map(|p| Some(p.as_ref())), false)
                     .map_err(|err| err.to_html(true))
+                    .map(|_| ())
             } else {
                 Err("Provide exactly one .json file for Custom".to_string())
             }
