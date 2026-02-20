@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use context_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
 use mzcore::{
@@ -12,6 +12,7 @@ use mzcore::{
 use mzcv::SynonymScope;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
+use tokio::sync::Mutex;
 
 use crate::{
     ModifiableState, Theme,
@@ -412,21 +413,13 @@ pub async fn update_modification(
         }
     });
 
-    if let Ok(mut state) = app.state::<Mutex<State>>().lock() {
-        // Update state (if this modification was not stored before the remove will just do nothing)
-        let custom = state.ontologies.custom_mut();
-        custom.remove(&custom_modification.id);
-        custom.add_to_indices(modification);
-        custom.save_to_cache().map_err(|e| e.to_html(true))?;
+    let handle = app.state::<Mutex<State>>();
+    let mut state = handle.lock().await;
+    // Update state (if this modification was not stored before the remove will just do nothing)
+    let custom = state.ontologies.custom_mut();
+    custom.remove(&custom_modification.id);
+    custom.add_to_indices(modification);
+    custom.save_to_cache().map_err(|e| e.to_html(true))?;
 
-        Ok(())
-    } else {
-        Err(BoxedError::new(
-            BasicKind::Error,
-            "State locked",
-            "Cannot unlock the mutable state, are you doing many things in parallel?",
-            Context::none(),
-        )
-        .to_html(false))
-    }
+    Ok(())
 }

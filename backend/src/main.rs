@@ -414,9 +414,10 @@ fn render_annotated_spectrum(
     }
 }
 
-fn load_custom_mods_and_models(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    let app_state = app.state::<Mutex<State>>();
-    let mut state = app_state.blocking_lock();
+fn load_custom_mods_and_models(
+    state: &mut tokio::sync::MutexGuard<'_, crate::State>,
+    path: &std::path::Path,
+) {
     let now = chrono::Local::now().format("%Y%m%d%H%M%S%.3f");
     let (ontologies, warnings) = dbg!(Ontologies::init());
     state.ontologies = ontologies;
@@ -437,47 +438,41 @@ fn load_custom_mods_and_models(app: &mut tauri::App) -> Result<(), Box<dyn std::
             Vec::new(),
         ))
     }
-    let path = app.path().app_config_dir();
-    if let Ok(path) = path {
-        let custom_models = path.join(CUSTOM_MODELS_FILE);
-        if custom_models.exists() {
-            match mzannotate::annotation::model::parse_custom_models(&custom_models) {
-                Ok(models) => state.custom_models = models,
-                Err(error) => {
-                    eprintln!("Error while parsing custom models:\n{error}");
-                    let mut combined_error = (error.to_html(false), Vec::new());
-                    if let Err(err) = std::fs::rename(
-                        &custom_models,
-                        custom_models
-                            .with_file_name(format!("{CUSTOM_MODELS_FILE}_backup_{now}.json")),
-                    ) {
-                        combined_error
-                            .1
-                            .push(format!("Could not rename models file: {err}"));
-                    }
-                    if let Err(err) = std::fs::write(
-                        custom_models.with_file_name(format!("error_{now}.txt")),
-                        error.to_string().as_bytes(),
-                    ) {
-                        combined_error
-                            .1
-                            .push(format!("Could not save models parse error file: {err}"));
-                    }
-                    state.custom_models_error = Some(combined_error);
+
+    let custom_models = path.join(CUSTOM_MODELS_FILE);
+    if custom_models.exists() {
+        match mzannotate::annotation::model::parse_custom_models(&custom_models) {
+            Ok(models) => state.custom_models = models,
+            Err(error) => {
+                eprintln!("Error while parsing custom models:\n{error}");
+                let mut combined_error = (error.to_html(false), Vec::new());
+                if let Err(err) = std::fs::rename(
+                    &custom_models,
+                    custom_models.with_file_name(format!("{CUSTOM_MODELS_FILE}_backup_{now}.json")),
+                ) {
+                    combined_error
+                        .1
+                        .push(format!("Could not rename models file: {err}"));
                 }
+                if let Err(err) = std::fs::write(
+                    custom_models.with_file_name(format!("error_{now}.txt")),
+                    error.to_string().as_bytes(),
+                ) {
+                    combined_error
+                        .1
+                        .push(format!("Could not save models parse error file: {err}"));
+                }
+                state.custom_models_error = Some(combined_error);
             }
         }
-
-        Ok(())
-    } else {
-        Err("Could not find configuration file".into())
     }
 }
 
-fn auto_open(app: &mut tauri::App, args: Args) -> Result<(), Box<dyn std::error::Error>> {
+fn auto_open(
+    state: &mut tokio::sync::MutexGuard<'_, crate::State>,
+    args: Args,
+) -> Result<(), Box<dyn std::error::Error>> {
     const RAW_EXTENSIONS: &[&str] = &["xy", "mgf", "mzml", "imzml", "mzmlb", "raw"];
-    let app_state = app.state::<Mutex<State>>();
-    let mut state = app_state.blocking_lock();
 
     for path in &args.paths {
         let actual_extension = path
@@ -492,12 +487,12 @@ fn auto_open(app: &mut tauri::App, args: Args) -> Result<(), Box<dyn std::error:
             .map(|ex| ex.to_string_lossy().to_lowercase());
         if let Some(ext) = actual_extension {
             if RAW_EXTENSIONS.contains(&ext.as_str()) {
-                match crate::spectra::annotator_open_raw_file(path, &mut state) {
+                match crate::spectra::annotator_open_raw_file(path, state) {
                     Ok(_) => (),
                     Err(error) => state.auto_open_errors.push(error),
                 }
             } else {
-                match crate::identified_peptides::annotator_open_psm_file(path, &mut state) {
+                match crate::identified_peptides::annotator_open_psm_file(path, state) {
                     Ok(None) => (),
                     Ok(Some(error)) => state.auto_open_errors.push(error),
                     Err(error) => state.auto_open_errors.push(error),
@@ -519,9 +514,14 @@ fn auto_open(app: &mut tauri::App, args: Args) -> Result<(), Box<dyn std::error:
     Ok(())
 }
 
-fn setup(app: &mut tauri::App, args: Args) -> Result<(), Box<dyn std::error::Error>> {
-    load_custom_mods_and_models(app)?;
-    auto_open(app, args)
+fn setup(app: tauri::AppHandle, args: Args) -> Result<(), Box<dyn std::error::Error>> {
+    let app_state = app.state::<Mutex<State>>();
+    let mut state = app_state.blocking_lock();
+    let Ok(path) = app.path().app_config_dir() else {
+        return Err("Could not find configuration directory path".into());
+    };
+    load_custom_mods_and_models(&mut state, &path);
+    auto_open(&mut state, args)
 }
 
 #[tauri::command]
@@ -724,7 +724,7 @@ fn main() {
             custom_models_error: None,
             auto_open_errors: Vec::new(),
         }))
-        .setup(|app| setup(app, args))
+        .setup(|app| setup(app.app_handle().clone(), args))
         .invoke_handler(tauri::generate_handler![
             annotate_spectrum,
             custom_modifications::delete_custom_modification,

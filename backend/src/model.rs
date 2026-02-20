@@ -1,4 +1,4 @@
-use std::{io::BufWriter, sync::Mutex};
+use std::io::BufWriter;
 
 use context_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
 use mzannotate::{
@@ -17,6 +17,7 @@ use mzcore::{
 };
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
+use tokio::sync::Mutex;
 
 use crate::{
     ModifiableState,
@@ -230,84 +231,76 @@ pub async fn update_model(
             .try_into()
             .map_err(|err: BoxedError<'static, BasicKind>| err.to_html(false))?,
     );
-
-    if let Ok(mut state) = app.state::<Mutex<State>>().lock() {
-        let (built_in_models_length, models) = get_models(&state);
-        let index = id.saturating_sub(built_in_models_length);
-        if index < state.custom_models.len() {
-            let (built_in, _, _) = models[id];
-            if built_in.is_some() {
-                return Err(BoxedError::small(
-                    BasicKind::Error,
-                    "Can not update built in model",
-                    "A built in model cannot be edited",
-                )
-                .to_html(false));
-            } else {
-                state.custom_models[index] = model;
-            }
+    let handle = app.state::<Mutex<State>>();
+    let mut state = handle.lock().await;
+    let (built_in_models_length, models) = get_models(&state);
+    let index = id.saturating_sub(built_in_models_length);
+    if index < state.custom_models.len() {
+        let (built_in, _, _) = models[id];
+        if built_in.is_some() {
+            return Err(BoxedError::small(
+                BasicKind::Error,
+                "Can not update built in model",
+                "A built in model cannot be edited",
+            )
+            .to_html(false));
         } else {
-            state.custom_models.push(model);
+            state.custom_models[index] = model;
         }
+    } else {
+        state.custom_models.push(model);
+    }
 
-        // Store mods config file
-        let path = app
-            .path()
-            .app_config_dir()
-            .map(|dir| dir.join(crate::CUSTOM_MODELS_FILE))
-            .map_err(|e| {
-                BoxedError::small(
-                    BasicKind::Error,
-                    "Cannot find app data directory",
-                    e.to_string(),
-                )
-                .to_html(false)
-            })?;
-        let parent = path.parent().ok_or_else(|| {
-            BoxedError::new(
-                BasicKind::Error,
-                "Custom models configuration does not have a valid directory",
-                "Please report",
-                Context::show(path.to_string_lossy()).to_owned(),
-            )
-            .to_html(false)
-        })?;
-        std::fs::create_dir_all(parent).map_err(|err| {
-            BoxedError::new(
-                BasicKind::Error,
-                "Could not create parent directories for custom models configuration file",
-                err.to_string(),
-                Context::show(parent.to_string_lossy()).to_owned(),
-            )
-            .to_html(false)
-        })?;
-        let file = BufWriter::new(std::fs::File::create(&path).map_err(|err| {
-            BoxedError::new(
-                BasicKind::Error,
-                "Could not open custom models configuration file",
-                err.to_string(),
-                Context::show(path.to_string_lossy()).to_owned(),
-            )
-            .to_html(false)
-        })?);
-        serde_json::to_writer_pretty(file, &state.custom_models).map_err(|err| {
+    // Store mods config file
+    let path = app
+        .path()
+        .app_config_dir()
+        .map(|dir| dir.join(crate::CUSTOM_MODELS_FILE))
+        .map_err(|e| {
             BoxedError::small(
                 BasicKind::Error,
-                "Could not write custom models to configuration file",
-                err.to_string(),
+                "Cannot find app data directory",
+                e.to_string(),
             )
             .to_html(false)
         })?;
-
-        Ok(())
-    } else {
-        Err(BoxedError::small(
+    let parent = path.parent().ok_or_else(|| {
+        BoxedError::new(
             BasicKind::Error,
-            "State locked",
-            "Cannot unlock the mutable state, are you doing many things in parallel?",
+            "Custom models configuration does not have a valid directory",
+            "Please report",
+            Context::show(path.to_string_lossy()).to_owned(),
         )
-        .to_html(false))
-    }
+        .to_html(false)
+    })?;
+    std::fs::create_dir_all(parent).map_err(|err| {
+        BoxedError::new(
+            BasicKind::Error,
+            "Could not create parent directories for custom models configuration file",
+            err.to_string(),
+            Context::show(parent.to_string_lossy()).to_owned(),
+        )
+        .to_html(false)
+    })?;
+    let file = BufWriter::new(std::fs::File::create(&path).map_err(|err| {
+        BoxedError::new(
+            BasicKind::Error,
+            "Could not open custom models configuration file",
+            err.to_string(),
+            Context::show(path.to_string_lossy()).to_owned(),
+        )
+        .to_html(false)
+    })?);
+    serde_json::to_writer_pretty(file, &state.custom_models).map_err(|err| {
+        BoxedError::small(
+            BasicKind::Error,
+            "Could not write custom models to configuration file",
+            err.to_string(),
+        )
+        .to_html(false)
+    })?;
+
+    Ok(())
 }
 
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
