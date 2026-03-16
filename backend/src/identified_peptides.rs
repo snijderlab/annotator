@@ -233,15 +233,18 @@ pub struct PSMSettings {
 impl PSMSettings {
     fn from_peptide<C, A>(state: &State, peptide: &PSM<C, A>, warning: Option<String>) -> Self {
         let mut str_peptide = String::new();
-        if let Some(peptide) = peptide.compound_peptidoform_ion() {
+        if let Some(peptide) = peptide.peptidoform_ion_set() {
             peptide.display(&mut str_peptide, true).unwrap()
         }
         Self {
             peptide: str_peptide,
             charge: peptide.charge().map(|v| v.value),
-            mode: peptide.mode().and_then(|mode| {
-                crate::model::get_model_index(&state.custom_models, mode.as_ref())
-            }),
+            mode: peptide
+                .mode()
+                .and_then(|mode| crate::model::get_model_index(&state.custom_models, mode.as_ref()))
+                .or(peptide
+                    .fragmentation_model()
+                    .map(crate::model::get_built_in_index)),
             warning,
         }
     }
@@ -254,15 +257,19 @@ pub async fn load_identified_peptide(
     state: ModifiableState<'_>,
 ) -> Result<PSMSettings, &'static str> {
     let mut state = state.lock().await;
-    let peptide = state
+    let res = state
         .psm_files()
         .iter()
         .find(|f| f.id == file)
-        .and_then(|file| file.peptides.get(index))
-        .cloned();
-    peptide
-        .map(|peptide| {
+        .and_then(|file| {
+            file.peptides
+                .get(index)
+                .map(|p| (file.file_name(), p.clone()))
+        });
+    res
+        .map(|(filename, peptide)| {
             let mut message = None;
+            let mut selected = false;
             match peptide.scans() {
                 SpectrumIds::None => (),
                 SpectrumIds::FileNotKnown(scans) => {
@@ -274,6 +281,7 @@ pub async fn load_identified_peptide(
                                 SpectrumId::Native(n) => state.spectra[index].select_native_id(n),
                                 SpectrumId::RetentionTime(rt) => state.spectra[index].select_retention_time(rt),
                             };
+                            selected = true;
                         }
                     } else {
                         message = Some("No raw files are loaded".to_string());
@@ -320,12 +328,17 @@ pub async fn load_identified_peptide(
                                     SpectrumId::Native(n) => state.spectra[index].select_native_id(n),
                                     SpectrumId::RetentionTime(rt) => state.spectra[index].select_retention_time(rt),
                                 };
+                                selected = true;
                             }
                         } else {
                             message = Some(format!("Could not find a raw file with name '{stem}' either load the correct raw file or manually load the spectra '{}' from the correct raw file", scans.iter().join(";")))
                         }
                     }
                 },
+            }
+
+            if let Some(annotated) = peptide.annotated_spectrum() {
+                state.spectra.push(crate::raw_file::RawFile::Single { id: 0, spectrum: annotated.into_owned().into(), selected: !selected, title: format!("F{file}:{index} - {filename} - {}", peptide.peptidoform_ion_set().unwrap_or_default()) })
             }
 
             PSMSettings::from_peptide(&state, &peptide, message)

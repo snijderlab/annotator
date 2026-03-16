@@ -350,7 +350,15 @@ fn main() {
         </div>
         
         <label for="noise-filter" title="Determine the noise level from the spectrum and remove everything below this factor times the noise level">Noise filter</label>
-        <input id="noise-filter" type="number" value="1.0" min="0.0">
+        <div class="row">
+          <select id="noise-filter-method">
+            <option value="Absolute" title="filter based on an absolute value; any peak with intensity above this value is kept">Absolute</option>
+            <option value="TIC" title="filter based on total ion current; any peak with intensity above this fraction of TIC is kept, i.e. if the TIC is 1234 and this is set to 0.5 any peak with a value above 617 is kept">TIC</option>
+            <option value="Basepeak" title="filter based on base peak; any peak with intensity above this fraction of the basepeak intensity is kept">Basepeak</option>
+            <option value="Local" title="Only works on raw data or merged spectra">Local</option>
+          </select>
+          <input id="noise-filter" style="flex-grow:1" type="number" value="0.0" min="0.0">
+        </div>
     
         <label for="spectrum-model">Model</label>
         <select id="spectrum-model"></select>"#).unwrap();
@@ -367,7 +375,7 @@ fn main() {
           </svg>
         </div>
       <output id="spectrum-error" class="hidden error"></output>
-      <div id='spectrum-wrapper' class="spectrum show-unassigned legend-ion hidden show-charge show-series show-glycan-id show-peptide-id show-neutral-losses show-cross-links show-ambiguous-amino-acids show-modifications show-glycan-peptide-fragments" onload='SpectrumSetUp()'>
+      <div id='spectrum-wrapper' class="spectrum show-unassigned show-background legend-ion hidden show-charge show-series show-glycan-id show-peptide-id show-neutral-losses show-cross-links show-ambiguous-amino-acids show-modifications show-glycan-peptide-fragments" onload='SpectrumSetUp()'>
         <div class='legend'>
           <span class='title'>Ion legend</span>
           <div class='ion-series'>
@@ -491,6 +499,8 @@ fn main() {
             <label for='theoretical' title='Show the theoretical peptidoform spectrum on the x axis'><input id='theoretical' class='theoretical' type='checkbox' switch/>Show theoretical spectrum</label>
             
             <label for='unassigned' title='Show the unassigned peaks in the spectrum'><input id='unassigned' class='unassigned' type='checkbox' switch checked/>Show unassigned peaks</label>
+
+            <label for='background' title='Show the background peaks in the spectrum'><input id='background' class='background' type='checkbox' switch checked/>Show background peaks</label>
     
             <div class='row'>
               <span class='title'>Ion colour mode</span>

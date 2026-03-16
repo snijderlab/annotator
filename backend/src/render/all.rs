@@ -18,6 +18,7 @@ use mzcore::{
 };
 use mzdata::mzpeaks::PeakCollection;
 use mzident::PSMMetaData;
+use mzpeaks::CentroidPeak;
 
 use crate::{
     Theme,
@@ -30,24 +31,24 @@ use super::{classes::get_classes, label::get_label};
 
 pub fn annotated_spectrum(
     spectrum: &AnnotatedSpectrum,
-    _id: &str,
     fragments: &[Fragment],
     model: &FragmentationModel,
     parameters: &MatchingParameters,
     mass_mode: MassMode,
     theme: Theme,
+    background: &[CentroidPeak],
 ) -> (String, Limits) {
     let mut output = String::new();
-    let (limits, overview) = get_overview(spectrum);
+    let (limits, overview) = get_overview(spectrum, background);
     let (graph_data, graph_boundaries) =
         spectrum_graph_boundaries(spectrum, fragments, model, mass_mode);
-    let compound_peptidoform_ion = spectrum.compound_peptidoform_ion().unwrap_or_default();
-    let multiple_peptidoform_ions = compound_peptidoform_ion.peptidoform_ions().len() > 1;
-    let multiple_peptidoforms = compound_peptidoform_ion
+    let peptidoform_ion_set = spectrum.peptidoform_ion_set().unwrap_or_default();
+    let multiple_peptidoform_ions = peptidoform_ion_set.peptidoform_ions().len() > 1;
+    let multiple_peptidoforms = peptidoform_ion_set
         .peptidoform_ions()
         .iter()
         .any(|p| p.peptidoforms().len() > 1);
-    let multiple_glycans = compound_peptidoform_ion
+    let multiple_glycans = peptidoform_ion_set
         .peptidoform_ions()
         .iter()
         .flat_map(|p| p.peptidoforms())
@@ -72,7 +73,7 @@ pub fn annotated_spectrum(
     let mut glycan_footnotes = Vec::new();
     let unique_peptide_lookup = super::render_peptide(
         &mut output,
-        &compound_peptidoform_ion,
+        &peptidoform_ion_set,
         Some(overview),
         None,
         None,
@@ -94,6 +95,7 @@ pub fn annotated_spectrum(
         parameters,
         &mut glycan_footnotes,
         theme,
+        background,
     );
     // Error graph
     render_error_graph(
@@ -446,7 +448,10 @@ pub struct Limits {
     pub intensity_unassigned: f32,
 }
 
-pub fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) {
+pub fn get_overview(
+    spectrum: &AnnotatedSpectrum,
+    background: &[CentroidPeak],
+) -> (Limits, PositionCoverage) {
     let mut output: PositionCoverage = spectrum
         .analytes
         .iter()
@@ -480,6 +485,10 @@ pub fn get_overview(spectrum: &AnnotatedSpectrum) -> (Limits, PositionCoverage) 
             });
         }
     }
+    for peak in background {
+        max_mz = max_mz.max(MassOverCharge::new::<thomson>(peak.mz));
+        max_intensity_unassigned = max_intensity_unassigned.max(peak.intensity);
+    }
     (
         Limits {
             mz: max_mz * 1.01,
@@ -505,6 +514,7 @@ fn render_spectrum(
     parameters: &MatchingParameters,
     glycan_footnotes: &mut Vec<String>,
     theme: Theme,
+    background: &[CentroidPeak],
 ) {
     write!(
         output,
@@ -559,7 +569,7 @@ fn render_spectrum(
     )
     .unwrap();
 
-    let compound_peptidoform_ion = spectrum.compound_peptidoform_ion().unwrap_or_default();
+    let compound_peptidoform_ion = spectrum.peptidoform_ion_set().unwrap_or_default();
     for peak in &spectrum.peaks {
         write!(
             output,
@@ -608,6 +618,22 @@ fn render_spectrum(
             )
             .unwrap();
         }
+    }
+    for peak in background {
+        if !parameters
+            .mz_range
+            .contains(&MassOverCharge::new::<mzcore::system::thomson>(peak.mz))
+        {
+            continue;
+        }
+        write!(
+            output,
+            "<span class='background peak' style='--mz:{};--intensity:{};' data-label='{}'></span>",
+            peak.mz,
+            peak.intensity,
+            (peak.mz * 100.0).round() / 100.0,
+        )
+        .unwrap();
     }
     write!(output, "</div>").unwrap();
     write!(
@@ -720,13 +746,13 @@ fn general_stats(
     let (combined_scores, separate_peptide_scores) =
         spectrum.scores(fragments, parameters, mass_mode);
     let fdr = (spectrum.peaks.len() != 0).then(|| spectrum.fdr(fragments, parameters, mass_mode));
-    let compound_peptidoform_ion = spectrum.compound_peptidoform_ion().unwrap_or_default();
+    let peptidoform_ion_set = spectrum.peptidoform_ion_set().unwrap_or_default();
 
     for (peptidoform_ion_index, peptidoform_ion_scores) in
         separate_peptide_scores.iter().enumerate()
     {
         for (peptidoform_index, peptidoform_score) in peptidoform_ion_scores.iter().enumerate() {
-            let precursor = compound_peptidoform_ion.peptidoform_ions()[peptidoform_ion_index]
+            let precursor = peptidoform_ion_set.peptidoform_ions()[peptidoform_ion_index]
                 .peptidoforms()[peptidoform_index]
                 .clone()
                 .into_linear()
@@ -898,10 +924,8 @@ fn general_stats(
     write!(output, "<label><input type='checkbox' switch id='general-stats-show-details'>Show statistics per ion series</label><table class='general-stats'>").unwrap();
     if multiple_peptidoform_ions || multiple_peptidoforms {
         write!(output, "<tr><td>General Statistics</td>").unwrap();
-        for (peptidoform_ion_index, peptidoform_ion) in compound_peptidoform_ion
-            .peptidoform_ions()
-            .iter()
-            .enumerate()
+        for (peptidoform_ion_index, peptidoform_ion) in
+            peptidoform_ion_set.peptidoform_ions().iter().enumerate()
         {
             for peptidoform_index in 0..peptidoform_ion.peptidoforms().len() {
                 if multiple_peptidoform_ions && multiple_peptidoforms {

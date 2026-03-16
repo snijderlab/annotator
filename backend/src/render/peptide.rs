@@ -17,7 +17,7 @@ use super::render_full_glycan;
 /// Render a peptidoform with the given ions present. It returns a lookup with the unique ids for all peptides.
 pub fn render_peptide(
     output: &mut String,
-    compound_peptidoform: &CompoundPeptidoformIon,
+    peptidoform_ion_set: &PeptidoformIonSet,
     overview: Option<super::PositionCoverage>,
     local_confidence: Option<Vec<Vec<Vec<f64>>>>,
     flanking_sequences: Option<(&FlankingSequence, &FlankingSequence)>,
@@ -25,8 +25,8 @@ pub fn render_peptide(
     theme: Theme,
 ) -> Vec<(usize, usize)> {
     let mut unique_peptide_lookup = Vec::new();
-    let multiple_peptidoforms = compound_peptidoform.peptidoform_ions().len() > 1;
-    let multiple_peptides = compound_peptidoform
+    let multiple_peptidoforms = peptidoform_ion_set.peptidoform_ions().len() > 1;
+    let multiple_peptides = peptidoform_ion_set
         .peptidoform_ions()
         .iter()
         .any(|p| p.peptidoforms().len() > 1);
@@ -62,7 +62,7 @@ pub fn render_peptide(
     .unwrap();
     let mut cross_link_lookup = Vec::new();
     for (peptidoform_ion_index, peptidoform_ion) in
-        compound_peptidoform.peptidoform_ions().iter().enumerate()
+        peptidoform_ion_set.peptidoform_ions().iter().enumerate()
     {
         for (peptidoform_index, peptidoform) in peptidoform_ion.peptidoforms().iter().enumerate() {
             render_linear_peptidoform(

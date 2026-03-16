@@ -605,14 +605,14 @@ function SpectrumSettings(event) {
     } else if (t.id == "force-show-clear") {
         spectrum_wrapper.querySelectorAll(".peak").forEach(element => { delete element.dataset.showLabelManually; delete element.dataset.showMZManually; delete element.dataset.showGlycanManually });
     } else if (cl == "unassigned") {
-        if (t.checked) { // Will be adding all background peaks
+        if (t.checked) { // Will be adding all unassigned peaks
             spectrum_wrapper.classList.add('show-unassigned');
             if (Number(canvas.dataset.maxIntensity) == Number(canvas.dataset.initialMaxIntensityAssigned)) {
                 canvas.dataset.maxIntensity = canvas.dataset.initialMaxIntensity;
                 canvas.style.setProperty("--max-intensity", canvas.dataset.maxIntensity);
                 UpdateSpectrumAxes(canvas)
             }
-        } else { // Will be removing all background peaks
+        } else { // Will be removing all unassigned peaks
             spectrum_wrapper.classList.remove('show-unassigned');
             if (canvas.dataset.maxIntensity == canvas.dataset.initialMaxIntensity) {
                 canvas.dataset.maxIntensity = canvas.dataset.initialMaxIntensityAssigned;
@@ -620,6 +620,8 @@ function SpectrumSettings(event) {
                 UpdateSpectrumAxes(canvas)
             }
         }
+    } else if (cl == "background") {
+        spectrum_wrapper.classList.toggle('show-background', t.checked);
     } else if (t.id == "spectrum-label-charge") {
         spectrum_wrapper.classList.toggle("show-charge", t.checked);
     } else if (t.id == "spectrum-label-series") {

@@ -5,6 +5,7 @@
 
 use std::path::PathBuf;
 
+use mzpeaks::CentroidPeak;
 use tokio::sync::Mutex;
 
 use clap::Parser;
@@ -40,6 +41,7 @@ mod validate;
 use crate::{
     html_builder::{HtmlContent, HtmlElement, HtmlTag},
     metadata_render::{OptionalString, RenderToHtml},
+    spectra::NoiseFilter,
     state::State,
 };
 
@@ -112,16 +114,20 @@ fn refresh(
 
     (
         state.psm_files().len(),
-        state.annotated_spectrum.as_ref().map(|annotated| {
-            render_annotated_spectrum(
-                annotated,
-                &[],
-                FragmentationModel::all(),
-                &MatchingParameters::default(),
-                MassMode::Monoisotopic,
-                theme,
-            )
-        }),
+        state
+            .annotated_spectrum
+            .as_ref()
+            .map(|(annotated, background)| {
+                render_annotated_spectrum(
+                    annotated,
+                    &[],
+                    FragmentationModel::all(),
+                    &MatchingParameters::default(),
+                    MassMode::Monoisotopic,
+                    theme,
+                    background,
+                )
+            }),
         state.auto_open_errors.clone(),
         HtmlElement::table(
             Some(&[
@@ -283,18 +289,10 @@ fn load_annotated_spectrum(
         &MatchingParameters::default(),
         MassMode::Monoisotopic,
         theme,
+        &[],
     );
-    state.annotated_spectrum = Some(annotated);
+    state.annotated_spectrum = Some((annotated, Vec::new()));
     Ok(rendered)
-}
-
-#[derive(Debug, Default, Deserialize, PartialEq, PartialOrd, Serialize)]
-pub enum NoiseFilter {
-    #[default]
-    None,
-    Relative(f64),
-    Absolute(f64),
-    TopX(f64, usize),
 }
 
 #[derive(Debug, Default, Deserialize, PartialEq, PartialOrd, Serialize)]
@@ -310,7 +308,7 @@ pub struct AnnotationResult {
 async fn annotate_spectrum<'a>(
     tolerance: (f64, &'a str),
     charge: Option<isize>,
-    filter: f32,
+    noise_filter: (NoiseFilter, f32),
     model: usize,
     peptide: &'a str,
     state: ModifiableState<'a>,
@@ -319,7 +317,7 @@ async fn annotate_spectrum<'a>(
     theme: Theme,
 ) -> Result<(AnnotationResult, Vec<String>), Vec<String>> {
     let mut state = state.lock().await;
-    let spectrum = crate::spectra::create_selected_spectrum(&mut state, filter)
+    let (background, spectrum) = crate::spectra::create_selected_spectrum(&mut state, noise_filter)
         .map_err(|err| vec![err.to_html(false)])?;
     let model = crate::model::get_models(&state)
         .1
@@ -344,8 +342,8 @@ async fn annotate_spectrum<'a>(
             ]);
         }
     };
-    let (peptide, warnings) = CompoundPeptidoformIon::pro_forma(peptide, &state.ontologies)
-        .map_err(|errs| {
+    let (peptide, warnings) =
+        PeptidoformIonSet::pro_forma(peptide, &state.ontologies).map_err(|errs| {
             errs.into_iter()
                 .map(|err| err.to_html(false))
                 .collect::<Vec<_>>()
@@ -362,9 +360,16 @@ async fn annotate_spectrum<'a>(
     );
     let fragments = peptide.generate_theoretical_fragments(use_charge, model);
     let annotated = spectrum.annotate(peptide, &fragments, &parameters, mass_mode);
-    let rendered =
-        render_annotated_spectrum(&annotated, &fragments, model, &parameters, mass_mode, theme);
-    state.annotated_spectrum = Some(annotated);
+    let rendered = render_annotated_spectrum(
+        &annotated,
+        &fragments,
+        model,
+        &parameters,
+        mass_mode,
+        theme,
+        &background,
+    );
+    state.annotated_spectrum = Some((annotated, background));
     Ok((
         rendered,
         warnings
@@ -381,6 +386,7 @@ fn render_annotated_spectrum(
     parameters: &MatchingParameters,
     mass_mode: MassMode,
     theme: Theme,
+    background: &[CentroidPeak],
 ) -> AnnotationResult {
     let multiple_peptidoforms = annotated
         .analytes
@@ -399,7 +405,7 @@ fn render_annotated_spectrum(
         .count()
         == 1;
     let (spectrum, limits) = render::annotated_spectrum(
-        annotated, "spectrum", fragments, model, parameters, mass_mode, theme,
+        annotated, fragments, model, parameters, mass_mode, theme, background,
     );
     AnnotationResult {
         spectrum,

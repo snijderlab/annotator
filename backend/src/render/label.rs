@@ -12,7 +12,7 @@ use crate::Theme;
 use super::render_glycan_fragment;
 
 pub fn get_label(
-    compound_peptidoform: &CompoundPeptidoformIon,
+    compound_peptidoform: &PeptidoformIonSet,
     annotations: &[Fragment],
     multiple_peptidoform_ions: bool,
     multiple_peptidoforms: bool,
@@ -257,7 +257,7 @@ pub fn get_label(
 }
 
 fn get_glycan_figure(
-    compound_peptidoform: &CompoundPeptidoformIon,
+    compound_peptidoform: &PeptidoformIonSet,
     annotation: &Fragment,
     theme: Theme,
     glycan_footnotes: &mut Vec<String>,
@@ -323,7 +323,7 @@ fn get_single_label(
     multiple_peptidoform_ions: bool,
     multiple_peptidoforms: bool,
     multiple_glycans: bool,
-    compound_peptidoform: &CompoundPeptidoformIon,
+    compound_peptidoform: &PeptidoformIonSet,
     glycan_footnotes: &mut Vec<String>,
     theme: Theme,
 ) -> String {
@@ -501,7 +501,7 @@ fn get_modifications(
     annotation: &Fragment,
     multiple_peptidoforms: bool,
     multiple_peptidoform_ions: bool,
-    compound_peptidoform: &CompoundPeptidoformIon,
+    compound_peptidoform: &PeptidoformIonSet,
 ) -> String {
     annotation
         .formula

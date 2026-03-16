@@ -17,7 +17,7 @@ pub fn spectrum_table(
 ) -> String {
     fn generate_text(
         annotation: &Fragment,
-        compound_peptidoform: &CompoundPeptidoformIon,
+        compound_peptidoform: &PeptidoformIonSet,
     ) -> (String, String, String) {
         let format_label = |label: (Option<String>, std::borrow::Cow<'_, str>)| {
             if let Some(sup) = label.0 {
@@ -97,7 +97,7 @@ pub fn spectrum_table(
             ),
         )
     }
-    let peptide = spectrum.compound_peptidoform_ion().unwrap_or_default();
+    let peptide = spectrum.peptidoform_ion_set().unwrap_or_default();
     let mut output = String::new();
     write!(
         output,

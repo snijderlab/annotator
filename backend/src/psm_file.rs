@@ -42,7 +42,7 @@ impl PSMFile {
                     .enumerate()
                     .filter_map(|(index, identified)| {
                         identified
-                            .compound_peptidoform_ion()
+                            .peptidoform_ion_set()
                             .and_then(|p| p.into_owned().singular_peptidoform())
                             .and_then(|p| p.into_linear())
                             .map(|p| IndexSequence {

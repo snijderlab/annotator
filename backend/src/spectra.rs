@@ -23,7 +23,7 @@ use mzdata::{
         SignalContinuity, SpectrumDescription, SpectrumSummary, bindata::BinaryCompressionType,
     },
 };
-use mzpeaks::{CentroidPeak, peak_set::PeakSetVec};
+use mzpeaks::{CentroidPeak, PeakCollection, peak_set::PeakSetVec};
 use mzsignal::{ArrayPairLike, PeakPicker};
 use serde::{Deserialize, Serialize};
 
@@ -706,10 +706,97 @@ pub fn spectrum_description(
     )
 }
 
+#[derive(Copy, Clone, Debug, Deserialize, PartialEq, PartialOrd, Serialize)]
+pub enum NoiseFilter {
+    Local,
+    TIC,
+    Basepeak,
+    Absolute,
+}
+
+impl NoiseFilter {
+    fn filter(
+        self,
+        value: f32,
+        spectrum: MultiLayerSpectrum,
+    ) -> (Vec<CentroidPeak>, MultiLayerSpectrum) {
+        if let Some(peaks) = &spectrum.peaks {
+            match self {
+                Self::Local => (Vec::new(), spectrum),
+                Self::TIC => {
+                    let threshold = peaks.total_ion_current() * value;
+                    (
+                        peaks
+                            .peaks
+                            .iter()
+                            .filter(|p| p.intensity < threshold)
+                            .cloned()
+                            .collect(),
+                        MultiLayerSpectrum {
+                            peaks: Some(
+                                peaks
+                                    .peaks
+                                    .iter()
+                                    .filter(|p| p.intensity >= threshold)
+                                    .cloned()
+                                    .collect(),
+                            ),
+                            ..spectrum
+                        },
+                    )
+                }
+                Self::Basepeak => {
+                    let threshold = peaks.base_peak().map_or(0.0, |p| p.intensity) * value;
+                    (
+                        peaks
+                            .peaks
+                            .iter()
+                            .filter(|p| p.intensity < threshold)
+                            .cloned()
+                            .collect(),
+                        MultiLayerSpectrum {
+                            peaks: Some(
+                                peaks
+                                    .peaks
+                                    .iter()
+                                    .filter(|p| p.intensity >= threshold)
+                                    .cloned()
+                                    .collect(),
+                            ),
+                            ..spectrum
+                        },
+                    )
+                }
+                Self::Absolute => (
+                    peaks
+                        .peaks
+                        .iter()
+                        .filter(|p| p.intensity < value)
+                        .cloned()
+                        .collect(),
+                    MultiLayerSpectrum {
+                        peaks: Some(
+                            peaks
+                                .peaks
+                                .iter()
+                                .filter(|p| p.intensity >= value)
+                                .cloned()
+                                .collect(),
+                        ),
+                        ..spectrum
+                    },
+                ),
+            }
+        } else {
+            (Vec::new(), spectrum)
+        }
+    }
+}
+
 pub fn create_selected_spectrum(
     state: &mut crate::State,
-    filter: f32,
-) -> Result<MultiLayerSpectrum, BoxedError<'_, BasicKind>> {
+    filter: (NoiseFilter, f32),
+) -> Result<(Vec<CentroidPeak>, MultiLayerSpectrum), BoxedError<'_, BasicKind>> {
     let mut spectra = Vec::new();
     for file in state.spectra.iter_mut() {
         spectra.extend(file.get_selected_spectra());
@@ -723,19 +810,17 @@ pub fn create_selected_spectrum(
         ));
     } else if spectra.len() == 1 {
         let mut spectrum = spectra.pop().unwrap();
-        if filter != 0.0 && spectrum.arrays.is_some() {
-            // TODO: When centroided data is loaded denoising is not applied
-            spectrum.denoise(filter).map_err(|err| {
-                BoxedError::new(
-                    BasicKind::Error,
-                    "Spectrum could not be denoised",
-                    err.to_string(),
-                    Context::none(),
-                )
-            })?;
-        }
-
         if spectrum.signal_continuity() == SignalContinuity::Profile {
+            if filter.0 == NoiseFilter::Local && filter.1 != 0.0 && spectrum.arrays.is_some() {
+                spectrum.denoise(filter.1).map_err(|err| {
+                    BoxedError::new(
+                        BasicKind::Error,
+                        "Spectrum could not be denoised",
+                        err.to_string(),
+                        Context::none(),
+                    )
+                })?;
+            }
             spectrum
                 .pick_peaks_with(&PeakPicker::default())
                 .map_err(|err| {
@@ -762,9 +847,9 @@ pub fn create_selected_spectrum(
             .unwrap_or_default();
         let averaged = mzdata::spectrum::average_spectra(&spectra, 0.001);
         let mut binding = averaged.intensity_array().to_owned();
-        let picked = if filter != 0.0 {
+        let picked = if filter.0 == NoiseFilter::Local && filter.1 != 0.0 {
             let denoised =
-                mzsignal::denoise::denoise(&averaged.mz_array, &mut binding, filter).unwrap();
+                mzsignal::denoise::denoise(&averaged.mz_array, &mut binding, filter.1).unwrap();
             mzsignal::peak_picker::pick_peaks(&averaged.mz_array, denoised).unwrap()
         } else {
             mzsignal::peak_picker::pick_peaks(&averaged.mz_array, &averaged.intensity_array)
@@ -781,13 +866,12 @@ pub fn create_selected_spectrum(
         )
     };
 
-    Ok(spectrum)
+    Ok(filter.0.filter(filter.1, spectrum))
 }
 
 #[tauri::command]
 pub fn save_spectrum(
     state: ModifiableState,
-    filter: f32,
     path: &Path,
     sequence: &'_ str,
     model: usize,
@@ -811,7 +895,7 @@ pub fn save_spectrum(
     let ext = path
         .extension()
         .map(|s| s.to_string_lossy().to_ascii_lowercase());
-    let mut spectrum = state.annotated_spectrum.clone().ok_or_else(|| BoxedError::small(
+    let (mut spectrum, _) = state.annotated_spectrum.clone().ok_or_else(|| BoxedError::small(
                 BasicKind::Error,
                 "No spectrum present",
                 "No spectrum was present so no spectrum can be saved. Annotate a spectrum or load one from a library to save a spectrum.",

@@ -1577,6 +1577,10 @@ input:not(:checked)+.collapsible {
     & .unassigned {
         --color: var(--color-halfway);
     }
+
+    & .background {
+        --color: var(--color-halfway-bg);
+    }
 }
 
 .spectrum.legend-peptidoform {
@@ -1681,6 +1685,10 @@ input:not(:checked)+.collapsible {
     & .unassigned {
         --color: var(--color-halfway);
     }
+
+    & .background {
+        --color: var(--color-halfway-bg);
+    }
 }
 
 .spectrum.legend-peptide {
@@ -1784,6 +1792,10 @@ input:not(:checked)+.collapsible {
 
     & .unassigned {
         --color: var(--color-halfway);
+    }
+
+    & .background {
+        --color: var(--color-halfway-bg);
     }
 }
 
@@ -2136,6 +2148,12 @@ input:not(:checked)+.collapsible {
         width: var(--stroke-spectrum-unassigned);
     }
 
+    &.background {
+        display: none;
+        z-index: 0;
+        width: var(--stroke-spectrum-unassigned);
+    }
+
     &>span {
         position: absolute;
         top: -1.2em;
@@ -2257,7 +2275,8 @@ input:not(:checked)+.collapsible {
     cursor: crosshair;
 }
 
-.spectrum.show-unassigned .peak.unassigned {
+.spectrum.show-unassigned .peak.unassigned,
+.spectrum.show-background .peak.background {
     display: block;
 }
 

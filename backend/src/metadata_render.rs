@@ -23,10 +23,10 @@ pub trait RenderToTable {
 impl<C, A> RenderToHtml for PSM<C, A> {
     fn to_html(&self, theme: Theme) -> HtmlElement {
         // Render the peptide with its local confidence
-        let peptide = if let Some(peptide) = self.compound_peptidoform_ion() {
+        let peptide = if let Some(peptide) = self.peptidoform_ion_set() {
             let mut glycan_footnotes = Vec::new();
             let mut buffer = String::new();
-            let overview = self.annotated_spectrum().map(|a| get_overview(&a).1);
+            let overview = self.annotated_spectrum().map(|a| get_overview(&a, &[]).1);
             render_peptide(
                 &mut buffer,
                 &peptide,
@@ -52,7 +52,7 @@ impl<C, A> RenderToHtml for PSM<C, A> {
         };
 
         let formula = self
-            .compound_peptidoform_ion()
+            .peptidoform_ion_set()
             .map(|p| p.formulas()[0].clone());
         HtmlTag::div.new()
             .children([
@@ -62,7 +62,7 @@ impl<C, A> RenderToHtml for PSM<C, A> {
                         self.score.map_or(String::from("-"), |s| format!("{s:.3}")),
                         self.local_confidence.as_ref().map_or(String::from("-"), |lc| format!("{:.3}", lc.iter().sum::<f64>() / lc.len() as f64)),
                         self.original_confidence().map_or(String::from("-"), |(s, t)| format!("<span title='{}|{}'>{s:.3}</span>", t.accession, t.name)),
-                        self.compound_peptidoform_ion().and_then(|p| p.singular_peptidoform_ref().map(|p| p.len()))
+                        self.peptidoform_ion_set().and_then(|p| p.singular_peptidoform_ref().map(|p| p.len()))
                             .to_optional_string(),
                         formula
                             .as_ref()

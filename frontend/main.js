@@ -129,9 +129,8 @@ async function save_spectrum_file(e) {
   save(properties).then((result) => {
     if (result != null) {
       document.querySelector("#save-spectrum").classList.add("loading")
-      var noise_threshold = Number(document.querySelector("#noise-filter").value);
       var charge = document.querySelector("#spectrum-charge").value == "" ? null : Number(document.querySelector("#spectrum-charge").value);
-      invoke("save_spectrum", { filter: noise_threshold, path: result, sequence: document.querySelector("#peptide").innerText, model: Number(document.querySelector("#spectrum-model").value), charge: charge }).then(() => {
+      invoke("save_spectrum", { path: result, sequence: document.querySelector("#peptide").innerText, model: Number(document.querySelector("#spectrum-model").value), charge: charge }).then(() => {
         clearError("open-files-error");
         document.querySelector("#save-spectrum").classList.remove("loading");
       }).catch((error) => {
@@ -536,7 +535,7 @@ async function load_identified_peptide() {
     } else {
       clearError("spectrum-error");
     }
-    update_selected_spectra();
+    update_open_raw_files();
     document.getElementById("load-identified-peptide").classList.remove("loading");
   }).catch(() => {
     document.querySelector("#identified-peptide-details").innerText = "ERROR";
@@ -929,7 +928,7 @@ async function annotate_spectrum() {
   invoke("annotate_spectrum", {
     tolerance: [Number(document.querySelector("#spectrum-tolerance").value), document.querySelector("#spectrum-tolerance-unit").value],
     charge: charge,
-    filter: noise_threshold,
+    noiseFilter: [document.querySelector("#noise-filter-method").value, noise_threshold],
     model: Number(document.querySelector("#spectrum-model").value),
     peptide: document.querySelector("#peptide").innerText,
     massMode: document.querySelector("#spectrum-mass-mode").value,
