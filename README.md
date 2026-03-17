@@ -63,7 +63,7 @@ It uses the [ProForma 2.0](https://github.com/HUPO-PSI/ProForma) specification t
 On windows use:
 
 > [!NOTE]  
-> `winget install --id Snijderlab.Annotator`.
+> `winget install --id Snijderlab.Annotator`
 
 ### From binary 
 

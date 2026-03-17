@@ -2142,13 +2142,12 @@ input:not(:checked)+.collapsible {
         font-size: .5em;
     }
 
-    &.unassigned {
+    &.assigned {
         display: none;
-        z-index: 0;
-        width: var(--stroke-spectrum-unassigned);
     }
 
-    &.background {
+    &.background,
+    &.unassigned {
         display: none;
         z-index: 0;
         width: var(--stroke-spectrum-unassigned);
@@ -2275,6 +2274,7 @@ input:not(:checked)+.collapsible {
     cursor: crosshair;
 }
 
+.spectrum.show-assigned .peak.assigned,
 .spectrum.show-unassigned .peak.unassigned,
 .spectrum.show-background .peak.background {
     display: block;

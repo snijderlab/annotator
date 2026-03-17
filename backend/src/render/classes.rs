@@ -113,6 +113,7 @@ pub fn get_classes(
     if annotations.is_empty() {
         "unassigned".to_string()
     } else {
+        output.push("assigned".to_string());
         output.join(" ")
     }
 }

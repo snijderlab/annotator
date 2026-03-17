@@ -375,7 +375,7 @@ fn main() {
           </svg>
         </div>
       <output id="spectrum-error" class="hidden error"></output>
-      <div id='spectrum-wrapper' class="spectrum show-unassigned show-background legend-ion hidden show-charge show-series show-glycan-id show-peptide-id show-neutral-losses show-cross-links show-ambiguous-amino-acids show-modifications show-glycan-peptide-fragments" onload='SpectrumSetUp()'>
+      <div id='spectrum-wrapper' class="spectrum show-assigned show-unassigned show-background legend-ion hidden show-charge show-series show-glycan-id show-peptide-id show-neutral-losses show-cross-links show-ambiguous-amino-acids show-modifications show-glycan-peptide-fragments" onload='SpectrumSetUp()'>
         <div class='legend'>
           <span class='title'>Ion legend</span>
           <div class='ion-series'>
@@ -498,9 +498,11 @@ fn main() {
             
             <label for='theoretical' title='Show the theoretical peptidoform spectrum on the x axis'><input id='theoretical' class='theoretical' type='checkbox' switch/>Show theoretical spectrum</label>
             
+            <label for='assigned' title='Show the assigned peaks in the spectrum'><input id='assigned' class='assigned' type='checkbox' switch checked/>Show assigned peaks</label>
+
             <label for='unassigned' title='Show the unassigned peaks in the spectrum'><input id='unassigned' class='unassigned' type='checkbox' switch checked/>Show unassigned peaks</label>
 
-            <label for='background' title='Show the background peaks in the spectrum'><input id='background' class='background' type='checkbox' switch checked/>Show background peaks</label>
+            <label for='background' title='Show the noise peaks in the spectrum'><input id='background' class='background' type='checkbox' switch checked/>Show noise peaks</label>
     
             <div class='row'>
               <span class='title'>Ion colour mode</span>

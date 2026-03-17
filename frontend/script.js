@@ -620,6 +620,8 @@ function SpectrumSettings(event) {
                 UpdateSpectrumAxes(canvas)
             }
         }
+    } else if (cl == "assigned") {
+        spectrum_wrapper.classList.toggle('show-assigned', t.checked);
     } else if (cl == "background") {
         spectrum_wrapper.classList.toggle('show-background', t.checked);
     } else if (t.id == "spectrum-label-charge") {
