@@ -27,10 +27,10 @@ use tauri::Manager;
 
 mod custom_modifications;
 mod html_builder;
-mod identified_peptides;
 mod metadata_render;
 mod model;
 mod psm_file;
+mod psms;
 mod raw_file;
 mod render;
 mod search_modification;
@@ -230,31 +230,22 @@ async fn details_formula(text: &str) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn identified_peptide_details(
-    file: usize,
-    index: usize,
-    state: ModifiableState,
-    theme: Theme,
-) -> (bool, String) {
+fn psm_details(file: usize, index: usize, state: ModifiableState, theme: Theme) -> (bool, String) {
     state
         .blocking_lock()
         .psm_files()
         .iter()
         .find(|f| f.id == file)
-        .map_or(
-            (false, "Identified peptide file index not valid".to_string()),
-            |file| {
-                file.peptides.get(index).map_or(
-                    (false, "Identified peptide index not valid".to_string()),
-                    |peptide| {
-                        (
-                            peptide.has_annotated_spectrum(),
-                            peptide.to_html(theme).to_string(),
-                        )
-                    },
-                )
-            },
-        )
+        .map_or((false, "PSM file index not valid".to_string()), |file| {
+            file.peptides
+                .get(index)
+                .map_or((false, "PSM index not valid".to_string()), |peptide| {
+                    (
+                        peptide.has_annotated_spectrum(),
+                        peptide.to_html(theme).to_string(),
+                    )
+                })
+        })
 }
 
 #[tauri::command]
@@ -266,20 +257,16 @@ fn load_annotated_spectrum(
 ) -> Result<AnnotationResult, String> {
     let mut state = state.blocking_lock();
     let annotated = state.psm_files().iter().find(|f| f.id == file).map_or(
-        Err("Identified peptide file index not valid".to_string()),
+        Err("PSM file index not valid".to_string()),
         |file| {
-            file.peptides.get(index).map_or(
-                Err("Identified peptide index not valid".to_string()),
-                |peptide| {
+            file.peptides
+                .get(index)
+                .map_or(Err("PSM index not valid".to_string()), |peptide| {
                     peptide.annotated_spectrum().map_or(
-                        Err(
-                            "Identified peptide does not have an associated annotated spectrum"
-                                .to_string(),
-                        ),
+                        Err("PSM does not have an associated annotated spectrum".to_string()),
                         |a| Ok(a.into_owned()),
                     )
-                },
-            )
+                })
         },
     )?;
     let rendered = render_annotated_spectrum(
@@ -498,7 +485,7 @@ fn auto_open(
                     Err(error) => state.auto_open_errors.push(error),
                 }
             } else {
-                match crate::identified_peptides::annotator_open_psm_file(path, state) {
+                match crate::psms::annotator_open_psm_file(path, state) {
                     Ok(None) => (),
                     Ok(Some(error)) => state.auto_open_errors.push(error),
                     Err(error) => state.auto_open_errors.push(error),
@@ -722,7 +709,7 @@ fn main() {
         .plugin(tauri_plugin_opener::init())
         .manage(Mutex::new(State {
             spectra: Vec::new(),
-            identified_peptide_files: std::cell::RefCell::new(Vec::new()),
+            psm_files: std::cell::RefCell::new(Vec::new()),
             annotated_spectrum: None,
             ontologies: Ontologies::empty(),
             custom_modifications_error: None,
@@ -740,12 +727,12 @@ fn main() {
             custom_modifications::update_modification,
             details_formula,
             get_custom_configuration_path,
-            identified_peptide_details,
-            identified_peptides::close_identified_peptides_file,
-            identified_peptides::get_identified_peptides_files,
-            identified_peptides::load_identified_peptide,
-            identified_peptides::load_identified_peptides_file,
-            identified_peptides::search_peptide,
+            psm_details,
+            psms::close_identified_peptides_file,
+            psms::get_identified_peptides_files,
+            psms::load_identified_peptide,
+            psms::load_identified_peptides_file,
+            psms::search_peptide,
             load_annotated_spectrum,
             model::delete_custom_model,
             model::duplicate_custom_model,

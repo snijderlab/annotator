@@ -29,9 +29,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ModifiableState,
-    identified_peptides::PSMSettings,
     metadata_render::OptionalString,
     model::get_built_in_index,
+    psms::PSMSettings,
     raw_file::{RawFile, RawFileDetails},
     render::display_mass,
 };

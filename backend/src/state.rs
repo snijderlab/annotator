@@ -12,7 +12,7 @@ use crate::{psm_file::PSMFile, raw_file::RawFile};
 
 pub struct State {
     pub spectra: Vec<RawFile>,
-    pub identified_peptide_files: RefCell<Vec<PSMFile>>,
+    pub psm_files: RefCell<Vec<PSMFile>>,
     pub annotated_spectrum: Option<(AnnotatedSpectrum, Vec<CentroidPeak>)>,
     pub ontologies: Ontologies,
     pub custom_modifications_error: Option<(String, Vec<String>)>,
@@ -23,10 +23,10 @@ pub struct State {
 
 impl State {
     pub fn psm_files(&self) -> Ref<'_, Vec<PSMFile>> {
-        self.identified_peptide_files.borrow()
+        self.psm_files.borrow()
     }
     pub fn psm_files_mut(&self) -> RefMut<'_, Vec<PSMFile>> {
-        self.identified_peptide_files.borrow_mut()
+        self.psm_files.borrow_mut()
     }
 }
 

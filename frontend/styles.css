@@ -1054,12 +1054,12 @@ input:not(:checked)+.collapsible {
     }
 }
 
-#identified-peptide-details .complex-peptide {
+#psm-details .complex-peptide {
     display: flex;
     flex-wrap: wrap;
 }
 
-#identified-peptide-details .peptide {
+#psm-details .peptide {
     --color: var(--color-purple-light);
     --fs-peptide: 1rem;
     --stroke-peptide: 2px;
@@ -1379,7 +1379,7 @@ input:not(:checked)+.collapsible {
 }
 
 .spectrum.compact .peptide,
-#identified-peptide-details .peptide {
+#psm-details .peptide {
     --width: calc(.5em - var(--side-spacing));
     --height: 0.5em;
 
@@ -1522,7 +1522,7 @@ input:not(:checked)+.collapsible {
 }
 
 #spectrum-wrapper.legend-ion,
-#identified-peptide-details .complex-peptide.with-fragments {
+#psm-details .complex-peptide.with-fragments {
 
     & .a,
     & .Y {
@@ -3905,7 +3905,7 @@ label:has(#general-stats-show-details:not(:checked))+.general-stats .fragments-d
     font-style: italic;
 }
 
-#identified-peptide-details {
+#psm-details {
     table {
         table-layout: fixed;
     }

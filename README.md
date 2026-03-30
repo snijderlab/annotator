@@ -29,7 +29,7 @@ It can even make nice pictures from glycans as seen below.
 * Supports complex and highly customizable fragmentation models
     - Has built in models for: HCD, CID, ETD, top-down ETD, EtHCD, EtCAD, EAD, EAciD, UVPD
 * Supports custom modifications
-* Supports loading and searching in 20+ identified peptides file formats
+* Supports loading and searching in 20+ PSM file formats
     - Amongst others: msFragger, PEAKS, mzTAB, SSL
 * Extensive control over the visualisation
 * Export to PDF (do not forget to turn on background graphics in the advanced settings while printing)

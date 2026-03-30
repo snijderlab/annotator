@@ -310,7 +310,7 @@ fn main() {
               <button id="load-identified-peptide" title="Find this PSM in the raw data file and populate all setting fields with values based on this PSM" type="button">Load</button>
               <button id="load-annotated-spectrum" title="Load the annotated spectrum" type="button" hidden="true">Load annotated spectrum</button>
             </div>
-            <div id="identified-peptide-details"></div>
+            <div id="psm-details"></div>
           </div>
         </div>
       </div>

@@ -25,7 +25,7 @@ impl PSMFile {
 
     pub fn new(path: String, peptides: Vec<PSM<Linked, MaybePeptidoform>>) -> Self {
         Self {
-            id: IDENTIFIED_PEPTIDE_FILE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
+            id: PSM_FILE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
             path,
             peptides,
             index: OnceLock::default(),
@@ -37,21 +37,17 @@ impl PSMFile {
             index
         } else {
             let index = AlignIndex::new(
-                self.peptides
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(index, identified)| {
-                        identified
-                            .peptidoform_ion_set()
-                            .and_then(|p| p.into_owned().singular_peptidoform())
-                            .and_then(|p| p.into_linear())
-                            .map(|p| IndexSequence {
-                                sequence: Arc::new(p),
-                                score: identified.score.map(OrderedFloat),
-                                id: self.id,
-                                index,
-                            })
-                    }),
+                self.peptides.iter().enumerate().filter_map(|(index, psm)| {
+                    psm.peptidoform_ion_set()
+                        .and_then(|p| p.into_owned().singular_peptidoform())
+                        .and_then(|p| p.into_linear())
+                        .map(|p| IndexSequence {
+                            sequence: Arc::new(p),
+                            score: psm.score.map(OrderedFloat),
+                            id: self.id,
+                            index,
+                        })
+                }),
                 MassMode::Monoisotopic,
             );
             let _ = self.index.set(index);
@@ -60,4 +56,4 @@ impl PSMFile {
     }
 }
 
-static IDENTIFIED_PEPTIDE_FILE_COUNTER: AtomicUsize = AtomicUsize::new(0);
+static PSM_FILE_COUNTER: AtomicUsize = AtomicUsize::new(0);
