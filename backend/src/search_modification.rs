@@ -16,6 +16,7 @@ use mzcore::{
     },
     system::{Mass, dalton},
 };
+use mzcv::AccessionCode;
 
 use crate::{
     html_builder::{HtmlElement, HtmlTag},
@@ -425,8 +426,8 @@ fn render_modification_id(id: &ModificationId, ontologies: &Ontologies) -> HtmlE
     let mut text = HtmlTag::div.new();
     text
         .content(HtmlTag::p.new().content(format!(
-            "Ontology: <span class='ontology'>{}</span>, name: <span class='name'>{}</span>, index: <span class='index'>{}</span>{}",
-            id.ontology, if id.ontology == Ontology::Gnome {id.name.to_ascii_uppercase()} else {id.name.to_string()}, id.id().to_optional_string(), if let Some(url) = id.url() {
+            "Ontology: <span class='ontology'>{}</span>, name: <span class='name'>{}</span>, ID: <span class='index'>{}</span>{}",
+            id.ontology, if id.ontology == Ontology::Gnome {id.name.to_ascii_uppercase()} else {id.name.to_string()}, id.id().to_string(), if let Some(url) = id.url() {
                 format!(", {}", HtmlTag::a.new()
                 .content("view online")
                 .header("href", url)
@@ -465,8 +466,9 @@ fn render_modification_id(id: &ModificationId, ontologies: &Ontologies) -> HtmlE
                                     && id[2..].parse::<usize>().is_ok() =>
                             {
                                 if let Ok(index) = id[2..].parse::<u32>()
-                                    && let Some(modification) =
-                                        ontologies.resid().get_by_index(&index)
+                                    && let Some(modification) = ontologies
+                                        .resid()
+                                        .get_by_index(&AccessionCode::Numeric(index))
                                 {
                                     link_modification(modification)
                                 } else {
@@ -475,8 +477,9 @@ fn render_modification_id(id: &ModificationId, ontologies: &Ontologies) -> HtmlE
                             }
                             Some("PSI-MOD") if id.parse::<usize>().is_ok() => {
                                 if let Ok(index) = id.parse::<u32>()
-                                    && let Some(modification) =
-                                        ontologies.psimod().get_by_index(&index)
+                                    && let Some(modification) = ontologies
+                                        .psimod()
+                                        .get_by_index(&AccessionCode::Numeric(index))
                                 {
                                     link_modification(modification)
                                 } else {
@@ -485,8 +488,9 @@ fn render_modification_id(id: &ModificationId, ontologies: &Ontologies) -> HtmlE
                             }
                             Some("Unimod") if id.parse::<usize>().is_ok() => {
                                 if let Ok(index) = id.parse::<u32>()
-                                    && let Some(modification) =
-                                        ontologies.unimod().get_by_index(&index)
+                                    && let Some(modification) = ontologies
+                                        .unimod()
+                                        .get_by_index(&AccessionCode::Numeric(index))
                                 {
                                     link_modification(modification)
                                 } else {
@@ -552,6 +556,36 @@ fn render_modification_id(id: &ModificationId, ontologies: &Ontologies) -> HtmlE
                             }
                         })
                         .clone()
+                })),
+        );
+    }
+    if !id.parents.is_empty() {
+        text.content(
+            HtmlTag::ul
+                .new()
+                .class("parents")
+                .children([HtmlTag::li.new().class("title").content("Parent terms")])
+                .children(id.parents.iter().map(|parent| {
+                    if let Some(modification) = ontologies.get_by_index(id.ontology, &parent) {
+                        link_modification(modification)
+                    } else {
+                        parent.to_string()
+                    }
+                })),
+        );
+    }
+    if !id.children.is_empty() {
+        text.content(
+            HtmlTag::ul
+                .new()
+                .class("children")
+                .children([HtmlTag::li.new().class("title").content("Child terms")])
+                .children(id.children.iter().map(|parent| {
+                    if let Some(modification) = ontologies.get_by_index(id.ontology, &parent) {
+                        link_modification(modification)
+                    } else {
+                        parent.to_string()
+                    }
                 })),
         );
     }

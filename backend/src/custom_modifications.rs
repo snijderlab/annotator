@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use context_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
+use context_error::{BasicKind, BoxedError, FullErrorContent};
 use mzcore::{
     chemistry::{DiagnosticIon, NeutralLoss},
     ontology::Ontology,
@@ -9,7 +9,7 @@ use mzcore::{
         LinkerLength, LinkerSpecificity, ModificationId, PlacementRule, SimpleModificationInner,
     },
 };
-use mzcv::SynonymScope;
+use mzcv::{AccessionCode, SynonymScope};
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 use tokio::sync::Mutex;
@@ -25,7 +25,7 @@ use crate::{
 pub fn get_custom_modifications(
     state: ModifiableState,
     theme: Theme,
-) -> Result<(Vec<(u32, String)>, Option<(String, Vec<String>)>), &'static str> {
+) -> Result<(Vec<(AccessionCode, String)>, Option<(String, Vec<String>)>), &'static str> {
     let state = state.blocking_lock();
 
     Ok((
@@ -38,7 +38,7 @@ pub fn get_custom_modifications(
                 (
                     modification
                         .description()
-                        .and_then(|d| d.id())
+                        .map(|d| d.id())
                         .unwrap_or_default(),
                     crate::search_modification::render_modification(
                         modification.clone(),
@@ -62,8 +62,8 @@ pub fn duplicate_custom_modification(
     let mut locked_state = state.blocking_lock();
     if let Some(modification) = locked_state.ontologies.custom().data().iter().find(|p| {
         p.description()
-            .and_then(|d| d.id())
-            .is_some_and(|i| i == id)
+            .map(|d| d.id())
+            .is_some_and(|i| i == id.into())
     }) {
         let new_modification = match modification.as_ref().clone() {
             SimpleModificationInner::Database {
@@ -71,7 +71,7 @@ pub fn duplicate_custom_modification(
                 specificities,
                 formula,
             } => {
-                id.set_id(Some(new_id));
+                id.set_id(new_id.into());
                 SimpleModificationInner::Database {
                     specificities,
                     formula,
@@ -87,7 +87,7 @@ pub fn duplicate_custom_modification(
                 taxonomy,
                 glycomeatlas,
             } => {
-                id.set_id(Some(new_id));
+                id.set_id(new_id.into());
                 SimpleModificationInner::Gno {
                     id,
                     composition,
@@ -104,7 +104,7 @@ pub fn duplicate_custom_modification(
                 formula,
                 length,
             } => {
-                id.set_id(Some(new_id));
+                id.set_id(new_id.into());
                 SimpleModificationInner::Linker {
                     id,
                     specificities,
@@ -134,7 +134,7 @@ pub fn duplicate_custom_modification(
 #[tauri::command]
 pub fn delete_custom_modification(id: u32, state: ModifiableState) -> Result<(), &'static str> {
     let mut state = state.blocking_lock();
-    if state.ontologies.custom_mut().remove(&id) {
+    if state.ontologies.custom_mut().remove(&id.into()) {
         Ok(())
     } else {
         Err("Could not find specified id")
@@ -147,13 +147,18 @@ pub fn get_custom_modification(
     state: ModifiableState,
 ) -> Result<CustomModification, &'static str> {
     let state = state.blocking_lock();
-    match state.ontologies.custom().get_by_index(&id).as_deref() {
+    match state
+        .ontologies
+        .custom()
+        .get_by_index(&id.into())
+        .as_deref()
+    {
         Some(SimpleModificationInner::Database {
             specificities,
             formula,
             id,
         }) => Ok(CustomModification {
-            id: id.id().unwrap_or_default(),
+            id: id.id(),
             name: id.name.to_string(),
             formula: formula.to_string(),
             description: id.description.to_string(),
@@ -189,7 +194,7 @@ pub fn get_custom_modification(
             id,
             length,
         }) => Ok(CustomModification {
-            id: id.id().unwrap_or_default(),
+            id: id.id(),
             name: id.name.to_string(),
             formula: formula.to_string(),
             description: id.description.to_string(),
@@ -258,7 +263,7 @@ pub fn get_custom_modification(
 /// This structure is way easier to handle over there.
 #[derive(Deserialize, Serialize)]
 pub struct CustomModification {
-    id: u32,
+    id: AccessionCode,
     name: String,
     formula: String,
     description: String,
@@ -291,7 +296,7 @@ pub async fn update_modification(
     let id = ModificationId::new(
         Ontology::Custom,
         custom_modification.name.clone().into_boxed_str(),
-        Some(custom_modification.id),
+        custom_modification.id.into(),
         custom_modification.description.into_boxed_str(),
         custom_modification
             .synonyms

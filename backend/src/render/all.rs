@@ -1347,7 +1347,7 @@ pub fn display_placement_rule(
                     "{}@<span class='position'>{pos}</span>",
                     ontologies
                         .psimod()
-                        .get_by_index(index)
+                        .get_by_index(&(*index).into())
                         .unwrap_or_else(|| panic!(
                             "Invalid PsiMod placement rule, non existing modification {index}"
                         ))
@@ -1364,7 +1364,7 @@ pub fn display_placement_rule(
                     "{}@{pos}",
                     ontologies
                         .psimod()
-                        .get_by_index(index)
+                        .get_by_index(&(*index).into())
                         .unwrap_or_else(|| panic!(
                             "Invalid PsiMod placement rule, non existing modification {index}"
                         ))
@@ -1382,7 +1382,7 @@ pub fn link_modification(modification: SimpleModification) -> String {
                 description.ontology.char(),
                 description.name
             )
-        } else if let Some(id) = description.id() {
+        } else {
             let preview = if let SimpleModificationInner::Database { formula, .. }
             | SimpleModificationInner::Linker { formula, .. } =
                 modification.as_ref()
@@ -1399,15 +1399,13 @@ pub fn link_modification(modification: SimpleModification) -> String {
             format!(
                 "<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{2}{1}\";document.getElementById(\"search-modification-button\").click()'{preview}>{0}:{2}{1}</a>",
                 description.ontology.name(),
-                id,
+                description.id(),
                 if description.ontology == Ontology::Resid {
                     "AA"
                 } else {
                     ""
                 }
             )
-        } else {
-            String::new()
         }
     } else {
         String::new()
