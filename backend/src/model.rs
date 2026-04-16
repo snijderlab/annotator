@@ -689,6 +689,9 @@ fn parse_neutral_losses(
 pub fn parameters(
     tolerance: (f64, &str),
     mz_range: (Option<f64>, Option<f64>),
+    isotopes: bool,
+    isotope_tolerance: (f64, &str),
+    isotope_filter: f64,
 ) -> Result<MatchingParameters, BoxedError<'static, BasicKind>> {
     let mut parameters = MatchingParameters::default();
     if tolerance.1 == "ppm" {
@@ -704,6 +707,20 @@ pub fn parameters(
             Context::none(),
         ));
     }
+    if isotope_tolerance.1 == "ppm" {
+        parameters.isotope_tolerance = Tolerance::new_ppm(isotope_tolerance.0);
+    } else if tolerance.1 == "th" {
+        parameters.isotope_tolerance = Tolerance::new_absolute(MassOverCharge::new::<
+            mzcore::system::thomson,
+        >(isotope_tolerance.0));
+    } else {
+        return Err(BoxedError::new(
+            BasicKind::Error,
+            "Invalid isotope tolerance unit",
+            "",
+            Context::none(),
+        ));
+    }
     let min = mz_range.0.unwrap_or(0.0);
     let max = mz_range.1.unwrap_or(f64::MAX);
     if min > max {
@@ -715,5 +732,8 @@ pub fn parameters(
         ));
     }
     parameters.mz_range = MassOverCharge::new::<thomson>(min)..=MassOverCharge::new::<thomson>(max);
+    parameters.match_isotopes = isotopes;
+    parameters.isotope_filter = isotope_filter;
+    dbg!(&parameters);
     Ok(parameters)
 }

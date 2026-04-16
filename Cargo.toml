@@ -8,7 +8,7 @@ clap = {version = "4.6", features = ["derive"]}
 context_error = "0.2.0"
 itertools = "0.14"
 mzalign = { version = "0.1.1", features = ["rayon"] }
-mzannotate = { version = "0.1.0" }
+mzannotate = { version = "0.1.0", features = ["isotopes"] }
 mzcore = { version = "0.1.1", default-features = false, features = ["isotopes", "glycan-render"] }
 mzcv = { version = "0.2.0", features = ["search-index", "http"] }
 mzident = { version = "0.1.0", features = ["mzannotate"] }

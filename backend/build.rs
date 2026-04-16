@@ -339,6 +339,21 @@ fn main() {
           <option value="most_abundant" title="Match the peaks based on the most abundant isotope, meaning that for each fragment the isotopic distribution is generated and the most abundant species is selected. This mode should be good for very high mass matching, but it will take more time to be calculated.">Most abundant</option>
         </select>
 
+        <label for="spectrum-isotopes">Isotopes</label>
+        <input type="checkbox" id="spectrum-isotopes"/>
+
+        <label for="spectrum-isotope-tolerance">Isotope Tolerance</label>
+        <div class="grouped-input">
+          <input type="number" id="spectrum-isotope-tolerance" value="2" />
+          <select id="spectrum-isotope-tolerance-unit">
+            <option value="ppm">ppm</option>
+            <option value="th">Thompson (mz)</option>
+          </select>
+        </div>
+
+        <label for="spectrum-isotope-filter">Isotope filter</label>
+        <input type="number" id="spectrum-isotope-filter" min="0.0" max="1.0" value="0.5"/>
+
         <label for="spectrum-charge">Max charge </label>
         <input type="number" id="spectrum-charge" value="" placeholder="Empty takes peptidoform charge from raw data" />
         
