@@ -49,6 +49,7 @@ pub fn get_label(
             multiple_peptidoform_ions,
             compound_peptidoform,
         ));
+        let mut shared_isotopes = Some(get_isotopes(&annotations[0]));
         let mut shared_charge_carriers = Some(get_charge_carriers(&annotations[0]));
         let mut shared_glycan_peptide_fragments =
             Some(get_glycan_peptide_fragments(&annotations[0]));
@@ -120,6 +121,11 @@ pub fn get_label(
             {
                 shared_modifications = None;
             }
+            if let Some(cc) = &shared_isotopes
+                && *cc != get_isotopes(a)
+            {
+                shared_isotopes = None;
+            }
             if let Some(cc) = &shared_charge_carriers
                 && *cc != get_charge_carriers(a)
             {
@@ -142,6 +148,7 @@ pub fn get_label(
             && shared_xl.is_none()
             && shared_ambiguous_amino_acids.is_none()
             && shared_modifications.is_none()
+            && shared_isotopes.is_none()
             && shared_charge_carriers.is_none()
             && shared_glycan_peptide_fragments.is_none()
         {
@@ -182,6 +189,7 @@ pub fn get_label(
             let xl_str = shared_xl.unwrap_or("*".to_string());
             let aaa_str = shared_ambiguous_amino_acids.unwrap_or("*".to_string());
             let sm_str = shared_modifications.unwrap_or("*".to_string());
+            let iso_str = shared_isotopes.unwrap_or("*".to_string());
             let cc_str = shared_charge_carriers.unwrap_or("*".to_string());
             let glycan_peptide_fragments_str =
                 shared_glycan_peptide_fragments.unwrap_or("*".to_string());
@@ -223,7 +231,7 @@ pub fn get_label(
                 )
             } else {
                 format!(
-                    "{}<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span><span class='cross-links'>{}</span><span class='ambiguous-amino-acids'>{}</span><span class='modifications'>{}</span><span class='charge-carriers'>{}</span><span class='glycan-peptide-fragment'>{}</span></span>{}",
+                    "{}<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span><span class='cross-links'>{}</span><span class='ambiguous-amino-acids'>{}</span><span class='modifications'>{}</span>{}<span class='charge-carriers'>{}</span><span class='glycan-peptide-fragment'>{}</span></span>{}",
                     glycan_figure_str,
                     ion_str,
                     charge_str,
@@ -247,6 +255,7 @@ pub fn get_label(
                     xl_str,
                     aaa_str,
                     sm_str,
+                    iso_str,
                     cc_str,
                     glycan_peptide_fragments_str,
                     multi,
@@ -329,7 +338,7 @@ fn get_single_label(
 ) -> String {
     let ch = format!("{:+}", annotation.charge.value);
     format!(
-        "{}<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span><span class='cross-links'>{}</span><span class='ambiguous-amino-acids'>{}</span><span class='modifications'>{}</span><span class='charge-carriers'>{}</span><span class='glycan-peptide-fragment'>{}</span></span>",
+        "{}<span>{}<sup class='charge'>{}</sup><sub style='--charge-width:{};'><span class='series'>{}</span><span class='glycan-id'>{}</span><span class='peptide-id'>{}</span></sub><span class='neutral-losses'>{}</span><span class='cross-links'>{}</span><span class='ambiguous-amino-acids'>{}</span><span class='modifications'>{}</span>{}<span class='charge-carriers'>{}</span><span class='glycan-peptide-fragment'>{}</span></span>",
         get_glycan_figure(compound_peptidoform, annotation, theme, glycan_footnotes)
             .unwrap_or_default(),
         if let FragmentType::B { b, y, .. } = &annotation.ion {
@@ -405,6 +414,7 @@ fn get_single_label(
             multiple_peptidoform_ions,
             compound_peptidoform,
         ),
+        get_isotopes(annotation),
         get_charge_carriers(annotation),
         get_glycan_peptide_fragments(annotation),
     )
@@ -564,6 +574,14 @@ fn get_modifications(
                 None
             }
         })
+        .join("")
+}
+
+fn get_isotopes(annotation: &Fragment) -> String {
+    annotation
+        .isotope
+        .iter()
+        .map(|(a, i)| format!("{a:+}{i}"))
         .join("")
 }
 

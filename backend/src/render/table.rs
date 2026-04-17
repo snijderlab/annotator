@@ -92,8 +92,13 @@ pub fn spectrum_table(
             sequence_index,
             series_number,
             format!(
-                "<span title='mzPAF: {}'>{label}</span>",
-                annotation.to_mz_paf_string()
+                "<span title='mzPAF: {}'>{label}{}</span>",
+                annotation.to_mz_paf_string(),
+                annotation
+                    .isotope
+                    .iter()
+                    .map(|(a, i)| format!("{a:+}{i}"))
+                    .join(""),
             ),
         )
     }

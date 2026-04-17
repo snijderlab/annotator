@@ -344,7 +344,7 @@ fn main() {
 
         <label for="spectrum-isotope-tolerance">Isotope Tolerance</label>
         <div class="grouped-input">
-          <input type="number" id="spectrum-isotope-tolerance" value="2" />
+          <input type="number" id="spectrum-isotope-tolerance" value="20" />
           <select id="spectrum-isotope-tolerance-unit">
             <option value="ppm">ppm</option>
             <option value="th">Thompson (mz)</option>
