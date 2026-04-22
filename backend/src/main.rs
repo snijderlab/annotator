@@ -303,7 +303,6 @@ async fn annotate_spectrum<'a>(
     mz_range: (Option<f64>, Option<f64>),
     theme: Theme,
     isotopes: bool,
-    isotope_tolerance: (f64, &'a str),
     isotope_filter: f64,
 ) -> Result<(AnnotationResult, Vec<String>), Vec<String>> {
     let mut state = state.lock().await;
@@ -320,14 +319,8 @@ async fn annotate_spectrum<'a>(
             ]
         })?
         .2;
-    let parameters = model::parameters(
-        tolerance,
-        mz_range,
-        isotopes,
-        isotope_tolerance,
-        isotope_filter,
-    )
-    .map_err(|err| vec![err.to_html(false)])?;
+    let parameters = model::parameters(tolerance, mz_range, isotopes, isotope_filter)
+        .map_err(|err| vec![err.to_html(false)])?;
     let mass_mode = match mass_mode {
         "monoisotopic" => MassMode::Monoisotopic,
         "average_weight" => MassMode::Average,

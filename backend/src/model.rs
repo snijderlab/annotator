@@ -690,7 +690,6 @@ pub fn parameters(
     tolerance: (f64, &str),
     mz_range: (Option<f64>, Option<f64>),
     isotopes: bool,
-    isotope_tolerance: (f64, &str),
     isotope_filter: f64,
 ) -> Result<MatchingParameters, BoxedError<'static, BasicKind>> {
     let mut parameters = MatchingParameters::default();
@@ -703,20 +702,6 @@ pub fn parameters(
         return Err(BoxedError::new(
             BasicKind::Error,
             "Invalid tolerance unit",
-            "",
-            Context::none(),
-        ));
-    }
-    if isotope_tolerance.1 == "ppm" {
-        parameters.isotope_tolerance = Tolerance::new_ppm(isotope_tolerance.0);
-    } else if tolerance.1 == "th" {
-        parameters.isotope_tolerance = Tolerance::new_absolute(MassOverCharge::new::<
-            mzcore::system::thomson,
-        >(isotope_tolerance.0));
-    } else {
-        return Err(BoxedError::new(
-            BasicKind::Error,
-            "Invalid isotope tolerance unit",
             "",
             Context::none(),
         ));

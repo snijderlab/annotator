@@ -934,7 +934,6 @@ async function annotate_spectrum() {
     massMode: document.querySelector("#spectrum-mass-mode").value,
     mzRange: [optional_number(document.querySelector("#model-mz-range-min").value), optional_number(document.querySelector("#model-mz-range-max").value)],
     isotopes: document.querySelector("#spectrum-isotopes").checked,
-    isotopeTolerance: [Number(document.querySelector("#spectrum-isotope-tolerance").value), document.querySelector("#spectrum-isotope-tolerance-unit").value],
     isotopeFilter: Number(document.querySelector("#spectrum-isotope-filter").value),
     theme: Theme
   }).then((result) => {

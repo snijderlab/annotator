@@ -145,12 +145,16 @@ pub fn get_label(
             && shared_peptidoform.is_none()
             && shared_glycan.is_none()
             && shared_loss.is_none()
-            && shared_xl.is_none()
-            && shared_ambiguous_amino_acids.is_none()
-            && shared_modifications.is_none()
-            && shared_isotopes.is_none()
-            && shared_charge_carriers.is_none()
-            && shared_glycan_peptide_fragments.is_none()
+            && shared_xl.as_ref().is_none_or(|s| s.is_empty())
+            && shared_ambiguous_amino_acids
+                .as_ref()
+                .is_none_or(|s| s.is_empty())
+            && shared_modifications.as_ref().is_none_or(|s| s.is_empty())
+            && shared_isotopes.as_ref().is_none_or(|s| s.is_empty())
+            && shared_charge_carriers.as_ref().is_none_or(|s| s.is_empty())
+            && shared_glycan_peptide_fragments
+                .as_ref()
+                .is_none_or(|s| s.is_empty())
         {
             "*".to_string()
         } else {
