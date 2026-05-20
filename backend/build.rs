@@ -342,15 +342,6 @@ fn main() {
         <label for="spectrum-isotopes">Isotopes</label>
         <input type="checkbox" id="spectrum-isotopes"/>
 
-        <label for="spectrum-isotope-tolerance">Isotope Tolerance</label>
-        <div class="grouped-input">
-          <input type="number" id="spectrum-isotope-tolerance" value="20" />
-          <select id="spectrum-isotope-tolerance-unit">
-            <option value="ppm">ppm</option>
-            <option value="th">Thompson (mz)</option>
-          </select>
-        </div>
-
         <label for="spectrum-isotope-filter">Isotope filter</label>
         <input type="number" id="spectrum-isotope-filter" min="0.0" max="1.0" value="0.5"/>
 
