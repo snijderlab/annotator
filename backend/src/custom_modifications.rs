@@ -382,7 +382,7 @@ pub async fn update_modification(
             id,
             length: match custom_modification.linker_length {
                 None => LinkerLength::Unknown,
-                Some(l) => LinkerLength::Discreet(vec![l.into()]),
+                Some(l) => LinkerLength::Discrete(vec![l.into()]),
             },
         }
     } else {

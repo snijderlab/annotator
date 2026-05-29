@@ -321,7 +321,7 @@ pub fn render_modification(
         output.content(render_modification_id(id, ontologies));
         match length {
             LinkerLength::Unknown => (),
-            LinkerLength::Discreet(v) => {
+            LinkerLength::Discrete(v) => {
                 output.content(
                     HtmlTag::p
                         .new()

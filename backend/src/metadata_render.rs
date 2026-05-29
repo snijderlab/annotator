@@ -906,7 +906,7 @@ impl RenderToHtml for CVTerm {
             .content(self.term.accession.to_string())
             .title(format!(
                 "[{}, {}, {}, {}]",
-                self.term.accession.cv, self.term.accession.accession, self.term.name, self.comment
+                self.term.accession.cv, self.term.accession.accession, self.term.name, self.value
             ))
             .clone()
     }
