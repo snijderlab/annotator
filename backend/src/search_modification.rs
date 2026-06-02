@@ -1,6 +1,5 @@
 use crate::{
     ModifiableState, Theme, html_builder,
-    metadata_render::OptionalString,
     render::{display_formula, display_masses, display_placement_rule, render_full_glycan},
 };
 use context_error::{BasicKind, BoxedError, CreateError, FullErrorContent};
@@ -10,13 +9,12 @@ use mzcore::{
     prelude::*,
     quantities::Tolerance,
     sequence::{
-        GnoComposition, LinkerLength, LinkerSpecificity, ModificationId, PlacementRule,
+        CrossId, GnoComposition, LinkerLength, LinkerSpecificity, ModificationId, PlacementRule,
         ReturnModification, SimpleModification, SimpleModificationInner,
         modification_search_formula, modification_search_glycan, modification_search_mass,
     },
     system::{Mass, dalton},
 };
-use mzcv::AccessionCode;
 
 use crate::{
     html_builder::{HtmlElement, HtmlTag},
@@ -427,7 +425,7 @@ fn render_modification_id(id: &ModificationId, ontologies: &Ontologies) -> HtmlE
     text
         .content(HtmlTag::p.new().content(format!(
             "Ontology: <span class='ontology'>{}</span>, name: <span class='name'>{}</span>, ID: <span class='index'>{}</span>{}",
-            id.ontology, if id.ontology == Ontology::Gnome {id.name.to_ascii_uppercase()} else {id.name.to_string()}, id.id().to_string(), if let Some(url) = id.url() {
+            id.ontology, if id.ontology == Ontology::Gnome {id.name.to_ascii_uppercase()} else {id.name.to_string()}, id.id(), if let Some(url) = id.url() {
                 format!(", {}", HtmlTag::a.new()
                 .content("view online")
                 .header("href", url)
@@ -456,104 +454,32 @@ fn render_modification_id(id: &ModificationId, ontologies: &Ontologies) -> HtmlE
                 .new()
                 .class("cross-ids")
                 .children([HtmlTag::li.new().class("title").content("Cross IDs")])
-                .children(id.cross_ids.iter().map(|(meta, id)| {
+                .children(id.cross_ids.iter().map(|id| {
                     HtmlTag::li
                         .new()
-                        .content(match meta.as_deref() {
-                            Some("RESID")
-                                if id.starts_with("AA")
-                                    && id.len() > 2
-                                    && id[2..].parse::<usize>().is_ok() =>
-                            {
-                                if let Ok(index) = id[2..].parse::<u32>()
-                                    && let Some(modification) = ontologies
-                                        .resid()
-                                        .get_by_index(&AccessionCode::Numeric(index))
-                                {
+                        .content(match id {
+                            CrossId::Mod(ontology, id, _rule) => ontologies
+                                .get_by_index(*ontology, id)
+                                .map_or(id.to_string(), |modification| {
                                     link_modification(modification)
-                                } else {
-                                    String::new()
-                                }
-                            }
-                            Some("PSI-MOD") if id.parse::<usize>().is_ok() => {
-                                if let Ok(index) = id.parse::<u32>()
-                                    && let Some(modification) = ontologies
-                                        .psimod()
-                                        .get_by_index(&AccessionCode::Numeric(index))
-                                {
-                                    link_modification(modification)
-                                } else {
-                                    String::new()
-                                }
-                            }
-                            Some("Unimod") if id.parse::<usize>().is_ok() => {
-                                if let Ok(index) = id.parse::<u32>()
-                                    && let Some(modification) = ontologies
-                                        .unimod()
-                                        .get_by_index(&AccessionCode::Numeric(index))
-                                {
-                                    link_modification(modification)
-                                } else {
-                                    String::new()
-                                }
-                            }
-                            Some("ChEBI") if id.parse::<usize>().is_ok() => HtmlTag::a
+                                }),
+                            CrossId::URL(name, url) => HtmlTag::a
                                 .new()
-                                .header(
-                                    "href",
-                                    format!(
-                                        "https://www.ebi.ac.uk/chebi/chebiOntology.do?chebiId={id}"
-                                    ),
-                                )
+                                .content(name.as_ref().unwrap_or(url))
+                                .header("href", url.to_string())
                                 .header("target", "_blank")
-                                .content(format!(
-                                    "<span class='cross-id-system'>ChEBI</span>: {id}"
-                                ))
                                 .to_string(),
-                            Some("PubMed" | "PMID") if id.parse::<usize>().is_ok() => HtmlTag::a
-                                .new()
-                                .header("href", format!("https://pubmed.ncbi.nlm.nih.gov/{id}"))
-                                .header("target", "_blank")
-                                .content(format!(
-                                    "<span class='cross-id-system'>PubMed</span>: {id}"
-                                ))
-                                .to_string(),
-                            Some("DOI") => HtmlTag::a
-                                .new()
-                                .header("href", format!("https://doi.org/{id}"))
-                                .header("target", "_blank")
-                                .content(format!("<span class='cross-id-system'>DOI</span>: {id}"))
-                                .to_string(),
-                            Some("FindMod") => HtmlTag::a
-                                .new()
-                                .header("href", format!("https://web.expasy.org/findmod/{id}.html"))
-                                .header("target", "_blank")
-                                .content(format!(
-                                    "<span class='cross-id-system'>FindMod</span>: {id}"
-                                ))
-                                .to_string(),
-                            Some("PDBHET") => HtmlTag::a
-                                .new()
-                                .header("href", format!("https://www.rcsb.org/ligand/{id}"))
-                                .header("target", "_blank")
-                                .content(format!(
-                                    "<span class='cross-id-system'>PDBHET</span>: {id}"
-                                ))
-                                .to_string(),
-                            _ => {
-                                if id.starts_with("http://") || id.starts_with("https://") {
+                            _ => id.url().map_or_else(
+                                || id.to_string(),
+                                |url| {
                                     HtmlTag::a
                                         .new()
-                                        .header("href", id.to_string())
+                                        .content(id.to_string())
+                                        .header("href", url)
                                         .header("target", "_blank")
-                                        .content(meta.as_deref().unwrap_or("URL"))
                                         .to_string()
-                                } else if let Some(meta) = meta {
-                                    format!("<span class='cross-id-system'>{meta}</span>: {id}")
-                                } else {
-                                    id.to_string()
-                                }
-                            }
+                                },
+                            ),
                         })
                         .clone()
                 })),
@@ -566,7 +492,7 @@ fn render_modification_id(id: &ModificationId, ontologies: &Ontologies) -> HtmlE
                 .class("parents")
                 .children([HtmlTag::li.new().class("title").content("Parent terms")])
                 .children(id.parents.iter().map(|parent| {
-                    if let Some(modification) = ontologies.get_by_index(id.ontology, &parent) {
+                    if let Some(modification) = ontologies.get_by_index(id.ontology, parent) {
                         link_modification(modification)
                     } else {
                         parent.to_string()
@@ -581,7 +507,7 @@ fn render_modification_id(id: &ModificationId, ontologies: &Ontologies) -> HtmlE
                 .class("children")
                 .children([HtmlTag::li.new().class("title").content("Child terms")])
                 .children(id.children.iter().map(|parent| {
-                    if let Some(modification) = ontologies.get_by_index(id.ontology, &parent) {
+                    if let Some(modification) = ontologies.get_by_index(id.ontology, parent) {
                         link_modification(modification)
                     } else {
                         parent.to_string()

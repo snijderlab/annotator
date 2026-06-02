@@ -291,7 +291,7 @@ fn get_glycan_figure(
                             SequencePosition::NTerm => compound_peptidoform.peptidoform_ions()[pii]
                                 .peptidoforms()[pi]
                                 .get_n_term(),
-                            SequencePosition::Index(i) => {
+                            SequencePosition::Index(i, _) => {
                                 compound_peptidoform.peptidoform_ions()[pii].peptidoforms()[pi]
                                     .sequence()[i]
                                     .modifications
@@ -536,7 +536,7 @@ fn get_modifications(
                             [annotation.peptidoform_ion_index?]
                             .peptidoforms()[annotation.peptidoform_index?]
                             .get_n_term(),
-                        SequencePosition::Index(i) => compound_peptidoform.peptidoform_ions()
+                        SequencePosition::Index(i, _) => compound_peptidoform.peptidoform_ions()
                             [annotation.peptidoform_ion_index?]
                             .peptidoforms()[annotation.peptidoform_index?]
                             .sequence()[*i]
@@ -630,7 +630,7 @@ fn get_glycan_peptide_fragments(annotation: &Fragment) -> String {
 pub fn display_sequence_index(sequence_index: SequencePosition) -> String {
     match sequence_index {
         SequencePosition::NTerm => "N-terminal".to_string(),
-        SequencePosition::Index(i) => (i + 1).to_string(),
+        SequencePosition::Index(i, _) => (i + 1).to_string(),
         SequencePosition::CTerm => "C-terminal".to_string(),
     }
 }

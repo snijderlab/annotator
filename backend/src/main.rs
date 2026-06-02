@@ -377,13 +377,13 @@ fn render_annotated_spectrum(
     theme: Theme,
     background: &[CentroidPeak],
 ) -> AnnotationResult {
-    let multiple_peptidoforms = annotated
+    let multiple_peptidoform_ions = annotated
         .analytes
         .iter()
         .filter(|a| matches!(&a.target, AnalyteTarget::PeptidoformIon(_)))
         .count()
-        == 1;
-    let multiple_peptides = annotated
+        != 1;
+    let multiple_peptidoforms = annotated
         .analytes
         .iter()
         .filter_map(|a| match &a.target {
@@ -392,7 +392,7 @@ fn render_annotated_spectrum(
         })
         .flat_map(|p| p.peptidoforms())
         .count()
-        == 1;
+        != 1;
     let (spectrum, limits) = render::annotated_spectrum(
         annotated, fragments, model, parameters, mass_mode, theme, background,
     );
@@ -401,8 +401,8 @@ fn render_annotated_spectrum(
         fragment_table: render::spectrum_table(
             annotated,
             fragments,
+            multiple_peptidoform_ions,
             multiple_peptidoforms,
-            multiple_peptides,
         ),
         mz_max: limits.mz.value,
         intensity_max: limits.intensity,

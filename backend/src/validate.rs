@@ -236,7 +236,7 @@ pub fn validate_custom_single_specificity(
         .map(|text| text.parse::<PlacementRule>())
         .collect::<Result<Vec<_>, _>>().map_err(|err| err.to_html(false))?;
     let rules = if rules.is_empty() {
-        vec![PlacementRule::Anywhere]
+        vec![PlacementRule::Position(mzcore::sequence::Position::Anywhere)]
     } else {
         rules
     };
@@ -308,7 +308,7 @@ pub fn validate_custom_linker_specificity(
         .collect::<Result<Vec<_>, _>>()
         .map_err(|err| err.to_html(false))?;
     let rules1 = if rules1.is_empty() {
-        vec![PlacementRule::Anywhere]
+        vec![PlacementRule::Position(mzcore::sequence::Position::Anywhere)]
     } else {
         rules1
     };
@@ -318,7 +318,7 @@ pub fn validate_custom_linker_specificity(
         .collect::<Result<Vec<_>, _>>()
         .map_err(|err| err.to_html(false))?;
     let rules2 = if rules2.is_empty() {
-        vec![PlacementRule::Anywhere]
+        vec![PlacementRule::Position(mzcore::sequence::Position::Anywhere)]
     } else {
         rules2
     };

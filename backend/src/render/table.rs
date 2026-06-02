@@ -80,6 +80,16 @@ pub fn spectrum_table(
                         .unwrap_or_else(|| aa.aminoacid.to_string())
                 ),
             )
+        } else if let FragmentType::Internal(_, start, end) = &annotation.ion {
+            (
+                format!(
+                    "{}:{}",
+                    display_sequence_index(start.sequence_index),
+                    display_sequence_index(end.sequence_index),
+                ),
+                "-".to_string(),
+                format_label(annotation.ion.label()),
+            )
         } else {
             // precursor
             (
@@ -128,12 +138,12 @@ pub fn spectrum_table(
             </tr></thead><tdata>",
         peptide,
         if multiple_peptidoform_ions {
-            "<th>Peptidoform</th>"
+            "<th>Peptidoform Ion</th>"
         } else {
             ""
         },
         if multiple_peptidoforms {
-            "<th>Peptide</th>"
+            "<th>Peptidoform</th>"
         } else {
             ""
         }
@@ -169,20 +179,12 @@ pub fn spectrum_table(
                     peak.mz.value,
                     [
                         "matched".to_string(),
-                        if multiple_peptidoform_ions {
-                            annotation
-                                .peptidoform_ion_index
-                                .map_or("?".to_string(), |i| (i + 1).to_string())
-                        } else {
-                            String::new()
-                        },
-                        if multiple_peptidoforms {
-                            annotation
-                                .peptidoform_index
-                                .map_or("?".to_string(), |i| (i + 1).to_string())
-                        } else {
-                            String::new()
-                        },
+                        annotation
+                            .peptidoform_ion_index
+                            .map_or("?".to_string(), |i| (i + 1).to_string()),
+                        annotation
+                            .peptidoform_index
+                            .map_or("?".to_string(), |i| (i + 1).to_string()),
                         sequence_index.to_string(),
                         label.to_string(),
                         annotation
@@ -230,20 +232,12 @@ pub fn spectrum_table(
                     .map_or(f64::NAN, |v| v.value),
                 [
                     "fragment".to_string(),
-                    if multiple_peptidoform_ions {
-                        fragment
-                            .peptidoform_index
-                            .map_or("?".to_string(), |i| (i + 1).to_string())
-                    } else {
-                        String::new()
-                    },
-                    if multiple_peptidoforms {
-                        fragment
-                            .peptidoform_index
-                            .map_or("?".to_string(), |i| (i + 1).to_string())
-                    } else {
-                        String::new()
-                    },
+                    fragment
+                        .peptidoform_ion_index
+                        .map_or("?".to_string(), |i| (i + 1).to_string()),
+                    fragment
+                        .peptidoform_index
+                        .map_or("?".to_string(), |i| (i + 1).to_string()),
                     sequence_index.to_string(),
                     label.to_string(),
                     fragment

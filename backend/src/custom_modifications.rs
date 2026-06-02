@@ -12,6 +12,7 @@ use mzcore::{
 use mzcv::{AccessionCode, SynonymScope};
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
+use thin_vec::ThinVec;
 use tokio::sync::Mutex;
 
 use crate::{
@@ -163,11 +164,7 @@ pub fn get_custom_modification(
             formula: formula.to_string(),
             description: id.description.to_string(),
             synonyms: id.synonyms.iter().map(|s| s.1.to_string()).collect(),
-            cross_ids: id
-                .cross_ids
-                .iter()
-                .map(|(a, b)| a.as_ref().map_or(b.to_string(), |a| format!("{a}:{b}")))
-                .collect(),
+            cross_ids: id.cross_ids.iter().map(|c| c.to_string()).collect(),
             linker: false,
             single_specificities: specificities
                 .iter()
@@ -202,7 +199,7 @@ pub fn get_custom_modification(
             cross_ids: id
                 .cross_ids
                 .iter()
-                .map(|(a, b)| a.as_ref().map_or(b.to_string(), |a| format!("{a}:{b}")))
+                .map(|cross_id| cross_id.to_string())
                 .collect(),
             linker: true,
             single_specificities: Vec::new(),
@@ -306,14 +303,9 @@ pub async fn update_modification(
         custom_modification
             .cross_ids
             .iter()
-            .map(|id| {
-                id.split_once(':')
-                    .map_or((None, id.clone().into_boxed_str()), |(a, b)| {
-                        (Some(a.into()), b.into())
-                    })
-            })
-            .collect::<Vec<_>>()
-            .into(),
+            .map(|id| id.parse())
+            .collect::<Result<ThinVec<_>, _>>()
+            .expect("Invalid cross-id"), // TODO it can crash here
         false,
     );
     let modification = Arc::new(if custom_modification.linker {

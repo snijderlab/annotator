@@ -476,7 +476,7 @@ pub fn get_overview(
             max_intensity = max_intensity.max(peak.intensity);
             peak.annotations.iter().for_each(|fragment| {
                 if let Some(pos) = fragment.ion.position()
-                    && let SequencePosition::Index(si) = pos.sequence_index
+                    && let SequencePosition::Index(si, _) = pos.sequence_index
                     && let (Some(pii), Some(pi)) =
                         (fragment.peptidoform_ion_index, fragment.peptidoform_index)
                 {
@@ -1340,8 +1340,7 @@ pub fn display_placement_rule(
                 "<span class='aminoacid'>{}</span>@<span class='position'>{pos}</span>",
                 aa.iter().join("")
             ),
-            PlacementRule::Terminal(pos) => format!("<span class='position'>{pos}</span>"),
-            PlacementRule::Anywhere => "<span class='position'>Anywhere</span>".to_string(),
+            PlacementRule::Position(pos) => format!("<span class='position'>{pos}</span>"),
             PlacementRule::PsiModification(index, pos) => {
                 format!(
                     "{}@<span class='position'>{pos}</span>",
@@ -1357,8 +1356,7 @@ pub fn display_placement_rule(
     } else {
         match rule {
             PlacementRule::AminoAcid(aa, pos) => format!("{}@{pos}", aa.iter().join("")),
-            PlacementRule::Terminal(pos) => pos.to_string(),
-            PlacementRule::Anywhere => "Anywhere".to_string(),
+            PlacementRule::Position(pos) => pos.to_string(),
             PlacementRule::PsiModification(index, pos) => {
                 format!(
                     "{}@{pos}",
@@ -1397,14 +1395,9 @@ pub fn link_modification(modification: SimpleModification) -> String {
                 String::new()
             };
             format!(
-                "<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{2}{1}\";document.getElementById(\"search-modification-button\").click()'{preview}>{0}:{2}{1}</a>",
+                "<a onclick='document.getElementById(\"search-modification\").value=\"{0}:{1}\";document.getElementById(\"search-modification-button\").click()'{preview}>{0}:{1}</a>",
                 description.ontology.name(),
                 description.id(),
-                if description.ontology == Ontology::Resid {
-                    "AA"
-                } else {
-                    ""
-                }
             )
         }
     } else {
