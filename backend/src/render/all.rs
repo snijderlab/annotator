@@ -10,7 +10,7 @@ use mzannotate::{
 };
 use mzcore::{
     chemistry::NeutralLoss,
-    glycan::{GlycanDirection, GlycanRoot, GlycanSelection, GlycanStructure},
+    glycan::{GlycanDirection, GlycanRenderSettings, GlycanRoot, GlycanSelection, GlycanStructure},
     ontology::{Ontologies, Ontology},
     prelude::*,
     sequence::{PlacementRule, SimpleModification, SimpleModificationInner},
@@ -1405,6 +1405,18 @@ pub fn link_modification(modification: SimpleModification) -> String {
     }
 }
 
+const BIG_GLYCAN: GlycanRenderSettings = GlycanRenderSettings::const_default()
+    .column_size(40.0)
+    .sugar_size(20.0)
+    .stroke_size(2.0)
+    .modification_details(mzcore::glycan::GlycanModificationDetails::Full);
+
+const SMALL_GLYCAN: GlycanRenderSettings = GlycanRenderSettings::const_default()
+    .column_size(20.0)
+    .sugar_size(10.0)
+    .stroke_size(1.0)
+    .modification_details(mzcore::glycan::GlycanModificationDetails::OnlyContent);
+
 pub fn render_full_glycan(
     glycan: &GlycanStructure,
     big: bool,
@@ -1440,17 +1452,19 @@ pub fn render_full_glycan(
                     },
                 ))
             },
-            if big { 40.0 } else { 20.0 },
-            if big { 20.0 } else { 10.0 },
-            if big { 2.0 } else { 1.0 },
             if on_peptide {
                 GlycanDirection::TopDown
             } else {
                 GlycanDirection::LeftToRight
             },
             GlycanSelection::FULL,
-            theme.fg(),
-            theme.bg(),
+            &if big {
+                BIG_GLYCAN.clone()
+            } else {
+                SMALL_GLYCAN.clone()
+            }
+            .foreground(theme.fg())
+            .background(theme.bg()),
             footnotes,
         )
         .map_or("Render error".to_string(), |r| {
@@ -1493,13 +1507,12 @@ pub fn render_glycan_fragment(
                     String::new()
                 },
             )),
-            20.0,
-            10.0,
-            1.0,
             GlycanDirection::TopDown,
             selection,
-            theme.fg(),
-            theme.bg(),
+            &SMALL_GLYCAN
+                .clone()
+                .foreground(theme.fg())
+                .background(theme.bg()),
             footnotes,
         )
         .map_or("Render error".to_string(), |r| {
