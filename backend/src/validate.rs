@@ -120,7 +120,7 @@ pub fn parse_monosaccharide_neutral_loss(text: &str) -> Result<(MonoSaccharide, 
             Ok(sugar)
         } else {
             Err(BoxedError::new(BasicKind::Error,"Could not parse monosaccharide", format!("The monosaccharide was interpreted to mean '{sugar}' but this left text unaccounted for"), Context::line_range(None, text, amount_parsed..monosaccharide.len())))
-        }
+        }).or_else(|_| MonoSaccharide::from_pro_forma::<false>(&Context::default(), monosaccharide, 0..monosaccharide.len()).map(|(sug, _)| sug).map_err(|errs| errs.first().unwrap().convert::<BasicKind, BoxedError<'_, BasicKind>>(|_| BasicKind::Error))
     )?, specific, found_losses))
 }
 

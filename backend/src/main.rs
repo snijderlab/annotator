@@ -13,6 +13,7 @@ use context_error::{BasicKind, BoxedError, CreateError, FullErrorContent};
 use itertools::Itertools;
 use mzannotate::{mzspeclib::AnalyteTarget, prelude::*};
 use mzcore::{
+    chemistry::OutputMolecularFormula,
     ontology::Ontologies,
     prelude::*,
     system::{e, isize::Charge},
@@ -369,8 +370,8 @@ async fn annotate_spectrum<'a>(
 }
 
 fn render_annotated_spectrum(
-    annotated: &AnnotatedSpectrum,
-    fragments: &[Fragment],
+    annotated: &AnnotatedSpectrum<OutputMolecularFormula>,
+    fragments: &[Fragment<OutputMolecularFormula>],
     model: &FragmentationModel,
     parameters: &MatchingParameters,
     mass_mode: MassMode,

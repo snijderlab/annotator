@@ -4,7 +4,9 @@ use std::{
 };
 
 use mzannotate::prelude::*;
-use mzcore::{ontology::Ontologies, prelude::*, sequence::Linear};
+use mzcore::{
+    chemistry::OutputMolecularFormula, ontology::Ontologies, prelude::*, sequence::Linear,
+};
 use mzpeaks::CentroidPeak;
 use ordered_float::OrderedFloat;
 
@@ -13,7 +15,7 @@ use crate::{psm_file::PSMFile, raw_file::RawFile};
 pub struct State {
     pub spectra: Vec<RawFile>,
     pub psm_files: RefCell<Vec<PSMFile>>,
-    pub annotated_spectrum: Option<(AnnotatedSpectrum, Vec<CentroidPeak>)>,
+    pub annotated_spectrum: Option<(AnnotatedSpectrum<OutputMolecularFormula>, Vec<CentroidPeak>)>,
     pub ontologies: Ontologies,
     pub custom_modifications_error: Option<(String, Vec<String>)>,
     pub custom_models: Vec<(String, FragmentationModel)>,

@@ -2,6 +2,7 @@ use std::ops::Not;
 
 use itertools::Itertools;
 use mzannotate::{annotation::{Score, model::BuiltInFragmentationModel}, prelude::MatchingParameters};
+use mzcore::chemistry::AmbiguousMolecule;
 use mzident::{
     CVTerm, MSFraggerOpenModification, PSM, PSMData, PSMMetaData, ProteinMetaData, SpectrumIds
 };

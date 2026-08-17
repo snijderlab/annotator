@@ -1,5 +1,6 @@
 use itertools::Itertools;
 use mzannotate::fragment::Fragment;
+use mzcore::chemistry::OutputMolecularFormula;
 
 /// Get all applicable classes for a set of annotations.
 /// These are:
@@ -10,7 +11,7 @@ use mzannotate::fragment::Fragment;
 ///   * The unique peptide index (eg 'pu1', 'pu12')
 ///   * Other auxiliary classes ('oxonium', 'neutral-loss', & 'diagnostic')
 pub fn get_classes(
-    annotations: &[Fragment],
+    annotations: &[Fragment<OutputMolecularFormula>],
     unique_peptidoform_lookup: &[(usize, usize)],
 ) -> String {
     let mut output = Vec::new();

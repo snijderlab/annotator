@@ -6,17 +6,17 @@ use crate::{
 };
 use itertools::Itertools;
 use mzannotate::{fragment::FragmentType, prelude::*, spectrum::AnnotatedSpectrum};
-use mzcore::prelude::*;
+use mzcore::{chemistry::OutputMolecularFormula, prelude::*};
 use mzident::PSMMetaData;
 
 pub fn spectrum_table(
-    spectrum: &AnnotatedSpectrum,
-    fragments: &[Fragment],
+    spectrum: &AnnotatedSpectrum<OutputMolecularFormula>,
+    fragments: &[Fragment<OutputMolecularFormula>],
     multiple_peptidoform_ions: bool,
     multiple_peptidoforms: bool,
 ) -> String {
     fn generate_text(
-        annotation: &Fragment,
+        annotation: &Fragment<OutputMolecularFormula>,
         compound_peptidoform: &PeptidoformIonSet,
     ) -> (String, String, String) {
         let format_label = |label: (Option<String>, std::borrow::Cow<'_, str>)| {

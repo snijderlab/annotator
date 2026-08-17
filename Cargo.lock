@@ -786,8 +786,9 @@ checksum = "7c74b8349d32d297c9134b8c88677813a227df8f779daa29bfc29c183fe3dca6"
 
 [[package]]
 name = "context_error"
-version = "0.2.0"
-source = "git+https://github.com/douweschulte/context_error#4809ba2b8cb479c2068999d623e216d02d6de2d5"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9bc4a1eacadc98da5e0c4f02884efd5c5ad4a267e5e6175b3a53a9918ecb458"
 dependencies = [
  "serde",
 ]
@@ -2537,7 +2538,7 @@ dependencies = [
 
 [[package]]
 name = "imgt"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bincode",
  "context_error",
@@ -3111,7 +3112,7 @@ dependencies = [
 
 [[package]]
 name = "mzalign"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "imgt",
  "itertools",
@@ -3124,7 +3125,7 @@ dependencies = [
 
 [[package]]
 name = "mzannotate"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "context_error",
  "indexmap 2.13.0",
@@ -3142,7 +3143,7 @@ dependencies = [
 
 [[package]]
 name = "mzcore"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "bincode",
  "context_error",
@@ -3162,7 +3163,7 @@ dependencies = [
 
 [[package]]
 name = "mzcv"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bincode",
  "chrono",
@@ -3216,7 +3217,7 @@ dependencies = [
 
 [[package]]
 name = "mzident"
-version = "0.1.0"
+version = "0.2.1"
 dependencies = [
  "context_error",
  "flate2",

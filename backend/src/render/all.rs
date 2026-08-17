@@ -9,7 +9,7 @@ use mzannotate::{
     spectrum::{AnnotatedPeak, AnnotatedSpectrum},
 };
 use mzcore::{
-    chemistry::NeutralLoss,
+    chemistry::{NeutralLoss, OutputMolecularFormula},
     glycan::{GlycanDirection, GlycanRenderSettings, GlycanRoot, GlycanSelection, GlycanStructure},
     ontology::{Ontologies, Ontology},
     prelude::*,
@@ -30,8 +30,8 @@ use ordered_float::OrderedFloat;
 use super::{classes::get_classes, label::get_label};
 
 pub fn annotated_spectrum(
-    spectrum: &AnnotatedSpectrum,
-    fragments: &[Fragment],
+    spectrum: &AnnotatedSpectrum<OutputMolecularFormula>,
+    fragments: &[Fragment<OutputMolecularFormula>],
     model: &FragmentationModel,
     parameters: &MatchingParameters,
     mass_mode: MassMode,
@@ -138,7 +138,7 @@ pub fn annotated_spectrum(
 type Boundaries = (f64, f64, f64, f64, f64, f64, f64, f64, f32, f32);
 type SpectrumGraphData = Vec<Point>;
 struct Point {
-    annotation: Vec<Fragment>,
+    annotation: Vec<Fragment<OutputMolecularFormula>>,
     assigned: Option<RelAndAbs<f64>>,
     unassigned: UnassignedData,
     mz: MassOverCharge,
@@ -147,12 +147,12 @@ struct Point {
 }
 
 struct UnassignedData {
-    a: Option<RelAndAbs<(f64, Fragment)>>,
-    b: Option<RelAndAbs<(f64, Fragment)>>,
-    c: Option<RelAndAbs<(f64, Fragment)>>,
-    x: Option<RelAndAbs<(f64, Fragment)>>,
-    y: Option<RelAndAbs<(f64, Fragment)>>,
-    z: Option<RelAndAbs<(f64, Fragment)>>,
+    a: Option<RelAndAbs<(f64, Fragment<OutputMolecularFormula>)>>,
+    b: Option<RelAndAbs<(f64, Fragment<OutputMolecularFormula>)>>,
+    c: Option<RelAndAbs<(f64, Fragment<OutputMolecularFormula>)>>,
+    x: Option<RelAndAbs<(f64, Fragment<OutputMolecularFormula>)>>,
+    y: Option<RelAndAbs<(f64, Fragment<OutputMolecularFormula>)>>,
+    z: Option<RelAndAbs<(f64, Fragment<OutputMolecularFormula>)>>,
 }
 
 #[derive(Default)]
@@ -180,11 +180,11 @@ impl<A, B: Clone> RelAndAbs<(A, &B)> {
     }
 }
 
-impl<'a> RelAndAbs<(f64, &'a Fragment)> {
+impl<'a> RelAndAbs<(f64, &'a Fragment<OutputMolecularFormula>)> {
     fn fold(
         &mut self,
-        fragment: &'a Fragment,
-        point: &AnnotatedPeak<Fragment>,
+        fragment: &'a Fragment<OutputMolecularFormula>,
+        point: &AnnotatedPeak<Fragment<OutputMolecularFormula>>,
         mass_mode: MassMode,
     ) {
         self.rel = Self::min_by(
@@ -196,7 +196,10 @@ impl<'a> RelAndAbs<(f64, &'a Fragment)> {
                     .unwrap_or(f64::INFINITY),
                 fragment,
             ),
-            &|a: (f64, &Fragment), b: (f64, &Fragment)| b.0.abs().total_cmp(&a.0.abs()),
+            &|a: (f64, &Fragment<OutputMolecularFormula>),
+              b: (f64, &Fragment<OutputMolecularFormula>)| {
+                b.0.abs().total_cmp(&a.0.abs())
+            },
         );
         self.abs = Self::min_by(
             self.abs,
@@ -207,12 +210,18 @@ impl<'a> RelAndAbs<(f64, &'a Fragment)> {
                     .unwrap_or(f64::INFINITY),
                 fragment,
             ),
-            &|a: (f64, &Fragment), b: (f64, &Fragment)| b.0.abs().total_cmp(&a.0.abs()),
+            &|a: (f64, &Fragment<OutputMolecularFormula>),
+              b: (f64, &Fragment<OutputMolecularFormula>)| {
+                b.0.abs().total_cmp(&a.0.abs())
+            },
         )
     }
 }
 
-fn get_data(data: &Option<RelAndAbs<(f64, Fragment)>>, ion: char) -> [(String, String); 4] {
+fn get_data(
+    data: &Option<RelAndAbs<(f64, Fragment<OutputMolecularFormula>)>>,
+    ion: char,
+) -> [(String, String); 4] {
     [
         (
             format!("u-{ion}-rel-value"),
@@ -238,8 +247,8 @@ fn get_data(data: &Option<RelAndAbs<(f64, Fragment)>>, ion: char) -> [(String, S
 }
 
 fn get_unassigned_data(
-    point: &AnnotatedPeak<Fragment>,
-    fragments: &[Fragment],
+    point: &AnnotatedPeak<Fragment<OutputMolecularFormula>>,
+    fragments: &[Fragment<OutputMolecularFormula>],
     model: &FragmentationModel,
     mass_mode: MassMode,
 ) -> UnassignedData {
@@ -289,8 +298,8 @@ fn get_unassigned_data(
 }
 
 fn spectrum_graph_boundaries(
-    spectrum: &AnnotatedSpectrum,
-    fragments: &[Fragment],
+    spectrum: &AnnotatedSpectrum<OutputMolecularFormula>,
+    fragments: &[Fragment<OutputMolecularFormula>],
     model: &FragmentationModel,
     mass_mode: MassMode,
 ) -> (SpectrumGraphData, Boundaries) {
@@ -449,7 +458,7 @@ pub struct Limits {
 }
 
 pub fn get_overview(
-    spectrum: &AnnotatedSpectrum,
+    spectrum: &AnnotatedSpectrum<OutputMolecularFormula>,
     background: &[CentroidPeak],
 ) -> (Limits, PositionCoverage) {
     let mut output: PositionCoverage = spectrum
@@ -501,8 +510,8 @@ pub fn get_overview(
 
 fn render_spectrum(
     output: &mut String,
-    spectrum: &AnnotatedSpectrum,
-    fragments: &[Fragment],
+    spectrum: &AnnotatedSpectrum<OutputMolecularFormula>,
+    fragments: &[Fragment<OutputMolecularFormula>],
     boundaries: &Boundaries,
     limits: &Limits,
     selection: &str,
@@ -670,8 +679,8 @@ fn render_spectrum(
 
 fn general_stats(
     output: &mut String,
-    spectrum: &AnnotatedSpectrum,
-    fragments: &[Fragment],
+    spectrum: &AnnotatedSpectrum<OutputMolecularFormula>,
+    fragments: &[Fragment<OutputMolecularFormula>],
     multiple_peptidoform_ions: bool,
     multiple_peptidoforms: bool,
     parameters: &MatchingParameters,

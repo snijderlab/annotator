@@ -8,7 +8,10 @@ use std::{
 use context_error::{BasicKind, BoxedError, Context, CreateError, FullErrorContent};
 use itertools::Itertools;
 use mzannotate::annotation::model::BuiltInFragmentationModel;
-use mzcore::system::{Mass, OrderedTime, dalton};
+use mzcore::{
+    chemistry::OutputMolecularFormula,
+    system::{Mass, OrderedTime, dalton},
+};
 use mzdata::{
     Param,
     io::{
@@ -931,7 +934,9 @@ pub fn save_spectrum(
         Some("mgf") => {
             let mut writer: mzdata::io::mgf::MGFWriterType<
                 std::fs::File,
-                mzannotate::prelude::AnnotatedPeak<mzannotate::prelude::Fragment>,
+                mzannotate::prelude::AnnotatedPeak<
+                    mzannotate::prelude::Fragment<OutputMolecularFormula>,
+                >,
                 mzpeaks::DeconvolutedPeak,
                 mzdata::io::mgf::MZDataMGFStyle,
             > = mzdata::io::mgf::MGFWriterType::new(file);
@@ -948,7 +953,9 @@ pub fn save_spectrum(
         Some("mzml") => {
             let mut writer: mzdata::io::mzml::MzMLWriterType<
                 std::fs::File,
-                mzannotate::prelude::AnnotatedPeak<mzannotate::prelude::Fragment>,
+                mzannotate::prelude::AnnotatedPeak<
+                    mzannotate::prelude::Fragment<OutputMolecularFormula>,
+                >,
                 mzpeaks::DeconvolutedPeak,
             > = mzdata::io::mzml::MzMLWriterType::new(file);
             writer.write_spectrum(&spectrum).map_err(|e| {

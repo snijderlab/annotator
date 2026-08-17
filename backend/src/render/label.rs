@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use mzannotate::{fragment::FragmentType, prelude::*};
 use mzcore::{
-    chemistry::AmbiguousLabel,
+    chemistry::{AmbiguousLabel, OutputMolecularFormula},
     prelude::*,
     sequence::{GnoComposition, Modification, SimpleModificationInner},
 };
@@ -13,7 +13,7 @@ use super::render_glycan_fragment;
 
 pub fn get_label(
     compound_peptidoform: &PeptidoformIonSet,
-    annotations: &[Fragment],
+    annotations: &[Fragment<OutputMolecularFormula>],
     multiple_peptidoform_ions: bool,
     multiple_peptidoforms: bool,
     multiple_glycans: bool,
@@ -271,7 +271,7 @@ pub fn get_label(
 
 fn get_glycan_figure(
     compound_peptidoform: &PeptidoformIonSet,
-    annotation: &Fragment,
+    annotation: &Fragment<OutputMolecularFormula>,
     theme: Theme,
     glycan_footnotes: &mut Vec<String>,
 ) -> Option<String> {
@@ -332,7 +332,7 @@ fn get_glycan_figure(
 }
 
 fn get_single_label(
-    annotation: &Fragment,
+    annotation: &Fragment<OutputMolecularFormula>,
     multiple_peptidoform_ions: bool,
     multiple_peptidoforms: bool,
     multiple_glycans: bool,
@@ -424,7 +424,7 @@ fn get_single_label(
     )
 }
 
-fn get_xl(annotation: &Fragment) -> String {
+fn get_xl(annotation: &Fragment<OutputMolecularFormula>) -> String {
     let bound = annotation
         .formula
         .iter()
@@ -468,7 +468,7 @@ fn get_xl(annotation: &Fragment) -> String {
 }
 
 fn get_ambiguous_amino_acids(
-    annotation: &Fragment,
+    annotation: &Fragment<OutputMolecularFormula>,
     multiple_peptidoforms: bool,
     multiple_peptidoform_ions: bool,
 ) -> String {
@@ -512,7 +512,7 @@ fn get_ambiguous_amino_acids(
 }
 
 fn get_modifications(
-    annotation: &Fragment,
+    annotation: &Fragment<OutputMolecularFormula>,
     multiple_peptidoforms: bool,
     multiple_peptidoform_ions: bool,
     compound_peptidoform: &PeptidoformIonSet,
@@ -581,7 +581,7 @@ fn get_modifications(
         .join("")
 }
 
-fn get_isotopes(annotation: &Fragment) -> String {
+fn get_isotopes(annotation: &Fragment<OutputMolecularFormula>) -> String {
     annotation
         .isotope
         .iter()
@@ -589,7 +589,7 @@ fn get_isotopes(annotation: &Fragment) -> String {
         .join("")
 }
 
-fn get_charge_carriers(annotation: &Fragment) -> String {
+fn get_charge_carriers(annotation: &Fragment<OutputMolecularFormula>) -> String {
     let str = annotation
         .formula
         .iter()
@@ -609,7 +609,7 @@ fn get_charge_carriers(annotation: &Fragment) -> String {
     }
 }
 
-fn get_glycan_peptide_fragments(annotation: &Fragment) -> String {
+fn get_glycan_peptide_fragments(annotation: &Fragment<OutputMolecularFormula>) -> String {
     annotation
         .formula
         .iter()
