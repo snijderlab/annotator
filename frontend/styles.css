@@ -2542,6 +2542,8 @@ input:not(:checked)+.collapsible {
     #settings,
     #custom-models-collapsible,
     #custom-modifications,
+    #collapsible-ontologies,
+    .grow,
     .error,
     .usi,
     .theme,
