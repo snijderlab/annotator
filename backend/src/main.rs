@@ -211,9 +211,9 @@ async fn details_formula(text: &str) -> Result<String, String> {
                 .enumerate()
                 .skip(start)
                 .take(middle)
-                .map(|(offset, i)| format!("<span class='{} {}' style='--intensity:{}' title='mono + {} Da {:.4}% of total intensity {:.4}% of highest intensity'></span>", 
-                    if offset == 0 {"mono"} else {""}, 
-                    if offset == max {"most-abundant"} else {""}, 
+                .map(|(offset, i)| format!("<span class='{} {}' style='--intensity:{}' title='mono + {} Da {:.4}% of total intensity {:.4}% of highest intensity'></span>",
+                    if offset == 0 {"mono"} else {""},
+                    if offset == max {"most-abundant"} else {""},
                     i / *max_occurrence,
                     offset,
                     i * 100.0,
@@ -339,15 +339,12 @@ async fn annotate_spectrum<'a>(
                 .collect::<Vec<_>>()
         })?;
 
-    let use_charge = Charge::new::<e>(
-        charge
+    let use_charge = charge
             .or_else(|| {
                 spectrum
                     .precursor()
                     .and_then(|p| p.ions.first().and_then(|i| i.charge.map(|c| c as isize)))
-            })
-            .unwrap_or(1),
-    );
+            }).filter(|c| *c != 0).map(|c| Charge::new::<e>(c));
     let fragments = peptide.generate_theoretical_fragments(use_charge, model);
     let annotated = spectrum.annotate(peptide, &fragments, &parameters, mass_mode);
     let rendered = render_annotated_spectrum(

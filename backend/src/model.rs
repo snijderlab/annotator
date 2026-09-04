@@ -719,6 +719,5 @@ pub fn parameters(
     parameters.mz_range = MassOverCharge::new::<thomson>(min)..=MassOverCharge::new::<thomson>(max);
     parameters.match_isotopes = isotopes;
     parameters.isotope_filter = isotope_filter;
-    dbg!(&parameters);
     Ok(parameters)
 }
