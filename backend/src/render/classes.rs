@@ -4,12 +4,12 @@ use mzcore::chemistry::OutputMolecularFormula;
 
 /// Get all applicable classes for a set of annotations.
 /// These are:
-///   * The ion type(s) (eg 'precursor', 'y') (and 'multi' if there are multiple)
-///   * The peptidoform(s) (eg 'p0', 'p1') (and 'mp' if there are multiple peptides)
-///   * The peptide(s) (eg 'p0-2', 'p2-1') (and 'mpp' if there are multiple peptides)
-///   * The position(s) (eg 'p0-2-3', 'p2-1-123')
-///   * The unique peptide index (eg 'pu1', 'pu12')
-///   * Other auxiliary classes ('oxonium', 'neutral-loss', & 'diagnostic')
+///   * The ion type(s) (eg 'precursor', 'y') (and 'multi' if there are multiple).
+///   * The peptidoform(s) (eg 'p0', 'p1') (and 'mp' if there are multiple peptides).
+///   * The peptide(s) (eg 'p0-2', 'p2-1') (and 'mpp' if there are multiple peptides).
+///   * The position(s) (eg 'p0-2-3', 'p2-1-123').
+///   * The unique peptide index (eg 'pu1', 'pu12').
+///   * Other auxiliary classes ('oxonium', 'neutral-loss', & 'diagnostic').
 pub fn get_classes(
     annotations: &[Fragment<OutputMolecularFormula>],
     unique_peptidoform_lookup: &[(usize, usize)],
@@ -68,17 +68,15 @@ pub fn get_classes(
             }
         } else {
             first_peptidoform_index = Some(annotation.peptidoform_index);
-            output.push(format!(
-                "pu{}",
-                unique_peptidoform_lookup
-                    .iter()
-                    .position(|id| (Some(id.0), Some(id.1))
-                        == (
-                            annotation.peptidoform_ion_index,
-                            annotation.peptidoform_index
-                        ))
-                    .unwrap()
-            ))
+            if let Some(pu) = unique_peptidoform_lookup.iter().position(|id| {
+                (Some(id.0), Some(id.1))
+                    == (
+                        annotation.peptidoform_ion_index,
+                        annotation.peptidoform_index,
+                    )
+            }) {
+                output.push(format!("pu{pu}"))
+            }
         }
         if let Some(pos) = annotation.ion.position() {
             output.push(format!(

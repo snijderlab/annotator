@@ -408,9 +408,7 @@ fn render_linear_peptidoform(
             for (ion, intensity) in ions {
                 if !matches!(
                     ion,
-                    FragmentType::Immonium(_, _)
-                        | FragmentType::PrecursorSideChainLoss(_, _)
-                        | FragmentType::Diagnostic(_)
+                    FragmentType::Immonium(_, _) | FragmentType::Diagnostic(_)
                 ) {
                     write!(
                         output,
