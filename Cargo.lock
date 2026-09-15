@@ -2542,6 +2542,7 @@ version = "0.2.0"
 dependencies = [
  "bincode",
  "context_error",
+ "flate2",
  "itertools",
  "mzcore",
  "mzcv",

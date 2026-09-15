@@ -201,13 +201,11 @@ pub fn spectrum_table(
                             .to_optional_string(),
                         annotation
                             .mz(MassMode::Monoisotopic)
-                            .map_or("-".to_string(), |f| {
-                                format!("{:.5}", (f - peak.mz).abs().value)
-                            }),
+                            .map_or("-".to_string(), |f| format!("{:.5}", (f - peak.mz).value)),
                         annotation
                             .mz(MassMode::Monoisotopic)
                             .map_or("-".to_string(), |f| {
-                                format!("{:.2}", f.ppm(peak.mz).value * 1e6)
+                                format!("{:.2}", f.signed_ppm(peak.mz).value * 1e6)
                             }),
                         format!("{:+}", annotation.charge.value),
                         series_number,
