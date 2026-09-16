@@ -6,7 +6,7 @@ const { listen } = window.__TAURI__.event;
 
 const { open, save } = window.__TAURI__.dialog;
 
-const RAW_EXTENSIONS = ["xy", "mgf", "mzml", "imzml", "mzmlb", "raw"];
+const RAW_EXTENSIONS = ["xy", "mgf", "mzml", "imzml", "mzmlb", "raw", "dta"];
 const RAW_WRITE_EXTENSIONS = ["mgf", "mzml", "mzspeclib.txt"];
 const PSM_EXTENSIONS = ["csv", "csv.gz", "tsv", "tsv.gz", "txt", "txt.gz", "psmtsv", "psmtsv.gz", "fasta", "fasta.gz", "fas", "fas.gz", "fa", "fa.gz", "faa", "faa.gz", "mpfa", "mpfa.gz", "mztab", "mztab.gz", "deepnovo_denovo", "deepnovo_denovo.gz", "ssl", "ssl.gz"];
 
@@ -115,7 +115,7 @@ async function dialog_select_identified_peptides_file(e) {
   })
 };
 
-/** 
+/**
  * Save the current open spectrum
  * @param e: Element
 */
@@ -1343,9 +1343,9 @@ async function refresh() {
   })
 }
 
-/** 
+/**
  * @param {Event} e
- * @param {Element} listInput  
+ * @param {Element} listInput
  * */
 function editListInput(e, listInput) {
   let data = JSON.parse(e.target.dataset.value);
@@ -1625,8 +1625,8 @@ function moveCursorToEnd(contentEle) {
   selection.addRange(range);
 };
 
-/** 
- * @param {String} id - The ID of the `.separated-input .values` element. 
+/**
+ * @param {String} id - The ID of the `.separated-input .values` element.
  * @returns {String[]} - List of all elements, each of those as a string.
 */
 function loadSeparatedInput(id) {

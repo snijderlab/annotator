@@ -22,8 +22,9 @@ use mzdata::{
     params::{CURIE, ParamDescribed, Unit, Value, ValueRef},
     prelude::{IonMobilityMeasure, IonProperties, PrecursorSelection, SpectrumLike},
     spectrum::{
-        ArrayType, BinaryArrayMap, BinaryDataArrayType, DataArray, MultiLayerSpectrum, RawSpectrum,
-        SignalContinuity, SpectrumDescription, SpectrumSummary, bindata::BinaryCompressionType,
+        ArrayType, BinaryArrayMap, BinaryDataArrayType, DataArray, MultiLayerSpectrum, Precursor,
+        RawSpectrum, SelectedIon, SignalContinuity, SpectrumDescription, SpectrumSummary,
+        bindata::BinaryCompressionType,
     },
 };
 use mzpeaks::{CentroidPeak, PeakCollection, peak_set::PeakSetVec};
@@ -233,6 +234,23 @@ pub fn annotator_open_raw_file(
         let details = file.details();
         spectra.push(file);
         Ok(details)
+    } else if path
+        .extension()
+        .map(|ex| {
+            ex.eq_ignore_ascii_case("gz")
+                .then_some(path)
+                .and_then(|p| p.file_stem())
+                .and_then(|p| Path::new(p).extension())
+                .unwrap_or(ex)
+        })
+        .is_some_and(|e| e.to_string_lossy().eq_ignore_ascii_case("dta"))
+    {
+        let spectrum = load_dta(path)?;
+        let file = RawFile::new_single(spectrum.into(), path.to_string_lossy().to_string());
+        let spectra = &mut state.spectra;
+        let details = file.details();
+        spectra.push(file);
+        Ok(details)
     } else {
         match mzdata::io::MZReaderType::open_path(path) {
             Ok(mut file) => {
@@ -265,6 +283,7 @@ pub fn annotator_open_raw_file(
     }
 }
 
+/// Bruker .xy software contains a list of mz intensity pairs of a profile mode spectrum
 fn load_xy(path: &std::path::Path) -> Result<RawSpectrum, String> {
     let contents = std::io::BufReader::new(std::fs::File::open(path).map_err(|e| e.to_string())?);
     let mut intensity_array =
@@ -295,6 +314,61 @@ fn load_xy(path: &std::path::Path) -> Result<RawSpectrum, String> {
     arrays.add(intensity_array);
     let description = SpectrumDescription {
         signal_continuity: SignalContinuity::Profile,
+        ..Default::default()
+    };
+
+    Ok(RawSpectrum::new(description, arrays))
+}
+
+/// .dta files contain a list of mz intensity pairs of a centroid mode spectrum, with one header line containing the precusor mass and charge
+fn load_dta(path: &std::path::Path) -> Result<RawSpectrum, String> {
+    let contents = std::io::BufReader::new(std::fs::File::open(path).map_err(|e| e.to_string())?);
+    let mut intensity_array =
+        DataArray::from_name_and_type(&ArrayType::IntensityArray, BinaryDataArrayType::Float32);
+    let mut mz_array =
+        DataArray::from_name_and_type(&ArrayType::MZArray, BinaryDataArrayType::Float64);
+    let mut precursor = 0.0;
+    let mut charge = 0;
+    for (line_index, line) in contents.lines().enumerate() {
+        let line = line.map_err(|e| e.to_string())?;
+        let trimmed = line.trim();
+        match trimmed.split_once(' ').or(trimmed.split_once('\t')) {
+            None => return Err(format!("Invalid line ({}) '{line}'", line_index + 1)),
+            Some((first, second)) => {
+                if line_index == 0 {
+                    precursor = first.trim().parse::<f64>().map_err(|e| {
+                        format!("Invalid precursor ({}) '{line}': {e}", line_index + 1)
+                    })?;
+                    charge = second.trim().parse::<i32>().map_err(|e| {
+                        format!("Invalid charge ({}) '{line}': {e}", line_index + 1)
+                    })?;
+                } else {
+                    let mz = first.trim().parse::<f64>().map_err(|e| {
+                        format!("Invalid number ({}) '{line}': {e}", line_index + 1)
+                    })?;
+                    let intensity = second.trim().parse::<f32>().map_err(|e| {
+                        format!("Invalid number ({}) '{line}': {e}", line_index + 1)
+                    })?;
+                    mz_array.push(mz).unwrap();
+                    intensity_array.push(intensity).unwrap();
+                }
+            }
+        }
+    }
+    let mut arrays = BinaryArrayMap::new();
+    arrays.add(mz_array);
+    arrays.add(intensity_array);
+    let description = SpectrumDescription {
+        signal_continuity: SignalContinuity::Centroid,
+        precursor: vec![Precursor {
+            ions: vec![SelectedIon {
+                mz: precursor,
+                charge: Some(charge),
+                intensity: 0.0,
+                params: None,
+            }],
+            ..Default::default()
+        }],
         ..Default::default()
     };
 
