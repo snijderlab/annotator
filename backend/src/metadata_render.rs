@@ -71,8 +71,7 @@ impl<C, A> RenderToHtml for PSM<C, A> {
                             .to_optional_string(),
                         self.charge()
                             .map_or("-".to_string(), |c| c.value.to_string()),
-                        self.charge()
-                            .and_then(|c| formula.map(|f| (f, c)))
+                        formula.zip(self.charge())
                             .map(|(f, c)| format!(
                                 "{:.3}&nbsp;Th",
                                 f.monoisotopic_mass().value / c.value as f64
@@ -118,6 +117,9 @@ impl<C, A> RenderToHtml for PSM<C, A> {
                             self.unique().to_optional_string(),
                         )))
                     .clone(),
+                HtmlTag::p.new().maybe_content(dbg!(self.other_scores()).map(|a| {                
+                    a.iter().map(|(v, t)| format!("<span title='{}:{}'>{1}</span>:&nbsp;{v}", t.accession, t.name)).join(", ")
+                })).clone(),
                 HtmlTag::p.new().maybe_content(self.annotated_spectrum().map(|a| {                
                     let (fragments, peaks, intensity) = match a.scores(&[], &MatchingParameters::default(), mzcore::prelude::MassMode::Monoisotopic).0.score {
                         Score::Position { fragments, peaks, intensity, .. } | Score::UniqueFormulas { fragments, peaks, intensity, .. } => (fragments, peaks, intensity)
@@ -153,8 +155,7 @@ impl RenderToTable for PSMData {
                 ("Fraction", data.fraction.to_optional_string()),
                 (
                     "Feature",
-                    data.feature_tryp_cid
-                        .and_then(|f_cid| data.feature_tryp_ead.map(|f_ead| (f_cid, f_ead)))
+                    data.feature_tryp_cid.zip(data.feature_tryp_ead)
                         .map_or(
                             data.feature.as_ref().to_optional_string(),
                             |(f_cid, f_ead)| {
@@ -199,8 +200,7 @@ impl RenderToTable for PSMData {
                 ),
                 (
                     "RT range",
-                    data.rt_begin
-                        .and_then(|b| data.rt_end.map(|e| (b, e)))
+                    data.rt_begin.zip(data.rt_end)
                         .map(|(b, e)| format!("begin: {:.3} min end: {:.3} min", b.value, e.value))
                         .to_optional_string(),
                 ),
@@ -231,8 +231,7 @@ impl RenderToTable for PSMData {
                 ),
                 (
                     "Protein",
-                    data.protein_group
-                        .and_then(|g| data.protein_id.map(|i| (g, i)))
+                    data.protein_group.zip(data.protein_id)
                         .map(|(g, i)| format!("group: {g}, ID: {i}"))
                         .to_optional_string(),
                 ),
@@ -601,15 +600,10 @@ impl RenderToTable for PSMData {
             PSMData::MzTab(data) => vec![
                 (
                     "Search engine",
-                    data.search_engine
+                    data.search_engines
                         .iter()
-                        .map(|(engine, score, score_type)| {
-                            format!(
-                                "{} score: {} ({})",
-                                engine.to_html(theme),
-                                score.to_optional_string(),
-                                score_type.to_html(theme),
-                            )
+                        .map(|engine| {
+                            engine.to_html(theme)
                         })
                         .join("|"),
                 ),
@@ -904,9 +898,9 @@ impl RenderToHtml for CVTerm {
     fn to_html(&self, _theme: Theme) -> HtmlElement {
         HtmlTag::span
             .new()
-            .content(self.term.accession.to_string())
+            .content(self.term.name.to_string())
             .title(format!(
-                "[{}, {}, {}, {}]",
+                "[{}:{}|{}] {}",
                 self.term.accession.cv, self.term.accession.accession, self.term.name, self.value
             ))
             .clone()
