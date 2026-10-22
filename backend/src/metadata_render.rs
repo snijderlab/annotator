@@ -1,10 +1,13 @@
 use std::ops::Not;
 
 use itertools::Itertools;
-use mzannotate::{annotation::{Score, model::BuiltInFragmentationModel}, prelude::MatchingParameters};
+use mzannotate::{
+    annotation::{Score, model::BuiltInFragmentationModel},
+    prelude::MatchingParameters,
+};
 use mzcore::chemistry::AmbiguousMolecule;
 use mzident::{
-    CVTerm, MSFraggerOpenModification, PSM, PSMData, PSMMetaData, ProteinMetaData, SpectrumIds
+    CVTerm, MSFraggerOpenModification, PSM, PSMData, PSMMetaData, ProteinMetaData, SpectrumIds,
 };
 
 use crate::{
@@ -52,9 +55,7 @@ impl<C, A> RenderToHtml for PSM<C, A> {
             HtmlContent::Html(HtmlTag::p.new().content("No peptide").clone())
         };
 
-        let formula = self
-            .peptidoform_ion_set()
-            .map(|p| p.formulas()[0].clone());
+        let formula = self.peptidoform_ion_set().map(|p| p.formulas()[0].clone());
         HtmlTag::div.new()
             .children([
                 HtmlTag::p.new()
@@ -118,10 +119,21 @@ impl<C, A> RenderToHtml for PSM<C, A> {
                             self.unique().to_optional_string(),
                         )))
                     .clone(),
-                HtmlTag::p.new().maybe_content(self.annotated_spectrum().map(|a| {                
+                HtmlTag::p.new().maybe_content(self.other_scores().map(|scores| {
+                    format!("Other scores: {}",  scores
+                        .iter()
+                        .map(|(score, score_type)| {
+                            format!(
+                                "{}:&nbsp;{score}",
+                                score_type.to_html(theme),
+                            )
+                        })
+                        .join(", "),)
+                    })).clone(),
+                HtmlTag::p.new().maybe_content(self.annotated_spectrum().map(|a| {
                     let (fragments, peaks, intensity) = match a.scores(&[], &MatchingParameters::default(), mzcore::prelude::MassMode::Monoisotopic).0.score {
                         Score::Position { fragments, peaks, intensity, .. } | Score::UniqueFormulas { fragments, peaks, intensity, .. } => (fragments, peaks, intensity)
-                    };                    
+                    };
                     format!("Spectrum Fragments:&nbsp;{}, Peaks:&nbsp;{}, Intensity&nbsp;annotated:&nbsp;{:.2}%&nbsp;({:.2e}/{:.2e})", fragments.found, peaks.total, intensity.fraction()*100.0, intensity.found, intensity.total)
                     })).clone(),
                 HtmlTag::ul.new().children(match self.scans() {
@@ -131,9 +143,9 @@ impl<C, A> RenderToHtml for PSM<C, A> {
                 }).clone(),
                 ]
             ).content(peptide).children([
-                HtmlTag::p.new().content(format!("Additional MetaData <span title='{}'>{}</span> ID: {}", 
-                    self.search_engine().map(|s| format!("{}|{}", s.accession, s.name)).unwrap_or_default(), 
-                    self.format(), 
+                HtmlTag::p.new().content(format!("Additional MetaData <span title='{}'>{}</span> ID: {}",
+                    self.search_engine().map(|s| format!("{}|{}", s.accession, s.name)).unwrap_or_default(),
+                    self.format(),
                     self.id())).clone(),
                 {
                     HtmlElement::table::<HtmlContent, String>(
@@ -482,13 +494,13 @@ impl RenderToTable for PSMData {
                     data.fragment_ppm.get::<mzcore::system::ratio::ppm>().to_string(),
                 ),
                 ("Hyperscore", format!("{:.3} Δnext {:.3} Δbest {:.3}", data.hyperscore, data.delta_next, data.delta_best)),
-                ("Retention time (fraction)", format!("{:.3} predicted {:.3} Δ {:.3}", 
-                    data.aligned_rt.get::<mzcore::system::ratio::fraction>(), 
-                    data.predicted_rt.get::<mzcore::system::ratio::fraction>(), 
+                ("Retention time (fraction)", format!("{:.3} predicted {:.3} Δ {:.3}",
+                    data.aligned_rt.get::<mzcore::system::ratio::fraction>(),
+                    data.predicted_rt.get::<mzcore::system::ratio::fraction>(),
                     data.delta_rt_model)),
-                ("Ion mobility", format!("{:.3} predicted {:.3} Δ {:.3}", 
-                    data.ion_mobility, 
-                    data.predicted_mobility, 
+                ("Ion mobility", format!("{:.3} predicted {:.3} Δ {:.3}",
+                    data.ion_mobility,
+                    data.predicted_mobility,
                     data.delta_mobility)),
                 ("Matched peaks", data.matched_peaks.to_string()),
                 ("Longest b", data.longest_b.to_string()),
@@ -599,20 +611,6 @@ impl RenderToTable for PSMData {
                 ("Group", data.group.as_ref().to_optional_string()),
             ],
             PSMData::MzTab(data) => vec![
-                (
-                    "Search engine",
-                    data.search_engine
-                        .iter()
-                        .map(|(engine, score, score_type)| {
-                            format!(
-                                "{} score: {} ({})",
-                                engine.to_html(theme),
-                                score.to_optional_string(),
-                                score_type.to_html(theme),
-                            )
-                        })
-                        .join("|"),
-                ),
                 ("URI", data.uri.as_ref().to_optional_string()),
                 (
                     "Other columns",
@@ -620,7 +618,7 @@ impl RenderToTable for PSMData {
                         .then(|| {
                             HtmlElement::table(
                                 Some(&["Column", "Value"]),
-                                data.additional.iter().map(|(k, v)| [k, v]),
+                                data.additional.iter().sorted().map(|(k, v)| [k, v]),
                             )
                         })
                         .to_optional_string(),
@@ -656,6 +654,23 @@ impl RenderToTable for PSMData {
                 ("Complex satisfied", data.is_complex_satisfied.to_string()),
                 ("In filter", data.is_filter_in.to_string()),
                 ("Title", data.title.to_string()),
+            ],
+            PSMData::PsmUtils(data) => vec![
+                ("Run", data.run.clone()),
+                ("Collection", data.collection.clone()),
+                ("Is decoy", data.is_decoy.to_string()),
+                (
+                    "Ion mobility",
+                    data.ion_mobility.to_optional_string(),
+                ),
+                (
+                    "Rank",
+                    data.rank.to_string(),
+                ),
+                (
+                    "Source",
+                    data.source.0.clone(),
+                ),
             ],
             PSMData::PUniFind(data) => {
                 vec![("Cosine similarity", data.cos_similarity.to_string())]
@@ -906,8 +921,21 @@ impl RenderToHtml for CVTerm {
             .new()
             .content(self.term.accession.to_string())
             .title(format!(
-                "[{}, {}, {}, {}]",
+                "({}:{}|{}) {}",
                 self.term.accession.cv, self.term.accession.accession, self.term.name, self.value
+            ))
+            .clone()
+    }
+}
+
+impl RenderToHtml for mzcv::Term {
+    fn to_html(&self, _theme: Theme) -> HtmlElement {
+        HtmlTag::span
+            .new()
+            .content(self.name.as_ref())
+            .title(format!(
+                "{}:{}|{}",
+                self.accession.cv, self.accession.accession, self.name
             ))
             .clone()
     }
