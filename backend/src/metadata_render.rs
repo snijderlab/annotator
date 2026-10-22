@@ -72,8 +72,7 @@ impl<C, A> RenderToHtml for PSM<C, A> {
                             .to_optional_string(),
                         self.charge()
                             .map_or("-".to_string(), |c| c.value.to_string()),
-                        self.charge()
-                            .and_then(|c| formula.map(|f| (f, c)))
+                        formula.zip(self.charge())
                             .map(|(f, c)| format!(
                                 "{:.3}&nbsp;Th",
                                 f.monoisotopic_mass().value / c.value as f64
@@ -165,8 +164,7 @@ impl RenderToTable for PSMData {
                 ("Fraction", data.fraction.to_optional_string()),
                 (
                     "Feature",
-                    data.feature_tryp_cid
-                        .and_then(|f_cid| data.feature_tryp_ead.map(|f_ead| (f_cid, f_ead)))
+                    data.feature_tryp_cid.zip(data.feature_tryp_ead)
                         .map_or(
                             data.feature.as_ref().to_optional_string(),
                             |(f_cid, f_ead)| {
@@ -211,8 +209,7 @@ impl RenderToTable for PSMData {
                 ),
                 (
                     "RT range",
-                    data.rt_begin
-                        .and_then(|b| data.rt_end.map(|e| (b, e)))
+                    data.rt_begin.zip(data.rt_end)
                         .map(|(b, e)| format!("begin: {:.3} min end: {:.3} min", b.value, e.value))
                         .to_optional_string(),
                 ),
@@ -243,8 +240,7 @@ impl RenderToTable for PSMData {
                 ),
                 (
                     "Protein",
-                    data.protein_group
-                        .and_then(|g| data.protein_id.map(|i| (g, i)))
+                    data.protein_group.zip(data.protein_id)
                         .map(|(g, i)| format!("group: {g}, ID: {i}"))
                         .to_optional_string(),
                 ),
@@ -919,9 +915,9 @@ impl RenderToHtml for CVTerm {
     fn to_html(&self, _theme: Theme) -> HtmlElement {
         HtmlTag::span
             .new()
-            .content(self.term.accession.to_string())
+            .content(self.term.name.to_string())
             .title(format!(
-                "({}:{}|{}) {}",
+                "[{}:{}|{}] {}",
                 self.term.accession.cv, self.term.accession.accession, self.term.name, self.value
             ))
             .clone()
