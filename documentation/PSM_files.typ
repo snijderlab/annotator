@@ -31,6 +31,7 @@ There are quite some programs that export PSMs. The annotator supports a selecti
   [pLink], [2.3],
   [PowerNovo], [1.0.17],
   [Proteoscape], [2025B],
+  [psm_utils], [1.5],
   [pUniFind], [0.1],
   [Sage], [0.14],
   [π-HelixNovo], [1.1],

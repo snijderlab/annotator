@@ -273,8 +273,6 @@ impl RenderToTable for PSMData {
                 ("Rank", data.rank.to_string()),
                 ("Matched ion counts", data.matched_ion_counts.to_string()),
                 ("Kind", data.proteins()[0].kind.to_string()),
-                ("Q value", data.q_value.to_string()),
-                ("PEP", data.pep.to_string()),
                 ("PEP Q value", data.pep_q_value.to_string()),
                 ("Localisation score", data.localisation_score.to_string()),
                 ("Yion score", data.yion_score.to_string()),
@@ -334,8 +332,6 @@ impl RenderToTable for PSMData {
                 ("Organism", data.proteins()[0].organism.join("|")),
                 ("Matched ion counts", data.matched_ion_counts.to_string()),
                 ("Kind", data.proteins()[0].kind.iter().join("|")),
-                ("Q value", data.q_value.to_string()),
-                ("PEP", data.pep.to_string()),
                 ("PEP Q value", data.pep_q_value.to_string()),
 
             ],
@@ -501,17 +497,12 @@ impl RenderToTable for PSMData {
                 ("Matched peaks", data.matched_peaks.to_string()),
                 ("Longest b", data.longest_b.to_string()),
                 ("Longest y", data.longest_y.to_string()),
-                (
-                    "Matched intensity",
-                    data.matched_intensity_pct.value.to_string(),
-                ),
                 ("Scored candidates", data.scored_candidates.to_string()),
                 ("Poisson", data.poisson.to_string()),
                 (
                     "Sage discriminant score",
                     data.sage_discriminant_score.to_string(),
                 ),
-                ("Posterior error", data.posterior_error.to_string()),
                 ("Spectrum q", data.spectrum_q.to_string()),
                 ("Peptide q", data.peptide_q.to_string()),
                 ("Protein q", data.protein_q.to_string()),
@@ -540,7 +531,6 @@ impl RenderToTable for PSMData {
                         .map(|m| m.value)
                         .to_optional_string(),
                 ),
-                ("Expectation score", format!("{:e}", data.expectation_score)),
                 ("Next score", data.next_score.to_string()),
                 (
                     "Peptide Prophet probability",
@@ -625,8 +615,6 @@ impl RenderToTable for PSMData {
                 ("Score", format!("{:e}", data.score)),
                 ("Refined score", data.refined_score.to_string()),
                 ("SVM score", data.svm_score.to_string()),
-                ("E-value", data.e_value.to_string()),
-                ("Q-value", data.q_value.to_string()),
                 ("Decoy", data.is_decoy.to_string()),
                 (
                     "Proteins",
@@ -668,9 +656,7 @@ impl RenderToTable for PSMData {
                     data.source.0.clone(),
                 ),
             ],
-            PSMData::PUniFind(data) => {
-                vec![("Cosine similarity", data.cos_similarity.to_string())]
-            }
+            PSMData::PUniFind(_) => Vec::new(),
             PSMData::Fasta(data) => vec![
                 ("Description", data.description().to_string()),
                 (
