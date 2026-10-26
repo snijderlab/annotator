@@ -110,12 +110,13 @@ impl<C, A> RenderToHtml for PSM<C, A> {
                     .maybe_content(
                         self.proteins().is_empty().not().then(||
                             format!(
-                            "Protein&nbsp;ID:&nbsp;{}, Name:&nbsp;{}, Database:&nbsp;{}, Location:&nbsp;{}, Unique:&nbsp{}",
+                            "Protein&nbsp;ID:&nbsp;{}, Name:&nbsp;{}, Database:&nbsp;{}, Location:&nbsp;{}, Unique:&nbsp{}, Decoy:&nbsp{}",
                             self.proteins().iter().filter_map(|n| n.numerical_id()).join(";"),
                             self.proteins().iter().map(|n| n.id().name().to_string()).join(";"),
                             self.database().map(|(db, version)| format!("{db}{}", version.map(|v| format!(" ({v})")).unwrap_or_default())).to_optional_string(),
                             self.protein_location().map(|s| format!("{} — {}", s.start, s.end)).to_optional_string(),
                             self.unique().to_optional_string(),
+                            self.is_decoy().to_optional_string(),
                         )))
                     .clone(),
                 HtmlTag::p.new().maybe_content(self.other_scores().map(|scores| {
@@ -477,7 +478,6 @@ impl RenderToTable for PSMData {
             ],
             PSMData::Sage(data) => vec![
                 ("Rank", data.rank.to_string()),
-                ("Decoy", data.decoy.to_string()),
                 ("Missed cleavages", data.missed_cleavages.to_string()),
                 ("Semi enzymatic", data.semi_enzymatic.to_string()),
                 ("Isotope error", data.isotope_error.to_string()),
@@ -615,7 +615,6 @@ impl RenderToTable for PSMData {
                 ("Score", format!("{:e}", data.score)),
                 ("Refined score", data.refined_score.to_string()),
                 ("SVM score", data.svm_score.to_string()),
-                ("Decoy", data.is_decoy.to_string()),
                 (
                     "Proteins",
                     data.proteins
@@ -642,7 +641,6 @@ impl RenderToTable for PSMData {
             PSMData::PsmUtils(data) => vec![
                 ("Run", data.run.clone()),
                 ("Collection", data.collection.clone()),
-                ("Is decoy", data.is_decoy.to_string()),
                 (
                     "Ion mobility",
                     data.ion_mobility.to_optional_string(),
@@ -653,7 +651,11 @@ impl RenderToTable for PSMData {
                 ),
                 (
                     "Source",
-                    data.source.0.clone(),
+                    if let Some(term) = &data.source.1 {
+                        term.to_html(theme).to_string()
+                    } else {
+                        data.source.0.clone()
+                    }
                 ),
             ],
             PSMData::PUniFind(_) => Vec::new(),
