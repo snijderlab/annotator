@@ -647,7 +647,7 @@ impl RenderToTable for PSMData {
                 ),
                 (
                     "Rank",
-                    data.rank.to_string(),
+                    data.rank.to_optional_string(),
                 ),
                 (
                     "Source",
